@@ -15,7 +15,7 @@
 #include "pyp/crp.h"
 #include "pyp/tied_parameter_resampler.h"
 
-#define kORDER 3
+#define kORDER 5
 
 static const char *REVISION = "$Rev: 0 $";
 

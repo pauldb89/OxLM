@@ -8,6 +8,7 @@
 #include "pyp/random.h"
 #include "pyp/crp.h"
 #include "pyp/tied_parameter_resampler.h"
+#include "lbl/log_add.h"
 
 #include "hpyplm/uvector.h"
 #include "hpyplm/uniform_vocab.h"
@@ -18,15 +19,21 @@
 
 namespace oxlm {
 
-template <WordId N> struct LBL_PYPLM;
+template <unsigned N> struct LBL_PYPLM;
 
 template<> struct LBL_PYPLM<0> : public UniformVocabulary {
   LBL_PYPLM(const LogBiLinearModel& m, double a, double b, double c, double d,
             MatrixRealPtr pc, VectorRealPtr zc)
     : UniformVocabulary(m.labels(), a, b, c, d), probs_cache(pc), z_cache(zc), 
       p0_array(ArrayReal::Ones(m.labels())*p0) {
-      (*z_cache)(0) = m.B.sum();
-      probs_cache->row(0) = m.B;
+//      (*z_cache)(0) = m.B.exp().sum();
+      double log_z=Log<double>::zero();
+      for (WordId r=0; r < m.labels(); ++r)
+        log_z = Log<double>::add(log_z, m.B(r));
+      for (WordId r=0; r < m.labels(); ++r) {
+        (*probs_cache)(0,r) = exp(m.B(r) - log_z);
+        assert(!std::isnan((*probs_cache)(0,r)));
+      }
     }
 
   std::ostream& print(std::ostream& out) const 
@@ -40,7 +47,7 @@ template<> struct LBL_PYPLM<0> : public UniformVocabulary {
 };
 
 // represents an N-gram LM
-template <WordId N> struct LBL_PYPLM {
+template <unsigned N> struct LBL_PYPLM {
 //  LBL_PYPLM() : backoff(0,1,1,1,1), tr(1,1,1,1,0.8,0.0), lookup(N-1), singleton_crp(0.8,0) {
 //    pyp::MT19937 eng;
 //    tr.insert(&singleton_crp);  // add to resampler
@@ -52,12 +59,11 @@ template <WordId N> struct LBL_PYPLM {
     : probs_cache(new MatrixReal(N+1,m.labels())), z_cache(new VectorReal(N+1)),
       backoff(m, da, db, ss, sr, probs_cache, z_cache), tr(da, db, ss, sr, 0.8, 0.0), 
       lookup(N-1), singleton_crp(0.8,0), lbl_model(m) {
-      assert(lbl_model.config.ngram_order >= N);
+      assert(lbl_model.config.ngram_order >= (int)N);
       pyp::MT19937 eng;
       tr.insert(&singleton_crp);  // add to resampler
       singleton_crp.increment(0, 1.0, eng);
-
-      context_products = lbl_model.Q * lbl_model.C.at(N-1);
+//      context_products = lbl_model.Q * lbl_model.C.at(N-1);
     }
 
   explicit LBL_PYPLM(const LogBiLinearModel& m, 
@@ -65,7 +71,7 @@ template <WordId N> struct LBL_PYPLM {
                      MatrixRealPtr pc, VectorRealPtr zc)
     : probs_cache(pc), z_cache(zc), backoff(m, da, db, ss, sr, pc, zc), tr(da, db, ss, sr, 0.8, 0.0), 
       lookup(N-1), singleton_crp(0.8,0), lbl_model(m) {
-      assert(lbl_model.config.ngram_order >= N);
+      assert(lbl_model.config.ngram_order >= (int)N);
       pyp::MT19937 eng;
       tr.insert(&singleton_crp);  // add to resampler
       singleton_crp.increment(0, 1.0, eng);
@@ -148,18 +154,26 @@ template <WordId N> struct LBL_PYPLM {
 
   void recursive_probs(const std::vector<WordId>& context) const {
     backoff.recursive_probs(context);
-    double z=0.0f;
+    double log_z=Log<double>::zero();
     assert (context.size() >= N);
     WordId trigger=context.at(context.size()-N);
     const VectorReal& trigger_vector=context_products.row(trigger);
 
-    #pragma omp parallel for reduction(+:z)
+//    #pragma omp parallel for reduction(+:z)
     for (WordId r=0; r < lbl_model.labels(); ++r) {
-      double lbl_weight = std::exp(lbl_model.R.row(r) * trigger_vector);
-      (*probs_cache)(N,r) = lbl_weight * prob(r, context, (*probs_cache)(N-1,r));
-      z += (*probs_cache)(N,r);
+      double lbl_weight = lbl_model.R.row(r) * trigger_vector + log(prob(r, context, (*probs_cache)(N-1,r)));
+      (*probs_cache)(N,r) = lbl_weight;
+      assert(!std::isnan((*probs_cache)(N,r)));
+      log_z = Log<double>::add(log_z, lbl_weight);
     }
-    (*z_cache)(N) = z;
+    (*probs_cache).row(N).array() -= log_z;
+    (*probs_cache).row(N) = (*probs_cache).row(N).array().exp();
+    for (WordId r=0; r < lbl_model.labels(); ++r)
+      assert(!std::isnan((*probs_cache)(N,r)));
+//    for (WordId r=0; r < lbl_model.labels(); ++r) {
+//      (*probs_cache)(N,r) = lbl_weight * prob(r, context, (*probs_cache)(N-1,r));
+
+    (*z_cache)(N) = exp(log_z);
   }
 
   double log_likelihood() const {
@@ -213,7 +227,7 @@ public:
 private:
   void copy_context(const std::vector<WordId>& context, std::vector<WordId>& result) const {
     assert (context.size() >= N-1);
-    for (WordId i = 0; i < N-1; ++i)
+    for (unsigned i = 0; i < N-1; ++i)
       result[i] = context[context.size() - 1 - i];
   }
 

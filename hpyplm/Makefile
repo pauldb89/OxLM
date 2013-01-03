@@ -1,6 +1,6 @@
 LOCAL_LIBS=${HOME}/packages
-CXXFLAGS =  -std=c++11 -g -O3 -fopenmp -Wall -I${LOCAL_LIBS}/include -m64 -I/usr/include/eigen3 -I..
-LDFLAGS = -std=c++11 -g -O3 -fopenmp -L${LOCAL_LIBS}/lib64 -L${LOCAL_LIBS}/lib -lboost_program_options -lboost_serialization
+CXXFLAGS =  -std=c++0x -g -O3 -fopenmp -Wall -I${LOCAL_LIBS}/include -m64 -I/usr/include/eigen3 -I..
+LDFLAGS = -std=c++0x -g -O3 -fopenmp -L${LOCAL_LIBS}/lib64 -L${LOCAL_LIBS}/lib -lboost_program_options -lboost_serialization
 
 all: hpyplm dhpyplm chpyplm
 
@@ -17,7 +17,7 @@ chpyplm_generate: chpyplm_generate.o
 	$(CXX) -o $@ $^ $(LDFLAGS)
 
 dhpyplm: dhpyplm.cc
-	$(CXX) -std=c++11 -O3 -g -Wall -I.. dhpyplm.cc -o dhpyplm
+	$(CXX) -std=c++0x -O3 -g -Wall -I.. dhpyplm.cc -o dhpyplm
 
 %.o: %.cc
 	${CXX} $(CXXFLAGS) -c $< -o $@
@@ -33,24 +33,24 @@ BOOST_INCLUDE=$(BOOST_ROOT)/include
 BOOST_SERIALIZATION=$(BOOST_ROOT)/lib/libboost_serialization.a
 
 hpyplm_train: hpyplm_train.cc
-	$(CXX) -std=c++11 -O3 -Wall -I$(BOOST_INCLUDE) -I.. $< -o $@ $(BOOST_SERIALIZATION)
+	$(CXX) -std=c++0x -O3 -Wall -I$(BOOST_INCLUDE) -I.. $< -o $@ $(BOOST_SERIALIZATION)
 
 hpyplm_query: hpyplm_query.cc
-	$(CXX) -std=c++11 -O3 -Wall -I$(BOOST_INCLUDE) -I.. $< -o $@ $(BOOST_SERIALIZATION)
+	$(CXX) -std=c++0x -O3 -Wall -I$(BOOST_INCLUDE) -I.. $< -o $@ $(BOOST_SERIALIZATION)
 
 hpyplm_query_observe: hpyplm_query_observe.cc
-	$(CXX) -std=c++11 -O3 -Wall -I$(BOOST_INCLUDE) -I.. $< -o $@ $(BOOST_SERIALIZATION)
+	$(CXX) -std=c++0x -O3 -Wall -I$(BOOST_INCLUDE) -I.. $< -o $@ $(BOOST_SERIALIZATION)
 
 
 dhpyplm_train: dhpyplm_train.cc
-	$(CXX) -std=c++11 -O3 -Wall -I$(BOOST_INCLUDE) -I.. $< -o $@ $(BOOST_SERIALIZATION)
+	$(CXX) -std=c++0x -O3 -Wall -I$(BOOST_INCLUDE) -I.. $< -o $@ $(BOOST_SERIALIZATION)
 
 dhpyplm_query: dhpyplm_query.cc
-	$(CXX) -std=c++11 -O3 -Wall -I$(BOOST_INCLUDE) -I.. $< -o $@ $(BOOST_SERIALIZATION)
+	$(CXX) -std=c++0x -O3 -Wall -I$(BOOST_INCLUDE) -I.. $< -o $@ $(BOOST_SERIALIZATION)
 
 CDEC = ../../cdec
 cdec_ff_hpyplm.o: cdec_ff_hpyplm.cc
-	$(CXX) -shared -fPIC -std=c++11 -O3 -g -Wall -I$(BOOST_INCLUDE) -I.. -I$(CDEC)/utils -I$(CDEC)/mteval -I$(CDEC)/decoder $< -c
+	$(CXX) -shared -fPIC -std=c++0x -O3 -g -Wall -I$(BOOST_INCLUDE) -I.. -I$(CDEC)/utils -I$(CDEC)/mteval -I$(CDEC)/decoder $< -c
 
 libcdec_ff_hpyplm.so: cdec_ff_hpyplm.o
 	$(CXX) -shared -Wl,-soname,$@ -o $@ $<
