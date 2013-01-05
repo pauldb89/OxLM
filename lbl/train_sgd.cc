@@ -313,7 +313,6 @@ Real sgd_update(LogBiLinearModel& model,
   Real f=0;
   WordId start_id = model.label_set().Convert("<s>");
 
-  // setup the gradient matrices
   int word_width = model.config.word_representation_size;
   int context_width = model.config.ngram_order-1;
 

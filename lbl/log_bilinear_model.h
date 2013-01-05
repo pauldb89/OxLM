@@ -34,6 +34,9 @@ public:
 
   ~LogBiLinearModel() { delete [] m_data; }
 
+  int output_types() const { return config.classes > 0 ? config.classes : m_labels.size(); }
+  int context_types() const { return m_labels.size(); }
+
   int labels() const { return m_labels.size(); }
   const Dict& label_set() const { return m_labels; }
   Dict& label_set() { return m_labels; }

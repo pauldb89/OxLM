@@ -30,14 +30,16 @@ LogBiLinearModel::LogBiLinearModel(const ModelData& config, const Dict& labels)
 }
 
 void LogBiLinearModel::init(const ModelData& config, const Dict& labels, bool init_weights) {
-    int num_words = labels.size();
+    // the prediction vector ranges over classes for a class based LM, or the vocab otherwise
+    int num_output_words = output_types();
+    int num_context_words = context_types();
     int word_width = config.word_representation_size;
     int context_width = config.ngram_order-1;
 
-    int R_size = num_words*word_width;
-    int Q_size = R_size;
+    int R_size = num_output_words * word_width;
+    int Q_size = num_context_words * word_width;;
     int C_size = word_width*word_width;
-    int B_size = num_words;
+    int B_size = num_output_words;
 
     m_data_size = R_size + Q_size + context_width*C_size + B_size;
     m_data = new Real[m_data_size];
@@ -53,11 +55,11 @@ void LogBiLinearModel::init(const ModelData& config, const Dict& labels, bool in
     }
     else W.setZero();
 
-    new (&R) WordVectorsType(m_data, num_words, word_width);
-    new (&Q) WordVectorsType(m_data+R_size, num_words, word_width);
+    new (&R) WordVectorsType(m_data, num_output_words, word_width);
+    new (&Q) WordVectorsType(m_data+R_size, num_context_words, word_width);
 
     C.clear();
-    Real* ptr = m_data+2*R_size;
+    Real* ptr = m_data+R_size+Q_size;
     for (int i=0; i<context_width; i++) {
       C.push_back(ContextTransformType(ptr, word_width, word_width));
       ptr += C_size;
@@ -65,7 +67,7 @@ void LogBiLinearModel::init(const ModelData& config, const Dict& labels, bool in
       //      C.back().setZero();
     }
 
-    new (&B) WeightsType(ptr, num_words);
+    new (&B) WeightsType(ptr, num_output_words);
 
     //R.setOnes();
     //R.setZero();
@@ -79,16 +81,17 @@ void LogBiLinearModel::init(const ModelData& config, const Dict& labels, bool in
     //    Q << 0,0,0,1 , 0,0,1,0 , 0,1,0,0 , 1,0,0,0; 
     //    Q << 1,1 , 1,1 , 1,1 , 1,1; 
 
-    assert(ptr+num_words== m_data+m_data_size); 
+    assert(ptr+num_output_words == m_data+m_data_size); 
 
     #pragma omp master
     if (false) {
       std::cerr << "===============================" << std::endl;
-      std::cerr << " Created a LogBiLinearModel: " << std::endl;
-      std::cerr << "  Vocab size = " << num_words << std::endl;
-      std::cerr << "  Word Vector size = " << word_width << std::endl;
-      std::cerr << "  Context size = " << context_width << std::endl;
-      std::cerr << "  Total parameters = " << m_data_size << std::endl;
+      std::cerr << " Created a LogBiLinearModel: "   << std::endl;
+      std::cerr << "  Output Vocab size = "          << num_output_words << std::endl;
+      std::cerr << "  Context Vocab size = "         << num_context_words << std::endl;
+      std::cerr << "  Word Vector size = "           << word_width << std::endl;
+      std::cerr << "  Context size = "               << context_width << std::endl;
+      std::cerr << "  Total parameters = "           << m_data_size << std::endl;
       std::cerr << "===============================" << std::endl;
     }
   }

@@ -42,7 +42,7 @@ struct ModelData {
                 time_series_parameter(1.0), label_sample_size(100), 
                 feature_type("explicit"), hash_bits(16), threads(1), 
                 iteration_size(1), verbose(false), ngram_order(3), 
-                word_representation_size(100), uniform(false)
+                word_representation_size(100), uniform(false), classes(-1)
   {}
 
   ZType       ztype;
@@ -59,6 +59,7 @@ struct ModelData {
   int         ngram_order;
   int         word_representation_size;
   bool        uniform;
+  int         classes;
 
   friend class boost::serialization::access;
   template<class Archive>
@@ -77,6 +78,7 @@ struct ModelData {
     ar & ngram_order;
     ar & word_representation_size;
     ar & uniform;
+    ar & classes;
   }
 };
 typedef boost::shared_ptr<ModelData> ModelDataPtr;
