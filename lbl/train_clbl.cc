@@ -248,8 +248,9 @@ void learn(const variables_map& vm, const ModelData& config) {
       reduction(+:av_f)
     {
       int thread_id = omp_get_thread_num();
-      for (size_t start=thread_id*minibatch_size; start < training_corpus.size(); ++minibatch_counter) {
-        size_t end = min(training_corpus.size(), start + minibatch_size);
+      int thread_minibatch_size = minibatch_size / omp_get_num_threads();
+      for (size_t start=thread_id*thread_minibatch_size; start < training_corpus.size(); ++minibatch_counter) {
+        size_t end = min(training_corpus.size(), start + thread_minibatch_size);
 
         Real lambda = config.l2_parameter*(end-start)/static_cast<Real>(training_corpus.size()); 
         Real f=0.0;
@@ -264,7 +265,7 @@ void learn(const variables_map& vm, const ModelData& config) {
         #pragma omp master 
         if (minibatch_counter % 100 == 0) { cerr << "."; cout.flush(); }
 
-        start += (minibatch_size*omp_get_num_threads());
+        start += (thread_minibatch_size*omp_get_num_threads());
       }
     }
 
