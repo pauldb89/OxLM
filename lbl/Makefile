@@ -5,7 +5,7 @@ CXX=g++
 
 local_objs = log_bilinear_model.o 
 
-all: train_sgd train_clbl
+all: train_sgd train_clbl train_mlbl
 
 -include makefile.depend
 
@@ -17,6 +17,9 @@ train_sgd: train_sgd.o $(local_objs)
 	$(CXX) -o $@ $^ $(LDFLAGS)
 
 train_clbl: train_clbl.o $(local_objs)
+	$(CXX) -o $@ $^ $(LDFLAGS)
+
+train_mlbl: train_mlbl.o $(local_objs)
 	$(CXX) -o $@ $^ $(LDFLAGS)
 
 %.o: %.cc

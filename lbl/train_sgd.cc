@@ -103,7 +103,7 @@ int main(int argc, char **argv) {
     ("threads", value<int>()->default_value(1), 
         "number of worker threads.")
     ("test-tokens", value<int>()->default_value(10000), 
-        "number of evenly space test points tokens evaluate.")
+        "number of evenly spaced test points tokens evaluate.")
     ("step-size", value<float>()->default_value(1.0), 
         "SGD batch stepsize, it is normalised by the number of minibatches.")
     ("verbose,v", "print perplexity for each sentence (1) or input token (2) ")

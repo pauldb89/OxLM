@@ -24,6 +24,7 @@
 #include <Eigen/Core>
 
 // Local
+#include "lbl/lbfgs.h"
 #include "lbl/log_bilinear_model.h"
 #include "lbl/log_add.h"
 #include "corpus/corpus.h"
@@ -42,27 +43,18 @@ typedef vector<WordId> Corpus;
 
 void learn(const variables_map& vm, const ModelData& config);
 
-struct TrainingInstance {
-  vector<WordId> noise_words; 
-  Real            data_prob;
-  int             data_index;
-  vector<Real>    noise_probs;
-};
-typedef vector<TrainingInstance> TrainingInstances;
-void cache_data(const LogBiLinearModel& model,
-                int start, int end, 
-                const Corpus& training_corpus, const vector<size_t>& indices, const VectorReal& unigram,
-                int k, TrainingInstances &result);
+Real function_and_gradient(LogBiLinearModel& model,
+                           int start, int end, const Corpus& training_corpus,
+                           Real lambda,
+                           LogBiLinearModel::WeightsType& gradient,
+                           Real* gradient_data, 
+                           Real& wnorm, Real& gnorm);
 
-Real sgd_update(LogBiLinearModel& model, int start, int end, 
-                const Corpus& training_corpus, 
-                const TrainingInstances &result,
-                Real lambda, Real step_size);
 Real perplexity(const LogBiLinearModel& model, const Corpus& test_corpus, int stride=1);
 
 
 int main(int argc, char **argv) {
-  cout << "Online noise contrastive estimation for log-bilinear models: Copyright 2013 Phil Blunsom, " 
+  cout << "LBFGS optimisation for a mixture of log-bilinear models: Copyright 2013 Phil Blunsom, " 
        << REVISION << '\n' << endl;
 
   ///////////////////////////////////////////////////////////////////////////////////////
@@ -203,62 +195,45 @@ void learn(const variables_map& vm, const ModelData& config) {
     ar >> model;
   }
 
-  vector<size_t> training_indices(training_corpus.size());
-  VectorReal unigram = VectorReal::Zero(model.labels());
-  for (size_t i=0; i<training_indices.size(); i++) {
-    unigram(training_corpus[i]) += 1;
-    training_indices[i] = i;
-  }
-  model.B = ((unigram.array()+1.0)/(unigram.sum()+unigram.size())).log();
-  unigram /= unigram.sum();
+  int num_weights = model.num_weights();
+  Real* gradient_data = new Real[num_weights];
+  LogBiLinearModel::WeightsType gradient(gradient_data, num_weights);
 
-  size_t minibatch_counter=0;
-  size_t minibatch_size = vm["minibatch-size"].as<int>();
-  for (int iteration=0; iteration < vm["iterations"].as<int>(); ++iteration) {
-    clock_t iteration_start=clock();
-    Real av_f=0.0;
-    cout << "Iteration " << iteration << ": "; cout.flush();
+//  int thread_id = omp_get_thread_num();
+  Real lambda = config.l2_parameter; 
 
-    if (vm.count("randomise"))
-      std::random_shuffle(training_indices.begin(), training_indices.end());
+  Real f=0.0, wnorm=0.0, gnorm=numeric_limits<Real>::max();
 
-    #pragma omp parallel \
-      firstprivate(minibatch_counter) \
-      shared(training_corpus,training_indices,model,vm,minibatch_size,iteration,config,unigram) \
-      reduction(+:av_f)
-    {
-      TrainingInstances training_instances;
+  scitbx::lbfgs::minimizer<Real> minimiser(num_weights, 10);
+  int function_evaluations=0;
+  bool calc_g_and_f = true;
+  int lbfgs_iteration = minimiser.iter();
+  clock_t lbfgs_time=0, gradient_time=0;
+  while (lbfgs_iteration < vm["lbfgs-iterations"].as<int>() && gnorm > vm["gnorm-threshold"].as<float>()) {
+    if (calc_g_and_f) {
+      clock_t gradient_start = clock();
 
-      int thread_id = omp_get_thread_num();
-      for (size_t start=thread_id*minibatch_size; start < training_corpus.size(); ++minibatch_counter) {
-        size_t end = min(training_corpus.size(), start + minibatch_size);
-
-        Real lambda = config.l2_parameter*(end-start)/static_cast<Real>(training_corpus.size()); 
-
-        cache_data(model, start, end, training_corpus, training_indices, unigram,
-                   config.label_sample_size, training_instances);
-
-        Real f=0.0;
-        Real step_size = vm["step-size"].as<float>(); //* minibatch_size / training_corpus.size();
-        f = sgd_update(model, start, end, training_corpus, training_instances, lambda, step_size);
-        av_f += f;
-
-        // regularisation
-        if (lambda > 0) model.l2_gradient_update(step_size*lambda);
-
-        #pragma omp master 
-        if (minibatch_counter % 100 == 0) { cerr << "."; cout.flush(); }
-
-        start += (minibatch_size*omp_get_num_threads());
-      }
+      gradient.setZero();
+      f = function_and_gradient(model, 0, training_corpus.size(), training_corpus, lambda, gradient, gradient_data, wnorm, gnorm);
+      function_evaluations++;
+      gradient_time += (clock() - gradient_start);
     }
 
-    Real iteration_time = (clock()-iteration_start) / (Real)CLOCKS_PER_SEC;
-    cerr << "\n | Time: " << iteration_time << " seconds, Average f = " << av_f/training_corpus.size();
-    if (vm.count("test-set"))
-      cerr << ", Test Perplexity = " << perplexity(model, test_corpus, test_corpus.size()/vm["test-tokens"].as<int>()); 
-    cerr << " |" << endl << endl;
+    if (lbfgs_iteration == 0 || (!calc_g_and_f )) {
+      cerr << "  (" << lbfgs_iteration+1 << "." << function_evaluations << ":" 
+        << "f=" << f << ",|w|=" << wnorm << ",|g|=" << gnorm << ")\n";
+    }
+
+    clock_t lbfgs_start=clock();
+    calc_g_and_f = minimiser.run(model.data(), f, gradient_data);
+    lbfgs_iteration = minimiser.iter();
+    lbfgs_time += (clock() - lbfgs_start);
   }
+
+  minimiser.run(model.data(), f, gradient_data);
+  if (vm.count("test-set"))
+    cerr << ", Test Perplexity = " << perplexity(model, test_corpus, test_corpus.size()/vm["test-tokens"].as<int>()); 
+  cerr << " |" << endl << endl;
 
   if (vm.count("model-out")) {
     cout << "Writing trained model to " << vm["model-out"].as<string>() << endl;
@@ -266,55 +241,42 @@ void learn(const variables_map& vm, const ModelData& config) {
     boost::archive::text_oarchive ar(f);
     ar << model;
   }
+
+  delete gradient_data;
 }
 
 
-void cache_data(const LogBiLinearModel& model,
-                int start, int end, const Corpus& training_corpus, const vector<size_t>& indices, 
-                const VectorReal& unigram, int k, TrainingInstances &result) {
-  assert (start>=0 && start < end && end <= static_cast<int>(training_corpus.size()));
-  assert (training_corpus.size() == indices.size());
-  int num_tokens = training_corpus.size();
-  int num_words = model.labels();
-
-  result.resize(end-start);
-  for (int s=start; s<end; ++s) {
-    TrainingInstance& t = result.at(s-start);
-    int w_i = indices.at(s);
-    t.data_index = w_i;
-    WordId w = training_corpus.at(w_i);
-
-    t.noise_words.resize(k);
-    t.noise_probs.resize(k);
-    if (model.config.uniform) {
-      Real word_prob = 1.0 / model.labels();
-      t.data_prob = word_prob;
-      for(int n_i=0; n_i < k; n_i++) {
-        t.noise_words.at(n_i) = rand() % num_words;
-        t.noise_probs.at(n_i) = word_prob;
-      }
-    }
-    else {
-      t.data_prob = unigram(w);
-      for(int n_i=0; n_i < k; ++n_i) {
-        WordId n_w = training_corpus.at(rand() % num_tokens);
-        t.noise_words.at(n_i) = n_w;
-        t.noise_probs.at(n_i) = unigram(n_w);
-      }
-    }
-  }
-}
-
-
-Real sgd_update(LogBiLinearModel& model,
-                int start, int end, const Corpus& training_corpus,
-                const TrainingInstances &training_instances,
-                Real lambda, Real step_size) {
+Real function_and_gradient(LogBiLinearModel& model,
+                           int start, int end, const Corpus& training_corpus,
+                           Real lambda,
+                           LogBiLinearModel::WeightsType& gradient,
+                           Real* gradient_data, 
+                           Real& wnorm, Real& gnorm) {
   Real f=0;
   WordId start_id = model.label_set().Convert("<s>");
 
   int word_width = model.config.word_representation_size;
   int context_width = model.config.ngram_order-1;
+  int num_words = model.labels();
+
+  int R_size = num_words*word_width;
+  int Q_size = R_size;
+  int C_size = word_width*word_width;
+  int B_size = num_words;
+
+  assert((R_size+Q_size+context_width*C_size+B_size) == model.num_weights());
+
+  LogBiLinearModel::WordVectorsType g_R(gradient_data, num_words, word_width);
+  LogBiLinearModel::WordVectorsType g_Q(gradient_data+R_size, num_words, word_width);
+
+  LogBiLinearModel::ContextTransformsType g_C;
+  Real* ptr = gradient_data+2*R_size;
+  for (int i=0; i<context_width; i++) {
+    g_C.push_back(LogBiLinearModel::ContextTransformType(ptr, word_width, word_width));
+    ptr += C_size;
+  }
+
+  LogBiLinearModel::WeightsType g_B(ptr, num_words);
 
   // cache the products of Q with the contexts 
   std::vector<MatrixReal> q_context_products(context_width);
@@ -322,9 +284,9 @@ Real sgd_update(LogBiLinearModel& model,
     q_context_products.at(i) = model.Q * model.C.at(i);
 
   // cache the partition functions
-  std::vector<VectorReal> log_partition_functions(context_width);
+  std::vector<VectorReal> log_partition_functions(context_width, VectorReal(num_words));
+  std::vector<MatrixReal> expected_representations(context_width, MatrixReal(num_words, context_width));
   for (int i=0; i<context_width; i++) { // O(context_width * |v|^2)
-    log_partition_functions[i] = VectorReal(model.labels());
     for (int q=0; q<model.labels(); ++q) { // O(|v|^2)
       VectorReal logProbs = model.R * q_context_products[i].row(q).transpose();// + model.B;
       Real max_logProb = logProbs.maxCoeff();
@@ -333,15 +295,14 @@ Real sgd_update(LogBiLinearModel& model,
       assert(isfinite(logProbs_z));
       logProbs.array() -= logProbs_z;
 
-      log_partition_functions[i].row(q) = logProbs_z;
+      log_partition_functions[i](q) = logProbs_z;
 
       // model update component
       VectorReal probs = logProbs.array().exp();
 
-//      for (int r=0; r<model.labels(); ++r) {
-//        g_R.row(r) += (probs[r]*q_context_products[i].row(q));
-//      }
-      g_R += (probs * q_context_products[i].row(q)); // O(|v|)
+      VectorReal expected_features = (probs * q_context_products[i].row(q)); // O(|v|)
+      g_R += expected_features;
+      expected_representations[i].row(q) = expected_features.colwise().sum();
     }
   }
 
