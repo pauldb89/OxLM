@@ -63,7 +63,7 @@ void LogBiLinearModel::init(const ModelData& config, const Dict& labels, bool in
     for (int i=0; i<context_width; i++) {
       C.push_back(ContextTransformType(ptr, word_width, word_width));
       ptr += C_size;
-      //     C.back().setIdentity();
+           C.back().setIdentity();
       //      C.back().setZero();
     }
 
@@ -76,9 +76,9 @@ void LogBiLinearModel::init(const ModelData& config, const Dict& labels, bool in
     //Q.setIdentity();
     //Q.setZero();
     //B.setOnes();
-    //    R << 0,0,0,1 , 0,0,1,0 , 0,1,0,0 , 1,0,0,0; 
+        R << 0,0,0,1 , 0,0,1,0 , 0,1,0,0 , 1,0,0,0; 
     //    R << 0,0 , 0,0 , 0,1 , 1,0; 
-    //    Q << 0,0,0,1 , 0,0,1,0 , 0,1,0,0 , 1,0,0,0; 
+        Q << 0,0,0,1 , 0,0,1,0 , 0,1,0,0 , 1,0,0,0; 
     //    Q << 1,1 , 1,1 , 1,1 , 1,1; 
 
     assert(ptr+num_output_words == m_data+m_data_size); 

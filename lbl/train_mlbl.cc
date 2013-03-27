@@ -46,8 +46,7 @@ void learn(const variables_map& vm, const ModelData& config);
 Real function_and_gradient(LogBiLinearModel& model,
                            int start, int end, const Corpus& training_corpus,
                            Real lambda,
-                           LogBiLinearModel::WeightsType& gradient,
-                           Real* gradient_data, 
+                           LogBiLinearModel::WeightsType& gradient, Real* gradient_data, 
                            Real& wnorm, Real& gnorm);
 
 Real perplexity(const LogBiLinearModel& model, const Corpus& test_corpus, int stride=1);
@@ -70,14 +69,12 @@ int main(int argc, char **argv) {
     ;
   options_description generic("Allowed options");
   generic.add_options()
-    ("input,i", value<string>()->default_value("data.txt"), 
+    ("input,i", value<string>(), 
         "corpus of sentences, one per line")
     ("test-set", value<string>(), 
         "corpus of test sentences to be evaluated at each iteration")
     ("iterations", value<int>()->default_value(10), 
         "number of passes through the data")
-    ("minibatch-size", value<int>()->default_value(100), 
-        "number of sentences per minibatch")
     ("order,n", value<int>()->default_value(3), 
         "ngram order")
     ("model-in,m", value<string>(), 
@@ -87,7 +84,7 @@ int main(int argc, char **argv) {
     ("lambda,r", value<float>()->default_value(0.0), 
         "regularisation strength parameter")
     ("dump-frequency", value<int>()->default_value(0), 
-        "dump model every n minibatches.")
+        "dump model every n iterations.")
     ("label-sample-size,s", value<int>()->default_value(100), 
         "number of previous labels to cache for sampling the partition function.")
     ("word-width", value<int>()->default_value(100), 
@@ -96,8 +93,8 @@ int main(int argc, char **argv) {
         "number of worker threads.")
     ("test-tokens", value<int>()->default_value(10000), 
         "number of evenly space test points tokens evaluate.")
-    ("step-size", value<float>()->default_value(1.0), 
-        "SGD batch stepsize, it is normalised by the number of minibatches.")
+    ("gnorm-threshold", value<float>()->default_value(1.0), 
+        "Terminat LBFGS iterations if the gradient norm falls below this value.")
     ("verbose,v", "print perplexity for each sentence (1) or input token (2) ")
     ("randomise", "visit the training tokens in random order")
     ("uniform", "sample noise distribution from a uniform (default unigram) distribution.")
@@ -118,6 +115,10 @@ int main(int argc, char **argv) {
     cout << cmdline_options << "\n"; 
     return 1; 
   }
+  if (!vm.count("input")) { 
+    cout << cmdline_options << "\n"; 
+    return 1; 
+  }
 
   ModelData config;
   config.label_sample_size = vm["label-sample-size"].as<int>();
@@ -135,7 +136,6 @@ int main(int argc, char **argv) {
     cerr << "# model-in = " << vm["model-in"].as<string>() << endl;
   cerr << "# model-out = " << vm["model-out"].as<string>() << endl;
   cerr << "# input = " << vm["input"].as<string>() << endl;
-  cerr << "# minibatch-size = " << vm["minibatch-size"].as<int>() << endl;
   cerr << "# lambda = " << vm["lambda"].as<float>() << endl;
   cerr << "# label-sample-size = " << vm["label-sample-size"].as<int>() << endl;
   cerr << "# iterations = " << vm["iterations"].as<int>() << endl;
@@ -209,12 +209,13 @@ void learn(const variables_map& vm, const ModelData& config) {
   bool calc_g_and_f = true;
   int lbfgs_iteration = minimiser.iter();
   clock_t lbfgs_time=0, gradient_time=0;
-  while (lbfgs_iteration < vm["lbfgs-iterations"].as<int>() && gnorm > vm["gnorm-threshold"].as<float>()) {
+  while (lbfgs_iteration < vm["iterations"].as<int>() && gnorm > vm["gnorm-threshold"].as<float>()) {
     if (calc_g_and_f) {
       clock_t gradient_start = clock();
 
       gradient.setZero();
-      f = function_and_gradient(model, 0, training_corpus.size(), training_corpus, lambda, gradient, gradient_data, wnorm, gnorm);
+      f = function_and_gradient(model, 0, training_corpus.size(), training_corpus, lambda, 
+                                gradient, gradient_data, wnorm, gnorm);
       function_evaluations++;
       gradient_time += (clock() - gradient_start);
     }
@@ -232,8 +233,8 @@ void learn(const variables_map& vm, const ModelData& config) {
 
   minimiser.run(model.data(), f, gradient_data);
   if (vm.count("test-set"))
-    cerr << ", Test Perplexity = " << perplexity(model, test_corpus, test_corpus.size()/vm["test-tokens"].as<int>()); 
-  cerr << " |" << endl << endl;
+    cerr << " Test Perplexity = " << perplexity(model, test_corpus, test_corpus.size()/vm["test-tokens"].as<int>()) 
+         << endl;;
 
   if (vm.count("model-out")) {
     cout << "Writing trained model to " << vm["model-out"].as<string>() << endl;
@@ -252,6 +253,7 @@ Real function_and_gradient(LogBiLinearModel& model,
                            LogBiLinearModel::WeightsType& gradient,
                            Real* gradient_data, 
                            Real& wnorm, Real& gnorm) {
+  cerr << "function_and_gradient" << endl;
   Real f=0;
   WordId start_id = model.label_set().Convert("<s>");
 
@@ -280,32 +282,63 @@ Real function_and_gradient(LogBiLinearModel& model,
 
   // cache the products of Q with the contexts 
   std::vector<MatrixReal> q_context_products(context_width);
-  for (int i=0; i<context_width; i++)
+  for (int i=0; i < context_width; i++)
     q_context_products.at(i) = model.Q * model.C.at(i);
 
+  // model update component and
   // cache the partition functions
   std::vector<VectorReal> log_partition_functions(context_width, VectorReal(num_words));
   std::vector<MatrixReal> expected_representations(context_width, MatrixReal(num_words, context_width));
-  for (int i=0; i<context_width; i++) { // O(context_width * |v|^2)
-    for (int q=0; q<model.labels(); ++q) { // O(|v|^2)
-      VectorReal logProbs = model.R * q_context_products[i].row(q).transpose();// + model.B;
+  for (int i=0; i < context_width; i++) { // O(context_width * |v|^2)
+    for (int q=0; q < num_words; ++q) { // O(|v|^2)
+      VectorReal logProbs = model.R * q_context_products[i].row(q).transpose();// + model.B; 
       Real max_logProb = logProbs.maxCoeff();
       Real logProbs_z = log((logProbs.array() - max_logProb).exp().sum()) + max_logProb;
 
       assert(isfinite(logProbs_z));
       logProbs.array() -= logProbs_z;
-
       log_partition_functions[i](q) = logProbs_z;
 
-      // model update component
       VectorReal probs = logProbs.array().exp();
+      VectorReal expected_representation = (probs.transpose() * model.R); // O(|v| * word_width)
 
-      VectorReal expected_features = (probs * q_context_products[i].row(q)); // O(|v|)
-      g_R += expected_features;
-      expected_representations[i].row(q) = expected_features.colwise().sum();
+      // model expectations
+      g_R        += (probs * q_context_products[i].row(q)); // O(|v| * word_width)
+      g_Q.row(q) += (model.C.at(i) * expected_representation).transpose();
+      g_C.at(i)  += (model.Q.row(q).transpose() * expected_representation.transpose());
     }
   }
+  cerr << "g_R:\n" << g_R << endl;
+  cerr << "g_Q:\n" << g_Q << endl;
+  cerr << "g_C:\n";
+  for (auto C : g_C)
+    cerr << C << endl;
 
+  // data update component
+  for (size_t t=0; t < training_corpus.size(); ++t) {
+    WordId w = training_corpus.at(t);
+    int context_start = t - context_width;
+    for (int i=0; i<context_width; i++) {
+      int j=context_start+i;
+      int q = (j<0 ? start_id : training_corpus.at(j));
+
+      Real logProb = model.R.row(w) * q_context_products[i].row(q).transpose() 
+                     - log_partition_functions.at(i)(q);// + model.B; 
+      f += logProb;
+
+      // data expectations
+      g_R.row(w) -= q_context_products[i].row(q);
+      g_Q.row(q) -= (model.C.at(i) * model.R.row(w).transpose());
+      g_C.at(i)  -= (model.Q.row(q).transpose() * model.R.row(w));
+    }
+  }
+  cerr << "g_R:\n" << g_R << endl;
+  cerr << "g_Q:\n" << g_Q << endl;
+  cerr << "g_C:\n";
+  for (auto C : g_C)
+    cerr << C << endl;
+
+  cerr << "f=" << f;
 
   return f;
 }
