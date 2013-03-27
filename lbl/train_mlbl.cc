@@ -47,7 +47,7 @@ Real function_and_gradient(LogBiLinearModel& model,
                            int start, int end, const Corpus& training_corpus,
                            Real lambda,
                            LogBiLinearModel::WeightsType& gradient, Real* gradient_data, 
-                           Real& wnorm, Real& gnorm);
+                           Real& wnorm, Real& gnorm, const VectorReal& word_counts);
 
 Real perplexity(const LogBiLinearModel& model, const Corpus& test_corpus, int stride=1);
 
@@ -96,8 +96,6 @@ int main(int argc, char **argv) {
     ("gnorm-threshold", value<float>()->default_value(1.0), 
         "Terminat LBFGS iterations if the gradient norm falls below this value.")
     ("verbose,v", "print perplexity for each sentence (1) or input token (2) ")
-    ("randomise", "visit the training tokens in random order")
-    ("uniform", "sample noise distribution from a uniform (default unigram) distribution.")
     ;
   options_description config_options, cmdline_options;
   config_options.add(generic);
@@ -195,6 +193,10 @@ void learn(const variables_map& vm, const ModelData& config) {
     ar >> model;
   }
 
+  VectorReal word_freq = VectorReal::Zero(model.labels());
+  for (auto w : training_corpus)
+    word_freq(w) += 1;
+
   int num_weights = model.num_weights();
   Real* gradient_data = new Real[num_weights];
   LogBiLinearModel::WeightsType gradient(gradient_data, num_weights);
@@ -204,7 +206,7 @@ void learn(const variables_map& vm, const ModelData& config) {
 
   Real f=0.0, wnorm=0.0, gnorm=numeric_limits<Real>::max();
 
-  scitbx::lbfgs::minimizer<Real> minimiser(num_weights, 10);
+  scitbx::lbfgs::minimizer<Real> minimiser(num_weights, 50);
   int function_evaluations=0;
   bool calc_g_and_f = true;
   int lbfgs_iteration = minimiser.iter();
@@ -215,7 +217,7 @@ void learn(const variables_map& vm, const ModelData& config) {
 
       gradient.setZero();
       f = function_and_gradient(model, 0, training_corpus.size(), training_corpus, lambda, 
-                                gradient, gradient_data, wnorm, gnorm);
+                                gradient, gradient_data, wnorm, gnorm, word_freq);
       function_evaluations++;
       gradient_time += (clock() - gradient_start);
     }
@@ -252,8 +254,8 @@ Real function_and_gradient(LogBiLinearModel& model,
                            Real lambda,
                            LogBiLinearModel::WeightsType& gradient,
                            Real* gradient_data, 
-                           Real& wnorm, Real& gnorm) {
-  cerr << "function_and_gradient" << endl;
+                           Real& wnorm, Real& gnorm, const VectorReal& word_counts) {
+  cerr << "Function_and_gradient" << endl;
   Real f=0;
   WordId start_id = model.label_set().Convert("<s>");
 
@@ -281,14 +283,15 @@ Real function_and_gradient(LogBiLinearModel& model,
   LogBiLinearModel::WeightsType g_B(ptr, num_words);
 
   // cache the products of Q with the contexts 
+  cerr << "  - caching " << num_words << " Q products" << endl;
   std::vector<MatrixReal> q_context_products(context_width);
   for (int i=0; i < context_width; i++)
     q_context_products.at(i) = model.Q * model.C.at(i);
 
   // model update component and
   // cache the partition functions
+  cerr << "  - model update";
   std::vector<VectorReal> log_partition_functions(context_width, VectorReal(num_words));
-  std::vector<MatrixReal> expected_representations(context_width, MatrixReal(num_words, context_width));
   for (int i=0; i < context_width; i++) { // O(context_width * |v|^2)
     for (int q=0; q < num_words; ++q) { // O(|v|^2)
       VectorReal logProbs = model.R * q_context_products[i].row(q).transpose();// + model.B; 
@@ -303,18 +306,23 @@ Real function_and_gradient(LogBiLinearModel& model,
       VectorReal expected_representation = (probs.transpose() * model.R); // O(|v| * word_width)
 
       // model expectations
-      g_R        += (probs * q_context_products[i].row(q)); // O(|v| * word_width)
-      g_Q.row(q) += (model.C.at(i) * expected_representation).transpose();
-      g_C.at(i)  += (model.Q.row(q).transpose() * expected_representation.transpose());
+      Real q_freq = word_counts(q);
+      g_R        += (q_freq * probs * q_context_products[i].row(q)); // O(|v| * word_width)
+      g_Q.row(q) += (q_freq * model.C.at(i) * expected_representation).transpose();
+      g_C.at(i)  += (q_freq * model.Q.row(q).transpose() * expected_representation.transpose());
+
+      if (q % 1000 == 0) {cerr << "."; cerr.flush(); }
     }
   }
-  cerr << "g_R:\n" << g_R << endl;
-  cerr << "g_Q:\n" << g_Q << endl;
-  cerr << "g_C:\n";
-  for (auto C : g_C)
-    cerr << C << endl;
+  cerr << endl;
+//  cerr << "g_R:\n" << g_R << endl;
+//  cerr << "g_Q:\n" << g_Q << endl;
+//  cerr << "g_C:\n";
+//  for (auto C : g_C)
+//    cerr << C << endl;
 
   // data update component
+  cerr << "  - data update";
   for (size_t t=0; t < training_corpus.size(); ++t) {
     WordId w = training_corpus.at(t);
     int context_start = t - context_width;
@@ -324,21 +332,24 @@ Real function_and_gradient(LogBiLinearModel& model,
 
       Real logProb = model.R.row(w) * q_context_products[i].row(q).transpose() 
                      - log_partition_functions.at(i)(q);// + model.B; 
-      f += logProb;
+      f -= logProb;
 
       // data expectations
       g_R.row(w) -= q_context_products[i].row(q);
       g_Q.row(q) -= (model.C.at(i) * model.R.row(w).transpose());
       g_C.at(i)  -= (model.Q.row(q).transpose() * model.R.row(w));
+
+      if (t % 100000 == 0) {cerr << "."; cerr.flush(); }
     }
   }
-  cerr << "g_R:\n" << g_R << endl;
-  cerr << "g_Q:\n" << g_Q << endl;
-  cerr << "g_C:\n";
-  for (auto C : g_C)
-    cerr << C << endl;
+  cerr << endl;
+//  cerr << "g_R:\n" << g_R << endl;
+//  cerr << "g_Q:\n" << g_Q << endl;
+//  cerr << "g_C:\n";
+//  for (auto C : g_C)
+//    cerr << C << endl;
 
-  cerr << "f=" << f;
+  cerr << "f=" << f << endl;
 
   return f;
 }
