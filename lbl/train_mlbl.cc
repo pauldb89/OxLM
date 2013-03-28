@@ -204,12 +204,20 @@ void learn(const variables_map& vm, const ModelData& config) {
 
   Real f=0.0, wnorm=0.0, gnorm=numeric_limits<Real>::max();
 
-  scitbx::lbfgs::minimizer<Real> minimiser(num_weights, 50);
+  scitbx::lbfgs::minimizer<Real>* minimiser = new scitbx::lbfgs::minimizer<Real>(num_weights, 20);
   int function_evaluations=0;
   bool calc_g_and_f = true;
-  int lbfgs_iteration = minimiser.iter();
+  int lbfgs_iteration = minimiser->iter();
   clock_t lbfgs_time=0, gradient_time=0;
+/*
   while (lbfgs_iteration < vm["iterations"].as<int>() && gnorm > vm["gnorm-threshold"].as<float>()) {
+    if (lbfgs_iteration % 50 == 0 && lbfgs_iteration != 0) {
+      delete minimiser;
+      minimiser = new scitbx::lbfgs::minimizer<Real>(num_weights, 20);
+      calc_g_and_f = true;
+      cerr << " -- reset lbfgs history -- " << std::endl;
+    }
+
     if (calc_g_and_f) {
       clock_t gradient_start = clock();
 
@@ -231,16 +239,32 @@ void learn(const variables_map& vm, const ModelData& config) {
       cerr << ")\n";
 
     clock_t lbfgs_start=clock();
-    calc_g_and_f = minimiser.run(model.data(), f, gradient_data);
-    lbfgs_iteration = minimiser.iter();
+    calc_g_and_f = minimiser->run(model.data(), f, gradient_data);
+    lbfgs_iteration = minimiser->iter();
     lbfgs_time += (clock() - lbfgs_start);
   }
 
-  minimiser.run(model.data(), f, gradient_data);
+  minimiser->run(model.data(), f, gradient_data);
+*/
+  for (int lbfgs_iteration=0; lbfgs_iteration < vm["iterations"].as<int>(); ++lbfgs_iteration) {
+      gradient.setZero();
+      f = function_and_gradient(model, 0, training_corpus.size(), training_corpus, lambda, 
+                                gradient, gradient_data, wnorm, gnorm, word_freq);
+
+      function_evaluations++;
+      cerr << "  (" << lbfgs_iteration+1 << "." << function_evaluations << ":" 
+        << "f=" << f << ",|w|=" << wnorm << ",|g|=" << gnorm;
+      cerr << ", Test Perplexity = " 
+           << perplexity(model, test_corpus, test_corpus.size()/vm["test-tokens"].as<int>())
+           << ")\n";
+
+      model.W = model.W - (0.00002*gradient);
+  }
+
   if (vm.count("test-set"))
     cerr << "  Final Test Perplexity = " 
-         << perplexity(model, test_corpus, test_corpus.size()/vm["test-tokens"].as<int>()) 
-         << endl;
+      << perplexity(model, test_corpus, test_corpus.size()/vm["test-tokens"].as<int>()) 
+      << endl;
 
   if (vm.count("model-out")) {
     cout << "Writing trained model to " << vm["model-out"].as<string>() << endl;
@@ -294,9 +318,8 @@ Real function_and_gradient(LogBiLinearModel& model,
 
   // cache the partition functions
   cerr << "  - caching Z(w)";
-  boost::progress_display show_progress( context_width*num_words, std::cerr, "\n  ", "  ", "  ");
+  boost::progress_display show_progress(context_width*num_words, std::cerr, "\n  ", "  ", "  ");
   std::vector<VectorReal> log_partition_functions(context_width, VectorReal(num_words));
-  std::vector<MatrixReal> expected_representations(context_width, MatrixReal(num_words, context_width));
   for (int i=0; i < context_width; i++) { // O(context_width * |v|^2)
     for (int q=0; q < num_words; ++q) { // O(|v|^2)
       VectorReal logProbs = model.R * q_context_products[i].row(q).transpose() + model.B; 
@@ -304,7 +327,6 @@ Real function_and_gradient(LogBiLinearModel& model,
       Real logProbs_z = log((logProbs.array() - max_logProb).exp().sum()) + max_logProb;
 
       assert(isfinite(logProbs_z));
-//      logProbs.array() -= logProbs_z;
       log_partition_functions[i](q) = logProbs_z;
       ++show_progress;
     }
@@ -326,14 +348,15 @@ Real function_and_gradient(LogBiLinearModel& model,
       int q = (j<0 ? start_id : training_corpus.at(j));
       logProbs(i) = model.R.row(w) * q_context_products[i].row(q).transpose() + model.B(w)
                     - log_partition_functions.at(i)(q); 
-      f -= (logProbs(i) - log(context_width));
     }
+    f -= (log(logProbs.array().exp().sum()) - log(context_width));
 
     // calculate the mixture contributions
     Real max_logProb = logProbs.maxCoeff();
     Real logProbs_z = log((logProbs.array() - max_logProb).exp().sum()) + max_logProb;
     VectorReal contributions = (logProbs.array() - logProbs_z).exp();
-//    contributions = VectorReal::Ones(context_width);
+// cerr << contributions.transpose() << endl << endl;;
+// contributions = VectorReal::Zero(context_width).array() + 0.5;
 
     // do the data gradient update
     for (int i=0; i<context_width; i++) {
@@ -343,10 +366,10 @@ Real function_and_gradient(LogBiLinearModel& model,
       context_expectations.at(i)(q) += contributions(i);
 
       // data expectations
-      g_R.row(w) -= contributions(i) * q_context_products[i].row(q);
-      g_Q.row(q) -= contributions(i) * (model.C.at(i) * model.R.row(w).transpose());
-      g_C.at(i)  -= contributions(i) * (model.Q.row(q).transpose() * model.R.row(w));
-      g_B(w)     -= contributions(i);
+      g_R.row(w) -= (contributions(i) * q_context_products[i].row(q));
+      g_Q.row(q) -= (contributions(i) * (model.C.at(i) * model.R.row(w).transpose()));
+      g_C.at(i)  -= (contributions(i) * (model.Q.row(q).transpose() * model.R.row(w)));
+      g_B(w)     -=  contributions(i);
 
 //      if (t % 100000 == 0) {cerr << "."; cerr.flush(); }
       ++show_progress;
@@ -368,14 +391,11 @@ Real function_and_gradient(LogBiLinearModel& model,
       VectorReal probs = (logProbs.array() - log_partition_functions[i](q)).exp();
       VectorReal expected_representation = (probs.transpose() * model.R); // O(|v| * word_width)
 
-//      expected_representations[i].row(q) = (probs.transpose() * model.R); // O(|v| * word_width)
-//      VectorReal expected_representation = expected_representations[i].row(q);
-
       // model expectations
       Real q_freq = context_expectations[i](q);
-      g_R        += (q_freq * probs * q_context_products[i].row(q)); // O(|v| * word_width)
-      g_Q.row(q) += (q_freq * model.C.at(i) * expected_representation).transpose();
-      g_C.at(i)  += (q_freq * model.Q.row(q).transpose() * expected_representation.transpose());
+      g_R        += (q_freq * (probs * q_context_products[i].row(q))); // O(|v| * word_width)
+      g_Q.row(q) += (q_freq * (model.C.at(i) * expected_representation).transpose());
+      g_C.at(i)  += (q_freq * (model.Q.row(q).transpose() * expected_representation.transpose()));
       g_B        += (q_freq * probs);
 
 //      if (q % 1000 == 0) {cerr << "."; cerr.flush(); }
