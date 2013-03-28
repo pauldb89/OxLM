@@ -115,7 +115,7 @@ int main(int argc, char** argv) {
   auto count=0;
   for (int sample=0; sample < samples; ++sample) {
     for (const auto& s : corpuse) {
-      if (count++ % 1000 == 999) cerr << '.' << flush;
+      if (count++ % 100 == 99) cerr << '.' << flush;
       ctx.resize(kORDER - 1);
       for (size_t i = 0; i <= s.size(); ++i) {
         WordId w = (i < s.size() ? s[i] : kEOS);

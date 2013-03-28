@@ -18,6 +18,7 @@
 #include <boost/random.hpp>
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
+#include <boost/progress.hpp>
 
 // Eigen
 #include <Eigen/Dense>
@@ -85,8 +86,6 @@ int main(int argc, char **argv) {
         "regularisation strength parameter")
     ("dump-frequency", value<int>()->default_value(0), 
         "dump model every n iterations.")
-    ("label-sample-size,s", value<int>()->default_value(100), 
-        "number of previous labels to cache for sampling the partition function.")
     ("word-width", value<int>()->default_value(100), 
         "Width of word representation vectors.")
     ("threads", value<int>()->default_value(1), 
@@ -119,7 +118,6 @@ int main(int argc, char **argv) {
   }
 
   ModelData config;
-  config.label_sample_size = vm["label-sample-size"].as<int>();
   config.l2_parameter = vm["lambda"].as<float>();
   config.word_representation_size = vm["word-width"].as<int>();
   config.threads = vm["threads"].as<int>();
@@ -135,7 +133,6 @@ int main(int argc, char **argv) {
   cerr << "# model-out = " << vm["model-out"].as<string>() << endl;
   cerr << "# input = " << vm["input"].as<string>() << endl;
   cerr << "# lambda = " << vm["lambda"].as<float>() << endl;
-  cerr << "# label-sample-size = " << vm["label-sample-size"].as<int>() << endl;
   cerr << "# iterations = " << vm["iterations"].as<int>() << endl;
   cerr << "# threads = " << vm["threads"].as<int>() << endl;
   cerr << "################################" << endl;
@@ -196,6 +193,7 @@ void learn(const variables_map& vm, const ModelData& config) {
   VectorReal word_freq = VectorReal::Zero(model.labels());
   for (auto w : training_corpus)
     word_freq(w) += 1;
+  model.B = ((word_freq.array()+1.0)/(word_freq.sum()+word_freq.size())).log();
 
   int num_weights = model.num_weights();
   Real* gradient_data = new Real[num_weights];
@@ -224,8 +222,13 @@ void learn(const variables_map& vm, const ModelData& config) {
 
     if (lbfgs_iteration == 0 || (!calc_g_and_f )) {
       cerr << "  (" << lbfgs_iteration+1 << "." << function_evaluations << ":" 
-        << "f=" << f << ",|w|=" << wnorm << ",|g|=" << gnorm << ")\n";
+        << "f=" << f << ",|w|=" << wnorm << ",|g|=" << gnorm;
     }
+    if (vm.count("test-set") && !calc_g_and_f)
+      cerr << ", Test Perplexity = " 
+        << perplexity(model, test_corpus, test_corpus.size()/vm["test-tokens"].as<int>());
+    if (lbfgs_iteration == 0 || (!calc_g_and_f ))
+      cerr << ")\n";
 
     clock_t lbfgs_start=clock();
     calc_g_and_f = minimiser.run(model.data(), f, gradient_data);
@@ -235,8 +238,9 @@ void learn(const variables_map& vm, const ModelData& config) {
 
   minimiser.run(model.data(), f, gradient_data);
   if (vm.count("test-set"))
-    cerr << " Test Perplexity = " << perplexity(model, test_corpus, test_corpus.size()/vm["test-tokens"].as<int>()) 
-         << endl;;
+    cerr << "  Final Test Perplexity = " 
+         << perplexity(model, test_corpus, test_corpus.size()/vm["test-tokens"].as<int>()) 
+         << endl;
 
   if (vm.count("model-out")) {
     cout << "Writing trained model to " << vm["model-out"].as<string>() << endl;
@@ -288,58 +292,64 @@ Real function_and_gradient(LogBiLinearModel& model,
   for (int i=0; i < context_width; i++)
     q_context_products.at(i) = model.Q * model.C.at(i);
 
-  // model update component and
   // cache the partition functions
-  cerr << "  - model update";
+  cerr << "  - caching Z(w)";
+  boost::progress_display show_progress( context_width*num_words, std::cerr, "\n  ", "  ", "  ");
   std::vector<VectorReal> log_partition_functions(context_width, VectorReal(num_words));
+  std::vector<MatrixReal> expected_representations(context_width, MatrixReal(num_words, context_width));
   for (int i=0; i < context_width; i++) { // O(context_width * |v|^2)
     for (int q=0; q < num_words; ++q) { // O(|v|^2)
-      VectorReal logProbs = model.R * q_context_products[i].row(q).transpose();// + model.B; 
+      VectorReal logProbs = model.R * q_context_products[i].row(q).transpose() + model.B; 
       Real max_logProb = logProbs.maxCoeff();
       Real logProbs_z = log((logProbs.array() - max_logProb).exp().sum()) + max_logProb;
 
       assert(isfinite(logProbs_z));
-      logProbs.array() -= logProbs_z;
+//      logProbs.array() -= logProbs_z;
       log_partition_functions[i](q) = logProbs_z;
-
-      VectorReal probs = logProbs.array().exp();
-      VectorReal expected_representation = (probs.transpose() * model.R); // O(|v| * word_width)
-
-      // model expectations
-      Real q_freq = word_counts(q);
-      g_R        += (q_freq * probs * q_context_products[i].row(q)); // O(|v| * word_width)
-      g_Q.row(q) += (q_freq * model.C.at(i) * expected_representation).transpose();
-      g_C.at(i)  += (q_freq * model.Q.row(q).transpose() * expected_representation.transpose());
-
-      if (q % 1000 == 0) {cerr << "."; cerr.flush(); }
+      ++show_progress;
     }
   }
   cerr << endl;
-//  cerr << "g_R:\n" << g_R << endl;
-//  cerr << "g_Q:\n" << g_Q << endl;
-//  cerr << "g_C:\n";
-//  for (auto C : g_C)
-//    cerr << C << endl;
 
   // data update component
   cerr << "  - data update";
+  show_progress.restart(training_corpus.size()*context_width);
+  VectorReal logProbs(context_width);
+  std::vector<VectorReal> context_expectations(context_width, VectorReal::Zero(num_words));
   for (size_t t=0; t < training_corpus.size(); ++t) {
     WordId w = training_corpus.at(t);
     int context_start = t - context_width;
+
+    // calculate the log-probabilities
+    for (int i=0; i<context_width; i++) {
+      int j=context_start+i;
+      int q = (j<0 ? start_id : training_corpus.at(j));
+      logProbs(i) = model.R.row(w) * q_context_products[i].row(q).transpose() + model.B(w)
+                    - log_partition_functions.at(i)(q); 
+      f -= (logProbs(i) - log(context_width));
+    }
+
+    // calculate the mixture contributions
+    Real max_logProb = logProbs.maxCoeff();
+    Real logProbs_z = log((logProbs.array() - max_logProb).exp().sum()) + max_logProb;
+    VectorReal contributions = (logProbs.array() - logProbs_z).exp();
+//    contributions = VectorReal::Ones(context_width);
+
+    // do the data gradient update
     for (int i=0; i<context_width; i++) {
       int j=context_start+i;
       int q = (j<0 ? start_id : training_corpus.at(j));
 
-      Real logProb = model.R.row(w) * q_context_products[i].row(q).transpose() 
-                     - log_partition_functions.at(i)(q);// + model.B; 
-      f -= logProb;
+      context_expectations.at(i)(q) += contributions(i);
 
       // data expectations
-      g_R.row(w) -= q_context_products[i].row(q);
-      g_Q.row(q) -= (model.C.at(i) * model.R.row(w).transpose());
-      g_C.at(i)  -= (model.Q.row(q).transpose() * model.R.row(w));
+      g_R.row(w) -= contributions(i) * q_context_products[i].row(q);
+      g_Q.row(q) -= contributions(i) * (model.C.at(i) * model.R.row(w).transpose());
+      g_C.at(i)  -= contributions(i) * (model.Q.row(q).transpose() * model.R.row(w));
+      g_B(w)     -= contributions(i);
 
-      if (t % 100000 == 0) {cerr << "."; cerr.flush(); }
+//      if (t % 100000 == 0) {cerr << "."; cerr.flush(); }
+      ++show_progress;
     }
   }
   cerr << endl;
@@ -348,6 +358,37 @@ Real function_and_gradient(LogBiLinearModel& model,
 //  cerr << "g_C:\n";
 //  for (auto C : g_C)
 //    cerr << C << endl;
+
+  // model update component and
+  cerr << "  - model update";
+  show_progress.restart(context_width*num_words);
+  for (int i=0; i < context_width; i++) { // O(context_width * |v|^2)
+    for (int q=0; q < num_words; ++q) { // O(|v|^2)
+      VectorReal logProbs = model.R * q_context_products[i].row(q).transpose() + model.B; 
+      VectorReal probs = (logProbs.array() - log_partition_functions[i](q)).exp();
+      VectorReal expected_representation = (probs.transpose() * model.R); // O(|v| * word_width)
+
+//      expected_representations[i].row(q) = (probs.transpose() * model.R); // O(|v| * word_width)
+//      VectorReal expected_representation = expected_representations[i].row(q);
+
+      // model expectations
+      Real q_freq = context_expectations[i](q);
+      g_R        += (q_freq * probs * q_context_products[i].row(q)); // O(|v| * word_width)
+      g_Q.row(q) += (q_freq * model.C.at(i) * expected_representation).transpose();
+      g_C.at(i)  += (q_freq * model.Q.row(q).transpose() * expected_representation.transpose());
+      g_B        += (q_freq * probs);
+
+//      if (q % 1000 == 0) {cerr << "."; cerr.flush(); }
+      ++show_progress;
+    }
+  }
+  cerr << endl;
+//  cerr << "g_R:\n" << g_R << endl;
+//  cerr << "g_Q:\n" << g_Q << endl;
+//  cerr << "g_C:\n";
+//  for (auto C : g_C)
+//    cerr << C << endl;
+
 
   cerr << "f=" << f << endl;
 
@@ -398,6 +439,6 @@ Real perplexity(const LogBiLinearModel& model, const Corpus& test_corpus, int st
       tokens++;
     }
   }
-  cerr << ", Average log_z = " << log_z_sum / tokens;
+//  cerr << ", Average log_z = " << log_z_sum / tokens;
   return exp(-p/tokens);
 }

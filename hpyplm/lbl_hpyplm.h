@@ -23,10 +23,9 @@ template <unsigned N> struct LBL_PYPLM;
 
 template<> struct LBL_PYPLM<0> : public UniformVocabulary {
   LBL_PYPLM(const LogBiLinearModel& m, double a, double b, double c, double d,
-            MatrixRealPtr pc, VectorRealPtr zc)
-    : UniformVocabulary(m.labels(), a, b, c, d), probs_cache(pc), z_cache(zc), 
+            MatrixRealPtr pc)
+    : UniformVocabulary(m.labels(), a, b, c, d), probs_cache(pc),
       p0_array(ArrayReal::Ones(m.labels())*p0) {
-//      (*z_cache)(0) = m.B.exp().sum();
       double log_z=Log<double>::zero();
       for (WordId r=0; r < m.labels(); ++r)
         log_z = Log<double>::add(log_z, m.B(r));
@@ -42,7 +41,6 @@ template<> struct LBL_PYPLM<0> : public UniformVocabulary {
   void recursive_probs(const std::vector<WordId>& context) const {}
 
   MatrixRealPtr probs_cache;
-  VectorRealPtr z_cache;
   ArrayReal p0_array;
 };
 
@@ -56,8 +54,8 @@ template <unsigned N> struct LBL_PYPLM {
 
   explicit LBL_PYPLM(const LogBiLinearModel& m, 
                      double da = 1.0, double db = 1.0, double ss = 1.0, double sr = 1.0) 
-    : probs_cache(new MatrixReal(N+1,m.labels())), z_cache(new VectorReal(N+1)),
-      backoff(m, da, db, ss, sr, probs_cache, z_cache), tr(da, db, ss, sr, 0.8, 0.0), 
+    : probs_cache(new MatrixReal(N+1,m.labels())),
+      backoff(m, da, db, ss, sr, probs_cache), tr(da, db, ss, sr, 0.8, 0.0), 
       lookup(N-1), singleton_crp(0.8,0), lbl_model(m) {
       assert(lbl_model.config.ngram_order >= (int)N);
       pyp::MT19937 eng;
@@ -68,15 +66,15 @@ template <unsigned N> struct LBL_PYPLM {
 
   explicit LBL_PYPLM(const LogBiLinearModel& m, 
                      double da, double db, double ss, double sr,
-                     MatrixRealPtr pc, VectorRealPtr zc)
-    : probs_cache(pc), z_cache(zc), backoff(m, da, db, ss, sr, pc, zc), tr(da, db, ss, sr, 0.8, 0.0), 
+                     MatrixRealPtr pc)
+    : probs_cache(pc), backoff(m, da, db, ss, sr, pc), tr(da, db, ss, sr, 0.8, 0.0), 
       lookup(N-1), singleton_crp(0.8,0), lbl_model(m) {
       assert(lbl_model.config.ngram_order >= (int)N);
       pyp::MT19937 eng;
       tr.insert(&singleton_crp);  // add to resampler
       singleton_crp.increment(0, 1.0, eng);
 
-      context_products = lbl_model.Q * lbl_model.C.at(N-1);
+      context_products = lbl_model.Q * lbl_model.C.at(N-1) * lbl_model.R.transpose();
     }
 
   template<typename Engine>
@@ -148,7 +146,9 @@ template <unsigned N> struct LBL_PYPLM {
   }
 
   double backoff_prob(WordId w, const std::vector<WordId>& context) const {
-    backoff.recursive_probs(context);
+    // the top level ngram populates the cache of probabilities
+    if (probs_cache->rows() == N+1)
+      backoff.recursive_probs(context);
     return (*probs_cache)(N-1,w);
   }
 
@@ -157,23 +157,27 @@ template <unsigned N> struct LBL_PYPLM {
     double log_z=Log<double>::zero();
     assert (context.size() >= N);
     WordId trigger=context.at(context.size()-N);
-    const VectorReal& trigger_vector=context_products.row(trigger);
+//    const VectorReal& trigger_vector=context_products.row(trigger);
 
 //    #pragma omp parallel for reduction(+:z)
+    double scale= -std::numeric_limits<double>::max();
     for (WordId r=0; r < lbl_model.labels(); ++r) {
-      double lbl_weight = lbl_model.R.row(r) * trigger_vector + log(prob(r, context, (*probs_cache)(N-1,r)));
+//      double lbl_weight = lbl_model.R.row(r) * trigger_vector + log(prob(r, context, (*probs_cache)(N-1,r)));
+      double lbl_weight = context_products(trigger,r) + log(prob(r, context, (*probs_cache)(N-1,r)));
       (*probs_cache)(N,r) = lbl_weight;
-      assert(!std::isnan((*probs_cache)(N,r)));
-      log_z = Log<double>::add(log_z, lbl_weight);
+      scale = std::max(lbl_weight, scale);
+//      assert(!std::isnan((*probs_cache)(N,r)));
+//      log_z = Log<double>::add(log_z, lbl_weight);
     }
-    (*probs_cache).row(N).array() -= log_z;
-    (*probs_cache).row(N) = (*probs_cache).row(N).array().exp();
+    log_z=0.0;
     for (WordId r=0; r < lbl_model.labels(); ++r)
-      assert(!std::isnan((*probs_cache)(N,r)));
-//    for (WordId r=0; r < lbl_model.labels(); ++r) {
-//      (*probs_cache)(N,r) = lbl_weight * prob(r, context, (*probs_cache)(N-1,r));
+      log_z += exp((*probs_cache)(N,r)-scale);
 
-    (*z_cache)(N) = exp(log_z);
+    for (WordId r=0; r < lbl_model.labels(); ++r)
+      (*probs_cache)(N,r) = std::exp((*probs_cache)(N,r) - log_z + scale);
+
+//    (*probs_cache).row(N).array() -= log_z;
+//    (*probs_cache).row(N) = (*probs_cache).row(N).array().exp();
   }
 
   double log_likelihood() const {
@@ -214,7 +218,6 @@ template <unsigned N> struct LBL_PYPLM {
 
 private:
   MatrixRealPtr probs_cache;
-  VectorRealPtr z_cache;
   MatrixReal    context_products;
 
 public:
