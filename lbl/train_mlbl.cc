@@ -56,6 +56,12 @@ Real function_and_gradient(LogBiLinearModelMixture& model,
 Real perplexity(const LogBiLinearModelMixture& model, const Corpus& test_corpus, int stride=1);
 
 
+inline VectorReal softMax(const VectorReal& v) {
+  Real max = v.maxCoeff();
+  return (v.array() - (log((v.array() - max).exp().sum()) + max)).exp();
+}
+
+
 int main(int argc, char **argv) {
   cout << "LBFGS optimisation for a mixture of log-bilinear models: Copyright 2013 Phil Blunsom, " 
        << REVISION << '\n' << endl;
@@ -338,8 +344,9 @@ Real function_and_gradient(LogBiLinearModelMixture& model,
   int Q_size = R_size;
   int C_size = word_width*word_width;
   int B_size = num_words;
+  int M_size = context_width;
 
-  assert((R_size+Q_size+context_width*C_size+B_size) == model.num_weights());
+  assert((R_size+Q_size+context_width*C_size+B_size+M_size) == model.num_weights());
 
   LogBiLinearModelMixture::WordVectorsType g_R(gradient_data, num_words, word_width);
   LogBiLinearModelMixture::WordVectorsType g_Q(gradient_data+R_size, num_words, word_width);
@@ -352,12 +359,16 @@ Real function_and_gradient(LogBiLinearModelMixture& model,
   }
 
   LogBiLinearModelMixture::WeightsType g_B(ptr, num_words);
+  LogBiLinearModelMixture::WeightsType g_M(ptr+num_words, context_width);
 
   // cache the products of Q with the contexts 
   cerr << "  - caching " << num_words << " Q products" << endl;
   std::vector<MatrixReal> q_context_products(context_width);
   for (int i=0; i < context_width; i++)
     q_context_products.at(i) = model.Q * model.C.at(i);
+
+  // cache the mixture weights
+  VectorReal pM = softMax(model.M);
 
   // cache the partition functions
   cerr << "  - caching Z(w)";
@@ -394,15 +405,19 @@ Real function_and_gradient(LogBiLinearModelMixture& model,
     for (int i=0; i<context_width; i++) {
       int j=context_start+i;
       int q = (j<0 ? start_id : training_corpus.at(j));
-      logProbs(i) = model.R.row(w) * q_context_products[i].row(q).transpose() + model.B(w)
-                    - log_partition_functions.at(i)(q); 
+      logProbs(i) = exp(model.R.row(w) * q_context_products[i].row(q).transpose() + model.B(w)
+                    - log_partition_functions.at(i)(q));
+      logProbs(i) *= pM(i);
     }
-    f -= (log(logProbs.array().exp().sum()) - log(context_width));
+    //f -= (log(logProbs.array().exp().sum()));
+    f -= log(logProbs.sum());
 
     // calculate the mixture contributions
-    Real max_logProb = logProbs.maxCoeff();
-    Real logProbs_z = log((logProbs.array() - max_logProb).exp().sum()) + max_logProb;
-    VectorReal contributions = (logProbs.array() - logProbs_z).exp();
+    Real contributions_z = logProbs.sum();
+    VectorReal contributions = logProbs.array()/contributions_z;
+//    Real max_logProb = logProbs.maxCoeff();
+//    Real logProbs_z = log((logProbs.array() - max_logProb).exp().sum()) + max_logProb;
+//    VectorReal contributions = (logProbs.array() - logProbs_z).exp();
 // cerr << contributions.transpose() << endl << endl;;
 // contributions = VectorReal::Zero(context_width).array() + 0.5;
 
@@ -418,6 +433,8 @@ Real function_and_gradient(LogBiLinearModelMixture& model,
       g_Q.row(q) -= (contributions(i) * (model.C.at(i) * model.R.row(w).transpose()));
       g_C.at(i)  -= (contributions(i) * (model.Q.row(q).transpose() * model.R.row(w)));
       g_B(w)     -=  contributions(i);
+
+      g_M(i)     -=  (contributions(i) - pM(i));
 
 //      if (t % 100000 == 0) {cerr << "."; cerr.flush(); }
       ++show_progress;
@@ -461,6 +478,8 @@ Real function_and_gradient(LogBiLinearModelMixture& model,
   }
 
 
+  cerr << "Model M: " << pM.transpose() << endl;
+  cerr << "g_M:     " << g_M.transpose() << endl;
   cerr << "f=" << f << endl;
 
   return f;

@@ -82,13 +82,13 @@ public:
   WeightsType           B;
   WeightsType           W;
 
-private:
+protected:
+  LogBiLinearModel() : R(0,0,0), Q(0,0,0), B(0,0), W(0,0) {}
+
   virtual void init(const ModelData& config, const Dict& labels, bool init_weights=false);
   virtual void allocate_data(const ModelData& config);
 
   Dict m_labels;
-
-protected:
   int m_data_size;
   Real* m_data;
 };

@@ -79,7 +79,7 @@ void LogBiLinearModel::init(const ModelData& config, const Dict& labels, bool in
   //    Q << 0,0,0,1 , 0,0,1,0 , 0,1,0,0 , 1,0,0,0; 
   //    Q << 1,1 , 1,1 , 1,1 , 1,1; 
 
-  assert(ptr+num_output_words == m_data+m_data_size); 
+//  assert(ptr+num_output_words == m_data+m_data_size); 
 
 #pragma omp master
   if (false) {
@@ -110,10 +110,12 @@ void LogBiLinearModel::allocate_data(const ModelData& config) {
 }
 
 
-LogBiLinearModelMixture::LogBiLinearModelMixture(const ModelData& config, const Dict& labels)
-  : LogBiLinearModel(config, labels), M(0,0) {
-  int context_width = config.ngram_order-1;
-  new (&M) WeightsType(m_data+(m_data_size-context_width), context_width);
+LogBiLinearModelMixture::LogBiLinearModelMixture(const ModelData& c, const Dict& labels) : M(0,0) {
+    config = c;
+    m_labels = labels;
+    init(config, m_labels, true);
+    int context_width = config.ngram_order-1;
+    new (&M) WeightsType(m_data+(m_data_size-context_width), context_width);
 }
 
 void LogBiLinearModelMixture::allocate_data(const ModelData& config) {
