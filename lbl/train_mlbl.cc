@@ -497,6 +497,9 @@ Real perplexity(const LogBiLinearModelMixture& model, const Corpus& test_corpus,
   for (int i=0; i<context_width; i++)
     q_context_products.at(i) = model.Q * model.C.at(i);
 
+  // cache the mixture weights
+  VectorReal pM = softMax(model.M);
+
   int tokens=0;
   WordId start_id = model.label_set().Lookup("<s>");
   #pragma omp parallel \
@@ -517,10 +520,10 @@ Real perplexity(const LogBiLinearModelMixture& model, const Corpus& test_corpus,
         ArrayReal score_vector = model.R * q_context_products[i].row(v_i).transpose() + model.B;
         Real max_score = score_vector.maxCoeff();
         Real log_z = log((score_vector-max_score).exp().sum()) + max_score;
-        p_sum += exp(score_vector(w) - log_z);
+        p_sum += (pM(i) * exp(score_vector(w) - log_z));
       }
       
-      p += log(p_sum/context_width);
+      p += log(p_sum);
       tokens++;
     }
   }
