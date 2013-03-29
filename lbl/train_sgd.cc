@@ -18,6 +18,8 @@
 #include <boost/random.hpp>
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/archive/binary_iarchive.hpp>
 
 // Eigen
 #include <Eigen/Dense>

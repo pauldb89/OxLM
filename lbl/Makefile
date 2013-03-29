@@ -1,9 +1,11 @@
 LOCAL_LIBS=${HOME}/packages
 CXXFLAGS = -g -std=c++0x -fopenmp -O3 -Wall -I.. -I${LOCAL_LIBS}/include -m64 -I/usr/include/eigen3
-LDFLAGS = -g -std=c++0x -fopenmp -O3 -L${LOCAL_LIBS}/lib64 -L${LOCAL_LIBS}/lib -lboost_program_options -lboost_serialization
+LDFLAGS = -g -std=c++0x -fopenmp -O3 -L${LOCAL_LIBS}/lib64 -L${LOCAL_LIBS}/lib -lboost_program_options -lboost_serialization -lgfortran
+FFLAGS = -Wall -g -O3
 CXX=g++
+FC=gfortran
 
-local_objs = log_bilinear_model.o 
+local_objs = log_bilinear_model.o lbfgs.o lbfgs_wrapper.o
 
 all: train_sgd train_clbl train_mlbl
 
@@ -27,6 +29,9 @@ train_mlbl: train_mlbl.o $(local_objs)
 
 %.o: %.c
 	${CC} $(CFLAGS) -c $< -o $@
+
+%.o: %.f
+	$(FC) $(FFLAGS) -c $< -o $@
 
 .PHONY: depend echo
 depend:

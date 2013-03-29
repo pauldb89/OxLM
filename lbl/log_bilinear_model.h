@@ -32,7 +32,7 @@ public:
   LogBiLinearModel(const ModelData& config, const Dict& labels);
   LogBiLinearModel(const LogBiLinearModel& model);
 
-  ~LogBiLinearModel() { delete [] m_data; }
+  virtual ~LogBiLinearModel() { delete [] m_data; }
 
   int output_types() const { return config.classes > 0 ? config.classes : m_labels.size(); }
   int context_types() const { return m_labels.size(); }
@@ -83,12 +83,25 @@ public:
   WeightsType           W;
 
 private:
-  void init(const ModelData& config, const Dict& labels, bool init_weights=false);
+  virtual void init(const ModelData& config, const Dict& labels, bool init_weights=false);
+  virtual void allocate_data(const ModelData& config);
 
   Dict m_labels;
 
+protected:
   int m_data_size;
   Real* m_data;
+};
+
+
+class LogBiLinearModelMixture : public LogBiLinearModel {
+public:
+  LogBiLinearModelMixture(const ModelData& config, const Dict& labels);
+
+  WeightsType M;
+
+private:
+  virtual void allocate_data(const ModelData& config);
 };
 
 }
