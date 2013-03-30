@@ -518,9 +518,10 @@ Real perplexity(const LogBiLinearModelMixture& model, const Corpus& test_corpus,
         int v_i = (j<0 ? start_id : test_corpus.at(j));
 
         ArrayReal score_vector = model.R * q_context_products[i].row(v_i).transpose() + model.B;
-        Real max_score = score_vector.maxCoeff();
-        Real log_z = log((score_vector-max_score).exp().sum()) + max_score;
-        p_sum += (pM(i) * exp(score_vector(w) - log_z));
+//        Real max_score = score_vector.maxCoeff();
+//        Real log_z = log((score_vector-max_score).exp().sum()) + max_score;
+//        p_sum += (pM(i) * exp(score_vector(w) - log_z));
+        p_sum += (pM(i) * softMax(score_vector)(w));
       }
       
       p += log(p_sum);
