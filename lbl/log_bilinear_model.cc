@@ -18,14 +18,14 @@ using namespace oxlm;
 static boost::mt19937 linear_model_rng(static_cast<unsigned> (std::time(0)));
 static uniform_01<> linear_model_uniform_dist;
 
-LogBiLinearModel::LogBiLinearModel(const LogBiLinearModel& model) 
-  : config(model.config), R(0,0,0), Q(0,0,0), B(0,0), W(0,0), m_labels(model.label_set()) {
-    init(config, m_labels, false);
-    addModel(model);
-}
+//LogBiLinearModel::LogBiLinearModel(const LogBiLinearModel& model) 
+//  : config(model.config), R(0,0,0), Q(0,0,0), B(0,0), W(0,0), m_labels(model.label_set()) {
+//    init(config, m_labels, false);
+//    addModel(model);
+//}
 
 LogBiLinearModel::LogBiLinearModel(const ModelData& config, const Dict& labels)
-  : config(config), R(0,0,0), Q(0,0,0), B(0,0), W(0,0), m_labels(labels) {
+  : config(config), R(0,0,0), Q(0,0,0), B(0,0), W(0,0), M(0,0), m_labels(labels) {
     init(config, m_labels, true);
 }
 
@@ -66,6 +66,7 @@ void LogBiLinearModel::init(const ModelData& config, const Dict& labels, bool in
   }
 
   new (&B) WeightsType(ptr, num_output_words);
+  new (&M) WeightsType(ptr+num_output_words, context_width);
 
   //R.setOnes();
   //R.setZero();
@@ -82,7 +83,7 @@ void LogBiLinearModel::init(const ModelData& config, const Dict& labels, bool in
 //  assert(ptr+num_output_words == m_data+m_data_size); 
 
 #pragma omp master
-  if (false) {
+  if (true) {
     std::cerr << "===============================" << std::endl;
     std::cerr << " Created a LogBiLinearModel: "   << std::endl;
     std::cerr << "  Output Vocab size = "          << num_output_words << std::endl;
@@ -104,12 +105,13 @@ void LogBiLinearModel::allocate_data(const ModelData& config) {
   int Q_size = num_context_words * word_width;;
   int C_size = word_width*word_width;
   int B_size = num_output_words;
+  int M_size = context_width;
 
-  m_data_size = R_size + Q_size + context_width*C_size + B_size;
+  m_data_size = R_size + Q_size + context_width*C_size + B_size + M_size;
   m_data = new Real[m_data_size];
 }
 
-
+/*
 LogBiLinearModelMixture::LogBiLinearModelMixture(const ModelData& c, const Dict& labels) : M(0,0) {
     config = c;
     m_labels = labels;
@@ -133,5 +135,5 @@ void LogBiLinearModelMixture::allocate_data(const ModelData& config) {
     m_data_size = R_size + Q_size + context_width*C_size + B_size + M_size;
     m_data = new Real[m_data_size];
 }
-
+*/
 
