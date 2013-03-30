@@ -47,13 +47,13 @@ typedef vector<WordId> Corpus;
 
 void learn(const variables_map& vm, const ModelData& config);
 
-Real function_and_gradient(LogBiLinearModelMixture& model,
+Real function_and_gradient(LogBiLinearModel& model,
                            int start, int end, const Corpus& training_corpus,
                            Real lambda,
-                           LogBiLinearModelMixture::WeightsType& gradient, Real* gradient_data, 
+                           LogBiLinearModel::WeightsType& gradient, Real* gradient_data, 
                            Real& wnorm, Real& gnorm, const VectorReal& word_counts);
 
-Real perplexity(const LogBiLinearModelMixture& model, const Corpus& test_corpus, int stride=1);
+Real perplexity(const LogBiLinearModel& model, const Corpus& test_corpus, int stride=1);
 
 
 inline VectorReal softMax(const VectorReal& v) {
@@ -191,7 +191,7 @@ void learn(const variables_map& vm, const ModelData& config) {
   }
   //////////////////////////////////////////////
 
-  LogBiLinearModelMixture model(config, dict);
+  LogBiLinearModel model(config, dict);
 
   if (vm.count("model-in")) {
     std::ifstream f(vm["model-in"].as<string>().c_str());
@@ -207,7 +207,7 @@ void learn(const variables_map& vm, const ModelData& config) {
 
   int num_weights = model.num_weights();
   Real* gradient_data = new Real[num_weights];
-  LogBiLinearModelMixture::WeightsType gradient(gradient_data, num_weights);
+  LogBiLinearModel::WeightsType gradient(gradient_data, num_weights);
 
 //  int thread_id = omp_get_thread_num();
   Real lambda = config.l2_parameter; 
@@ -219,7 +219,7 @@ void learn(const variables_map& vm, const ModelData& config) {
   bool calc_g_and_f = true;
   int lbfgs_iteration = 0; //minimiser->iter();
   clock_t lbfgs_time=0, gradient_time=0;
-/*
+
   lbfgs_t *opt = lbfgs_create(num_weights, 20, 0.001);
   while (lbfgs_iteration < vm["iterations"].as<int>() && gnorm > vm["gnorm-threshold"].as<float>()) {
     if (calc_g_and_f) {
@@ -255,8 +255,8 @@ void learn(const variables_map& vm, const ModelData& config) {
     }
     lbfgs_time += (clock() - lbfgs_start);
   }
- */ 
-
+ 
+/*
   while (lbfgs_iteration < vm["iterations"].as<int>() && gnorm > vm["gnorm-threshold"].as<float>()) {
 //    if (lbfgs_iteration % 50 == 0 && lbfgs_iteration != 0) {
 //      delete minimiser;
@@ -293,7 +293,7 @@ void learn(const variables_map& vm, const ModelData& config) {
 
   minimiser->run(model.data(), f, gradient_data);
   delete minimiser;
-
+*/
 /*
   for (int lbfgs_iteration=0; lbfgs_iteration < vm["iterations"].as<int>(); ++lbfgs_iteration) {
       gradient.setZero();
@@ -326,10 +326,10 @@ void learn(const variables_map& vm, const ModelData& config) {
 }
 
 
-Real function_and_gradient(LogBiLinearModelMixture& model,
+Real function_and_gradient(LogBiLinearModel& model,
                            int start, int end, const Corpus& training_corpus,
                            Real lambda,
-                           LogBiLinearModelMixture::WeightsType& gradient,
+                           LogBiLinearModel::WeightsType& gradient,
                            Real* gradient_data, 
                            Real& wnorm, Real& gnorm, const VectorReal& word_counts) {
   cerr << "Function_and_gradient" << endl;
@@ -348,18 +348,18 @@ Real function_and_gradient(LogBiLinearModelMixture& model,
 
   assert((R_size+Q_size+context_width*C_size+B_size+M_size) == model.num_weights());
 
-  LogBiLinearModelMixture::WordVectorsType g_R(gradient_data, num_words, word_width);
-  LogBiLinearModelMixture::WordVectorsType g_Q(gradient_data+R_size, num_words, word_width);
+  LogBiLinearModel::WordVectorsType g_R(gradient_data, num_words, word_width);
+  LogBiLinearModel::WordVectorsType g_Q(gradient_data+R_size, num_words, word_width);
 
-  LogBiLinearModelMixture::ContextTransformsType g_C;
+  LogBiLinearModel::ContextTransformsType g_C;
   Real* ptr = gradient_data+2*R_size;
   for (int i=0; i<context_width; i++) {
-    g_C.push_back(LogBiLinearModelMixture::ContextTransformType(ptr, word_width, word_width));
+    g_C.push_back(LogBiLinearModel::ContextTransformType(ptr, word_width, word_width));
     ptr += C_size;
   }
 
-  LogBiLinearModelMixture::WeightsType g_B(ptr, num_words);
-  LogBiLinearModelMixture::WeightsType g_M(ptr+num_words, context_width);
+  LogBiLinearModel::WeightsType g_B(ptr, num_words);
+  LogBiLinearModel::WeightsType g_M(ptr+num_words, context_width);
 
   // cache the products of Q with the contexts 
   cerr << "  - caching " << num_words << " Q products" << endl;
@@ -486,7 +486,7 @@ Real function_and_gradient(LogBiLinearModelMixture& model,
 }
 
 
-Real perplexity(const LogBiLinearModelMixture& model, const Corpus& test_corpus, int stride) {
+Real perplexity(const LogBiLinearModel& model, const Corpus& test_corpus, int stride) {
   Real p=0.0;
 
 //  int word_width = model.config.word_representation_size;

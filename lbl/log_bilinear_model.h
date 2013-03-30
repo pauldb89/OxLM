@@ -13,7 +13,7 @@
 
 namespace oxlm {
 
-typedef float Real;
+typedef double Real;
 typedef std::vector<Real> Reals;
 typedef Eigen::Matrix<Real, Eigen::Dynamic, Eigen::Dynamic> MatrixReal;
 typedef Eigen::Matrix<Real, Eigen::Dynamic, 1>              VectorReal;
@@ -30,7 +30,7 @@ public:
 
 public:
   LogBiLinearModel(const ModelData& config, const Dict& labels);
-  LogBiLinearModel(const LogBiLinearModel& model);
+//  LogBiLinearModel(const LogBiLinearModel& model);
 
   virtual ~LogBiLinearModel() { delete [] m_data; }
 
@@ -81,9 +81,10 @@ public:
   WordVectorsType       Q;
   WeightsType           B;
   WeightsType           W;
+  WeightsType           M;
 
 protected:
-  LogBiLinearModel() : R(0,0,0), Q(0,0,0), B(0,0), W(0,0) {}
+//  LogBiLinearModel() : R(0,0,0), Q(0,0,0), B(0,0), W(0,0), M(0,0) {}
 
   virtual void init(const ModelData& config, const Dict& labels, bool init_weights=false);
   virtual void allocate_data(const ModelData& config);
@@ -94,16 +95,38 @@ protected:
 };
 
 
+/*
 class LogBiLinearModelMixture : public LogBiLinearModel {
 public:
   LogBiLinearModelMixture(const ModelData& config, const Dict& labels);
 
   WeightsType M;
 
+  friend class boost::serialization::access;
+  template<class Archive>
+  void save(Archive & ar, const unsigned int version) const {
+    std::cerr << "Save: writing" << m_data_size << " parameters." << std::endl;
+    ar << config;
+    ar << m_labels;
+    ar << boost::serialization::make_array(m_data, m_data_size);
+  }
+
+  template<class Archive>
+  void load(Archive & ar, const unsigned int version) {
+    ar >> config;
+    ar >> m_labels;
+    delete [] m_data;
+    std::cerr << "Load: initially " << m_data_size << " parameters." << std::endl;
+    init(config, m_labels, false);
+    std::cerr << "Load: reading " << m_data_size << " parameters." << std::endl;
+    ar >> boost::serialization::make_array(m_data, m_data_size);
+  }
+  BOOST_SERIALIZATION_SPLIT_MEMBER();
+
 private:
   virtual void allocate_data(const ModelData& config);
 };
-
+*/
 }
 
 #endif // _LOG_BILINEAR_MODEL_H_
