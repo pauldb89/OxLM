@@ -47,11 +47,9 @@ typedef vector<WordId> Corpus;
 
 void learn(const variables_map& vm, const ModelData& config);
 
-Real function_and_gradient(LogBiLinearModel& model,
-                           int start, int end, const Corpus& training_corpus,
-                           Real lambda,
-                           LogBiLinearModel::WeightsType& gradient, Real* gradient_data, 
-                           Real& wnorm, Real& gnorm, const VectorReal& word_counts);
+Real function_and_gradient(LogBiLinearModel& model, const Corpus& training_corpus,
+                           Real lambda, LogBiLinearModel::WeightsType& gradient, 
+                           Real* gradient_data, Real& wnorm, Real& gnorm);
 
 Real perplexity(const LogBiLinearModel& model, const Corpus& test_corpus, int stride=1);
 
@@ -214,7 +212,7 @@ void learn(const variables_map& vm, const ModelData& config) {
 
   Real f=0.0, wnorm=0.0, gnorm=numeric_limits<Real>::max();
 
-  scitbx::lbfgs::minimizer<Real>* minimiser = new scitbx::lbfgs::minimizer<Real>(num_weights, 20);
+//  scitbx::lbfgs::minimizer<Real>* minimiser = new scitbx::lbfgs::minimizer<Real>(num_weights, 20);
   int function_evaluations=0;
   bool calc_g_and_f = true;
   int lbfgs_iteration = 0; //minimiser->iter();
@@ -226,8 +224,7 @@ void learn(const variables_map& vm, const ModelData& config) {
       clock_t gradient_start = clock();
 
       gradient.setZero();
-      f = function_and_gradient(model, 0, training_corpus.size(), training_corpus, lambda, 
-                                gradient, gradient_data, wnorm, gnorm, word_freq);
+      f = function_and_gradient(model, training_corpus, lambda, gradient, gradient_data, wnorm, gnorm);
       function_evaluations++;
       gradient_time += (clock() - gradient_start);
     }
@@ -269,8 +266,8 @@ void learn(const variables_map& vm, const ModelData& config) {
       clock_t gradient_start = clock();
 
       gradient.setZero();
-      f = function_and_gradient(model, 0, training_corpus.size(), training_corpus, lambda, 
-                                gradient, gradient_data, wnorm, gnorm, word_freq);
+      f = function_and_gradient(model, training_corpus, lambda, 
+                                gradient, gradient_data, wnorm, gnorm );
       function_evaluations++;
       gradient_time += (clock() - gradient_start);
     }
@@ -297,8 +294,8 @@ void learn(const variables_map& vm, const ModelData& config) {
 /*
   for (int lbfgs_iteration=0; lbfgs_iteration < vm["iterations"].as<int>(); ++lbfgs_iteration) {
       gradient.setZero();
-      f = function_and_gradient(model, 0, training_corpus.size(), training_corpus, lambda, 
-                                gradient, gradient_data, wnorm, gnorm, word_freq);
+      f = function_and_gradient(model, training_corpus, lambda, 
+                                gradient, gradient_data, wnorm, gnorm);
 
       function_evaluations++;
       cerr << "  (" << lbfgs_iteration+1 << "." << function_evaluations << ":" 
@@ -326,12 +323,9 @@ void learn(const variables_map& vm, const ModelData& config) {
 }
 
 
-Real function_and_gradient(LogBiLinearModel& model,
-                           int start, int end, const Corpus& training_corpus,
-                           Real lambda,
-                           LogBiLinearModel::WeightsType& gradient,
-                           Real* gradient_data, 
-                           Real& wnorm, Real& gnorm, const VectorReal& word_counts) {
+Real function_and_gradient(LogBiLinearModel& model, const Corpus& training_corpus,
+                           Real lambda, LogBiLinearModel::WeightsType& gradient,
+                           Real* gradient_data, Real& wnorm, Real& gnorm) {
   cerr << "Function_and_gradient" << endl;
   Real f=0;
   WordId start_id = model.label_set().Convert("<s>");
@@ -340,147 +334,175 @@ Real function_and_gradient(LogBiLinearModel& model,
   int context_width = model.config.ngram_order-1;
   int num_words = model.labels();
 
-  int R_size = num_words*word_width;
-  int Q_size = R_size;
-  int C_size = word_width*word_width;
-  int B_size = num_words;
-  int M_size = context_width;
-
-  assert((R_size+Q_size+context_width*C_size+B_size+M_size) == model.num_weights());
-
-  LogBiLinearModel::WordVectorsType g_R(gradient_data, num_words, word_width);
-  LogBiLinearModel::WordVectorsType g_Q(gradient_data+R_size, num_words, word_width);
-
-  LogBiLinearModel::ContextTransformsType g_C;
-  Real* ptr = gradient_data+2*R_size;
-  for (int i=0; i<context_width; i++) {
-    g_C.push_back(LogBiLinearModel::ContextTransformType(ptr, word_width, word_width));
-    ptr += C_size;
-  }
-
-  LogBiLinearModel::WeightsType g_B(ptr, num_words);
-  LogBiLinearModel::WeightsType g_M(ptr+num_words, context_width);
+  std::vector<MatrixReal> q_context_products(context_width);
+  std::vector<VectorReal> log_partition_functions(context_width, VectorReal(num_words));
+  std::vector<VectorReal> context_expectations(context_width, VectorReal::Zero(num_words));
 
   // cache the products of Q with the contexts 
   cerr << "  - caching " << num_words << " Q products" << endl;
-  std::vector<MatrixReal> q_context_products(context_width);
   for (int i=0; i < context_width; i++)
     q_context_products.at(i) = model.Q * model.C.at(i);
 
   // cache the mixture weights
   VectorReal pM = softMax(model.M);
 
-  // cache the partition functions
   cerr << "  - caching Z(w)";
   boost::progress_display show_progress(context_width*num_words, std::cerr, "\n  ", "  ", "  ");
-  std::vector<VectorReal> log_partition_functions(context_width, VectorReal(num_words));
 
-  { boost::progress_timer timer;
-  for (int i=0; i < context_width; i++) { // O(context_width * |v|^2)
-    for (int q=0; q < num_words; ++q) { // O(|v|^2)
-      VectorReal logProbs = model.R * q_context_products[i].row(q).transpose() + model.B; 
-      Real max_logProb = logProbs.maxCoeff();
-      Real logProbs_z = log((logProbs.array() - max_logProb).exp().sum()) + max_logProb;
+  #pragma omp parallel shared(q_context_products,training_corpus,model, \
+                              show_progress,context_width,num_words,word_width, \
+                              log_partition_functions,pM,context_expectations)
+  {
+    int tid = omp_get_thread_num();
+    int R_size = num_words*word_width;
+    int Q_size = R_size;
+    int C_size = word_width*word_width;
+    int B_size = num_words;
+    int M_size = context_width;
 
-      assert(isfinite(logProbs_z));
-      log_partition_functions[i](q) = logProbs_z;
-      ++show_progress;
-    }
-  }
-  cerr << endl;
-  }
+    assert((R_size+Q_size+context_width*C_size+B_size+M_size) == model.num_weights());
+    Real* thread_local_gradient_data = new Real[model.num_weights()];
 
-  // data update component
-  VectorReal logProbs(context_width);
-  std::vector<VectorReal> context_expectations(context_width, VectorReal::Zero(num_words));
+    LogBiLinearModel::WordVectorsType g_R(thread_local_gradient_data, num_words, word_width);
+    LogBiLinearModel::WordVectorsType g_Q(thread_local_gradient_data+R_size, num_words, word_width);
 
-  { boost::progress_timer timer;
-  cerr << "  - data update";
-  show_progress.restart(training_corpus.size()*context_width);
-  for (size_t t=0; t < training_corpus.size(); ++t) {
-    WordId w = training_corpus.at(t);
-    int context_start = t - context_width;
-
-    // calculate the log-probabilities
+    LogBiLinearModel::ContextTransformsType g_C;
+    Real* ptr = thread_local_gradient_data+2*R_size;
     for (int i=0; i<context_width; i++) {
-      int j=context_start+i;
-      int q = (j<0 ? start_id : training_corpus.at(j));
-      logProbs(i) = exp(model.R.row(w) * q_context_products[i].row(q).transpose() + model.B(w)
-                    - log_partition_functions.at(i)(q));
-      logProbs(i) *= pM(i);
+      g_C.push_back(LogBiLinearModel::ContextTransformType(ptr, word_width, word_width));
+      ptr += C_size;
     }
-    //f -= (log(logProbs.array().exp().sum()));
-    f -= log(logProbs.sum());
 
-    // calculate the mixture contributions
-    Real contributions_z = logProbs.sum();
-    VectorReal contributions = logProbs.array()/contributions_z;
-//    Real max_logProb = logProbs.maxCoeff();
-//    Real logProbs_z = log((logProbs.array() - max_logProb).exp().sum()) + max_logProb;
-//    VectorReal contributions = (logProbs.array() - logProbs_z).exp();
-// cerr << contributions.transpose() << endl << endl;;
-// contributions = VectorReal::Zero(context_width).array() + 0.5;
+    LogBiLinearModel::WeightsType g_B(ptr, num_words);
+    LogBiLinearModel::WeightsType g_M(ptr+num_words, context_width);
 
-    // do the data gradient update
-    for (int i=0; i<context_width; i++) {
-      int j=context_start+i;
-      int q = (j<0 ? start_id : training_corpus.at(j));
+    // cache the partition functions
+    { 
+      #pragma omp master 
+      { boost::progress_timer timer; }
 
-      context_expectations.at(i)(q) += contributions(i);
+      #pragma omp for 
+      for (int q=0; q < num_words; ++q) { // O(|v|^2)
+        for (int i=0; i < context_width; i++) { // O(context_width * |v|^2)
+          VectorReal logProbs = model.R * q_context_products[i].row(q).transpose() + model.B; 
+          Real max_logProb = logProbs.maxCoeff();
+          Real logProbs_z = log((logProbs.array() - max_logProb).exp().sum()) + max_logProb;
 
-      // data expectations
-      g_R.row(w) -= (contributions(i) * q_context_products[i].row(q));
-      g_Q.row(q) -= (contributions(i) * (model.C.at(i) * model.R.row(w).transpose()));
-      g_C.at(i)  -= (contributions(i) * (model.Q.row(q).transpose() * model.R.row(w)));
-      g_B(w)     -=  contributions(i);
+          assert(isfinite(logProbs_z));
+          log_partition_functions[i](q) = logProbs_z;
 
-      g_M(i)     -=  (contributions(i) - pM(i));
+          if (tid==0) ++show_progress;
+        }
+      }
+      cerr << endl;
+    }
 
-//      if (t % 100000 == 0) {cerr << "."; cerr.flush(); }
-      ++show_progress;
+    // data update component
+    VectorReal logProbs(context_width);
+    { 
+      #pragma omp master 
+      {
+        cerr << "  - data update";
+        boost::progress_timer timer;
+        show_progress.restart(training_corpus.size()*context_width);
+      }
+
+      #pragma omp for
+      for (size_t t=0; t < training_corpus.size(); ++t) {
+        WordId w = training_corpus.at(t);
+        int context_start = t - context_width;
+
+        // calculate the log-probabilities
+        for (int i=0; i<context_width; i++) {
+          int j=context_start+i;
+          int q = (j<0 ? start_id : training_corpus.at(j));
+          logProbs(i) = exp(model.R.row(w) * q_context_products[i].row(q).transpose() + model.B(w)
+                            - log_partition_functions.at(i)(q));
+          logProbs(i) *= pM(i);
+        }
+        f -= log(logProbs.sum());
+
+        // calculate the mixture contributions
+        Real contributions_z = logProbs.sum();
+        VectorReal contributions = logProbs.array()/contributions_z;
+
+        // do the data gradient update
+        for (int i=0; i<context_width; i++) {
+          int j=context_start+i;
+          int q = (j<0 ? start_id : training_corpus.at(j));
+
+          context_expectations.at(i)(q) += contributions(i);
+
+          // data expectations
+          g_R.row(w) -= (contributions(i) * q_context_products[i].row(q));
+          g_Q.row(q) -= (contributions(i) * (model.C.at(i) * model.R.row(w).transpose()));
+          g_C.at(i)  -= (contributions(i) * (model.Q.row(q).transpose() * model.R.row(w)));
+          g_B(w)     -=  contributions(i);
+
+          g_M(i)     -=  (contributions(i) - pM(i));
+
+          //      if (t % 100000 == 0) {cerr << "."; cerr.flush(); }
+          if (tid==0) ++show_progress;
+        }
+      }
+      #pragma omp master
+      cerr << endl;
+      //  cerr << "g_R:\n" << g_R << endl;
+      //  cerr << "g_Q:\n" << g_Q << endl;
+      //  cerr << "g_C:\n";
+      //  for (auto C : g_C)
+      //    cerr << C << endl;
+    }
+
+    // model update component and
+    { 
+      #pragma omp master
+      {
+        boost::progress_timer timer;
+        cerr << "  - model update";
+        show_progress.restart(context_width*num_words);
+      }
+
+      #pragma omp for 
+      for (int q=0; q < num_words; ++q) { // O(context_width * |v|^2)
+        for (int i=0; i < context_width; i++) { // O(context_width)
+          VectorReal logProbs = model.R * q_context_products[i].row(q).transpose() + model.B; 
+          VectorReal probs = (logProbs.array() - log_partition_functions[i](q)).exp();
+          VectorReal expected_representation = (probs.transpose() * model.R); // O(|v|*word_width)
+
+          // model expectations
+          Real q_freq = context_expectations[i](q);
+          g_R        += (q_freq * (probs * q_context_products[i].row(q))); // O(|v|*word_width)
+          g_Q.row(q) += (q_freq * (model.C.at(i) * expected_representation).transpose());// O(word_width^2)
+          g_C.at(i)  += (q_freq * (model.Q.row(q).transpose() * expected_representation.transpose()));// O(word_width^2)
+          g_B        += (q_freq * probs);// O(|v|)
+
+          //      if (q % 1000 == 0) {cerr << "."; cerr.flush(); }
+          if (tid==0) ++show_progress;
+        }
+      }
+      #pragma omp master
+      cerr << endl;
+      //  cerr << "g_R:\n" << g_R << endl;
+      //  cerr << "g_Q:\n" << g_Q << endl;
+      //  cerr << "g_C:\n";
+      //  for (auto C : g_C)
+      //    cerr << C << endl;
+    }
+
+    // synchronise the gradients
+    #pragma omp critical 
+    for (int i=0; i<model.num_weights(); ++i)
+      gradient_data[i] += thread_local_gradient_data[i];
+
+    #pragma omp master
+    {
+      cerr << "Model M: " << pM.transpose() << endl;
+      cerr << "g_M:     " << g_M.transpose() << endl;
+      cerr << "f=" << f << endl;
     }
   }
-  cerr << endl;
-//  cerr << "g_R:\n" << g_R << endl;
-//  cerr << "g_Q:\n" << g_Q << endl;
-//  cerr << "g_C:\n";
-//  for (auto C : g_C)
-//    cerr << C << endl;
-  }
 
-  { boost::progress_timer timer;
-  // model update component and
-  cerr << "  - model update";
-  show_progress.restart(context_width*num_words);
-  for (int i=0; i < context_width; i++) { // O(context_width * |v|^2)
-    for (int q=0; q < num_words; ++q) { // O(|v|^2)
-      VectorReal logProbs = model.R * q_context_products[i].row(q).transpose() + model.B; 
-      VectorReal probs = (logProbs.array() - log_partition_functions[i](q)).exp();
-      VectorReal expected_representation = (probs.transpose() * model.R); // O(|v|*word_width)
-
-      // model expectations
-      Real q_freq = context_expectations[i](q);
-      g_R        += (q_freq * (probs * q_context_products[i].row(q))); // O(|v|*word_width)
-      g_Q.row(q) += (q_freq * (model.C.at(i) * expected_representation).transpose());// O(word_width^2)
-      g_C.at(i)  += (q_freq * (model.Q.row(q).transpose() * expected_representation.transpose()));// O(word_width^2)
-      g_B        += (q_freq * probs);// O(|v|)
-
-//      if (q % 1000 == 0) {cerr << "."; cerr.flush(); }
-      ++show_progress;
-    }
-  }
-  cerr << endl;
-//  cerr << "g_R:\n" << g_R << endl;
-//  cerr << "g_Q:\n" << g_Q << endl;
-//  cerr << "g_C:\n";
-//  for (auto C : g_C)
-//    cerr << C << endl;
-  }
-
-
-  cerr << "Model M: " << pM.transpose() << endl;
-  cerr << "g_M:     " << g_M.transpose() << endl;
-  cerr << "f=" << f << endl;
 
   return f;
 }
