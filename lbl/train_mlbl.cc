@@ -258,35 +258,33 @@ void learn(const variables_map& vm, const ModelData& config) {
 */ 
 
   while (lbfgs_iteration < vm["iterations"].as<int>() && gnorm > vm["gnorm-threshold"].as<float>()) {
-//    if (lbfgs_iteration % 50 == 0 && lbfgs_iteration != 0) {
-//      delete minimiser;
-//      minimiser = new scitbx::lbfgs::minimizer<Real>(num_weights, 20);
-//      calc_g_and_f = true;
-//      cerr << " -- reset lbfgs history -- " << std::endl;
-//    }
-
     if (calc_g_and_f) {
       clock_t gradient_start = clock();
 
       gradient.setZero();
-      f = function_and_gradient(model, training_corpus, lambda, 
-                                gradient, gradient_data, wnorm, gnorm );
+      f = function_and_gradient(model, training_corpus, lambda, gradient, gradient_data, wnorm, gnorm );
       function_evaluations++;
       gradient_time += (clock() - gradient_start);
     }
 
     if (lbfgs_iteration == 0 || (!calc_g_and_f )) {
-      cerr << "  (" << lbfgs_iteration+1 << "." << function_evaluations << ":" 
+      cout << "  (" << lbfgs_iteration+1 << "." << function_evaluations << ":" 
         << "f=" << f << ",|w|=" << wnorm << ",|g|=" << gnorm;
     }
     if (vm.count("test-set") && !calc_g_and_f)
-      cerr << ", Test Perplexity = " 
+      cout << ", Test Perplexity = " 
         << perplexity(model, test_corpus, test_corpus.size()/vm["test-tokens"].as<int>());
     if (lbfgs_iteration == 0 || (!calc_g_and_f ))
-      cerr << ")\n";
+      cout << ")\n";
 
     clock_t lbfgs_start=clock();
-    calc_g_and_f = minimiser->run(model.data(), f, gradient_data);
+    try { calc_g_and_f = minimiser->run(model.data(), f, gradient_data); }
+    catch (const scitbx::lbfgs::error &e) {
+      cerr << "LBFGS terminated with error:\n  " << e.what() << "\nRestarting..." << endl;
+      delete minimiser;
+      minimiser = new scitbx::lbfgs::minimizer<Real>(num_weights, vm["lbfgs-vectors"].as<int>());
+      calc_g_and_f = true;
+    }
     lbfgs_iteration = minimiser->iter();
     lbfgs_time += (clock() - lbfgs_start);
   }
@@ -377,7 +375,7 @@ Real function_and_gradient(LogBiLinearModel& model, const Corpus& training_corpu
     cerr << timer.elapsed() << " seconds." << endl;
 
     Real local_f = 0;
-    int tid = omp_get_thread_num();
+//    int tid = omp_get_thread_num();
     int R_size = num_words*word_width;
     int Q_size = R_size;
     int C_size = word_width*word_width;
@@ -517,6 +515,8 @@ Real function_and_gradient(LogBiLinearModel& model, const Corpus& training_corpu
       cerr << "f=" << f << endl;
     }
   }
+  wnorm = model.W.norm();
+  gnorm = gradient.norm();
 
   return f;
 }
