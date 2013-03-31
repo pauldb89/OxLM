@@ -103,6 +103,8 @@ int main(int argc, char **argv) {
         "number of evenly space test points tokens evaluate.")
     ("gnorm-threshold", value<float>()->default_value(1.0), 
         "Terminat LBFGS iterations if the gradient norm falls below this value.")
+    ("eta", value<float>()->default_value(0.00001), 
+        "SGD eta, if used.")
     ("verbose,v", "print perplexity for each sentence (1) or input token (2) ")
     ;
   options_description config_options, cmdline_options;
@@ -256,7 +258,7 @@ void learn(const variables_map& vm, const ModelData& config) {
     lbfgs_time += (clock() - lbfgs_start);
   }
 */ 
-
+/*
   while (lbfgs_iteration < vm["iterations"].as<int>() && gnorm > vm["gnorm-threshold"].as<float>()) {
     if (calc_g_and_f) {
       clock_t gradient_start = clock();
@@ -291,23 +293,31 @@ void learn(const variables_map& vm, const ModelData& config) {
 
   minimiser->run(model.data(), f, gradient_data);
   delete minimiser;
-
-/*
+*/
+  VectorReal adaGrad = gradient;
+  Real eta = vm["eta"].as<float>();
   for (int lbfgs_iteration=0; lbfgs_iteration < vm["iterations"].as<int>(); ++lbfgs_iteration) {
       gradient.setZero();
       f = function_and_gradient(model, training_corpus, lambda, 
                                 gradient, gradient_data, wnorm, gnorm);
+      for (int g=0; g<num_weights; ++g) 
+        adaGrad(g) += pow(gradient(g),2);
 
       function_evaluations++;
-      cerr << "  (" << lbfgs_iteration+1 << "." << function_evaluations << ":" 
+      cout << "  (" << lbfgs_iteration+1 << "." << function_evaluations << ":" 
         << "f=" << f << ",|w|=" << wnorm << ",|g|=" << gnorm;
-      cerr << ", Test Perplexity = " 
+      cout << ", Test Perplexity = " 
            << perplexity(model, test_corpus, test_corpus.size()/vm["test-tokens"].as<int>())
            << ")\n";
 
-      model.W = model.W - (0.000005*gradient);
+      //model.W = model.W - (0.0001*gradient);
+
+      for (int w=0; w<num_weights; ++w){
+        Real g = (adaGrad(w) == 0.0 ? 0.0 : eta / sqrt(adaGrad(w)));
+        model.W(w) -= (g*gradient(w));
+      }
   }
-*/
+
   if (vm.count("test-set"))
     cerr << "  Final Test Perplexity = " 
       << perplexity(model, test_corpus, test_corpus.size()/vm["test-tokens"].as<int>()) 
