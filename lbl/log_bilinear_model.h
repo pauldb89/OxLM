@@ -13,7 +13,7 @@
 
 namespace oxlm {
 
-typedef double Real;
+typedef float Real;
 typedef std::vector<Real> Reals;
 typedef Eigen::Matrix<Real, Eigen::Dynamic, Eigen::Dynamic> MatrixReal;
 typedef Eigen::Matrix<Real, Eigen::Dynamic, 1>              VectorReal;
