@@ -394,6 +394,7 @@ Real function_and_gradient(LogBiLinearModel& model, const Corpus& training_corpu
 
     assert((R_size+Q_size+context_width*C_size+B_size+M_size) == model.num_weights());
     Real* thread_local_gradient_data = new Real[model.num_weights()];
+    memset(thread_local_gradient_data, 0, sizeof(Real)*model.num_weights());
 
     LogBiLinearModel::WordVectorsType g_R(thread_local_gradient_data, num_words, word_width);
     LogBiLinearModel::WordVectorsType g_Q(thread_local_gradient_data+R_size, num_words, word_width);
