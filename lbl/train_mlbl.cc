@@ -294,7 +294,7 @@ void learn(const variables_map& vm, const ModelData& config) {
   minimiser->run(model.data(), f, gradient_data);
   delete minimiser;
 */
-  VectorReal adaGrad = gradient;
+  VectorReal adaGrad = VectorReal::Zero(num_weights);
   Real eta = vm["eta"].as<float>();
   for (int lbfgs_iteration=0; lbfgs_iteration < vm["iterations"].as<int>(); ++lbfgs_iteration) {
       gradient.setZero();
