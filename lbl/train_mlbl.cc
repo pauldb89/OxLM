@@ -97,6 +97,7 @@ int main(int argc, char **argv) {
         "Width of word representation vectors.")
     ("threads", value<int>()->default_value(1), 
         "number of worker threads.")
+    ("lbfgs", "optimise with lbfgs")
     ("lbfgs-vectors", value<int>()->default_value(10), 
         "number of gradient history vectors for lbfgs.")
     ("test-tokens", value<int>()->default_value(10000), 
@@ -217,7 +218,6 @@ void learn(const variables_map& vm, const ModelData& config) {
 
   Real f=0.0, wnorm=0.0, gnorm=numeric_limits<Real>::max();
 
-  scitbx::lbfgs::minimizer<Real>* minimiser = new scitbx::lbfgs::minimizer<Real>(num_weights, vm["lbfgs-vectors"].as<int>());
   int function_evaluations=0;
   bool calc_g_and_f = true;
   int lbfgs_iteration = 0; //minimiser->iter();
@@ -258,48 +258,50 @@ void learn(const variables_map& vm, const ModelData& config) {
     lbfgs_time += (clock() - lbfgs_start);
   }
 */ 
-/*
-  while (lbfgs_iteration < vm["iterations"].as<int>() && gnorm > vm["gnorm-threshold"].as<float>()) {
-    if (calc_g_and_f) {
-      clock_t gradient_start = clock();
+  if (vm.count("lbfgs")) {
+    scitbx::lbfgs::minimizer<Real>* minimiser = new scitbx::lbfgs::minimizer<Real>(num_weights, vm["lbfgs-vectors"].as<int>());
+    while (lbfgs_iteration < vm["iterations"].as<int>() && gnorm > vm["gnorm-threshold"].as<float>()) {
+      if (calc_g_and_f) {
+        clock_t gradient_start = clock();
 
-      gradient.setZero();
-      f = function_and_gradient(model, training_corpus, lambda, gradient, gradient_data, wnorm, gnorm );
-      function_evaluations++;
-      gradient_time += (clock() - gradient_start);
+        gradient.setZero();
+        f = function_and_gradient(model, training_corpus, lambda, gradient, gradient_data, wnorm, gnorm );
+        function_evaluations++;
+        gradient_time += (clock() - gradient_start);
+      }
+
+      if (lbfgs_iteration == 0 || (!calc_g_and_f )) {
+        cout << "  (" << lbfgs_iteration+1 << "." << function_evaluations << ":" 
+          << "f=" << f << ",|w|=" << wnorm << ",|g|=" << gnorm;
+      }
+      if (vm.count("test-set") && !calc_g_and_f)
+        cout << ", Test Perplexity = " 
+          << perplexity(model, test_corpus, test_corpus.size()/vm["test-tokens"].as<int>());
+      if (lbfgs_iteration == 0 || (!calc_g_and_f ))
+        cout << ")\n";
+
+      clock_t lbfgs_start=clock();
+      try { calc_g_and_f = minimiser->run(model.data(), f, gradient_data); }
+      catch (const scitbx::lbfgs::error &e) {
+        cerr << "LBFGS terminated with error:\n  " << e.what() << "\nRestarting..." << endl;
+        delete minimiser;
+        minimiser = new scitbx::lbfgs::minimizer<Real>(num_weights, vm["lbfgs-vectors"].as<int>());
+        calc_g_and_f = true;
+      }
+      lbfgs_iteration = minimiser->iter();
+      lbfgs_time += (clock() - lbfgs_start);
     }
 
-    if (lbfgs_iteration == 0 || (!calc_g_and_f )) {
-      cout << "  (" << lbfgs_iteration+1 << "." << function_evaluations << ":" 
-        << "f=" << f << ",|w|=" << wnorm << ",|g|=" << gnorm;
-    }
-    if (vm.count("test-set") && !calc_g_and_f)
-      cout << ", Test Perplexity = " 
-        << perplexity(model, test_corpus, test_corpus.size()/vm["test-tokens"].as<int>());
-    if (lbfgs_iteration == 0 || (!calc_g_and_f ))
-      cout << ")\n";
-
-    clock_t lbfgs_start=clock();
-    try { calc_g_and_f = minimiser->run(model.data(), f, gradient_data); }
-    catch (const scitbx::lbfgs::error &e) {
-      cerr << "LBFGS terminated with error:\n  " << e.what() << "\nRestarting..." << endl;
-      delete minimiser;
-      minimiser = new scitbx::lbfgs::minimizer<Real>(num_weights, vm["lbfgs-vectors"].as<int>());
-      calc_g_and_f = true;
-    }
-    lbfgs_iteration = minimiser->iter();
-    lbfgs_time += (clock() - lbfgs_start);
-  }
-
-  minimiser->run(model.data(), f, gradient_data);
-  delete minimiser;
-*/
-  VectorReal adaGrad = gradient;
-  Real eta = vm["eta"].as<float>();
-  for (int lbfgs_iteration=0; lbfgs_iteration < vm["iterations"].as<int>(); ++lbfgs_iteration) {
+    minimiser->run(model.data(), f, gradient_data);
+    delete minimiser;
+}
+  else {
+    VectorReal adaGrad = gradient;
+    Real eta = vm["eta"].as<float>();
+    for (int lbfgs_iteration=0; lbfgs_iteration < vm["iterations"].as<int>(); ++lbfgs_iteration) {
       gradient.setZero();
       f = function_and_gradient(model, training_corpus, lambda, 
-                                gradient, gradient_data, wnorm, gnorm);
+          gradient, gradient_data, wnorm, gnorm);
       for (int g=0; g<num_weights; ++g) 
         adaGrad(g) += pow(gradient(g),2);
 
@@ -307,8 +309,8 @@ void learn(const variables_map& vm, const ModelData& config) {
       cout << "  (" << lbfgs_iteration+1 << "." << function_evaluations << ":" 
         << "f=" << f << ",|w|=" << wnorm << ",|g|=" << gnorm;
       cout << ", Test Perplexity = " 
-           << perplexity(model, test_corpus, test_corpus.size()/vm["test-tokens"].as<int>())
-           << ")\n";
+        << perplexity(model, test_corpus, test_corpus.size()/vm["test-tokens"].as<int>())
+        << ")\n";
 
       //model.W = model.W - (0.0001*gradient);
 
@@ -316,6 +318,7 @@ void learn(const variables_map& vm, const ModelData& config) {
         Real g = (adaGrad(w) == 0.0 ? 0.0 : eta / sqrt(adaGrad(w)));
         model.W(w) -= (g*gradient(w));
       }
+    }
   }
 
   if (vm.count("test-set"))
@@ -525,6 +528,10 @@ Real function_and_gradient(LogBiLinearModel& model, const Corpus& training_corpu
       cerr << "f=" << f << endl;
     }
   }
+
+  gradient += lambda*model.W;
+  f += (lambda*pow(wnorm,2)/2.0);
+
   wnorm = model.W.norm();
   gnorm = gradient.norm();
 
