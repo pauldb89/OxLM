@@ -76,13 +76,19 @@ public:
   BOOST_SERIALIZATION_SPLIT_MEMBER();
 
   MatrixReal context_product(int i, const MatrixReal& v, bool transpose=false) const {
-    return v * (transpose ? C.at(i).transpose() : C.at(i));
+    if (m_diagonal)     {
+      //std::cerr << "context_product" << std::endl;
+      return (C.at(i).asDiagonal() * v.transpose()).transpose();
+    }
+    else if (transpose) return v * C.at(i).transpose();
+    else                return v * C.at(i);
   }
 
   //model.C.at(i) -= step_size * context_vectors.at(i).transpose() * weightedRepresentations; 
   void context_gradient_update(int i, Real sigma, const MatrixReal& v,const MatrixReal& w) {
-    //C.at(i) -= (sigma * v * w.transpose()); 
-    C.at(i) -= (sigma * v.transpose() * w); 
+    //std::cerr << "context_gradient_update" << std::endl;
+    if (m_diagonal) C.at(i) -= (sigma * v.cwiseProduct(w).colwise().sum()).transpose();
+    else            C.at(i) -= (sigma * v.transpose() * w); 
   }
 
 public:

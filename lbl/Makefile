@@ -7,7 +7,7 @@ FC=gfortran
 
 CXXFLAGS += -DEIGEN_DONT_PARALLELIZE
 
-local_objs = log_bilinear_model.o lbfgs.o lbfgs_wrapper.o
+local_objs = log_bilinear_model.o lbfgs.o # lbfgs_wrapper.o
 
 all: train_sgd train_clbl train_mlbl
 
@@ -31,9 +31,9 @@ train_mlbl: train_mlbl.o $(local_objs)
 
 %.o: %.c
 	${CC} $(CFLAGS) -c $< -o $@
-
-%.o: %.f
-	$(FC) $(FFLAGS) -c $< -o $@
+#
+# %.o: %.f
+#	$(FC) $(FFLAGS) -c $< -o $@
 
 .PHONY: depend echo
 depend:

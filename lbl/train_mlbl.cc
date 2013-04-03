@@ -27,7 +27,6 @@
 #include <Eigen/Core>
 
 // Local
-#include "lbl/lbfgs.h"
 #include "lbl/lbfgs2.h"
 #include "lbl/log_bilinear_model.h"
 #include "lbl/log_add.h"

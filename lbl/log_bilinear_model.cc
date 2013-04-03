@@ -39,6 +39,9 @@ void LogBiLinearModel::init(const ModelData& config, const Dict& labels, bool in
   int R_size = num_output_words * word_width;
   int Q_size = num_context_words * word_width;;
   int C_size = (m_diagonal ? word_width : word_width*word_width);
+  //int C_size;
+  //if (m_diagonal) C_size = word_width;
+  //else            C_size = word_width*word_width;
 
   allocate_data(config);
 
@@ -59,7 +62,8 @@ void LogBiLinearModel::init(const ModelData& config, const Dict& labels, bool in
   C.clear();
   Real* ptr = m_data+R_size+Q_size;
   for (int i=0; i<context_width; i++) {
-    C.push_back(ContextTransformType(ptr, word_width, (m_diagonal ? 1 : word_width)));
+    if (m_diagonal) C.push_back(ContextTransformType(ptr, word_width, 1));
+    else            C.push_back(ContextTransformType(ptr, word_width, word_width));
     ptr += C_size;
     //     C.back().setIdentity();
     //      C.back().setZero();
@@ -104,37 +108,11 @@ void LogBiLinearModel::allocate_data(const ModelData& config) {
 
   int R_size = num_output_words * word_width;
   int Q_size = num_context_words * word_width;;
-  int C_size = word_width*word_width;
+  int C_size = (m_diagonal ? word_width : word_width*word_width);
   int B_size = num_output_words;
   int M_size = context_width;
 
   m_data_size = R_size + Q_size + context_width*C_size + B_size + M_size;
   m_data = new Real[m_data_size];
 }
-
-/*
-LogBiLinearModelMixture::LogBiLinearModelMixture(const ModelData& c, const Dict& labels) : M(0,0) {
-    config = c;
-    m_labels = labels;
-    init(config, m_labels, true);
-    int context_width = config.ngram_order-1;
-    new (&M) WeightsType(m_data+(m_data_size-context_width), context_width);
-}
-
-void LogBiLinearModelMixture::allocate_data(const ModelData& config) {
-    int num_output_words = output_types();
-    int num_context_words = context_types();
-    int word_width = config.word_representation_size;
-    int context_width = config.ngram_order-1;
-
-    int R_size = num_output_words * word_width;
-    int Q_size = num_context_words * word_width;;
-    int C_size = word_width*word_width;
-    int B_size = num_output_words;
-    int M_size = context_width;
-
-    m_data_size = R_size + Q_size + context_width*C_size + B_size + M_size;
-    m_data = new Real[m_data_size];
-}
-*/
 

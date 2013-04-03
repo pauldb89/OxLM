@@ -111,6 +111,7 @@ int main(int argc, char **argv) {
     ("verbose,v", "print perplexity for each sentence (1) or input token (2) ")
     ("randomise", "visit the training tokens in random order")
     ("uniform", "sample noise distribution from a uniform (default unigram) distribution.")
+    ("diagonal-contexts", "Use diagonal context matrices (usually faster).")
     ;
   options_description config_options, cmdline_options;
   config_options.add(generic);
@@ -197,7 +198,7 @@ void learn(const variables_map& vm, const ModelData& config) {
   }
   //////////////////////////////////////////////
 
-  LogBiLinearModel model(config, dict);
+  LogBiLinearModel model(config, dict, vm.count("diagonal-contexts"));
 
   if (vm.count("model-in")) {
     std::ifstream f(vm["model-in"].as<string>().c_str());
@@ -412,9 +413,9 @@ Real sgd_update(LogBiLinearModel& model,
 //  clock_t context_start = clock();
   MatrixReal context_gradients = MatrixReal::Zero(word_width, instances);
   for (int i=0; i<context_width; ++i) {
-    context_gradients = (model.C.at(i) * weightedRepresentations.transpose()).transpose();
+    //context_gradients = (model.C.at(i) * weightedRepresentations.transpose()).transpose();
     //context_gradients = weightedRepresentations * model.C.at(i).transpose();
-    //context_gradients = model.context_product(i, weightedRepresentations, true); // weightedRepresentations*C(i)^T
+    context_gradients = model.context_product(i, weightedRepresentations, true); // weightedRepresentations*C(i)^T
     for (int instance=0; instance < instances; ++instance) {
       const TrainingInstance& t = training_instances.at(instance);
       int j=t.data_index-context_width+i;
@@ -441,7 +442,8 @@ Real perplexity(const LogBiLinearModel& model, const Corpus& test_corpus, int st
   // cache the products of Q with the contexts 
   std::vector<MatrixReal> q_context_products(context_width);
   for (int i=0; i<context_width; i++)
-    q_context_products.at(i) = model.Q * model.C.at(i);
+    q_context_products.at(i) = model.context_product(i, model.Q);
+    //q_context_products.at(i) = model.Q * model.C.at(i);
 
   int tokens=0;
   WordId start_id = model.label_set().Lookup("<s>");
