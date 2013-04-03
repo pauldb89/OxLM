@@ -334,7 +334,8 @@ Real sgd_update(LogBiLinearModel& model,
   }
   MatrixReal prediction_vectors = MatrixReal::Zero(instances, word_width);
   for (int i=0; i<context_width; ++i)
-    prediction_vectors += (context_vectors.at(i) * model.C.at(i));
+    prediction_vectors += model.context_product(i, context_vectors.at(i));
+//    prediction_vectors += (context_vectors.at(i) * model.C.at(i));
 //  clock_t cache_time = clock() - cache_start;
 
   // calculate the weight sum of word representations
@@ -412,13 +413,17 @@ Real sgd_update(LogBiLinearModel& model,
   MatrixReal context_gradients = MatrixReal::Zero(word_width, instances);
   for (int i=0; i<context_width; ++i) {
     context_gradients = (model.C.at(i) * weightedRepresentations.transpose()).transpose();
+    //context_gradients = weightedRepresentations * model.C.at(i).transpose();
+    //context_gradients = model.context_product(i, weightedRepresentations, true); // weightedRepresentations*C(i)^T
     for (int instance=0; instance < instances; ++instance) {
       const TrainingInstance& t = training_instances.at(instance);
       int j=t.data_index-context_width+i;
       int v_i = (j<0 ? start_id : training_corpus.at(j));
       model.Q.row(v_i) -= step_size * context_gradients.row(instance);
+      //model.Q.row(v_i) -= step_size * weightedRepresentations.row(instance) * model.C.at(i).transpose();
     }
-    model.C.at(i) -= step_size * context_vectors.at(i).transpose() * weightedRepresentations; 
+    //model.C.at(i) -= step_size * context_vectors.at(i).transpose() * weightedRepresentations; 
+    model.context_gradient_update(i, step_size, context_vectors.at(i), weightedRepresentations);
   }
 //  clock_t context_time = clock() - context_start;
 

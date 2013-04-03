@@ -24,8 +24,8 @@ static uniform_01<> linear_model_uniform_dist;
 //    addModel(model);
 //}
 
-LogBiLinearModel::LogBiLinearModel(const ModelData& config, const Dict& labels)
-  : config(config), R(0,0,0), Q(0,0,0), B(0,0), W(0,0), M(0,0), m_labels(labels) {
+LogBiLinearModel::LogBiLinearModel(const ModelData& config, const Dict& labels, bool diagonal)
+  : config(config), R(0,0,0), Q(0,0,0), B(0,0), W(0,0), M(0,0), m_labels(labels), m_diagonal(diagonal) {
     init(config, m_labels, true);
 }
 
@@ -38,7 +38,7 @@ void LogBiLinearModel::init(const ModelData& config, const Dict& labels, bool in
 
   int R_size = num_output_words * word_width;
   int Q_size = num_context_words * word_width;;
-  int C_size = word_width*word_width;
+  int C_size = (m_diagonal ? word_width : word_width*word_width);
 
   allocate_data(config);
 
@@ -59,7 +59,7 @@ void LogBiLinearModel::init(const ModelData& config, const Dict& labels, bool in
   C.clear();
   Real* ptr = m_data+R_size+Q_size;
   for (int i=0; i<context_width; i++) {
-    C.push_back(ContextTransformType(ptr, word_width, word_width));
+    C.push_back(ContextTransformType(ptr, word_width, (m_diagonal ? 1 : word_width)));
     ptr += C_size;
     //     C.back().setIdentity();
     //      C.back().setZero();
@@ -90,6 +90,7 @@ void LogBiLinearModel::init(const ModelData& config, const Dict& labels, bool in
     std::cerr << "  Context Vocab size = "         << num_context_words << std::endl;
     std::cerr << "  Word Vector size = "           << word_width << std::endl;
     std::cerr << "  Context size = "               << context_width << std::endl;
+    std::cerr << "  Diagonal = "                   << m_diagonal << std::endl;
     std::cerr << "  Total parameters = "           << m_data_size << std::endl;
     std::cerr << "===============================" << std::endl;
   }

@@ -29,7 +29,7 @@ public:
   typedef Eigen::Map<VectorReal> WeightsType;
 
 public:
-  LogBiLinearModel(const ModelData& config, const Dict& labels);
+  LogBiLinearModel(const ModelData& config, const Dict& labels, bool diagonal=false);
 //  LogBiLinearModel(const LogBiLinearModel& model);
 
   virtual ~LogBiLinearModel() { delete [] m_data; }
@@ -60,6 +60,7 @@ public:
   void save(Archive & ar, const unsigned int version) const {
     ar << config;
     ar << m_labels;
+    ar << m_diagonal;
     ar << boost::serialization::make_array(m_data, m_data_size);
   }
 
@@ -67,11 +68,22 @@ public:
   void load(Archive & ar, const unsigned int version) {
     ar >> config;
     ar >> m_labels;
+    ar >> m_diagonal;
     delete [] m_data;
     init(config, m_labels, false);
     ar >> boost::serialization::make_array(m_data, m_data_size);
   }
   BOOST_SERIALIZATION_SPLIT_MEMBER();
+
+  MatrixReal context_product(int i, const MatrixReal& v, bool transpose=false) const {
+    return v * (transpose ? C.at(i).transpose() : C.at(i));
+  }
+
+  //model.C.at(i) -= step_size * context_vectors.at(i).transpose() * weightedRepresentations; 
+  void context_gradient_update(int i, Real sigma, const MatrixReal& v,const MatrixReal& w) {
+    //C.at(i) -= (sigma * v * w.transpose()); 
+    C.at(i) -= (sigma * v.transpose() * w); 
+  }
 
 public:
   ModelData config;
@@ -92,6 +104,7 @@ protected:
   Dict m_labels;
   int m_data_size;
   Real* m_data;
+  bool m_diagonal;
 };
 
 
