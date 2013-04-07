@@ -56,10 +56,15 @@ void cache_data(const LogBiLinearModel& model,
                 const Corpus& training_corpus, const vector<size_t>& indices, const VectorReal& unigram,
                 int k, TrainingInstances &result);
 
-Real sgd_update(LogBiLinearModel& model, int start, int end, 
+Real sgd_gradient(LogBiLinearModel& model, int start, int end, 
                 const Corpus& training_corpus, 
                 const TrainingInstances &result,
-                Real lambda, Real step_size);
+                Real lambda, 
+                LogBiLinearModel::WordVectorsType& g_R,
+                LogBiLinearModel::WordVectorsType& g_Q,
+                LogBiLinearModel::ContextTransformsType& g_C,
+                LogBiLinearModel::WeightsType& g_B);
+
 Real perplexity(const LogBiLinearModel& model, const Corpus& test_corpus, int stride=1);
 
 
@@ -215,6 +220,42 @@ void learn(const variables_map& vm, const ModelData& config) {
   model.B = ((unigram.array()+1.0)/(unigram.sum()+unigram.size())).log();
   unigram /= unigram.sum();
 
+  //////////////////////////////////////////////
+  // setup the gradient matrices
+  int num_words = model.labels();
+  int word_width = model.config.word_representation_size;
+  int context_width = model.config.ngram_order-1;
+
+  int R_size = num_words*word_width;
+  int Q_size = R_size;
+  int C_size = (vm.count("diagonal-contexts") ? word_width : word_width*word_width);
+  int B_size = num_words;
+  int M_size = context_width;
+
+  assert((R_size+Q_size+context_width*C_size+B_size+M_size) == model.num_weights());
+
+  Real* gradient_data = new Real[model.num_weights()];
+  LogBiLinearModel::WeightsType gradient(gradient_data, model.num_weights());
+
+  LogBiLinearModel::WordVectorsType g_R(gradient_data, num_words, word_width);
+  LogBiLinearModel::WordVectorsType g_Q(gradient_data+R_size, num_words, word_width);
+
+  LogBiLinearModel::ContextTransformsType g_C;
+  Real* ptr = gradient_data+2*R_size;
+  for (int i=0; i<context_width; i++) {
+    if (vm.count("diagonal-contexts"))
+        g_C.push_back(LogBiLinearModel::ContextTransformType(ptr, word_width, 1));
+    else
+        g_C.push_back(LogBiLinearModel::ContextTransformType(ptr, word_width, word_width));
+    ptr += C_size;
+  }
+
+  LogBiLinearModel::WeightsType g_B(ptr, B_size);
+  LogBiLinearModel::WeightsType g_M(ptr+B_size, M_size);
+
+  VectorReal adaGrad = VectorReal::Zero(model.num_weights());
+  //////////////////////////////////////////////
+
   size_t minibatch_counter=0;
   size_t minibatch_size = vm["minibatch-size"].as<int>();
   for (int iteration=0; iteration < vm["iterations"].as<int>(); ++iteration) {
@@ -233,6 +274,7 @@ void learn(const variables_map& vm, const ModelData& config) {
       TrainingInstances training_instances;
 
       int thread_id = omp_get_thread_num();
+      Real step_size = vm["step-size"].as<float>(); //* minibatch_size / training_corpus.size();
       for (size_t start=thread_id*minibatch_size; start < training_corpus.size(); ++minibatch_counter) {
         size_t end = min(training_corpus.size(), start + minibatch_size);
 
@@ -242,8 +284,23 @@ void learn(const variables_map& vm, const ModelData& config) {
                    config.label_sample_size, training_instances);
 
         Real f=0.0;
-        Real step_size = vm["step-size"].as<float>(); //* minibatch_size / training_corpus.size();
-        f = sgd_update(model, start, end, training_corpus, training_instances, lambda, step_size);
+        gradient.setZero();
+        f = sgd_gradient(model, start, end, training_corpus, training_instances, lambda, g_R, g_Q, g_C, g_B);
+
+
+        adaGrad.array() += gradient.array().square();
+        ArrayReal gt = adaGrad.array().sqrt();
+        for (int w=0; w<model.num_weights(); ++w)
+          if (gt(w)) model.W(w) -= (step_size*gradient(w) / gt(w));
+
+//        model.W -= (step_size*gradient);
+//        model.R -= (step_size*g_R);
+//        model.Q -= (step_size*g_Q);
+//        for (int i=0; i<context_width; i++)
+//          model.C.at(i) -= (step_size*g_C.at(i));
+//        model.B -= (step_size*g_B);
+        
+
         av_f += f;
 
         // regularisation
@@ -309,10 +366,14 @@ void cache_data(const LogBiLinearModel& model,
 }
 
 
-Real sgd_update(LogBiLinearModel& model,
+Real sgd_gradient(LogBiLinearModel& model,
                 int start, int end, const Corpus& training_corpus,
                 const TrainingInstances &training_instances,
-                Real lambda, Real step_size) {
+                Real lambda,
+                LogBiLinearModel::WordVectorsType& g_R,
+                LogBiLinearModel::WordVectorsType& g_Q,
+                LogBiLinearModel::ContextTransformsType& g_C,
+                LogBiLinearModel::WeightsType& g_B) {
   Real f=0;
   WordId start_id = model.label_set().Convert("<s>");
 
@@ -395,15 +456,19 @@ Real sgd_update(LogBiLinearModel& model,
     WordId w = training_corpus.at(t.data_index);
     Real posW = pos_probs.at(instance);
 
-    model.R.row(w) += step_size * posW * prediction_vectors.row(instance).transpose();
-    model.B(w) += step_size * posW;
+    //model.R.row(w) += step_size * posW * prediction_vectors.row(instance).transpose();
+    //model.B(w) += step_size * posW;
+    g_R.row(w) -= posW * prediction_vectors.row(instance).transpose();
+    g_B(w) -= posW;
 
     for (size_t nl_i=0; nl_i < t.noise_words.size(); ++nl_i, ++noise_prob_index) {
       WordId v_noise = t.noise_words.at(nl_i);
       Real negW = neg_probs.at(noise_prob_index);
 
-      model.R.row(v_noise) -= step_size * negW * prediction_vectors.row(instance);
-      model.B(v_noise) -= step_size * negW;
+      //model.R.row(v_noise) -= step_size * negW * prediction_vectors.row(instance);
+      //model.B(v_noise) -= step_size * negW;
+      g_R.row(v_noise) += negW * prediction_vectors.row(instance);
+      g_B(v_noise) += negW;
 
       nl_i++;
     }
@@ -420,11 +485,11 @@ Real sgd_update(LogBiLinearModel& model,
       const TrainingInstance& t = training_instances.at(instance);
       int j=t.data_index-context_width+i;
       int v_i = (j<0 ? start_id : training_corpus.at(j));
-      model.Q.row(v_i) -= step_size * context_gradients.row(instance);
-      //model.Q.row(v_i) -= step_size * weightedRepresentations.row(instance) * model.C.at(i).transpose();
+      //model.Q.row(v_i) -= step_size * context_gradients.row(instance);
+      g_Q.row(v_i) += context_gradients.row(instance);
     }
     //model.C.at(i) -= step_size * context_vectors.at(i).transpose() * weightedRepresentations; 
-    model.context_gradient_update(i, step_size, context_vectors.at(i), weightedRepresentations);
+    model.context_gradient_update(g_C.at(i), context_vectors.at(i), weightedRepresentations);
   }
 //  clock_t context_time = clock() - context_start;
 

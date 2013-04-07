@@ -85,10 +85,10 @@ public:
   }
 
   //model.C.at(i) -= step_size * context_vectors.at(i).transpose() * weightedRepresentations; 
-  void context_gradient_update(int i, Real sigma, const MatrixReal& v,const MatrixReal& w) {
+  void context_gradient_update(ContextTransformType& g_C, const MatrixReal& v,const MatrixReal& w) const {
     //std::cerr << "context_gradient_update" << std::endl;
-    if (m_diagonal) C.at(i) -= (sigma * v.cwiseProduct(w).colwise().sum()).transpose();
-    else            C.at(i) -= (sigma * v.transpose() * w); 
+    if (m_diagonal) g_C += (v.cwiseProduct(w).colwise().sum()).transpose();
+    else            g_C += (v.transpose() * w); 
   }
 
 public:
