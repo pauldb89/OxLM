@@ -53,11 +53,6 @@ Real function_and_gradient(LogBiLinearModel& model, const Corpus& training_corpu
 Real perplexity(const LogBiLinearModel& model, const Corpus& test_corpus, int stride=1);
 
 
-inline VectorReal softMax(const VectorReal& v) {
-  Real max = v.maxCoeff();
-  return (v.array() - (log((v.array() - max).exp().sum()) + max)).exp();
-}
-
 
 int main(int argc, char **argv) {
   cout << "LBFGS optimisation for a mixture of log-bilinear models: Copyright 2013 Phil Blunsom, " 

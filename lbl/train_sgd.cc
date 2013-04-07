@@ -65,7 +65,18 @@ Real sgd_gradient(LogBiLinearModel& model, int start, int end,
                 LogBiLinearModel::ContextTransformsType& g_C,
                 LogBiLinearModel::WeightsType& g_B);
 
+Real mixture_sgd_gradient(LogBiLinearModel& model, int start, int end, 
+                          const Corpus& training_corpus, 
+                          const TrainingInstances &result,
+                          Real lambda, 
+                          LogBiLinearModel::WordVectorsType& g_R,
+                          LogBiLinearModel::WordVectorsType& g_Q,
+                          LogBiLinearModel::ContextTransformsType& g_C,
+                          LogBiLinearModel::WeightsType& g_B,
+                          LogBiLinearModel::WeightsType& g_M);
+
 Real perplexity(const LogBiLinearModel& model, const Corpus& test_corpus, int stride=1);
+Real mixture_perplexity(const LogBiLinearModel& model, const Corpus& test_corpus, int stride=1);
 
 
 int main(int argc, char **argv) {
@@ -117,6 +128,7 @@ int main(int argc, char **argv) {
     ("randomise", "visit the training tokens in random order")
     ("uniform", "sample noise distribution from a uniform (default unigram) distribution.")
     ("diagonal-contexts", "Use diagonal context matrices (usually faster).")
+    ("mixture", "Train a mixture of bigram LBL models, one per context position.")
     ;
   options_description config_options, cmdline_options;
   config_options.add(generic);
@@ -156,6 +168,7 @@ int main(int argc, char **argv) {
   cerr << "# label-sample-size = " << vm["label-sample-size"].as<int>() << endl;
   cerr << "# iterations = " << vm["iterations"].as<int>() << endl;
   cerr << "# threads = " << vm["threads"].as<int>() << endl;
+  cerr << "# mixture = " << vm.count("mixture") << endl;
   cerr << "################################" << endl;
 
   omp_set_num_threads(config.threads);
@@ -285,7 +298,10 @@ void learn(const variables_map& vm, const ModelData& config) {
 
         Real f=0.0;
         gradient.setZero();
-        f = sgd_gradient(model, start, end, training_corpus, training_instances, lambda, g_R, g_Q, g_C, g_B);
+        if (vm.count("mixture"))
+          f = mixture_sgd_gradient(model, start, end, training_corpus, training_instances, lambda, g_R, g_Q, g_C, g_B, g_M);
+        else
+          f = sgd_gradient(model, start, end, training_corpus, training_instances, lambda, g_R, g_Q, g_C, g_B);
 
 
         adaGrad.array() += gradient.array().square();
@@ -315,8 +331,16 @@ void learn(const variables_map& vm, const ModelData& config) {
 
     Real iteration_time = (clock()-iteration_start) / (Real)CLOCKS_PER_SEC;
     cerr << "\n | Time: " << iteration_time << " seconds, Average f = " << av_f/training_corpus.size();
-    if (vm.count("test-set"))
-      cerr << ", Test Perplexity = " << perplexity(model, test_corpus, test_corpus.size()/vm["test-tokens"].as<int>()); 
+    if (vm.count("test-set")) {
+      if (vm.count("mixture"))
+        cerr << ", Test Perplexity = " 
+             << mixture_perplexity(model, test_corpus, test_corpus.size()/vm["test-tokens"].as<int>()); 
+      else
+        cerr << ", Test Perplexity = " 
+             << perplexity(model, test_corpus, test_corpus.size()/vm["test-tokens"].as<int>()); 
+    }
+    if (vm.count("mixture"))
+      cerr << ", Mixture weights = " << softMax(model.M).transpose();
     cerr << " |" << endl << endl;
   }
 
@@ -497,6 +521,150 @@ Real sgd_gradient(LogBiLinearModel& model,
 }
 
 
+Real mixture_sgd_gradient(LogBiLinearModel& model,
+                          int start, int end, const Corpus& training_corpus,
+                          const TrainingInstances &training_instances,
+                          Real lambda,
+                          LogBiLinearModel::WordVectorsType& g_R,
+                          LogBiLinearModel::WordVectorsType& g_Q,
+                          LogBiLinearModel::ContextTransformsType& g_C,
+                          LogBiLinearModel::WeightsType& g_B,
+                          LogBiLinearModel::WeightsType& g_M) {
+  Real f=0;
+  WordId start_id = model.label_set().Convert("<s>");
+
+  int word_width = model.config.word_representation_size;
+  int context_width = model.config.ngram_order-1;
+
+  // form matrices of the ngram histories
+//  clock_t cache_start = clock();
+  int instances=end-start;
+  vector<MatrixReal> context_vectors(context_width, MatrixReal::Zero(instances, word_width)); 
+  for (int instance=0; instance < instances; ++instance) {
+    const TrainingInstance& t = training_instances.at(instance);
+    int context_start = t.data_index - context_width;
+
+    for (int i=0; i<context_width; i++) {
+      int j=context_start+i;
+      int v_i = (j<0 ? start_id : training_corpus.at(j));
+      context_vectors.at(i).row(instance) = model.Q.row(v_i);
+    }
+  }
+  vector<MatrixReal> prediction_vectors(context_width, MatrixReal::Zero(instances, word_width));
+  for (int i=0; i<context_width; ++i)
+    prediction_vectors.at(i) = model.context_product(i, context_vectors.at(i));
+
+  // the weight sum of word representations
+  vector<MatrixReal> weightedRepresentations(context_width, MatrixReal::Zero(instances, word_width));
+
+  // calculate the function and gradient for each ngram
+  Real unnormalised_llh=0;
+
+  // cache the mixture weights
+  VectorReal pM = softMax(model.M);
+
+  for (int instance=0; instance < instances; instance++) {
+    const TrainingInstance& t = training_instances.at(instance);
+    WordId w = training_corpus.at(t.data_index);
+
+    VectorReal logProbs(context_width);
+    // calculate the log-probabilities
+    for (int i=0; i<context_width; i++) {
+      logProbs(i) = model.R.row(w) * prediction_vectors.at(i).row(instance).transpose() + model.B(w);
+    }
+
+    // calculate the mixture contributions
+    VectorReal mixLogProbs = logProbs.array() + log(pM.array());
+    Real max = mixLogProbs.maxCoeff();
+    Real contributions_log_z = log((mixLogProbs.array() - max).exp().sum()) + max;
+    VectorReal contributions = (mixLogProbs.array() - contributions_log_z).exp();
+
+    // data update
+    Real k = t.noise_words.size();
+    //Real log_posP = (model.R.row(w) * prediction_vectors.row(instance).transpose()) + model.B(w);
+    Real log_posP = contributions_log_z;
+    Real posP = exp(log_posP);
+    posP = posP > numeric_limits<Real>::max() ? numeric_limits<Real>::max() : posP;
+    Real posW = k*t.data_prob / (posP + k*t.data_prob);
+
+    Real log_pos_nc_p = (log_posP - Log<Real>::add(log_posP, log(k*t.data_prob)));
+    log_pos_nc_p = log_pos_nc_p < -numeric_limits<Real>::max() ? -numeric_limits<Real>::max() : log_pos_nc_p;
+    assert(abs(log_pos_nc_p) <= numeric_limits<Real>::max());
+    f -= log_pos_nc_p;
+
+    unnormalised_llh += log_posP;
+
+    for (int i=0; i<context_width; i++) {
+      weightedRepresentations.at(i).row(instance) -= posW * contributions(i) * model.R.row(w).transpose();
+      g_R.row(w) -= posW * contributions(i) * prediction_vectors.at(i).row(instance).transpose();
+      g_M(i)     -= posW * (contributions(i) - pM(i));
+    }
+    g_B(w) -= posW;
+
+    for (size_t nl_i=0; nl_i < t.noise_words.size(); ++nl_i) {
+      WordId v_noise = t.noise_words.at(nl_i);
+
+      for (int i=0; i<context_width; i++) 
+        logProbs(i) = model.R.row(v_noise) * prediction_vectors.at(i).row(instance).transpose() + model.B(v_noise);
+
+      // calculate the mixture contributions
+      mixLogProbs = logProbs.array() + log(pM.array());
+      max = mixLogProbs.maxCoeff();
+      contributions_log_z = log((mixLogProbs.array() - max).exp().sum()) + max;
+      contributions = (mixLogProbs.array() - contributions_log_z).exp();
+
+      Real log_negP = contributions_log_z;
+      Real negP = exp(log_negP);
+
+      negP = negP > numeric_limits<Real>::max() ? numeric_limits<Real>::max() : negP;
+      Real negW = negP / (negP + k*t.noise_probs.at(nl_i));
+
+      Real log_negNoise_nc_p = log(k*t.noise_probs.at(nl_i)) - Log<Real>::add(log_negP, log(k*t.noise_probs.at(nl_i)));
+      log_negNoise_nc_p = log_negNoise_nc_p < -numeric_limits<Real>::max() ? -numeric_limits<Real>::max() : log_negNoise_nc_p;
+      f -= log_negNoise_nc_p;
+
+      for (int i=0; i<context_width; i++) {
+        weightedRepresentations.at(i).row(instance) += negW * contributions(i) * model.R.row(v_noise).transpose();
+        g_R.row(v_noise) += negW * contributions(i) * prediction_vectors.at(i).row(instance);
+        g_M(i)     += negW * (contributions(i) - pM(i));
+      }
+      g_B(v_noise) += negW;
+
+      nl_i++;
+    }
+
+    /*
+    // context gradient updates
+    for (int i=0; i<context_width; ++i) {
+      int j=t.data_index-context_width+i;
+      int v_i = (j<0 ? start_id : training_corpus.at(j));
+      g_Q.row(v_i) += model.context_product(i, weightedRepresentations.at(i).row(instance), true); 
+
+      model.context_gradient_update(g_C.at(i), context_vectors.at(i).row(instance), weightedRepresentations.at(i).row(instance));
+    }
+    */
+  }
+
+//  clock_t iteration_time = clock() - iteration_start;
+
+//  clock_t context_start = clock();
+  MatrixReal context_gradients = MatrixReal::Zero(word_width, instances);
+  for (int i=0; i<context_width; ++i) {
+    context_gradients = model.context_product(i, weightedRepresentations.at(i), true); // weightedRepresentations*C(i)^T
+    for (int instance=0; instance < instances; ++instance) {
+      const TrainingInstance& t = training_instances.at(instance);
+      int j=t.data_index-context_width+i;
+      int v_i = (j<0 ? start_id : training_corpus.at(j));
+      g_Q.row(v_i) += context_gradients.row(instance);
+    }
+    model.context_gradient_update(g_C.at(i), context_vectors.at(i), weightedRepresentations.at(i));
+  }
+//  clock_t context_time = clock() - context_start;
+
+  return f;
+}
+
+
 Real perplexity(const LogBiLinearModel& model, const Corpus& test_corpus, int stride) {
   Real p=0.0;
   Real log_z_sum=0.0;
@@ -542,5 +710,46 @@ Real perplexity(const LogBiLinearModel& model, const Corpus& test_corpus, int st
     }
   }
   cerr << ", Average log_z = " << log_z_sum / tokens;
+  return exp(-p/tokens);
+}
+
+Real mixture_perplexity(const LogBiLinearModel& model, const Corpus& test_corpus, int stride) {
+  Real p=0.0;
+
+  int context_width = model.config.ngram_order-1;
+
+  // cache the products of Q with the contexts 
+  std::vector<MatrixReal> q_context_products(context_width);
+  for (int i=0; i<context_width; i++)
+    q_context_products.at(i) = model.context_product(i, model.Q);
+
+  // cache the mixture weights
+  VectorReal pM = softMax(model.M);
+
+  int tokens=0;
+  WordId start_id = model.label_set().Lookup("<s>");
+  #pragma omp parallel \
+      shared(test_corpus,model,stride,q_context_products) \
+      reduction(+:p,tokens) 
+  {
+    size_t thread_num = omp_get_thread_num();
+    size_t num_threads = omp_get_num_threads();
+    for (size_t s = (thread_num*stride); s < test_corpus.size(); s += (num_threads*stride)) {
+      WordId w = test_corpus.at(s);
+
+      int context_start = s - context_width;
+      Real p_sum = 0;
+      for (int i=0; i<context_width; ++i) {
+        int j=context_start+i;
+        int v_i = (j<0 ? start_id : test_corpus.at(j));
+
+        ArrayReal score_vector = model.R * q_context_products[i].row(v_i).transpose() + model.B;
+        p_sum += (pM(i) * softMax(score_vector)(w));
+      }
+      
+      p += log(p_sum);
+      tokens++;
+    }
+  }
   return exp(-p/tokens);
 }

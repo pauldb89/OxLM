@@ -146,6 +146,12 @@ private:
   virtual void allocate_data(const ModelData& config);
 };
 */
+
+inline VectorReal softMax(const VectorReal& v) {
+  Real max = v.maxCoeff();
+  return (v.array() - (log((v.array() - max).exp().sum()) + max)).exp();
+}
+
 }
 
 #endif // _LOG_BILINEAR_MODEL_H_
