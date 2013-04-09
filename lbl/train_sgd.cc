@@ -10,6 +10,7 @@
 #include <time.h>
 #include <math.h>
 #include <float.h>
+#include <set>
 
 // Boost
 #include <boost/program_options/parsers.hpp>
@@ -233,115 +234,128 @@ void learn(const variables_map& vm, const ModelData& config) {
   model.B = ((unigram.array()+1.0)/(unigram.sum()+unigram.size())).log();
   unigram /= unigram.sum();
 
-  //////////////////////////////////////////////
-  // setup the gradient matrices
-  int num_words = model.labels();
-  int word_width = model.config.word_representation_size;
-  int context_width = model.config.ngram_order-1;
-
-  int R_size = num_words*word_width;
-  int Q_size = R_size;
-  int C_size = (vm.count("diagonal-contexts") ? word_width : word_width*word_width);
-  int B_size = num_words;
-  int M_size = context_width;
-
-  assert((R_size+Q_size+context_width*C_size+B_size+M_size) == model.num_weights());
-
-  Real* gradient_data = new Real[model.num_weights()];
-  LogBiLinearModel::WeightsType gradient(gradient_data, model.num_weights());
-
-  LogBiLinearModel::WordVectorsType g_R(gradient_data, num_words, word_width);
-  LogBiLinearModel::WordVectorsType g_Q(gradient_data+R_size, num_words, word_width);
-
-  LogBiLinearModel::ContextTransformsType g_C;
-  Real* ptr = gradient_data+2*R_size;
-  for (int i=0; i<context_width; i++) {
-    if (vm.count("diagonal-contexts"))
-        g_C.push_back(LogBiLinearModel::ContextTransformType(ptr, word_width, 1));
-    else
-        g_C.push_back(LogBiLinearModel::ContextTransformType(ptr, word_width, word_width));
-    ptr += C_size;
-  }
-
-  LogBiLinearModel::WeightsType g_B(ptr, B_size);
-  LogBiLinearModel::WeightsType g_M(ptr+B_size, M_size);
-
   VectorReal adaGrad = VectorReal::Zero(model.num_weights());
-  //////////////////////////////////////////////
+  VectorReal global_gradient(model.num_weights());
+  Real av_f=0.0;
 
-  size_t minibatch_counter=0;
-  size_t minibatch_size = vm["minibatch-size"].as<int>();
-  for (int iteration=0; iteration < vm["iterations"].as<int>(); ++iteration) {
-    clock_t iteration_start=clock();
-    Real av_f=0.0;
-    cout << "Iteration " << iteration << ": "; cout.flush();
+  #pragma omp parallel shared(global_gradient)
+  {
+    //////////////////////////////////////////////
+    // setup the gradient matrices
+    int num_words = model.labels();
+    int word_width = model.config.word_representation_size;
+    int context_width = model.config.ngram_order-1;
 
-    if (vm.count("randomise"))
-      std::random_shuffle(training_indices.begin(), training_indices.end());
+    int R_size = num_words*word_width;
+    int Q_size = R_size;
+    int C_size = (vm.count("diagonal-contexts") ? word_width : word_width*word_width);
+    int B_size = num_words;
+    int M_size = context_width;
 
-    #pragma omp parallel \
-      firstprivate(minibatch_counter) \
-      shared(training_corpus,training_indices,model,vm,minibatch_size,iteration,config,unigram) \
-      reduction(+:av_f)
-    {
+    assert((R_size+Q_size+context_width*C_size+B_size+M_size) == model.num_weights());
+
+    Real* gradient_data = new Real[model.num_weights()];
+    LogBiLinearModel::WeightsType gradient(gradient_data, model.num_weights());
+
+    LogBiLinearModel::WordVectorsType g_R(gradient_data, num_words, word_width);
+    LogBiLinearModel::WordVectorsType g_Q(gradient_data+R_size, num_words, word_width);
+
+    LogBiLinearModel::ContextTransformsType g_C;
+    Real* ptr = gradient_data+2*R_size;
+    for (int i=0; i<context_width; i++) {
+      if (vm.count("diagonal-contexts"))
+          g_C.push_back(LogBiLinearModel::ContextTransformType(ptr, word_width, 1));
+      else
+          g_C.push_back(LogBiLinearModel::ContextTransformType(ptr, word_width, word_width));
+      ptr += C_size;
+    }
+
+    LogBiLinearModel::WeightsType g_B(ptr, B_size);
+    LogBiLinearModel::WeightsType g_M(ptr+B_size, M_size);
+    //////////////////////////////////////////////
+
+    size_t minibatch_counter=0;
+    size_t minibatch_size = vm["minibatch-size"].as<int>();
+    for (int iteration=0; iteration < vm["iterations"].as<int>(); ++iteration) {
+      clock_t iteration_start=clock();
+      #pragma omp master
+      {
+        av_f=0.0;
+        cout << "Iteration " << iteration << ": "; cout.flush();
+
+        if (vm.count("randomise"))
+          std::random_shuffle(training_indices.begin(), training_indices.end());
+      }
+
       TrainingInstances training_instances;
-
       int thread_id = omp_get_thread_num();
       Real step_size = vm["step-size"].as<float>(); //* minibatch_size / training_corpus.size();
+
       for (size_t start=thread_id*minibatch_size; start < training_corpus.size(); ++minibatch_counter) {
         size_t end = min(training_corpus.size(), start + minibatch_size);
 
+        #pragma omp master
+        global_gradient.setZero();
+
+        gradient.setZero();
         Real lambda = config.l2_parameter*(end-start)/static_cast<Real>(training_corpus.size()); 
 
+        #pragma omp barrier
         cache_data(model, start, end, training_corpus, training_indices, unigram,
                    config.label_sample_size, training_instances);
 
         Real f=0.0;
-        gradient.setZero();
         if (vm.count("mixture"))
           f = mixture_sgd_gradient(model, start, end, training_corpus, training_instances, lambda, g_R, g_Q, g_C, g_B, g_M);
         else
           f = sgd_gradient(model, start, end, training_corpus, training_instances, lambda, g_R, g_Q, g_C, g_B);
 
+        #pragma omp critical 
+        {
+          global_gradient += gradient;
+          av_f += f;
+        }
+        #pragma omp barrier 
+        #pragma omp master
+        {
+          adaGrad.array() += global_gradient.array().square();
+          for (int w=0; w<model.num_weights(); ++w)
+            if (adaGrad(w)) model.W(w) -= (step_size*global_gradient(w) / sqrt(adaGrad(w)));
 
-        adaGrad.array() += gradient.array().square();
-        ArrayReal gt = adaGrad.array().sqrt();
-        for (int w=0; w<model.num_weights(); ++w)
-          if (gt(w)) model.W(w) -= (step_size*gradient(w) / gt(w));
+        //        model.W -= (step_size*global_gradient);
+        //        model.R -= (step_size*g_R);
+        //        model.Q -= (step_size*g_Q);
+        //        for (int i=0; i<context_width; i++)
+        //          model.C.at(i) -= (step_size*g_C.at(i));
+        //        model.B -= (step_size*g_B);
 
-//        model.W -= (step_size*gradient);
-//        model.R -= (step_size*g_R);
-//        model.Q -= (step_size*g_Q);
-//        for (int i=0; i<context_width; i++)
-//          model.C.at(i) -= (step_size*g_C.at(i));
-//        model.B -= (step_size*g_B);
-        
+          // regularisation
+          if (lambda > 0) model.l2_gradient_update(step_size*lambda);
 
-        av_f += f;
-
-        // regularisation
-        if (lambda > 0) model.l2_gradient_update(step_size*lambda);
-
-        #pragma omp master 
-        if (minibatch_counter % 100 == 0) { cerr << "."; cout.flush(); }
+          if (minibatch_counter % 100 == 0) { cerr << "."; cout.flush(); }
+        }
 
         start += (minibatch_size*omp_get_num_threads());
       }
-    }
 
-    Real iteration_time = (clock()-iteration_start) / (Real)CLOCKS_PER_SEC;
-    cerr << "\n | Time: " << iteration_time << " seconds, Average f = " << av_f/training_corpus.size();
-    if (vm.count("test-set")) {
+      Real iteration_time = (clock()-iteration_start) / (Real)CLOCKS_PER_SEC;
+      Real pp=0;
       if (vm.count("mixture"))
-        cerr << ", Test Perplexity = " 
-             << mixture_perplexity(model, test_corpus, test_corpus.size()/vm["test-tokens"].as<int>()); 
+        pp = mixture_perplexity(model, test_corpus, test_corpus.size()/vm["test-tokens"].as<int>());
       else
-        cerr << ", Test Perplexity = " 
-             << perplexity(model, test_corpus, test_corpus.size()/vm["test-tokens"].as<int>()); 
+        pp = perplexity(model, test_corpus, test_corpus.size()/vm["test-tokens"].as<int>());
+
+      #pragma omp master
+      {
+        cerr << "\n | Time: " << iteration_time << " seconds, Average f = " << av_f/training_corpus.size();
+        if (vm.count("test-set")) {
+          cerr << ", Test Perplexity = " << pp; 
+        }
+        if (vm.count("mixture"))
+          cerr << ", Mixture weights = " << softMax(model.M).transpose();
+        cerr << " |" << endl << endl;
+      }
     }
-    if (vm.count("mixture"))
-      cerr << ", Mixture weights = " << softMax(model.M).transpose();
-    cerr << " |" << endl << endl;
   }
 
   if (vm.count("model-out")) {
@@ -362,6 +376,7 @@ void cache_data(const LogBiLinearModel& model,
   int num_words = model.labels();
 
   result.resize(end-start);
+
   for (int s=start; s<end; ++s) {
     TrainingInstance& t = result.at(s-start);
     int w_i = indices.at(s);
@@ -537,9 +552,9 @@ Real mixture_sgd_gradient(LogBiLinearModel& model,
   int context_width = model.config.ngram_order-1;
 
   // form matrices of the ngram histories
-//  clock_t cache_start = clock();
   int instances=end-start;
   vector<MatrixReal> context_vectors(context_width, MatrixReal::Zero(instances, word_width)); 
+
   for (int instance=0; instance < instances; ++instance) {
     const TrainingInstance& t = training_instances.at(instance);
     int context_start = t.data_index - context_width;
@@ -551,6 +566,7 @@ Real mixture_sgd_gradient(LogBiLinearModel& model,
     }
   }
   vector<MatrixReal> prediction_vectors(context_width, MatrixReal::Zero(instances, word_width));
+
   for (int i=0; i<context_width; ++i)
     prediction_vectors.at(i) = model.context_product(i, context_vectors.at(i));
 
@@ -563,15 +579,15 @@ Real mixture_sgd_gradient(LogBiLinearModel& model,
   // cache the mixture weights
   VectorReal pM = softMax(model.M);
 
+
   for (int instance=0; instance < instances; instance++) {
     const TrainingInstance& t = training_instances.at(instance);
     WordId w = training_corpus.at(t.data_index);
 
-    VectorReal logProbs(context_width);
     // calculate the log-probabilities
-    for (int i=0; i<context_width; i++) {
+    VectorReal logProbs(context_width);
+    for (int i=0; i<context_width; i++) 
       logProbs(i) = model.R.row(w) * prediction_vectors.at(i).row(instance).transpose() + model.B(w);
-    }
 
     // calculate the mixture contributions
     VectorReal mixLogProbs = logProbs.array() + log(pM.array());
@@ -597,7 +613,8 @@ Real mixture_sgd_gradient(LogBiLinearModel& model,
     for (int i=0; i<context_width; i++) {
       weightedRepresentations.at(i).row(instance) -= posW * contributions(i) * model.R.row(w).transpose();
       g_R.row(w) -= posW * contributions(i) * prediction_vectors.at(i).row(instance).transpose();
-      g_M(i)     -= posW * (contributions(i) - pM(i));
+      //g_M(i)     -= posW * (contributions(i) - pM(i));
+      g_M(i)     -= (contributions(i) - pM(i));
     }
     g_B(w) -= posW;
 
@@ -626,7 +643,7 @@ Real mixture_sgd_gradient(LogBiLinearModel& model,
       for (int i=0; i<context_width; i++) {
         weightedRepresentations.at(i).row(instance) += negW * contributions(i) * model.R.row(v_noise).transpose();
         g_R.row(v_noise) += negW * contributions(i) * prediction_vectors.at(i).row(instance);
-        g_M(i)     += negW * (contributions(i) - pM(i));
+        //g_M(i)     += negW * (contributions(i) - pM(i));
       }
       g_B(v_noise) += negW;
 
@@ -636,18 +653,15 @@ Real mixture_sgd_gradient(LogBiLinearModel& model,
     /*
     // context gradient updates
     for (int i=0; i<context_width; ++i) {
-      int j=t.data_index-context_width+i;
-      int v_i = (j<0 ? start_id : training_corpus.at(j));
-      g_Q.row(v_i) += model.context_product(i, weightedRepresentations.at(i).row(instance), true); 
+    int j=t.data_index-context_width+i;
+    int v_i = (j<0 ? start_id : training_corpus.at(j));
+    g_Q.row(v_i) += model.context_product(i, weightedRepresentations.at(i).row(instance), true); 
 
-      model.context_gradient_update(g_C.at(i), context_vectors.at(i).row(instance), weightedRepresentations.at(i).row(instance));
+    model.context_gradient_update(g_C.at(i), context_vectors.at(i).row(instance), weightedRepresentations.at(i).row(instance));
     }
     */
   }
 
-//  clock_t iteration_time = clock() - iteration_start;
-
-//  clock_t context_start = clock();
   MatrixReal context_gradients = MatrixReal::Zero(word_width, instances);
   for (int i=0; i<context_width; ++i) {
     context_gradients = model.context_product(i, weightedRepresentations.at(i), true); // weightedRepresentations*C(i)^T
@@ -659,7 +673,6 @@ Real mixture_sgd_gradient(LogBiLinearModel& model,
     }
     model.context_gradient_update(g_C.at(i), context_vectors.at(i), weightedRepresentations.at(i));
   }
-//  clock_t context_time = clock() - context_start;
 
   return f;
 }
@@ -728,9 +741,11 @@ Real mixture_perplexity(const LogBiLinearModel& model, const Corpus& test_corpus
 
   int tokens=0;
   WordId start_id = model.label_set().Lookup("<s>");
+  /*
   #pragma omp parallel \
       shared(test_corpus,model,stride,q_context_products) \
       reduction(+:p,tokens) 
+  */
   {
     size_t thread_num = omp_get_thread_num();
     size_t num_threads = omp_get_num_threads();
