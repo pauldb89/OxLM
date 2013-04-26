@@ -7,17 +7,17 @@ all: hpyplm dhpyplm chpyplm
 hpyplm: hpyplm.o
 	$(CXX) -o $@ $^ $(LDFLAGS)
 
-chpyplm: chpyplm.o
-	$(CXX) -o $@ $^ $(LDFLAGS)
+#chpyplm: chpyplm.o
+#	$(CXX) -o $@ $^ $(LDFLAGS)
 
-# lbl_hpyplm: lbl_hpyplm.o ../lbl/log_bilinear_model.o
-# 	$(CXX) -o $@ $^ $(LDFLAGS)
+#lbl_hpyplm: lbl_hpyplm.o ../lbl/log_bilinear_model.o
+#	$(CXX) -o $@ $^ $(LDFLAGS)
 
-chpyplm_generate: chpyplm_generate.o
-	$(CXX) -o $@ $^ $(LDFLAGS)
+#chpyplm_generate: chpyplm_generate.o
+#	$(CXX) -o $@ $^ $(LDFLAGS)
 
-dhpyplm: dhpyplm.cc
-	$(CXX) -std=c++0x -O3 -g -Wall -I.. dhpyplm.cc -o dhpyplm
+#dhpyplm: dhpyplm.o
+#	$(CXX) -o $@ $^ $(LDFLAGS)
 
 %.o: %.cc
 	${CXX} $(CXXFLAGS) -c $< -o $@
@@ -28,9 +28,9 @@ dhpyplm: dhpyplm.cc
 
 ## stuff below here is optional
 
-BOOST_ROOT=/cab0/tools/boost-1.49.0
-BOOST_INCLUDE=$(BOOST_ROOT)/include
-BOOST_SERIALIZATION=$(BOOST_ROOT)/lib/libboost_serialization.a
+#BOOST_ROOT=$(LOCAL_LIBS)/boost_1_52_0/
+BOOST_INCLUDE=$(LOCAL_LIBS)/include
+BOOST_SERIALIZATION=$(LOCAL_LIBS)/lib/libboost_serialization.a
 
 hpyplm_train: hpyplm_train.cc
 	$(CXX) -std=c++0x -O3 -Wall -I$(BOOST_INCLUDE) -I.. $< -o $@ $(BOOST_SERIALIZATION)

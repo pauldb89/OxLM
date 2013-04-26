@@ -28,22 +28,22 @@ int main(int argc, char** argv) {
   string test_file = argv[2];
   int samples = atoi(argv[3]);
   
-  vector<vector<unsigned> > corpuse;
-  set<unsigned> vocabe, tv;
-  const unsigned kSOS = dict.Convert("<s>");
-  const unsigned kEOS = dict.Convert("</s>");
+  vector<vector<WordId> > corpuse;
+  set<WordId> vocabe, tv;
+  const WordId kSOS = dict.Convert("<s>");
+  const WordId kEOS = dict.Convert("</s>");
   cerr << "Reading corpus...\n";
   ReadFromFile(train_file, &dict, &corpuse, &vocabe);
   cerr << "E-corpus size: " << corpuse.size() << " sentences\t (" << vocabe.size() << " word types)\n";
-  vector<vector<unsigned> > test;
+  vector<vector<WordId> > test;
   ReadFromFile(test_file, &dict, &test, &tv);
   PYPLM<kORDER> lm(vocabe.size(), 1, 1, 1, 1);
-  vector<unsigned> ctx(kORDER - 1, kSOS);
+  vector<WordId> ctx(kORDER - 1, kSOS);
   for (int sample=0; sample < samples; ++sample) {
     for (const auto& s : corpuse) {
       ctx.resize(kORDER - 1);
       for (unsigned i = 0; i <= s.size(); ++i) {
-        unsigned w = (i < s.size() ? s[i] : kEOS);
+        WordId w = (i < s.size() ? s[i] : kEOS);
         if (sample > 0) lm.decrement(w, ctx, eng);
         lm.increment(w, ctx, eng);
         ctx.push_back(w);
@@ -61,7 +61,7 @@ int main(int argc, char** argv) {
   for (auto& s : test) {
     ctx.resize(kORDER - 1);
     for (unsigned i = 0; i <= s.size(); ++i) {
-      unsigned w = (i < s.size() ? s[i] : kEOS);
+      WordId w = (i < s.size() ? s[i] : kEOS);
       double lp = log(lm.prob(w, ctx)) / log(2);
       if (i < s.size() && vocabe.count(w) == 0) {
 //        cerr << "**OOV ";

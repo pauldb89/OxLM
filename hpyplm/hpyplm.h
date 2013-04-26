@@ -12,6 +12,8 @@
 #include "hpyplm/uvector.h"
 #include "hpyplm/uniform_vocab.h"
 
+#include "corpus/corpus.h"
+
 // An implementation of an N-gram LM based on PYPs as described 
 // in Y.-W. Teh. (2006) A Hierarchical Bayesian Language Model
 // based on Pitman-Yor Processes. In Proc. ACL.
@@ -44,7 +46,7 @@ template <unsigned N> struct PYPLM {
     }
 
   template<typename Engine>
-  void increment(unsigned w, const std::vector<unsigned>& context, Engine& eng) {
+  void increment(WordId w, const std::vector<WordId>& context, Engine& eng) {
     const double bo = backoff.prob(w, context);
     copy_context(context, lookup);
     auto it = p.find(lookup);
@@ -71,7 +73,7 @@ template <unsigned N> struct PYPLM {
   }
 
   template<typename Engine>
-  void decrement(unsigned w, const std::vector<unsigned>& context, Engine& eng) {
+  void decrement(WordId w, const std::vector<WordId>& context, Engine& eng) {
     copy_context(context, lookup);
 
     // check if this is a customer of a singleton context
@@ -91,7 +93,7 @@ template <unsigned N> struct PYPLM {
       backoff.decrement(w, context, eng);
   }
 
-  double prob(unsigned w, const std::vector<unsigned>& context) const {
+  double prob(WordId w, const std::vector<WordId>& context) const {
     const double bo = backoff.prob(w, context);
     copy_context(context, lookup);
 
@@ -126,9 +128,9 @@ template <unsigned N> struct PYPLM {
 
   PYPLM<N-1> backoff;
   pyp::tied_parameter_resampler<pyp::crp<unsigned>> tr;
-  mutable std::vector<unsigned> lookup;  // thread-local
-  std::unordered_map<std::vector<unsigned>, pyp::crp<unsigned>, uvector_hash> p;  // .first = context .second = CRP
-  std::unordered_map<std::vector<unsigned>, unsigned, uvector_hash> singletons; // contexts seen exactly once
+  mutable std::vector<WordId> lookup;  // thread-local
+  std::unordered_map<std::vector<WordId>, pyp::crp<unsigned>, vector_hash> p;  // .first = context .second = CRP
+  std::unordered_map<std::vector<WordId>, WordId, vector_hash> singletons; // contexts seen exactly once
 
   std::ostream& print(std::ostream& out) const {
     out << '\n' << N << "-gram PYLM:\n";
@@ -150,7 +152,7 @@ template <unsigned N> struct PYPLM {
   }
 
 private:
-  void copy_context(const std::vector<unsigned>& context, std::vector<unsigned>& result) const {
+  void copy_context(const std::vector<WordId>& context, std::vector<WordId>& result) const {
     assert (context.size() >= N-1);
     for (unsigned i = 0; i < N-1; ++i)
       result[i] = context[context.size() - 1 - i];
