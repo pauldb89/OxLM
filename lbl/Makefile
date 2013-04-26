@@ -1,6 +1,6 @@
 LOCAL_LIBS=${HOME}/packages
-CXXFLAGS = -g -std=c++0x -fopenmp -O3 -Wall -I.. -I${LOCAL_LIBS}/include -m64 -I/usr/include/eigen3
-LDFLAGS = -g -std=c++0x -fopenmp -O3 -L${LOCAL_LIBS}/lib64 -L${LOCAL_LIBS}/lib -lboost_program_options -lboost_serialization -lgfortran
+CXXFLAGS = -g -std=c++0x -O3 -fopenmp -Wall -I.. -I${LOCAL_LIBS}/include -m64 -I/usr/include/eigen3
+LDFLAGS = -g -std=c++0x -O3 -fopenmp -L${LOCAL_LIBS}/lib64 -L${LOCAL_LIBS}/lib -lboost_program_options -lboost_serialization -lgfortran
 FFLAGS = -Wall -g -O3  
 CXX=g++
 FC=gfortran

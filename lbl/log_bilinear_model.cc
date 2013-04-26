@@ -72,6 +72,8 @@ void LogBiLinearModel::init(const ModelData& config, const Dict& labels, bool in
   new (&B) WeightsType(ptr, num_output_words);
   new (&M) WeightsType(ptr+num_output_words, context_width);
 
+  M.setZero();
+
   //R.setOnes();
   //R.setZero();
   //R.setIdentity();
