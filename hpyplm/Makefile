@@ -10,8 +10,8 @@ hpyplm: hpyplm.o
 chpyplm: chpyplm.o
 	$(CXX) -o $@ $^ $(LDFLAGS)
 
-lbl_hpyplm: lbl_hpyplm.o ../lbl/log_bilinear_model.o
-	$(CXX) -o $@ $^ $(LDFLAGS)
+# lbl_hpyplm: lbl_hpyplm.o ../lbl/log_bilinear_model.o
+# 	$(CXX) -o $@ $^ $(LDFLAGS)
 
 chpyplm_generate: chpyplm_generate.o
 	$(CXX) -o $@ $^ $(LDFLAGS)

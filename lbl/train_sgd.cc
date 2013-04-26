@@ -57,7 +57,7 @@ void cache_data(const LogBiLinearModel& model,
                 const Corpus& training_corpus, const vector<size_t>& indices, const VectorReal& unigram,
                 int k, TrainingInstances &result);
 
-Real sgd_gradient(LogBiLinearModel& model, int start, int end, 
+Real sgd_gradient(LogBiLinearModel& model,
                 const Corpus& training_corpus, 
                 const TrainingInstances &result,
                 Real lambda, 
@@ -66,7 +66,7 @@ Real sgd_gradient(LogBiLinearModel& model, int start, int end,
                 LogBiLinearModel::ContextTransformsType& g_C,
                 LogBiLinearModel::WeightsType& g_B);
 
-Real mixture_sgd_gradient(LogBiLinearModel& model, int start, int end, 
+Real mixture_sgd_gradient(LogBiLinearModel& model,
                           const Corpus& training_corpus, 
                           const TrainingInstances &result,
                           Real lambda, 
@@ -105,6 +105,8 @@ int main(int argc, char **argv) {
         "number of passes through the data")
     ("minibatch-size", value<int>()->default_value(100), 
         "number of sentences per minibatch")
+    ("instances", value<int>()->default_value(std::numeric_limits<int>::max()), 
+        "training instances per iteration")
     ("order,n", value<int>()->default_value(3), 
         "ngram order")
     ("model-in,m", value<string>(), 
@@ -209,8 +211,14 @@ void learn(const variables_map& vm, const ModelData& config) {
     while (getline(test_in, line)) {
       stringstream line_stream(line);
       Sentence tokens;
-      while (line_stream >> token)
-        test_corpus.push_back(dict.Convert(token, true));
+      while (line_stream >> token) {
+        WordId w = dict.Convert(token, true);
+        if (w < 0) {
+          cerr << token << " " << w << endl;
+          assert(!"Unknown word found in test corpus.");
+        }
+        test_corpus.push_back(w);
+      }
       test_corpus.push_back(end_id);
     }
     test_in.close();
@@ -237,6 +245,7 @@ void learn(const variables_map& vm, const ModelData& config) {
   VectorReal adaGrad = VectorReal::Zero(model.num_weights());
   VectorReal global_gradient(model.num_weights());
   Real av_f=0.0;
+  Real pp=0;
 
   #pragma omp parallel shared(global_gradient)
   {
@@ -281,6 +290,7 @@ void learn(const variables_map& vm, const ModelData& config) {
       #pragma omp master
       {
         av_f=0.0;
+        pp=0.0;
         cout << "Iteration " << iteration << ": "; cout.flush();
 
         if (vm.count("randomise"))
@@ -288,10 +298,11 @@ void learn(const variables_map& vm, const ModelData& config) {
       }
 
       TrainingInstances training_instances;
-      int thread_id = omp_get_thread_num();
+//      int thread_id = omp_get_thread_num();
       Real step_size = vm["step-size"].as<float>(); //* minibatch_size / training_corpus.size();
 
-      for (size_t start=thread_id*minibatch_size; start < training_corpus.size(); ++minibatch_counter) {
+      //for (size_t start=thread_id*minibatch_size; start < training_corpus.size(); ++minibatch_counter) {
+      for (size_t start=0; start < training_corpus.size() && (int)start < vm["instances"].as<int>(); ++minibatch_counter) {
         size_t end = min(training_corpus.size(), start + minibatch_size);
 
         #pragma omp master
@@ -306,9 +317,9 @@ void learn(const variables_map& vm, const ModelData& config) {
 
         Real f=0.0;
         if (vm.count("mixture"))
-          f = mixture_sgd_gradient(model, start, end, training_corpus, training_instances, lambda, g_R, g_Q, g_C, g_B, g_M);
+          f = mixture_sgd_gradient(model, training_corpus, training_instances, lambda, g_R, g_Q, g_C, g_B, g_M);
         else
-          f = sgd_gradient(model, start, end, training_corpus, training_instances, lambda, g_R, g_Q, g_C, g_B);
+          f = sgd_gradient(model, training_corpus, training_instances, lambda, g_R, g_Q, g_C, g_B);
 
         #pragma omp critical 
         {
@@ -335,19 +346,32 @@ void learn(const variables_map& vm, const ModelData& config) {
           if (minibatch_counter % 100 == 0) { cerr << "."; cout.flush(); }
         }
 
-        start += (minibatch_size*omp_get_num_threads());
+        //start += (minibatch_size*omp_get_num_threads());
+        start += minibatch_size;
       }
+      #pragma omp master
+      cerr << endl;
 
       Real iteration_time = (clock()-iteration_start) / (Real)CLOCKS_PER_SEC;
-      Real pp=0;
-      if (vm.count("mixture"))
-        pp = mixture_perplexity(model, test_corpus, test_corpus.size()/vm["test-tokens"].as<int>());
-      else
-        pp = perplexity(model, test_corpus, test_corpus.size()/vm["test-tokens"].as<int>());
+//      test_tokens = min((int)test_corpus.size(), vm["test-tokens"].as<int>());
+      if (vm.count("test-set")) {
+        Real local_pp=0;
+        if (vm.count("mixture")) 
+          local_pp = mixture_perplexity(model, test_corpus, 1);
+          //local_pp = mixture_perplexity(model, test_corpus, max(1,(int)test_corpus.size()/test_tokens));
+        else
+          local_pp = perplexity(model, test_corpus, 1);
+          //local_pp = perplexity(model, test_corpus, max(1,(int)test_corpus.size()/test_tokens));
+
+        #pragma omp critical 
+        { pp += local_pp; }
+        #pragma omp barrier
+      }
 
       #pragma omp master
       {
-        cerr << "\n | Time: " << iteration_time << " seconds, Average f = " << av_f/training_corpus.size();
+        pp = exp(-pp/test_corpus.size());
+        cerr << " | Time: " << iteration_time << " seconds, Average f = " << av_f/training_corpus.size();
         if (vm.count("test-set")) {
           cerr << ", Test Perplexity = " << pp; 
         }
@@ -375,10 +399,19 @@ void cache_data(const LogBiLinearModel& model,
   int num_tokens = training_corpus.size();
   int num_words = model.labels();
 
-  result.resize(end-start);
+  //result.resize(end-start);
+  result.clear();
+  result.reserve(end-start);
 
-  for (int s=start; s<end; ++s) {
-    TrainingInstance& t = result.at(s-start);
+  size_t thread_num = omp_get_thread_num();
+  size_t num_threads = omp_get_num_threads();
+
+  for (int s = start+thread_num; s < end; s += num_threads) {
+  //for (int s=start; s<end; ++s) {
+    //TrainingInstance& t = result.at(s-start);
+    result.push_back(TrainingInstance());
+    TrainingInstance& t = result.back();
+
     int w_i = indices.at(s);
     t.data_index = w_i;
     WordId w = training_corpus.at(w_i);
@@ -406,7 +439,7 @@ void cache_data(const LogBiLinearModel& model,
 
 
 Real sgd_gradient(LogBiLinearModel& model,
-                int start, int end, const Corpus& training_corpus,
+                const Corpus& training_corpus,
                 const TrainingInstances &training_instances,
                 Real lambda,
                 LogBiLinearModel::WordVectorsType& g_R,
@@ -421,7 +454,7 @@ Real sgd_gradient(LogBiLinearModel& model,
 
   // form matrices of the ngram histories
 //  clock_t cache_start = clock();
-  int instances=end-start;
+  int instances=training_instances.size();
   vector<MatrixReal> context_vectors(context_width, MatrixReal::Zero(instances, word_width)); 
   for (int instance=0; instance < instances; ++instance) {
     const TrainingInstance& t = training_instances.at(instance);
@@ -537,7 +570,7 @@ Real sgd_gradient(LogBiLinearModel& model,
 
 
 Real mixture_sgd_gradient(LogBiLinearModel& model,
-                          int start, int end, const Corpus& training_corpus,
+                          const Corpus& training_corpus,
                           const TrainingInstances &training_instances,
                           Real lambda,
                           LogBiLinearModel::WordVectorsType& g_R,
@@ -552,7 +585,7 @@ Real mixture_sgd_gradient(LogBiLinearModel& model,
   int context_width = model.config.ngram_order-1;
 
   // form matrices of the ngram histories
-  int instances=end-start;
+  int instances=training_instances.size();
   vector<MatrixReal> context_vectors(context_width, MatrixReal::Zero(instances, word_width)); 
 
   for (int instance=0; instance < instances; ++instance) {
@@ -723,7 +756,8 @@ Real perplexity(const LogBiLinearModel& model, const Corpus& test_corpus, int st
     }
   }
   cerr << ", Average log_z = " << log_z_sum / tokens;
-  return exp(-p/tokens);
+  //return exp(-p/tokens);
+  return p;
 }
 
 Real mixture_perplexity(const LogBiLinearModel& model, const Corpus& test_corpus, int stride) {
@@ -741,30 +775,37 @@ Real mixture_perplexity(const LogBiLinearModel& model, const Corpus& test_corpus
 
   int tokens=0;
   WordId start_id = model.label_set().Lookup("<s>");
-  /*
-  #pragma omp parallel \
-      shared(test_corpus,model,stride,q_context_products) \
-      reduction(+:p,tokens) 
-  */
-  {
-    size_t thread_num = omp_get_thread_num();
-    size_t num_threads = omp_get_num_threads();
-    for (size_t s = (thread_num*stride); s < test_corpus.size(); s += (num_threads*stride)) {
-      WordId w = test_corpus.at(s);
+  
+  size_t thread_num = omp_get_thread_num();
+  size_t num_threads = omp_get_num_threads();
 
-      int context_start = s - context_width;
-      Real p_sum = 0;
-      for (int i=0; i<context_width; ++i) {
-        int j=context_start+i;
-        int v_i = (j<0 ? start_id : test_corpus.at(j));
+  #pragma omp master
+  cerr << "Calculating perplexity for " << test_corpus.size()/stride << " tokens";
 
-        ArrayReal score_vector = model.R * q_context_products[i].row(v_i).transpose() + model.B;
-        p_sum += (pM(i) * softMax(score_vector)(w));
-      }
-      
-      p += log(p_sum);
-      tokens++;
+  for (size_t s = (thread_num*stride); s < test_corpus.size(); s += (num_threads*stride)) {
+    WordId w = test_corpus.at(s);
+    assert(w < model.R.rows() && "ERROR in mixture_perplexity(): word index out of range");
+
+    int context_start = s - context_width;
+    Real p_sum = 0;
+    for (int i=0; i<context_width; ++i) {
+      int j=context_start+i;
+      int v_i = (j<0 ? start_id : test_corpus.at(j));
+      assert(v_i < model.Q.rows() && "ERROR in mixture_perplexity(): context word index out of range");
+
+      ArrayReal score_vector = model.R * q_context_products[i].row(v_i).transpose() + model.B;
+      assert (softMax(score_vector).rows() > w);
+      p_sum += (pM(i) * softMax(score_vector)(w));
     }
+
+    p += log(p_sum);
+    tokens++;
+
+    #pragma omp master
+    if (tokens % 1000 == 0) { cerr << "."; cerr.flush(); }
   }
-  return exp(-p/tokens);
+  #pragma omp master
+  cerr << endl;
+
+  return p;
 }
