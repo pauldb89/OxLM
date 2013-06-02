@@ -38,6 +38,7 @@ using namespace boost;
 using namespace boost::program_options;
 using namespace std;
 using namespace oxlm;
+using namespace Eigen;
 
 
 typedef vector<WordId> Sentence;
@@ -399,7 +400,6 @@ void cache_data(const LogBiLinearModel& model,
   int num_tokens = training_corpus.size();
   int num_words = model.labels();
 
-  //result.resize(end-start);
   result.clear();
   result.reserve(end-start);
 
@@ -407,8 +407,6 @@ void cache_data(const LogBiLinearModel& model,
   size_t num_threads = omp_get_num_threads();
 
   for (int s = start+thread_num; s < end; s += num_threads) {
-  //for (int s=start; s<end; ++s) {
-    //TrainingInstance& t = result.at(s-start);
     result.push_back(TrainingInstance());
     TrainingInstance& t = result.back();
 
@@ -448,6 +446,7 @@ Real sgd_gradient(LogBiLinearModel& model,
                 LogBiLinearModel::WeightsType& g_B) {
   Real f=0;
   WordId start_id = model.label_set().Convert("<s>");
+  WordId end_id = model.label_set().Convert("</s>");
 
   int word_width = model.config.word_representation_size;
   int context_width = model.config.ngram_order-1;
@@ -460,16 +459,35 @@ Real sgd_gradient(LogBiLinearModel& model,
     const TrainingInstance& t = training_instances.at(instance);
     int context_start = t.data_index - context_width;
 
-    for (int i=0; i<context_width; i++) {
+    bool sentence_start = (t.data_index==0);
+    for (int i=context_width-1; i>=0; --i) {
       int j=context_start+i;
-      int v_i = (j<0 ? start_id : training_corpus.at(j));
+      sentence_start = (sentence_start || j<0 || training_corpus.at(j) == end_id);
+      int v_i = (sentence_start ? start_id : training_corpus.at(j));
       context_vectors.at(i).row(instance) = model.Q.row(v_i);
     }
   }
   MatrixReal prediction_vectors = MatrixReal::Zero(instances, word_width);
   for (int i=0; i<context_width; ++i)
     prediction_vectors += model.context_product(i, context_vectors.at(i));
-//    prediction_vectors += (context_vectors.at(i) * model.C.at(i));
+
+  // Drop out masking of the prediction vectors
+  //cerr << "HERE" << endl;
+  //ArrayReal drop_out = Eigen::ArrayXf::Random(instances, word_width);
+  //cerr << "THERE" << endl;
+  /*
+  MatrixReal drop_out = MatrixReal::Ones(instances, word_width);
+  if (rand()%2)
+    for (int i=0; i<drop_out.rows(); ++i)
+      for (int j=0; j<drop_out.cols(); ++j)
+        drop_out(i,j) = (rand()%2==0 ? 1.0 : 0.0);
+  
+  //ArrayReal drop_out = (MatrixReal::Random(instances, word_width) > 0.0f).cast<Real>();
+  prediction_vectors.array() = prediction_vectors.array()*drop_out.array();
+  */
+  
+      
+
 //  clock_t cache_time = clock() - cache_start;
 
   // calculate the weight sum of word representations
@@ -546,17 +564,22 @@ Real sgd_gradient(LogBiLinearModel& model,
     }
   }
 //  clock_t iteration_time = clock() - iteration_start;
+  //weightedRepresentations.array() = weightedRepresentations.array()*drop_out.array();
 
 //  clock_t context_start = clock();
   MatrixReal context_gradients = MatrixReal::Zero(word_width, instances);
   for (int i=0; i<context_width; ++i) {
-    //context_gradients = (model.C.at(i) * weightedRepresentations.transpose()).transpose();
-    //context_gradients = weightedRepresentations * model.C.at(i).transpose();
     context_gradients = model.context_product(i, weightedRepresentations, true); // weightedRepresentations*C(i)^T
     for (int instance=0; instance < instances; ++instance) {
       const TrainingInstance& t = training_instances.at(instance);
       int j=t.data_index-context_width+i;
-      int v_i = (j<0 ? start_id : training_corpus.at(j));
+
+      bool sentence_start = (j<0);
+      for (int k=j; !sentence_start && k < t.data_index; k++)
+        if (training_corpus.at(k) == end_id) 
+          sentence_start=true;
+      int v_i = (sentence_start ? start_id : training_corpus.at(j));
+
       //model.Q.row(v_i) -= step_size * context_gradients.row(instance);
       g_Q.row(v_i) += context_gradients.row(instance);
     }
@@ -580,6 +603,7 @@ Real mixture_sgd_gradient(LogBiLinearModel& model,
                           LogBiLinearModel::WeightsType& g_M) {
   Real f=0;
   WordId start_id = model.label_set().Convert("<s>");
+  WordId end_id = model.label_set().Convert("</s>");
 
   int word_width = model.config.word_representation_size;
   int context_width = model.config.ngram_order-1;
@@ -592,9 +616,11 @@ Real mixture_sgd_gradient(LogBiLinearModel& model,
     const TrainingInstance& t = training_instances.at(instance);
     int context_start = t.data_index - context_width;
 
-    for (int i=0; i<context_width; i++) {
+    bool sentence_start = (t.data_index==0);
+    for (int i=context_width-1; i>=0; --i) {
       int j=context_start+i;
-      int v_i = (j<0 ? start_id : training_corpus.at(j));
+      sentence_start = (sentence_start || j<0 || training_corpus.at(j) == end_id);
+      int v_i = (sentence_start ? start_id : training_corpus.at(j));
       context_vectors.at(i).row(instance) = model.Q.row(v_i);
     }
   }
@@ -701,7 +727,13 @@ Real mixture_sgd_gradient(LogBiLinearModel& model,
     for (int instance=0; instance < instances; ++instance) {
       const TrainingInstance& t = training_instances.at(instance);
       int j=t.data_index-context_width+i;
-      int v_i = (j<0 ? start_id : training_corpus.at(j));
+
+      bool sentence_start = (j<0);
+      for (int k=j; !sentence_start && k < t.data_index; k++)
+        if (training_corpus.at(k) == end_id) 
+          sentence_start=true;
+      int v_i = (sentence_start ? start_id : training_corpus.at(j));
+
       g_Q.row(v_i) += context_gradients.row(instance);
     }
     model.context_gradient_update(g_C.at(i), context_vectors.at(i), weightedRepresentations.at(i));
@@ -726,10 +758,16 @@ Real perplexity(const LogBiLinearModel& model, const Corpus& test_corpus, int st
 
   int tokens=0;
   WordId start_id = model.label_set().Lookup("<s>");
+  WordId end_id = model.label_set().Lookup("</s>");
+/*
   #pragma omp parallel \
       shared(test_corpus,model,stride,q_context_products,word_width) \
       reduction(+:p,log_z_sum,tokens) 
+*/
   {
+    #pragma omp master
+    cerr << "Calculating perplexity for " << test_corpus.size()/stride << " tokens";
+
     VectorReal prediction_vector(word_width);
     size_t thread_num = omp_get_thread_num();
     size_t num_threads = omp_get_num_threads();
@@ -738,9 +776,11 @@ Real perplexity(const LogBiLinearModel& model, const Corpus& test_corpus, int st
       prediction_vector.setZero();
 
       int context_start = s - context_width;
-      for (int i=0; i<context_width; ++i) {
+      bool sentence_start = (s==0);
+      for (int i=context_width-1; i>=0; --i) {
         int j=context_start+i;
-        int v_i = (j<0 ? start_id : test_corpus.at(j));
+        sentence_start = (sentence_start || j<0 || test_corpus.at(j) == end_id);
+        int v_i = (sentence_start ? start_id : test_corpus.at(j));
         prediction_vector += q_context_products[i].row(v_i).transpose();
       }
 
@@ -752,10 +792,15 @@ Real perplexity(const LogBiLinearModel& model, const Corpus& test_corpus, int st
       log_z_sum += log_z;
       p += w_p;
 
+      #pragma omp master
+      if (tokens % 1000 == 0) { cerr << "."; cerr.flush(); }
+
       tokens++;
     }
+    #pragma omp master
+    cerr << endl;
   }
-  cerr << ", Average log_z = " << log_z_sum / tokens;
+
   //return exp(-p/tokens);
   return p;
 }
@@ -775,6 +820,7 @@ Real mixture_perplexity(const LogBiLinearModel& model, const Corpus& test_corpus
 
   int tokens=0;
   WordId start_id = model.label_set().Lookup("<s>");
+  WordId end_id = model.label_set().Lookup("</s>");
   
   size_t thread_num = omp_get_thread_num();
   size_t num_threads = omp_get_num_threads();
@@ -788,9 +834,12 @@ Real mixture_perplexity(const LogBiLinearModel& model, const Corpus& test_corpus
 
     int context_start = s - context_width;
     Real p_sum = 0;
-    for (int i=0; i<context_width; ++i) {
+    bool sentence_start = (s==0);
+    //for (int i=0; i<context_width; ++i) {
+    for (int i=context_width-1; i>=0; --i) {
       int j=context_start+i;
-      int v_i = (j<0 ? start_id : test_corpus.at(j));
+      sentence_start = (sentence_start || j<0 || test_corpus.at(j) == end_id);
+      int v_i = (sentence_start ? start_id : test_corpus.at(j));
       assert(v_i < model.Q.rows() && "ERROR in mixture_perplexity(): context word index out of range");
 
       ArrayReal score_vector = model.R * q_context_products[i].row(v_i).transpose() + model.B;

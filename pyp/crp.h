@@ -13,7 +13,7 @@
 #include "crp_table_manager.h"
 #include "m.h"
 
-namespace pyp {
+namespace oxlm {
 
 // Chinese restaurant process (Pitman-Yor parameters) histogram-based table tracking
 // based on the implementation proposed by Blunsom et al. 2009

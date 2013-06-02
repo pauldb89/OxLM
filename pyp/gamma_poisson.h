@@ -3,7 +3,7 @@
 
 #include "m.h"
 
-namespace pyp {
+namespace oxlm {
 
 // http://en.wikipedia.org/wiki/Conjugate_prior
 template <typename F>

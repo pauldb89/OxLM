@@ -13,10 +13,10 @@
 #include <boost/serialization/vector.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 
-#define kORDER 3
+#define kORDER 4
 
 using namespace std;
-using namespace pyp;
+using namespace oxlm;
 
 Dict dict;
 
@@ -38,20 +38,20 @@ int main(int argc, char** argv) {
   int samples = atoi(argv[3]);
   assert(samples > 0);
 
-  vector<vector<unsigned> > corpus;
-  set<unsigned> vocabe, tv;
-  const unsigned kSOS = dict.Convert("<s>");
-  const unsigned kEOS = dict.Convert("</s>");
+  vector<vector<WordId> > corpus;
+  set<WordId> vocabe, tv;
+  const WordId kSOS = dict.Convert("<s>");
+  const WordId kEOS = dict.Convert("</s>");
   cerr << "Reading corpus...\n";
   ReadFromFile(train_file, &dict, &corpus, &vocabe);
   cerr << "E-corpus size: " << corpus.size() << " sentences\t (" << vocabe.size() << " word types)\n";
   PYPLM<kORDER> lm(vocabe.size(), 1, 1, 1, 1);
-  vector<unsigned> ctx(kORDER - 1, kSOS);
+  vector<WordId> ctx(kORDER - 1, kSOS);
   for (int sample=0; sample < samples; ++sample) {
     for (const auto& s : corpus) {
       ctx.resize(kORDER - 1);
       for (unsigned i = 0; i <= s.size(); ++i) {
-        unsigned w = (i < s.size() ? s[i] : kEOS);
+        WordId w = (i < s.size() ? s[i] : kEOS);
         if (sample > 0) lm.decrement(w, ctx, eng);
         lm.increment(w, ctx, eng);
         ctx.push_back(w);

@@ -13,7 +13,7 @@
 #include <limits>
 #include <random>
 
-namespace pyp {
+namespace oxlm {
 
 //! slice_sampler_rfc_type{} returns the value of a user-specified
 //! function if the argument is within range, or - infinity otherwise

@@ -1,12 +1,12 @@
 #include <iostream>
 #include <string>
 
-#include "cpyp/boost_serializers.h"
+#include "pyp/boost_serializers.h"
 #include <boost/serialization/vector.hpp>
 #include <boost/archive/binary_iarchive.hpp>
 
-// cpyp stuff
-#include "cpyp/random.h"
+// pyp stuff
+#include "pyp/random.h"
 #include "corpus/corpus.h"
 #include "hpyplm/hpyplm.h"
 
@@ -17,7 +17,7 @@
 #include "fdict.h"
 #include "sentence_metadata.h"
 
-#define kORDER 3
+#define kORDER 4
 
 using namespace std;
 
@@ -75,7 +75,8 @@ struct SimplePair {
 
 class FF_HPYPLM : public FeatureFunction {
  public:
-  FF_HPYPLM(const string& lm_file, const string& feat, const string& reffile) : fid(fd_convert_string(feat)), fid_oov(fd_convert_string(feat+"_OOV")) {
+  //FF_HPYPLM(const string& lm_file, const string& feat, const string& reffile) : fid(fd_convert_string(feat)), fid_oov(fd_convert_string(feat+"_OOV")) {
+  FF_HPYPLM(const string& lm_file, const string& feat, const string& reffile) : fid(FD::Convert(feat)), fid_oov(FD::Convert(feat+"_OOV")) {
     cerr << "Reading LM from " << lm_file << " ...\n";
     ifstream ifile(lm_file.c_str(), ios::in | ios::binary);
     if (!ifile.good()) {
@@ -86,14 +87,15 @@ class FF_HPYPLM : public FeatureFunction {
     ia & dict;
     ia & lm;
     cerr << "Initializing map contents (map size=" << dict.max() << ")\n";
-    for (unsigned i = 1; i < dict.max(); ++i)
+    for (int i = 1; i < dict.max(); ++i)
       AddToWordMap(i);
     cerr << "Done.\n";
     ss_off = OrderToStateSize(kORDER)-1;  // offset of "state size" member
     FeatureFunction::SetStateSize(OrderToStateSize(kORDER));
     kSTART = dict.Convert("<s>");
     kSTOP = dict.Convert("</s>");
-    kUNKNOWN = dict.Convert("<unk>");
+    //kUNKNOWN = dict.Convert("<unk>");
+    kUNKNOWN = dict.Convert("_UNK_");
     kNONE = 0;
     kSTAR = dict.Convert("<{STAR}>");
     last_id = 0;
@@ -101,8 +103,8 @@ class FF_HPYPLM : public FeatureFunction {
     // optional online "adaptation" by training on previous references
     if (reffile.size()) {
       cerr << "Reference file: " << reffile << endl;
-      set<unsigned> rv;
-      cpyp::ReadFromFile(reffile, &dict, &ref_sents, &rv);
+      set<WordID> rv;
+      oxlm::ReadFromFile(reffile, &dict, &ref_sents, &rv);
     }
   }
 
@@ -120,17 +122,18 @@ class FF_HPYPLM : public FeatureFunction {
     last_id = id;
   }
 
-  inline void AddToWordMap(const unsigned cpyp_id) {
-    const unsigned cdec_id = td_convert_string(dict.Convert(cpyp_id));
+  inline void AddToWordMap(const WordID pyp_id) {
+    //const unsigned cdec_id = td_convert_string(dict.Convert(pyp_id));
+    const unsigned cdec_id = TD::Convert(dict.Convert(pyp_id));
     assert(cdec_id > 0);
-    if (cdec_id >= cdec2cpyp.size())
-      cdec2cpyp.resize(cdec_id + 1);
-    cdec2cpyp[cdec_id] = cpyp_id;
+    if (cdec_id >= cdec2pyp.size())
+      cdec2pyp.resize(cdec_id + 1);
+    cdec2pyp[cdec_id] = pyp_id;
   }
 
-  void IncorporateSentenceToLM(const vector<unsigned>& sent) {
-    cpyp::MT19937 eng;
-    vector<unsigned> ctx(kORDER - 1, kSTART);
+  void IncorporateSentenceToLM(const vector<WordID>& sent) {
+    oxlm::MT19937 eng;
+    vector<WordID> ctx(kORDER - 1, kSTART);
     for (auto w : sent) {
       AddToWordMap(w);
       lm.increment(w, ctx, eng);
@@ -161,11 +164,11 @@ class FF_HPYPLM : public FeatureFunction {
   }
 
  private:
-  // returns the cpyp equivalent of a cdec word or kUNKNOWN
+  // returns the pyp equivalent of a cdec word or kUNKNOWN
   inline unsigned ConvertCdec(unsigned w) const {
     int res = 0;
-    if (w < cdec2cpyp.size())
-      res = cdec2cpyp[w];
+    if (w < cdec2pyp.size())
+      res = cdec2pyp[w];
     if (res) return res; else return kUNKNOWN;
   }
 
@@ -178,11 +181,11 @@ class FF_HPYPLM : public FeatureFunction {
   }
 
   inline double WordProb(WordID word, WordID const* context) const {
-    vector<unsigned> xx;
+    vector<WordID> xx;
     while (context && *context) { xx.push_back(*context++); }
     if (xx.empty()) { xx.resize(kORDER-1, kUNKNOWN); }
     else if (xx.size() < (kORDER - 1)) {
-      vector<unsigned> yy;
+      vector<WordID> yy;
       for (unsigned i = xx.size() + 1; i < kORDER; ++i) yy.push_back(xx[0]);
       for (unsigned j = 0; j < xx.size(); ++j)
         yy.push_back(xx[j]);
@@ -323,7 +326,7 @@ class FF_HPYPLM : public FeatureFunction {
       : 0;
   }
 
-  cpyp::Dict dict;
+  oxlm::Dict dict;
   mutable vector<WordID> buffer_;
   int ss_off;
   WordID kSTART;
@@ -331,19 +334,20 @@ class FF_HPYPLM : public FeatureFunction {
   WordID kUNKNOWN;
   WordID kNONE;
   WordID kSTAR;
-  cpyp::PYPLM<kORDER> lm; 
+  oxlm::PYPLM<kORDER> lm; 
   const int fid;
   const int fid_oov;
-  vector<int> cdec2cpyp; // cdec2cpyp[TD::Convert("word")] returns the index in the cpyp model
+  vector<int> cdec2pyp; // cdec2pyp[TD::Convert("word")] returns the index in the pyp model
 
   // stuff for online updating of LM
-  vector<vector<unsigned>> ref_sents;
+  vector<vector<WordID>> ref_sents;
   unsigned last_id; // id of the last sentence that was translated
 };
 
 extern "C" FeatureFunction* create_ff(const string& str) {
   string featurename, filename, reffile;
-  parse_lmspec(str, featurename, filename, reffile);
+  if (!parse_lmspec(str, featurename, filename, reffile))
+    abort();
   return new FF_HPYPLM(filename, featurename, reffile);
 }
 

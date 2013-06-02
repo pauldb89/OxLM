@@ -7,7 +7,7 @@
 #include "slice_sampler.h"
 #include "m.h"
 
-namespace pyp {
+namespace oxlm {
 
 // tie together CRPs that are conditionally independent given their hyperparameters
 template <class CRP>

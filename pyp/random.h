@@ -8,7 +8,7 @@
 #include <ctime>
 #include <random>
 
-namespace pyp {
+namespace oxlm {
 
 // this is just like std::mt19937 except it initializes itself from /dev/urandom
 struct MT19937 : public std::mt19937 {

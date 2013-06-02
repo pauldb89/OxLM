@@ -5,11 +5,13 @@
 #include <boost/archive/text_oarchive.hpp>
 #include <iostream>
 #include <fstream>
+#include <memory>
 
 #include <Eigen/Dense>
 
 #include "corpus/corpus.h"
 #include "lbl/config.h"
+//#include "lbl/EigenMatrixSerialize.h"
 
 namespace oxlm {
 
@@ -20,6 +22,50 @@ typedef Eigen::Matrix<Real, Eigen::Dynamic, 1>              VectorReal;
 typedef Eigen::Array<Real, Eigen::Dynamic, 1>               ArrayReal;
 typedef boost::shared_ptr<MatrixReal>                       MatrixRealPtr;
 typedef boost::shared_ptr<VectorReal>                       VectorRealPtr;
+
+
+class LogBiLinearModelApproximateZ {
+public:
+  LogBiLinearModelApproximateZ() {}
+
+  friend class boost::serialization::access;
+  template<class Archive>
+  void save(Archive & ar, const unsigned int version) const {
+    int m_z_approx_rows=m_z_approx.rows(), m_z_approx_cols=m_z_approx.cols();
+    ar << m_z_approx_rows; 
+    ar << m_z_approx_cols;
+	  ar << boost::serialization::make_array(m_z_approx.data(), m_z_approx.rows() * m_z_approx.cols());
+	  ar << boost::serialization::make_array(m_b_approx.data(), m_b_approx.rows());
+  }
+
+  template<class Archive>
+  void load(Archive & ar, const unsigned int version) {
+    int m_z_approx_rows=0, m_z_approx_cols=0;
+    ar >> m_z_approx_rows; ar >> m_z_approx_cols;
+
+    m_z_approx = MatrixReal(m_z_approx_rows, m_z_approx_cols);
+    m_b_approx = VectorReal(m_z_approx_cols);
+
+	  ar >> boost::serialization::make_array(m_z_approx.data(), m_z_approx.rows() * m_z_approx.cols());
+	  ar >> boost::serialization::make_array(m_b_approx.data(), m_b_approx.rows());
+  }
+  BOOST_SERIALIZATION_SPLIT_MEMBER();
+
+  Real z(const VectorReal& context) const {
+    VectorReal z_products = context.transpose()*m_z_approx + m_b_approx.transpose(); // 1 x Z
+    Real row_max = z_products.maxCoeff(); // 1 x 1
+    VectorReal exp_z_products = (z_products.array() - row_max).exp(); // 1 x Z
+    return log(exp_z_products.sum()) + row_max; // 1 x 1
+  }
+
+  void train(const MatrixReal& contexts, const VectorReal& zs, 
+             Real step_size, int iterations, int approx_vectors);
+
+private:
+  MatrixReal m_z_approx;
+  VectorReal m_b_approx;
+};
+
 
 class LogBiLinearModel {
 public:
@@ -75,6 +121,16 @@ public:
   }
   BOOST_SERIALIZATION_SPLIT_MEMBER();
 
+  Real score(const WordId w, const std::vector<WordId>& context, const LogBiLinearModelApproximateZ& z_approx) const {
+    VectorReal prediction_vector = VectorReal::Zero(config.word_representation_size);
+    int width = config.ngram_order-1;
+    int gap = width-context.size();
+    assert(static_cast<int>(context.size()) <= width);
+    for (int i=gap; i < width; i++)
+      prediction_vector += Q.row(context.at(i-gap)) * C.at(i);
+    return R.row(w) * prediction_vector + B(w) - z_approx.z(prediction_vector);
+  }
+
   MatrixReal context_product(int i, const MatrixReal& v, bool transpose=false) const {
     if (m_diagonal)     {
       //std::cerr << "context_product" << std::endl;
@@ -112,6 +168,8 @@ protected:
   Real* m_data;
   bool m_diagonal;
 };
+
+typedef std::shared_ptr<LogBiLinearModel> LogBiLinearModelPtr;
 
 
 /*

@@ -9,10 +9,10 @@
 #include <boost/serialization/vector.hpp>
 #include <boost/archive/binary_iarchive.hpp>
 
-#define kORDER 3
+#define kORDER 4
 
 using namespace std;
-using namespace pyp;
+using namespace oxlm;
 
 int main(int argc, char** argv) {
   if (argc != 3) {
@@ -36,30 +36,30 @@ int main(int argc, char** argv) {
   Dict dict;
   ia & dict;
   ia & lm;
-  const unsigned max_iv = dict.max();
-  const unsigned kSOS = dict.Convert("<s>");
-  const unsigned kEOS = dict.Convert("</s>");
-  set<unsigned> tv;
-  vector<vector<unsigned> > test;
+  const WordId max_iv = dict.max();
+  const WordId kSOS = dict.Convert("<s>");
+  const WordId kEOS = dict.Convert("</s>");
+  set<WordId> tv;
+  vector<vector<WordId> > test;
   ReadFromFile(test_file, &dict, &test, &tv);
   double llh = 0;
   unsigned cnt = 0;
   unsigned oovs = 0;
-  vector<unsigned> ctx(kORDER - 1, kSOS);
+  vector<WordId> ctx(kORDER - 1, kSOS);
   for (auto& s : test) {
     ctx.resize(kORDER - 1);
     for (unsigned i = 0; i <= s.size(); ++i) {
-      unsigned w = (i < s.size() ? s[i] : kEOS);
+      WordId w = (i < s.size() ? s[i] : kEOS);
       double lp = log(lm.prob(w, ctx)) / log(2);
       if (w >= max_iv) {
-        cerr << "**OOV ";
+        //cerr << "**OOV ";
         ++oovs;
         lp = 0;
       }
-      cerr << "p(" << dict.Convert(w) << " |";
-      for (unsigned j = ctx.size() + 1 - kORDER; j < ctx.size(); ++j)
-        cerr << ' ' << dict.Convert(ctx[j]);
-      cerr << ") = " << lp << endl;
+      //cerr << "p(" << dict.Convert(w) << " |";
+      //for (unsigned j = ctx.size() + 1 - kORDER; j < ctx.size(); ++j)
+      //  cerr << ' ' << dict.Convert(ctx[j]);
+      //cerr << ") = " << lp << endl;
       ctx.push_back(w);
       llh -= lp;
       cnt++;

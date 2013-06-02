@@ -2,7 +2,7 @@ LOCAL_LIBS=${HOME}/packages
 CXXFLAGS =  -std=c++0x -g -O3 -fopenmp -Wall -I${LOCAL_LIBS}/include -m64 -I/usr/include/eigen3 -I..
 LDFLAGS = -std=c++0x -g -O3 -fopenmp -L${LOCAL_LIBS}/lib64 -L${LOCAL_LIBS}/lib -lboost_program_options -lboost_serialization
 
-all: hpyplm dhpyplm chpyplm
+all: hpyplm hpyplm_train hpyplm_query # dhpyplm chpyplm
 
 hpyplm: hpyplm.o
 	$(CXX) -o $@ $^ $(LDFLAGS)
@@ -30,13 +30,13 @@ hpyplm: hpyplm.o
 
 #BOOST_ROOT=$(LOCAL_LIBS)/boost_1_52_0/
 BOOST_INCLUDE=$(LOCAL_LIBS)/include
-BOOST_SERIALIZATION=$(LOCAL_LIBS)/lib/libboost_serialization.a
+#BOOST_SERIALIZATION=$(LOCAL_LIBS)/lib/libboost_serialization.a
 
-hpyplm_train: hpyplm_train.cc
-	$(CXX) -std=c++0x -O3 -Wall -I$(BOOST_INCLUDE) -I.. $< -o $@ $(BOOST_SERIALIZATION)
+hpyplm_train: hpyplm_train.o
+	$(CXX) -o $@ $^ $(LDFLAGS)
 
-hpyplm_query: hpyplm_query.cc
-	$(CXX) -std=c++0x -O3 -Wall -I$(BOOST_INCLUDE) -I.. $< -o $@ $(BOOST_SERIALIZATION)
+hpyplm_query: hpyplm_query.o
+	$(CXX) -o $@ $^ $(LDFLAGS)
 
 hpyplm_query_observe: hpyplm_query_observe.cc
 	$(CXX) -std=c++0x -O3 -Wall -I$(BOOST_INCLUDE) -I.. $< -o $@ $(BOOST_SERIALIZATION)
@@ -53,7 +53,7 @@ cdec_ff_hpyplm.o: cdec_ff_hpyplm.cc
 	$(CXX) -shared -fPIC -std=c++0x -O3 -g -Wall -I$(BOOST_INCLUDE) -I.. -I$(CDEC)/utils -I$(CDEC)/mteval -I$(CDEC)/decoder $< -c
 
 libcdec_ff_hpyplm.so: cdec_ff_hpyplm.o
-	$(CXX) -shared -Wl,-soname,$@ -o $@ $<
+	$(CXX) -shared -L../../cdec/decoder -lcdec -Wl,-soname,$@ -o $@ $<
 
 .PHONY: depend echo
 depend:

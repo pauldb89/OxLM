@@ -33,14 +33,14 @@ template<> struct PYPLM<0> : public UniformVocabulary {
 // represents an N-gram LM
 template <unsigned N> struct PYPLM {
   PYPLM() : backoff(0,1,1,1,1), tr(1,1,1,1,0.8,0.0), lookup(N-1) {
-    pyp::MT19937 eng;
+    oxlm::MT19937 eng;
     tr.insert(&singleton_crp);  // add to resampler
     singleton_crp.increment(0, 1.0, eng);
   }
 
   explicit PYPLM(unsigned vs, double da = 1.0, double db = 1.0, double ss = 1.0, double sr = 1.0) 
     : backoff(vs, da, db, ss, sr), tr(da, db, ss, sr, 0.8, 0.0), lookup(N-1) {
-      pyp::MT19937 eng;
+      oxlm::MT19937 eng;
       tr.insert(&singleton_crp);  // add to resampler
       singleton_crp.increment(0, 1.0, eng);
     }
@@ -60,7 +60,7 @@ template <unsigned N> struct PYPLM {
       }
 
       // second customer triggers crp creation
-      it = p.insert(make_pair(lookup, pyp::crp<unsigned>(0.8,0))).first;
+      it = p.insert(make_pair(lookup, oxlm::crp<unsigned>(0.8,0))).first;
       tr.insert(&it->second);  // add to resampler
       
       // insert the first customer, which by definition creates a table
@@ -127,9 +127,9 @@ template <unsigned N> struct PYPLM {
   }
 
   PYPLM<N-1> backoff;
-  pyp::tied_parameter_resampler<pyp::crp<unsigned>> tr;
+  oxlm::tied_parameter_resampler<oxlm::crp<unsigned>> tr;
   mutable std::vector<WordId> lookup;  // thread-local
-  std::unordered_map<std::vector<WordId>, pyp::crp<unsigned>, vector_hash> p;  // .first = context .second = CRP
+  std::unordered_map<std::vector<WordId>, oxlm::crp<unsigned>, vector_hash> p;  // .first = context .second = CRP
   std::unordered_map<std::vector<WordId>, WordId, vector_hash> singletons; // contexts seen exactly once
 
   std::ostream& print(std::ostream& out) const {
@@ -162,7 +162,7 @@ private:
     return singletons.size()*singleton_crp.log_likelihood(tr.get_discount(), tr.get_strength());
   }
 
-  pyp::crp<unsigned> singleton_crp;
+  oxlm::crp<unsigned> singleton_crp;
 };
 
 }

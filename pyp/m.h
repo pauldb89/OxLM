@@ -7,7 +7,7 @@
 // TODO right now I sometimes assert that x is in the support of the distributions
 // should be configurable to return -inf instead
 
-namespace pyp {
+namespace oxlm {
 
 template <typename F>
 struct M {

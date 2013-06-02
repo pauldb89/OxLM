@@ -15,7 +15,7 @@
 #include <vector>
 #include <limits>
 
-namespace pyp {
+namespace oxlm {
 
 // this should just be a typedef to pair<unsigned,T> on the new c++
 // I have to avoid this since I want to use unions and c++-98

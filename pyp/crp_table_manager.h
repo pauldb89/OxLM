@@ -6,7 +6,7 @@
 #include "msparse_vector.h"
 #include "random.h"
 
-namespace pyp {
+namespace oxlm {
 
 // these are helper classes for implementing token-based CRP samplers
 // basically the data structures recommended by Blunsom et al. in the Note.
