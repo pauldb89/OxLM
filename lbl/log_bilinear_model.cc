@@ -7,9 +7,11 @@
 #include <fstream>
 #include <vector>
 #include <random>
+#include <cstring>
 
 #include "log_bilinear_model.h"
 #include "log_add.h"
+#include "lbl/lbfgs2.h"
 
 using namespace std;
 using namespace boost;
@@ -157,7 +159,7 @@ void LogBiLinearModelApproximateZ::train(const MatrixReal& contexts, const Vecto
     b_adaGrad.array() += b_gradient.array().square();
     m_b_approx.array() -= step_size*b_gradient.array()/b_adaGrad.array().sqrt();
 
-    if (iteration % 100 == 0) {
+    if (iteration % 10 == 0) {
       cerr << iteration << " : Train NLLS = " << (train_zs - pred_zs).squaredNorm() / train_zs.rows();
 //      Real diff = train_zs.sum() - pred_zs.sum();
 //      Real new_pp = exp(-(train_pp + train_zs.sum() - pred_zs.sum())/train_corpus.size());
@@ -176,4 +178,81 @@ void LogBiLinearModelApproximateZ::train(const MatrixReal& contexts, const Vecto
 */
     }
   }
+}
+
+
+void LogBiLinearModelApproximateZ::train_lbfgs(const MatrixReal& contexts, const VectorReal& zs, 
+                                               Real step_size, int iterations, int approx_vectors) {
+  int word_width = contexts.cols();
+  m_z_approx = MatrixReal(word_width, approx_vectors); // W x Z
+  m_b_approx = VectorReal(approx_vectors); // Z x 1
+  { // z_approx initialisation
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::normal_distribution<Real> gaussian(0,0.1);
+    for (int j=0; j<m_z_approx.cols(); j++) {
+      m_b_approx(j) = gaussian(gen);
+      for (int i=0; i<m_z_approx.rows(); i++)
+        m_z_approx(i,j) = gaussian(gen);
+    }
+  }
+
+  MatrixReal train_ps = contexts;
+  VectorReal train_zs = zs;
+
+  int z_weights = m_z_approx.rows()*m_z_approx.cols();
+  int b_weights = m_b_approx.rows();
+  Real *weights_data = new Real[z_weights+b_weights]; 
+  Real *gradient_data = new Real[z_weights+b_weights]; 
+  memcpy(weights_data, m_z_approx.data(), sizeof(Real)*z_weights);
+  memcpy(weights_data+z_weights, m_b_approx.data(), sizeof(Real)*b_weights);
+
+  scitbx::lbfgs::minimizer<Real>* minimiser = new scitbx::lbfgs::minimizer<Real>(z_weights+b_weights, 50);
+
+  bool calc_g_and_f=true;
+  Real f=0;
+  int function_evaluations=0;
+  for (int iteration=0; iteration < iterations;) {
+    if (calc_g_and_f) {
+      MatrixReal z_products = (train_ps * m_z_approx).rowwise() + m_b_approx.transpose(); // n x Z
+      VectorReal row_max = z_products.rowwise().maxCoeff(); // n x 1
+      MatrixReal exp_z_products = (z_products.colwise() - row_max).array().exp(); // n x Z
+      VectorReal pred_zs = (exp_z_products.rowwise().sum()).array().log() + row_max.array(); // n x 1
+
+      VectorReal err_gr = 2.0 * (train_zs - pred_zs); // n x 1
+      MatrixReal probs = (z_products.colwise() - pred_zs).array().exp(); //  n x Z
+
+      MatrixReal z_gradient = (-train_ps).transpose() * err_gr.asDiagonal() * probs; // W x Z
+      VectorReal b_gradient = err_gr.transpose() * probs; // Z x 1
+      memcpy(gradient_data, z_gradient.data(), sizeof(Real)*z_weights);
+      memcpy(gradient_data+z_weights, b_gradient.data(), sizeof(Real)*b_weights);
+
+      f = (train_zs - pred_zs).squaredNorm();
+
+      function_evaluations++;
+    }
+
+    //if (iteration == 0 || (!calc_g_and_f ))
+      cerr << "  (" << iteration+1 << "." << function_evaluations << ":" << "f=" << f / train_zs.rows() << ")\n";
+
+    try { 
+      calc_g_and_f = minimiser->run(weights_data, f, gradient_data); 
+      memcpy(m_z_approx.data(), weights_data, sizeof(Real)*z_weights);
+      memcpy(m_b_approx.data(), weights_data+z_weights, sizeof(Real)*b_weights);
+    }
+    catch (const scitbx::lbfgs::error &e) {
+      cerr << "LBFGS terminated with error:\n  " << e.what() << "\nRestarting..." << endl;
+      delete minimiser;
+      minimiser = new scitbx::lbfgs::minimizer<Real>(z_weights+b_weights, 50);
+      calc_g_and_f = true;
+    }
+    iteration = minimiser->iter();
+  }
+
+  minimiser->run(weights_data, f, gradient_data);
+  memcpy(m_z_approx.data(), weights_data, sizeof(Real)*z_weights);
+  memcpy(m_b_approx.data(), weights_data+z_weights, sizeof(Real)*b_weights);
+  delete minimiser;
+  delete weights_data;
+  delete gradient_data;
 }

@@ -61,7 +61,7 @@ void cache_data(const LogBiLinearModel& model,
 Real sgd_gradient(LogBiLinearModel& model,
                 const Corpus& training_corpus, 
                 const TrainingInstances &result,
-                Real lambda, 
+                Real lambda, bool pseudo,
                 LogBiLinearModel::WordVectorsType& g_R,
                 LogBiLinearModel::WordVectorsType& g_Q,
                 LogBiLinearModel::ContextTransformsType& g_C,
@@ -132,6 +132,7 @@ int main(int argc, char **argv) {
     ("randomise", "visit the training tokens in random order")
     ("uniform", "sample noise distribution from a uniform (default unigram) distribution.")
     ("diagonal-contexts", "Use diagonal context matrices (usually faster).")
+    ("pseudo", "Use a pseudo-likelihood CNE objective.")
     ("mixture", "Train a mixture of bigram LBL models, one per context position.")
     ;
   options_description config_options, cmdline_options;
@@ -173,6 +174,7 @@ int main(int argc, char **argv) {
   cerr << "# iterations = " << vm["iterations"].as<int>() << endl;
   cerr << "# threads = " << vm["threads"].as<int>() << endl;
   cerr << "# mixture = " << vm.count("mixture") << endl;
+  cerr << "# pseudo = " << vm.count("pseudo") << endl;
   cerr << "################################" << endl;
 
   omp_set_num_threads(config.threads);
@@ -318,9 +320,11 @@ void learn(const variables_map& vm, const ModelData& config) {
 
         Real f=0.0;
         if (vm.count("mixture"))
-          f = mixture_sgd_gradient(model, training_corpus, training_instances, lambda, g_R, g_Q, g_C, g_B, g_M);
+          f = mixture_sgd_gradient(model, training_corpus, training_instances, lambda, 
+                                   g_R, g_Q, g_C, g_B, g_M);
         else
-          f = sgd_gradient(model, training_corpus, training_instances, lambda, g_R, g_Q, g_C, g_B);
+          f = sgd_gradient(model, training_corpus, training_instances, lambda, vm.count("pseudo"), 
+                           g_R, g_Q, g_C, g_B);
 
         #pragma omp critical 
         {
@@ -439,7 +443,7 @@ void cache_data(const LogBiLinearModel& model,
 Real sgd_gradient(LogBiLinearModel& model,
                 const Corpus& training_corpus,
                 const TrainingInstances &training_instances,
-                Real lambda,
+                Real lambda, bool pseudo,
                 LogBiLinearModel::WordVectorsType& g_R,
                 LogBiLinearModel::WordVectorsType& g_Q,
                 LogBiLinearModel::ContextTransformsType& g_C,
@@ -471,6 +475,29 @@ Real sgd_gradient(LogBiLinearModel& model,
   for (int i=0; i<context_width; ++i)
     prediction_vectors += model.context_product(i, context_vectors.at(i));
 
+
+  vector<MatrixReal> rev_context_vectors; 
+  MatrixReal rev_prediction_vectors;
+  if (pseudo) {
+    rev_context_vectors.resize(context_width, MatrixReal::Zero(instances, word_width)); 
+    for (int instance=0; instance < instances; ++instance) {
+      const TrainingInstance& t = training_instances.at(instance);
+      int context_end = t.data_index + context_width;
+
+      bool sentence_end = (t.data_index== int(training_corpus.size())-1);
+      for (int i=context_width-1; i>=0 && !sentence_end; --i) {
+        int j=context_end-i;
+        assert (j < int(training_corpus.size()));
+        int v_i = training_corpus.at(j);
+        sentence_end = (v_i == end_id);
+        rev_context_vectors.at(i).row(instance) = model.R.row(v_i);
+      }
+    }
+    rev_prediction_vectors = MatrixReal::Zero(instances, word_width);
+    for (int i=0; i<context_width; ++i)
+      rev_prediction_vectors += model.context_product(i, rev_context_vectors.at(i), true);
+  }
+
   // Drop out masking of the prediction vectors
   //cerr << "HERE" << endl;
   //ArrayReal drop_out = Eigen::ArrayXf::Random(instances, word_width);
@@ -492,6 +519,8 @@ Real sgd_gradient(LogBiLinearModel& model,
 
   // calculate the weight sum of word representations
   MatrixReal weightedRepresentations = MatrixReal::Zero(instances, word_width);
+  MatrixReal rev_weightedRepresentations;
+  if (pseudo) { rev_weightedRepresentations = MatrixReal::Zero(instances, word_width); }
 
   // calculate the function and gradient for each ngram
   Real unnormalised_llh=0;
@@ -508,6 +537,8 @@ Real sgd_gradient(LogBiLinearModel& model,
     // data update
     Real k = t.noise_words.size();
     Real log_posP = (model.R.row(w) * prediction_vectors.row(instance).transpose()) + model.B(w);
+    if (pseudo) log_posP += model.Q.row(w) * rev_prediction_vectors.row(instance).transpose();
+
     Real posP = exp(log_posP);
     posP = posP > numeric_limits<Real>::max() ? numeric_limits<Real>::max() : posP;
     Real posW = k*t.data_prob / (posP + k*t.data_prob);
@@ -520,11 +551,14 @@ Real sgd_gradient(LogBiLinearModel& model,
     unnormalised_llh += log_posP;
 
     weightedRepresentations.row(instance) -= posW * model.R.row(w).transpose();
+    if (pseudo) rev_weightedRepresentations.row(instance) -= posW * model.Q.row(w).transpose();
     pos_probs.at(instance) = posW;
 
     for (size_t nl_i=0; nl_i < t.noise_words.size(); ++nl_i) {
       WordId v_noise = t.noise_words.at(nl_i);
       Real log_negP = model.R.row(v_noise) * prediction_vectors.row(instance).transpose() + model.B(v_noise);
+      if (pseudo) log_negP += model.Q.row(v_noise) * rev_prediction_vectors.row(instance).transpose();
+
       Real negP = exp(log_negP);
       negP = negP > numeric_limits<Real>::max() ? numeric_limits<Real>::max() : negP;
       Real negW = negP / (negP + k*t.noise_probs.at(nl_i));
@@ -534,6 +568,7 @@ Real sgd_gradient(LogBiLinearModel& model,
       f -= log_negNoise_nc_p;
 
       weightedRepresentations.row(instance) += negW * model.R.row(v_noise).transpose();
+      if (pseudo) rev_weightedRepresentations.row(instance) += negW * model.Q.row(v_noise).transpose();
       neg_probs.push_back(negW);
       nl_i++;
     }
@@ -549,6 +584,7 @@ Real sgd_gradient(LogBiLinearModel& model,
     //model.R.row(w) += step_size * posW * prediction_vectors.row(instance).transpose();
     //model.B(w) += step_size * posW;
     g_R.row(w) -= posW * prediction_vectors.row(instance).transpose();
+    if (pseudo) g_Q.row(w) -= posW * rev_prediction_vectors.row(instance).transpose();
     g_B(w) -= posW;
 
     for (size_t nl_i=0; nl_i < t.noise_words.size(); ++nl_i, ++noise_prob_index) {
@@ -558,6 +594,7 @@ Real sgd_gradient(LogBiLinearModel& model,
       //model.R.row(v_noise) -= step_size * negW * prediction_vectors.row(instance);
       //model.B(v_noise) -= step_size * negW;
       g_R.row(v_noise) += negW * prediction_vectors.row(instance);
+      if (pseudo) g_Q.row(v_noise) += negW * rev_prediction_vectors.row(instance);
       g_B(v_noise) += negW;
 
       nl_i++;
@@ -568,8 +605,12 @@ Real sgd_gradient(LogBiLinearModel& model,
 
 //  clock_t context_start = clock();
   MatrixReal context_gradients = MatrixReal::Zero(word_width, instances);
+  MatrixReal rev_context_gradients;
+  if (pseudo) rev_context_gradients = MatrixReal::Zero(word_width, instances);
   for (int i=0; i<context_width; ++i) {
     context_gradients = model.context_product(i, weightedRepresentations, true); // weightedRepresentations*C(i)^T
+    if (pseudo) rev_context_gradients = model.context_product(i, rev_weightedRepresentations); // rev_weightedRepresentations*C(i)
+
     for (int instance=0; instance < instances; ++instance) {
       const TrainingInstance& t = training_instances.at(instance);
       int j=t.data_index-context_width+i;
@@ -582,9 +623,19 @@ Real sgd_gradient(LogBiLinearModel& model,
 
       //model.Q.row(v_i) -= step_size * context_gradients.row(instance);
       g_Q.row(v_i) += context_gradients.row(instance);
+
+      if (pseudo) {
+        int k=t.data_index+context_width-i;
+        if (k<instances) {
+          int w_i = training_corpus.at(k);
+          g_R.row(w_i) += rev_context_gradients.row(instance);
+        }
+      }
     }
     //model.C.at(i) -= step_size * context_vectors.at(i).transpose() * weightedRepresentations; 
     model.context_gradient_update(g_C.at(i), context_vectors.at(i), weightedRepresentations);
+    if (pseudo)
+      model.context_gradient_update(g_C.at(i), rev_weightedRepresentations, rev_context_vectors.at(i));
   }
 //  clock_t context_time = clock() - context_start;
 

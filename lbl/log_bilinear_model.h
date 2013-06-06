@@ -60,6 +60,8 @@ public:
 
   void train(const MatrixReal& contexts, const VectorReal& zs, 
              Real step_size, int iterations, int approx_vectors);
+  void train_lbfgs(const MatrixReal& contexts, const VectorReal& zs, 
+                   Real step_size, int iterations, int approx_vectors);
 
 private:
   MatrixReal m_z_approx;
@@ -127,22 +129,21 @@ public:
     int gap = width-context.size();
     assert(static_cast<int>(context.size()) <= width);
     for (int i=gap; i < width; i++)
-      prediction_vector += Q.row(context.at(i-gap)) * C.at(i);
-    return R.row(w) * prediction_vector + B(w) - z_approx.z(prediction_vector);
+      if (m_diagonal) prediction_vector += C.at(i).asDiagonal() * Q.row(context.at(i-gap)).transpose();
+      else            prediction_vector += Q.row(context.at(i-gap)) * C.at(i);
+      //prediction_vector += context_product(i, Q.row(context.at(i-gap)).transpose());
+    return R.row(w) * prediction_vector + B(w);// - z_approx.z(prediction_vector);
   }
 
   MatrixReal context_product(int i, const MatrixReal& v, bool transpose=false) const {
     if (m_diagonal)     {
-      //std::cerr << "context_product" << std::endl;
       return (C.at(i).asDiagonal() * v.transpose()).transpose();
     }
     else if (transpose) return v * C.at(i).transpose();
     else                return v * C.at(i);
   }
 
-  //model.C.at(i) -= step_size * context_vectors.at(i).transpose() * weightedRepresentations; 
   void context_gradient_update(ContextTransformType& g_C, const MatrixReal& v,const MatrixReal& w) const {
-    //std::cerr << "context_gradient_update" << std::endl;
     if (m_diagonal) g_C += (v.cwiseProduct(w).colwise().sum()).transpose();
     else            g_C += (v.transpose() * w); 
   }

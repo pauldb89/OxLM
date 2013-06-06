@@ -163,8 +163,12 @@ int main(int argc, char **argv) {
 
   VectorReal sol = train_ps.jacobiSvd(ComputeThinU | ComputeThinV).solve(train_zs);
 
-  Real log_ls_var = ((train_ps * sol) - train_zs).squaredNorm() / train_zs.rows();
+  VectorReal ls_zs = (train_ps * sol);
+  Real log_ls_var = (ls_zs - train_zs).squaredNorm() / train_zs.rows();
   cerr << "  Train LeastSquares Variance = " << log_ls_var << endl;
+
+  Real new_pp = exp(-(train_pp + train_zs.sum() - ls_zs.sum())/train_corpus.size());
+  cerr << "  LS PPL = " << new_pp << endl;
 /*
   MatrixReal z_approx(word_width, vm["approx-vectors"].as<int>()); // W x Z
   VectorReal b_approx(vm["approx-vectors"].as<int>()); // Z x 1
@@ -220,7 +224,7 @@ int main(int argc, char **argv) {
 */
   LogBiLinearModelApproximateZ approximation;
   approximation.train(train_ps, train_zs, vm["step-size"].as<float>(), 
-                      vm["iterations"].as<int>(),vm["approx-vectors"].as<int>());
+                            vm["iterations"].as<int>(),vm["approx-vectors"].as<int>());
 
   if (vm.count("model-out")) {
     std::ofstream f_out(vm["model-out"].as<string>().c_str());
