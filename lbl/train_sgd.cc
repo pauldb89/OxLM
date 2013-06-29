@@ -237,13 +237,14 @@ void learn(const variables_map& vm, const ModelData& config) {
   }
 
   vector<size_t> training_indices(training_corpus.size());
-  VectorReal unigram = VectorReal::Zero(model.labels());
+  //VectorReal unigram = VectorReal::Zero(model.labels());
+  model.unigram = VectorReal::Zero(model.labels());
   for (size_t i=0; i<training_indices.size(); i++) {
-    unigram(training_corpus[i]) += 1;
+    model.unigram(training_corpus[i]) += 1;
     training_indices[i] = i;
   }
-  model.B = ((unigram.array()+1.0)/(unigram.sum()+unigram.size())).log();
-  unigram /= unigram.sum();
+  model.B = ((model.unigram.array()+1.0)/(model.unigram.sum()+model.unigram.size())).log();
+  model.unigram /= model.unigram.sum();
 
   VectorReal adaGrad = VectorReal::Zero(model.num_weights());
   VectorReal global_gradient(model.num_weights());
@@ -315,7 +316,7 @@ void learn(const variables_map& vm, const ModelData& config) {
         Real lambda = config.l2_parameter*(end-start)/static_cast<Real>(training_corpus.size()); 
 
         #pragma omp barrier
-        cache_data(model, start, end, training_corpus, training_indices, unigram,
+        cache_data(model, start, end, training_corpus, training_indices, model.unigram,
                    config.label_sample_size, training_instances);
 
         Real f=0.0;
@@ -570,7 +571,6 @@ Real sgd_gradient(LogBiLinearModel& model,
       weightedRepresentations.row(instance) += negW * model.R.row(v_noise).transpose();
       if (pseudo) rev_weightedRepresentations.row(instance) += negW * model.Q.row(v_noise).transpose();
       neg_probs.push_back(negW);
-      nl_i++;
     }
   }
 
@@ -596,8 +596,6 @@ Real sgd_gradient(LogBiLinearModel& model,
       g_R.row(v_noise) += negW * prediction_vectors.row(instance);
       if (pseudo) g_Q.row(v_noise) += negW * rev_prediction_vectors.row(instance);
       g_B(v_noise) += negW;
-
-      nl_i++;
     }
   }
 //  clock_t iteration_time = clock() - iteration_start;
@@ -756,8 +754,6 @@ Real mixture_sgd_gradient(LogBiLinearModel& model,
         //g_M(i)     += negW * (contributions(i) - pM(i));
       }
       g_B(v_noise) += negW;
-
-      nl_i++;
     }
 
     /*

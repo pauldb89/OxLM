@@ -82,14 +82,18 @@ public:
 
   virtual ~LogBiLinearModel() { delete [] m_data; }
 
-  int output_types() const { return config.classes > 0 ? config.classes : m_labels.size(); }
+  //int output_types() const { return config.classes > 0 ? config.classes : m_labels.size(); }
+  int output_types() const { return m_labels.size(); }
   int context_types() const { return m_labels.size(); }
 
   int labels() const { return m_labels.size(); }
   const Dict& label_set() const { return m_labels; }
   Dict& label_set() { return m_labels; }
 
-  void l2_gradient_update(Real sigma) { W -= W*sigma; }
+  virtual Real l2_gradient_update(Real sigma) { 
+    W -= W*sigma; 
+    return W.array().square().sum();
+  }
 
   void addModel(const LogBiLinearModel& model) { W += model.W; };
 
@@ -110,6 +114,10 @@ public:
     ar << m_labels;
     ar << m_diagonal;
     ar << boost::serialization::make_array(m_data, m_data_size);
+
+    int unigram_len=unigram.rows();
+    ar << unigram_len;
+    ar << boost::serialization::make_array(unigram.data(), unigram_len);
   }
 
   template<class Archive>
@@ -120,6 +128,11 @@ public:
     delete [] m_data;
     init(config, m_labels, false);
     ar >> boost::serialization::make_array(m_data, m_data_size);
+
+    int unigram_len=0;
+    ar >> unigram_len;
+    unigram = VectorReal(unigram_len);
+    ar >> boost::serialization::make_array(unigram.data(), unigram_len);
   }
   BOOST_SERIALIZATION_SPLIT_MEMBER();
 
@@ -132,7 +145,10 @@ public:
       if (m_diagonal) prediction_vector += C.at(i).asDiagonal() * Q.row(context.at(i-gap)).transpose();
       else            prediction_vector += Q.row(context.at(i-gap)) * C.at(i);
       //prediction_vector += context_product(i, Q.row(context.at(i-gap)).transpose());
-    return R.row(w) * prediction_vector + B(w);// - z_approx.z(prediction_vector);
+    //return R.row(w) * prediction_vector + B(w);// - z_approx.z(prediction_vector);
+    Real psi = R.row(w) * prediction_vector + B(w);
+//    Real log_uw = log(unigram);
+    return psi - log(exp(psi) + unigram(w));
   }
 
   MatrixReal context_product(int i, const MatrixReal& v, bool transpose=false) const {
@@ -157,6 +173,7 @@ public:
   WeightsType           B;
   WeightsType           W;
   WeightsType           M;
+  VectorReal            unigram;
 
 protected:
 //  LogBiLinearModel() : R(0,0,0), Q(0,0,0), B(0,0), W(0,0), M(0,0) {}
@@ -173,42 +190,70 @@ protected:
 typedef std::shared_ptr<LogBiLinearModel> LogBiLinearModelPtr;
 
 
-/*
-class LogBiLinearModelMixture : public LogBiLinearModel {
+
+class FactoredOutputLogBiLinearModel: public LogBiLinearModel {
 public:
-  LogBiLinearModelMixture(const ModelData& config, const Dict& labels);
+  FactoredOutputLogBiLinearModel(const ModelData& config, const Dict& labels, bool diagonal, 
+                                 const std::vector<int>& classes) 
+    : LogBiLinearModel(config, labels, diagonal), indexes(classes), F(MatrixReal::Zero(config.classes, config.word_representation_size)) {
+      assert (!classes.empty());
+      word_to_class.reserve(labels.size());
+      for (int c=0; c < int(classes.size())-1; ++c) {
+        int c_end = classes.at(c+1);
+        for (int w=classes.at(c); w < c_end; ++w)
+          word_to_class.push_back(c);
+      }
+      assert (labels.size() == word_to_class.size());
+    }
 
-  WeightsType M;
-
-  friend class boost::serialization::access;
-  template<class Archive>
-  void save(Archive & ar, const unsigned int version) const {
-    std::cerr << "Save: writing" << m_data_size << " parameters." << std::endl;
-    ar << config;
-    ar << m_labels;
-    ar << boost::serialization::make_array(m_data, m_data_size);
+  Eigen::Block<WordVectorsType> class_R(const int c) {
+    int c_start = indexes.at(c), c_end = indexes.at(c+1);
+    return R.block(c_start, 0, c_end-c_start, R.cols());
   }
 
-  template<class Archive>
-  void load(Archive & ar, const unsigned int version) {
-    ar >> config;
-    ar >> m_labels;
-    delete [] m_data;
-    std::cerr << "Load: initially " << m_data_size << " parameters." << std::endl;
-    init(config, m_labels, false);
-    std::cerr << "Load: reading " << m_data_size << " parameters." << std::endl;
-    ar >> boost::serialization::make_array(m_data, m_data_size);
+  const Eigen::Block<const WordVectorsType> class_R(const int c) const {
+    int c_start = indexes.at(c), c_end = indexes.at(c+1);
+    return R.block(c_start, 0, c_end-c_start, R.cols());
   }
-  BOOST_SERIALIZATION_SPLIT_MEMBER();
+
+  Eigen::VectorBlock<WeightsType> class_B(const int c) {
+    int c_start = indexes.at(c), c_end = indexes.at(c+1);
+    return B.segment(c_start, c_end-c_start);
+  }
+
+  const Eigen::VectorBlock<const WeightsType> class_B(const int c) const {
+    int c_start = indexes.at(c), c_end = indexes.at(c+1);
+    return B.segment(c_start, c_end-c_start);
+  }
+
+  int get_class(const WordId& w) const {
+    assert(w >= 0 && w < int(word_to_class.size()) 
+           && "ERROR: Failed to find word in class dictionary.");
+    return word_to_class[w];
+  }
+
+  virtual Real l2_gradient_update(Real sigma) { 
+    F -= F*sigma;
+    return LogBiLinearModel::l2_gradient_update(sigma) + F.array().square().sum();
+  }
+
+public:
+  std::vector<int> word_to_class;
+  std::vector<int> indexes;
+  MatrixReal F;
 
 private:
-  virtual void allocate_data(const ModelData& config);
 };
-*/
+
 
 inline VectorReal softMax(const VectorReal& v) {
   Real max = v.maxCoeff();
   return (v.array() - (log((v.array() - max).exp().sum()) + max)).exp();
+}
+
+inline VectorReal logSoftMax(const VectorReal& v) {
+  Real max = v.maxCoeff();
+  return v.array() - log((v.array() - max).exp().sum()) - max;
 }
 
 }

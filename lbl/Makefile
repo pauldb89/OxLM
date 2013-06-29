@@ -9,7 +9,7 @@ CXXFLAGS += -DEIGEN_DONT_PARALLELIZE
 
 local_objs = log_bilinear_model.o lbfgs.o # lbfgs_wrapper.o
 
-all: train_sgd train_clbl train_mlbl
+all: train_sgd train_factored_sgd
 
 -include makefile.depend
 
@@ -18,6 +18,9 @@ all: train_sgd train_clbl train_mlbl
 #-----------------------#
 
 train_sgd: train_sgd.o $(local_objs)
+	$(CXX) -o $@ $^ $(LDFLAGS)
+
+train_factored_sgd: train_factored_sgd.o $(local_objs)
 	$(CXX) -o $@ $^ $(LDFLAGS)
 
 train_clbl: train_clbl.o $(local_objs)
