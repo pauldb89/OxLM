@@ -430,7 +430,7 @@ Real sgd_gradient(FactoredOutputLogBiLinearModel& model,
 
 //  clock_t cache_time = clock() - cache_start;
 
-  // calculate the weight sum of word representations
+  // the weighted sum of word representations
   MatrixReal weightedRepresentations = MatrixReal::Zero(instances, word_width);
 
   // calculate the function and gradient for each ngram
@@ -440,11 +440,10 @@ Real sgd_gradient(FactoredOutputLogBiLinearModel& model,
     WordId w = training_corpus.at(w_i);
     int c = model.get_class(w);
     int c_start = model.indexes.at(c), c_end = model.indexes.at(c+1);
+    assert(w >= c_start && w < c_end);
 
     VectorReal class_conditional_scores = model.F * prediction_vectors.row(instance).transpose();// + model.B;
-
-    VectorReal word_conditional_scores
-      = model.class_R(c) * prediction_vectors.row(instance).transpose() + model.class_B(c);
+    VectorReal word_conditional_scores  = model.class_R(c) * prediction_vectors.row(instance).transpose() + model.class_B(c);
 
     ArrayReal class_conditional_log_probs = logSoftMax(class_conditional_scores);
     ArrayReal word_conditional_log_probs  = logSoftMax(word_conditional_scores);
@@ -455,10 +454,7 @@ Real sgd_gradient(FactoredOutputLogBiLinearModel& model,
     weightedRepresentations.row(instance) -= (model.F.row(c) - class_conditional_probs.transpose() * model.F);
     weightedRepresentations.row(instance) -= (model.R.row(w) - word_conditional_probs.transpose() * model.class_R(c));
 
-    if (!isfinite(class_conditional_log_probs(c))) {
-      cerr << c << " " << class_conditional_probs(c) << " \n" << class_conditional_scores.transpose() << endl;
-      assert(false);
-    }
+    assert(isfinite(class_conditional_log_probs(c)));
     assert(isfinite(word_conditional_log_probs(w-c_start)));
     f -= (class_conditional_log_probs(c) + word_conditional_log_probs(w-c_start));
 
@@ -466,14 +462,12 @@ Real sgd_gradient(FactoredOutputLogBiLinearModel& model,
     //   data contributions: 
     g_F.row(c) -= prediction_vectors.row(instance).transpose();
     g_R.row(w) -= prediction_vectors.row(instance).transpose();
-    g_B(w)     -= word_conditional_probs(w-c_start);
-
+    g_B(w)     -= 1.0;
     //   model contributions: 
     g_R.block(c_start, 0, c_end-c_start, g_R.cols()) 
         += word_conditional_probs * prediction_vectors.row(instance);
     g_F += class_conditional_probs * prediction_vectors.row(instance);
     g_B.segment(c_start, c_end-c_start) += word_conditional_probs;
-    
   }
 //  clock_t iteration_time = clock() - iteration_start;
 
