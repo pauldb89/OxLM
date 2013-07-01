@@ -61,11 +61,12 @@ Real sgd_gradient(FactoredOutputLogBiLinearModel& model,
                 LogBiLinearModel::WordVectorsType& g_Q,
                 LogBiLinearModel::ContextTransformsType& g_C,
                 LogBiLinearModel::WeightsType& g_B,
-                MatrixReal & g_F);
+                MatrixReal & g_F,
+                VectorReal & g_FB);
 
 
 Real perplexity(const FactoredOutputLogBiLinearModel& model, const Corpus& test_corpus, int stride=1);
-void freq_bin_type(const std::string &corpus, int num_classes, std::vector<int>& classes, Dict& dict);
+void freq_bin_type(const std::string &corpus, int num_classes, std::vector<int>& classes, Dict& dict, VectorReal& class_bias);
 
 
 int main(int argc, char **argv) {
@@ -176,7 +177,8 @@ void learn(const variables_map& vm, const ModelData& config) {
   // separate the word types into classes using
   // frequency binning
   vector<int> classes;
-  freq_bin_type(vm["input"].as<string>(), vm["classes"].as<int>(), classes, dict);
+  VectorReal class_bias(vm["classes"].as<int>());
+  freq_bin_type(vm["input"].as<string>(), vm["classes"].as<int>(), classes, dict, class_bias);
   //////////////////////////////////////////////
 
 
@@ -218,6 +220,7 @@ void learn(const variables_map& vm, const ModelData& config) {
 
   //LogBiLinearModel model(config, dict, vm.count("diagonal-contexts"));
   FactoredOutputLogBiLinearModel model(config, dict, vm.count("diagonal-contexts"), classes);
+  model.FB = class_bias;
 
   if (vm.count("model-in")) {
     std::ifstream f(vm["model-in"].as<string>().c_str());
@@ -240,7 +243,9 @@ void learn(const variables_map& vm, const ModelData& config) {
   Real pp=0;
 
   MatrixReal global_gradientF(model.F.rows(), model.F.cols());
+  VectorReal global_gradientFB(model.FB.size());
   MatrixReal adaGradF = MatrixReal::Zero(model.F.rows(), model.F.cols());
+  VectorReal adaGradFB = VectorReal::Zero(model.FB.size());
 
   #pragma omp parallel shared(global_gradient, global_gradientF)
   {
@@ -278,6 +283,7 @@ void learn(const variables_map& vm, const ModelData& config) {
     LogBiLinearModel::WeightsType g_B(ptr, B_size);
     LogBiLinearModel::WeightsType g_M(ptr+B_size, M_size);
     MatrixReal g_F(num_classes, word_width);
+    VectorReal g_FB(num_classes);
     //////////////////////////////////////////////
 
     size_t minibatch_counter=0;
@@ -304,20 +310,23 @@ void learn(const variables_map& vm, const ModelData& config) {
         {
           global_gradient.setZero();
           global_gradientF.setZero();
+          global_gradientFB.setZero();
         }
 
         gradient.setZero();
         g_F.setZero();
+        g_FB.setZero();
         Real lambda = config.l2_parameter*(end-start)/static_cast<Real>(training_corpus.size()); 
 
         #pragma omp barrier
         cache_data(start, end, training_corpus, training_indices, training_instances);
-        Real f = sgd_gradient(model, training_corpus, training_instances, lambda, g_R, g_Q, g_C, g_B, g_F);
+        Real f = sgd_gradient(model, training_corpus, training_instances, lambda, g_R, g_Q, g_C, g_B, g_F, g_FB);
 
         #pragma omp critical 
         {
           global_gradient += gradient;
           global_gradientF += g_F;
+          global_gradientFB += g_FB;
           av_f += f;
         }
         #pragma omp barrier 
@@ -328,9 +337,12 @@ void learn(const variables_map& vm, const ModelData& config) {
             if (adaGrad(w)) model.W(w) -= (step_size*global_gradient(w) / sqrt(adaGrad(w)));
 
           adaGradF.array() += global_gradientF.array().square();
-          for (int r=0; r < adaGradF.rows(); ++r)
+          adaGradFB.array() += global_gradientFB.array().square();
+          for (int r=0; r < adaGradF.rows(); ++r) {
+            if (adaGradFB(r)) model.FB(r) -= (step_size*global_gradientFB(r) / sqrt(adaGradFB(r)));
             for (int c=0; c < adaGradF.cols(); ++c)
               if (adaGradF(r,c)) model.F(r,c) -= (step_size*global_gradientF(r,c) / sqrt(adaGradF(r,c)));
+          }
 
           // regularisation
           if (lambda > 0) av_f += (0.5*lambda*model.l2_gradient_update(step_size*lambda));
@@ -400,7 +412,8 @@ Real sgd_gradient(FactoredOutputLogBiLinearModel& model,
                 LogBiLinearModel::WordVectorsType& g_Q,
                 LogBiLinearModel::ContextTransformsType& g_C,
                 LogBiLinearModel::WeightsType& g_B,
-                MatrixReal& g_F) {
+                MatrixReal& g_F,
+                VectorReal& g_FB) {
   Real f=0;
   WordId start_id = model.label_set().Convert("<s>");
   WordId end_id = model.label_set().Convert("</s>");
@@ -442,7 +455,7 @@ Real sgd_gradient(FactoredOutputLogBiLinearModel& model,
     int c_start = model.indexes.at(c), c_end = model.indexes.at(c+1);
     assert(w >= c_start && w < c_end);
 
-    VectorReal class_conditional_scores = model.F * prediction_vectors.row(instance).transpose();// + model.B;
+    VectorReal class_conditional_scores = model.F * prediction_vectors.row(instance).transpose() + model.FB;
     VectorReal word_conditional_scores  = model.class_R(c) * prediction_vectors.row(instance).transpose() + model.class_B(c);
 
     ArrayReal class_conditional_log_probs = logSoftMax(class_conditional_scores);
@@ -462,11 +475,13 @@ Real sgd_gradient(FactoredOutputLogBiLinearModel& model,
     //   data contributions: 
     g_F.row(c) -= prediction_vectors.row(instance).transpose();
     g_R.row(w) -= prediction_vectors.row(instance).transpose();
+    g_FB(c)    -= 1.0;
     g_B(w)     -= 1.0;
     //   model contributions: 
     g_R.block(c_start, 0, c_end-c_start, g_R.cols()) 
         += word_conditional_probs * prediction_vectors.row(instance);
     g_F += class_conditional_probs * prediction_vectors.row(instance);
+    g_FB += class_conditional_probs;
     g_B.segment(c_start, c_end-c_start) += word_conditional_probs;
   }
 //  clock_t iteration_time = clock() - iteration_start;
@@ -533,7 +548,7 @@ Real perplexity(const FactoredOutputLogBiLinearModel& model, const Corpus& test_
 
       int c = model.get_class(w);
       int c_start = model.indexes.at(c);
-      VectorReal class_probs = logSoftMax(model.F * prediction_vector);// + model.B;
+      VectorReal class_probs = logSoftMax(model.F * prediction_vector + model.FB);
       VectorReal word_probs = logSoftMax(model.class_R(c) * prediction_vector + model.class_B(c));
 //      cerr << model.label_str(w) << ": class=" << c << " log_prob=" << class_probs(c) 
 //           << "+" << word_probs(w-c_start) << " sum=" << word_probs.array().exp().sum() << endl;
@@ -553,13 +568,13 @@ Real perplexity(const FactoredOutputLogBiLinearModel& model, const Corpus& test_
 }
 
 
-void freq_bin_type(const std::string &corpus, int num_classes, vector<int>& classes, Dict& dict) {
+void freq_bin_type(const std::string &corpus, int num_classes, vector<int>& classes, Dict& dict, VectorReal& class_bias) {
   ifstream in(corpus.c_str());
   string line, token;
 
   map<string,int> tmp_dict;
   vector< pair<string,int> > counts;
-  int sum=0;
+  int sum=0, eos_sum=0;
   string eos = "</s>";
 
   while (getline(in, line)) {
@@ -572,6 +587,7 @@ void freq_bin_type(const std::string &corpus, int num_classes, vector<int>& clas
       else                            counts[w_id].second += 1;
       sum++;
     }
+    eos_sum++; 
   }
 
   sort(counts.begin(), counts.end(), 
@@ -581,6 +597,8 @@ void freq_bin_type(const std::string &corpus, int num_classes, vector<int>& clas
   classes.push_back(0);
   classes.push_back(2);
 
+  class_bias(0) = log(eos_sum);
+
   int bin_size = sum / (num_classes-1);
   int mass=0;
   for (int i=0; i < int(counts.size()); ++i) {
@@ -589,13 +607,17 @@ void freq_bin_type(const std::string &corpus, int num_classes, vector<int>& clas
 //      cerr << " " << classes.size() << ": " << classes.back() << " " << mass << endl;
       bin_size = (sum -= mass) / (num_classes - classes.size());
 
+      class_bias(classes.size()-1) = log(mass);
       classes.push_back(id+1);
+
       mass=0;
     }
   }
   if (classes.back() != int(dict.size()))
     classes.push_back(dict.size());
+
 //  cerr << " " << classes.size() << ": " << classes.back() << " " << mass << endl;
+  class_bias.array() -= log(eos_sum+sum);
 
   cerr << "Binned " << dict.size() << " types in " << classes.size()-1 << " classes with an average of " 
        << float(dict.size()) / float(classes.size()-1) << " types per bin." << endl; 

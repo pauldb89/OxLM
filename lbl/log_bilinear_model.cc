@@ -256,3 +256,33 @@ void LogBiLinearModelApproximateZ::train_lbfgs(const MatrixReal& contexts, const
   delete weights_data;
   delete gradient_data;
 }
+
+
+FactoredOutputLogBiLinearModel::FactoredOutputLogBiLinearModel(const ModelData& config, 
+                                                               const Dict& labels, 
+                                                               bool diagonal, 
+                                                               const std::vector<int>& classes) 
+: LogBiLinearModel(config, labels, diagonal), indexes(classes), 
+  F(MatrixReal::Zero(config.classes, config.word_representation_size)),
+  FB(VectorReal::Zero(config.classes)) {
+    assert (!classes.empty());
+    word_to_class.reserve(labels.size());
+    for (int c=0; c < int(classes.size())-1; ++c) {
+      int c_end = classes.at(c+1);
+      //cerr << "\nClass " << c << ":" << endl;
+      for (int w=classes.at(c); w < c_end; ++w) {
+        word_to_class.push_back(c);
+        //cerr << " " << label_str(w);
+      }
+    }
+    assert (labels.size() == word_to_class.size());
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::normal_distribution<Real> gaussian(0,0.1);
+    for (int i=0; i<F.rows(); i++) {
+      FB(i) = gaussian(gen);
+      for (int j=0; j<F.cols(); j++)
+        F(i,j) = gaussian(gen);
+    }
+}

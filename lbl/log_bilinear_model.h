@@ -194,17 +194,7 @@ typedef std::shared_ptr<LogBiLinearModel> LogBiLinearModelPtr;
 class FactoredOutputLogBiLinearModel: public LogBiLinearModel {
 public:
   FactoredOutputLogBiLinearModel(const ModelData& config, const Dict& labels, bool diagonal, 
-                                 const std::vector<int>& classes) 
-    : LogBiLinearModel(config, labels, diagonal), indexes(classes), F(MatrixReal::Zero(config.classes, config.word_representation_size)) {
-      assert (!classes.empty());
-      word_to_class.reserve(labels.size());
-      for (int c=0; c < int(classes.size())-1; ++c) {
-        int c_end = classes.at(c+1);
-        for (int w=classes.at(c); w < c_end; ++w)
-          word_to_class.push_back(c);
-      }
-      assert (labels.size() == word_to_class.size());
-    }
+                                 const std::vector<int>& classes);
 
   Eigen::Block<WordVectorsType> class_R(const int c) {
     int c_start = indexes.at(c), c_end = indexes.at(c+1);
@@ -234,13 +224,15 @@ public:
 
   virtual Real l2_gradient_update(Real sigma) { 
     F -= F*sigma;
-    return LogBiLinearModel::l2_gradient_update(sigma) + F.array().square().sum();
+    FB -= FB*sigma;
+    return LogBiLinearModel::l2_gradient_update(sigma) + F.array().square().sum() + FB.array().square().sum();
   }
 
 public:
   std::vector<int> word_to_class;
   std::vector<int> indexes;
   MatrixReal F;
+  VectorReal FB;
 
 private:
 };
