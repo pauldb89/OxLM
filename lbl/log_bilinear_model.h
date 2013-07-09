@@ -228,6 +228,8 @@ public:
     return LogBiLinearModel::l2_gradient_update(sigma) + F.array().square().sum() + FB.array().square().sum();
   }
 
+  void reclass(std::vector<WordId>& train, std::vector<WordId>& test);
+
 public:
   std::vector<int> word_to_class;
   std::vector<int> indexes;

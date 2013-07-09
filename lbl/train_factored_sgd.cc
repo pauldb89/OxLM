@@ -21,6 +21,7 @@
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/archive/binary_iarchive.hpp>
+#include <boost/lexical_cast.hpp>
 
 // Eigen
 #include <Eigen/Dense>
@@ -44,7 +45,7 @@ using namespace Eigen;
 typedef vector<WordId> Sentence;
 typedef vector<WordId> Corpus;
 
-void learn(const variables_map& vm, const ModelData& config);
+void learn(const variables_map& vm, ModelData& config);
 
 typedef int TrainingInstance;
 typedef vector<TrainingInstance> TrainingInstances;
@@ -67,6 +68,7 @@ Real sgd_gradient(FactoredOutputLogBiLinearModel& model,
 
 Real perplexity(const FactoredOutputLogBiLinearModel& model, const Corpus& test_corpus, int stride=1);
 void freq_bin_type(const std::string &corpus, int num_classes, std::vector<int>& classes, Dict& dict, VectorReal& class_bias);
+void classes_from_file(const std::string &class_file, vector<int>& classes, Dict& dict, VectorReal& class_bias);
 
 
 int main(int argc, char **argv) {
@@ -116,8 +118,11 @@ int main(int argc, char **argv) {
         "SGD batch stepsize, it is normalised by the number of minibatches.")
     ("classes", value<int>()->default_value(100), 
         "number of classes for factored output.")
+    ("class-file", value<string>(), 
+        "file containing word to class mappings in the format <class> <word> <frequence>.")
     ("verbose,v", "print perplexity for each sentence (1) or input token (2) ")
     ("randomise", "visit the training tokens in random order")
+    ("reclass", "reallocate word classes after the first epoch.")
     ("diagonal-contexts", "Use diagonal context matrices (usually faster).")
     ;
   options_description config_options, cmdline_options;
@@ -167,7 +172,7 @@ int main(int argc, char **argv) {
 }
 
 
-void learn(const variables_map& vm, const ModelData& config) {
+void learn(const variables_map& vm, ModelData& config) {
   Corpus training_corpus, test_corpus;
   Dict dict;
   dict.Convert("<s>");
@@ -177,8 +182,15 @@ void learn(const variables_map& vm, const ModelData& config) {
   // separate the word types into classes using
   // frequency binning
   vector<int> classes;
-  VectorReal class_bias(vm["classes"].as<int>());
-  freq_bin_type(vm["input"].as<string>(), vm["classes"].as<int>(), classes, dict, class_bias);
+  VectorReal class_bias = VectorReal::Zero(vm["classes"].as<int>());
+  if (vm.count("class-file")) {
+    if (vm.count("classes")) 
+      cerr << "Both --classes and --class-file used, ignoring the former." << endl;
+    classes_from_file(vm["class-file"].as<string>(), classes, dict, class_bias);
+    config.classes = classes.size()-1;
+  }
+  else
+    freq_bin_type(vm["input"].as<string>(), vm["classes"].as<int>(), classes, dict, class_bias);
   //////////////////////////////////////////////
 
 
@@ -372,9 +384,14 @@ void learn(const variables_map& vm, const ModelData& config) {
         if (vm.count("test-set")) {
           cerr << ", Test Perplexity = " << pp; 
         }
-        if (vm.count("mixture"))
-          cerr << ", Mixture weights = " << softMax(model.M).transpose();
         cerr << " |" << endl << endl;
+
+        if (iteration >= 1 && vm.count("reclass")) {
+          model.reclass(training_corpus, test_corpus);
+          adaGradF = MatrixReal::Zero(model.F.rows(), model.F.cols());
+          adaGradFB = VectorReal::Zero(model.FB.size());
+          adaGrad = VectorReal::Zero(model.num_weights());
+        }
       }
     }
   }
@@ -453,6 +470,9 @@ Real sgd_gradient(FactoredOutputLogBiLinearModel& model,
     WordId w = training_corpus.at(w_i);
     int c = model.get_class(w);
     int c_start = model.indexes.at(c), c_end = model.indexes.at(c+1);
+
+    if (!(w >= c_start && w < c_end))
+      cerr << w << " " << c << " " << c_start << " " << c_end << endl;
     assert(w >= c_start && w < c_end);
 
     VectorReal class_conditional_scores = model.F * prediction_vectors.row(instance).transpose() + model.FB;
@@ -595,31 +615,79 @@ void freq_bin_type(const std::string &corpus, int num_classes, vector<int>& clas
 
   classes.clear();
   classes.push_back(0);
+
   classes.push_back(2);
-
   class_bias(0) = log(eos_sum);
-
   int bin_size = sum / (num_classes-1);
+
+//  int bin_size = counts.size()/(num_classes);
+
   int mass=0;
   for (int i=0; i < int(counts.size()); ++i) {
     WordId id = dict.Convert(counts.at(i).first);
-    if ((mass += counts.at(i).second) > bin_size) {
-//      cerr << " " << classes.size() << ": " << classes.back() << " " << mass << endl;
-      bin_size = (sum -= mass) / (num_classes - classes.size());
 
+//    if ((mass += 1) > bin_size) {
+
+    if ((mass += counts.at(i).second) > bin_size) {
+      bin_size = (sum -= mass) / (num_classes - classes.size());
       class_bias(classes.size()-1) = log(mass);
+
+      
+//      class_bias(classes.size()-1) = 1;
+
       classes.push_back(id+1);
 
+      cerr << " " << classes.size() << ": " << classes.back() << " " << mass << endl;
       mass=0;
     }
   }
   if (classes.back() != int(dict.size()))
     classes.push_back(dict.size());
 
-//  cerr << " " << classes.size() << ": " << classes.back() << " " << mass << endl;
+  cerr << " " << classes.size() << ": " << classes.back() << " " << mass << endl;
   class_bias.array() -= log(eos_sum+sum);
 
   cerr << "Binned " << dict.size() << " types in " << classes.size()-1 << " classes with an average of " 
        << float(dict.size()) / float(classes.size()-1) << " types per bin." << endl; 
+  in.close();
+}
+
+void classes_from_file(const std::string &class_file, vector<int>& classes, Dict& dict, VectorReal& class_bias) {
+  ifstream in(class_file.c_str());
+
+  vector<int> class_freqs(1,0);
+  classes.clear();
+  classes.push_back(0);
+  classes.push_back(2);
+
+  int mass=0, total_mass=0;
+  string prev_class_str="", class_str="", token_str="", freq_str="";
+  while (in >> class_str >> token_str >> freq_str) {
+    int w_id = dict.Convert(token_str);
+
+    int freq = lexical_cast<int>(freq_str);
+    mass += freq;
+    total_mass += freq;
+
+    if (!prev_class_str.empty() && class_str != prev_class_str) {
+      class_freqs.push_back(log(mass));
+      classes.push_back(w_id+1);
+//      cerr << " " << classes.size() << ": " << classes.back() << " " << mass << endl;
+      mass=0;
+    }
+    prev_class_str=class_str; 
+  }
+
+  class_freqs.push_back(log(mass));
+  classes.push_back(dict.size());
+//  cerr << " " << classes.size() << ": " << classes.back() << " " << mass << endl;
+
+  class_bias = VectorReal::Zero(class_freqs.size());
+  for (size_t i=0; i<class_freqs.size(); ++i)
+    class_bias(i) = class_freqs.at(i) - log(total_mass);
+
+  cerr << "Read " << dict.size() << " types in " << classes.size()-1 << " classes with an average of " 
+       << float(dict.size()) / float(classes.size()-1) << " types per bin." << endl; 
+
   in.close();
 }
