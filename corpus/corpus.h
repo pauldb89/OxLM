@@ -13,11 +13,13 @@
 #include <boost/serialization/map.hpp>
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/string.hpp>
+#include <boost/functional/hash.hpp>
 
 namespace oxlm {
 
 typedef std::string Word;
 typedef int WordId;
+typedef std::vector<WordId> Words;
 
 class Dict {
 // typedef std::unordered_map<std::string, WordId, std::hash<std::string> > Map;
@@ -117,6 +119,26 @@ inline void ReadFromFile(const std::string& filename,
   }
 }
 
+template <typename Container> 
+struct container_hash {
+  std::size_t operator()(Container const& c) const {
+    return boost::hash_range(c.begin(), c.end());
+  }
+};
+
 }
+
+
+namespace std {
+  template<typename S, typename T> struct hash<pair<S, T>> {
+    inline size_t operator()(const pair<S, T> & v) const {
+      size_t seed = 0;
+      boost::hash_combine(seed, v.first);
+      boost::hash_combine(seed, v.second);
+      return seed;
+    }
+  };
+}
+
 
 #endif // PYPDICT_H_

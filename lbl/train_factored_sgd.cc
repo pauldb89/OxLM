@@ -184,8 +184,7 @@ void learn(const variables_map& vm, ModelData& config) {
   vector<int> classes;
   VectorReal class_bias = VectorReal::Zero(vm["classes"].as<int>());
   if (vm.count("class-file")) {
-    if (vm.count("classes")) 
-      cerr << "Both --classes and --class-file used, ignoring the former." << endl;
+    cerr << "--class-file set, ignoring --classes." << endl;
     classes_from_file(vm["class-file"].as<string>(), classes, dict, class_bias);
     config.classes = classes.size()-1;
   }
@@ -230,7 +229,6 @@ void learn(const variables_map& vm, ModelData& config) {
   }
   //////////////////////////////////////////////
 
-  //LogBiLinearModel model(config, dict, vm.count("diagonal-contexts"));
   FactoredOutputLogBiLinearModel model(config, dict, vm.count("diagonal-contexts"), classes);
   model.FB = class_bias;
 
@@ -498,8 +496,7 @@ Real sgd_gradient(FactoredOutputLogBiLinearModel& model,
     g_FB(c)    -= 1.0;
     g_B(w)     -= 1.0;
     //   model contributions: 
-    g_R.block(c_start, 0, c_end-c_start, g_R.cols()) 
-        += word_conditional_probs * prediction_vectors.row(instance);
+    g_R.block(c_start, 0, c_end-c_start, g_R.cols()) += word_conditional_probs * prediction_vectors.row(instance);
     g_F += class_conditional_probs * prediction_vectors.row(instance);
     g_FB += class_conditional_probs;
     g_B.segment(c_start, c_end-c_start) += word_conditional_probs;

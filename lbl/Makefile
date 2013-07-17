@@ -7,7 +7,7 @@ FC=gfortran
 
 CXXFLAGS += -DEIGEN_DONT_PARALLELIZE
 
-local_objs = log_bilinear_model.o lbfgs.o # lbfgs_wrapper.o
+local_objs = log_bilinear_model.o #lbfgs.o # lbfgs_wrapper.o
 
 all: train_sgd train_factored_sgd
 

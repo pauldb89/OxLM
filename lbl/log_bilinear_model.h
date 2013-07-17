@@ -24,6 +24,18 @@ typedef boost::shared_ptr<MatrixReal>                       MatrixRealPtr;
 typedef boost::shared_ptr<VectorReal>                       VectorRealPtr;
 
 
+inline VectorReal softMax(const VectorReal& v) {
+  Real max = v.maxCoeff();
+  return (v.array() - (log((v.array() - max).exp().sum()) + max)).exp();
+}
+
+inline VectorReal logSoftMax(const VectorReal& v, Real* lz=0) {
+  Real max = v.maxCoeff();
+  Real log_z = log((v.array() - max).exp().sum()) + max;
+  if (lz!=0) *lz = log_z;
+  return v.array() - log_z;
+}
+
 class LogBiLinearModelApproximateZ {
 public:
   LogBiLinearModelApproximateZ() {}
@@ -136,7 +148,8 @@ public:
   }
   BOOST_SERIALIZATION_SPLIT_MEMBER();
 
-  Real score(const WordId w, const std::vector<WordId>& context, const LogBiLinearModelApproximateZ& z_approx) const {
+  virtual Real 
+  score(const WordId w, const std::vector<WordId>& context, const LogBiLinearModelApproximateZ& z_approx) const {
     VectorReal prediction_vector = VectorReal::Zero(config.word_representation_size);
     int width = config.ngram_order-1;
     int gap = width-context.size();
@@ -149,6 +162,20 @@ public:
     Real psi = R.row(w) * prediction_vector + B(w);
 //    Real log_uw = log(unigram);
     return psi - log(exp(psi) + unigram(w));
+  }
+
+  virtual Real
+  log_prob(const WordId w, const std::vector<WordId>& context) const {
+    VectorReal prediction_vector = VectorReal::Zero(config.word_representation_size);
+    int width = config.ngram_order-1;
+    int gap = width-context.size();
+    assert(static_cast<int>(context.size()) <= width);
+    for (int i=gap; i < width; i++)
+      if (m_diagonal) prediction_vector += C.at(i).asDiagonal() * Q.row(context.at(i-gap)).transpose();
+      else            prediction_vector += Q.row(context.at(i-gap)) * C.at(i);
+
+    VectorReal word_probs = logSoftMax((R*prediction_vector).array() + B(w));
+    return word_probs(w);
   }
 
   MatrixReal context_product(int i, const MatrixReal& v, bool transpose=false) const {
@@ -193,6 +220,9 @@ typedef std::shared_ptr<LogBiLinearModel> LogBiLinearModelPtr;
 
 class FactoredOutputLogBiLinearModel: public LogBiLinearModel {
 public:
+  FactoredOutputLogBiLinearModel(const ModelData& config, const Dict& labels, bool diagonal)
+    : LogBiLinearModel(config, labels, diagonal) {}
+
   FactoredOutputLogBiLinearModel(const ModelData& config, const Dict& labels, bool diagonal, 
                                  const std::vector<int>& classes);
 
@@ -230,6 +260,114 @@ public:
 
   void reclass(std::vector<WordId>& train, std::vector<WordId>& test);
 
+  virtual Real
+  log_prob(const WordId w, const std::vector<WordId>& context) const {
+//    static int cache_hits=0, cache_misses=0;
+
+    VectorReal prediction_vector = VectorReal::Zero(config.word_representation_size);
+    int width = config.ngram_order-1;
+    int gap = width-context.size();
+    assert(static_cast<int>(context.size()) <= width);
+    for (int i=gap; i < width; i++)
+      if (m_diagonal) prediction_vector += C.at(i).asDiagonal() * Q.row(context.at(i-gap)).transpose();
+      else            prediction_vector += Q.row(context.at(i-gap)) * C.at(i);
+
+    int c = get_class(w);
+
+    // log p(c | context) 
+    Real class_log_prob = 0;
+    auto context_cache_result = m_context_cache.insert(make_pair(context,0));
+    if (!context_cache_result.second) {
+//      if (++cache_hits % 10000 == 0) std::cerr << "--H--" << cache_hits << "--H--";
+      class_log_prob = F.row(c)*prediction_vector + FB(c) - context_cache_result.first->second;
+    }
+    else {
+      Real c_log_z=0;
+      VectorReal class_probs = logSoftMax(F*prediction_vector + FB, &c_log_z);
+      class_log_prob = class_probs(c);
+      context_cache_result.first->second = c_log_z;
+    }
+
+    // log p(w | c, context) 
+    Real word_log_prob = 0;
+    auto class_context_cache_result = m_context_class_cache.insert(make_pair(make_pair(c,context),0));
+    if (!class_context_cache_result.second) {
+      word_log_prob  = R.row(w)*prediction_vector + B(w) - class_context_cache_result.first->second;
+    }
+    else {
+      int c_start = indexes.at(c);
+      Real w_log_z=0;
+      VectorReal word_probs = logSoftMax(class_R(c)*prediction_vector + class_B(c), &w_log_z);
+      word_log_prob = word_probs(w-c_start);
+      class_context_cache_result.first->second = w_log_z;
+    }
+//    if (++cache_misses % 100000 == 0) std::cerr << "--M--" << cache_misses << "--M--";
+
+    return class_log_prob + word_log_prob;
+  }
+
+  void clear_cache() { 
+    m_context_cache.clear(); 
+    m_context_cache.reserve(1000000);
+    m_context_class_cache.clear(); 
+    m_context_class_cache.reserve(1000000);
+  }
+
+  friend class boost::serialization::access;
+  template<class Archive>
+  void save(Archive & ar, const unsigned int version) const {
+    ar << config;
+    ar << m_labels;
+    ar << m_diagonal;
+    ar << boost::serialization::make_array(m_data, m_data_size);
+
+    int unigram_len=unigram.rows();
+    ar << unigram_len;
+    ar << boost::serialization::make_array(unigram.data(), unigram_len);
+
+    // FactoredOutputLogBiLinearModel
+    ar << word_to_class;
+    ar << indexes;
+
+    int F_rows=F.rows(), F_cols=F.cols();
+    ar << F_rows << F_cols;
+    ar << boost::serialization::make_array(F.data(), F_rows*F_cols);
+
+    int FB_len=FB.rows();
+    ar << FB_len;
+    ar << boost::serialization::make_array(FB.data(), FB_len);
+  }
+
+  template<class Archive>
+  void load(Archive & ar, const unsigned int version) {
+    ar >> config;
+    ar >> m_labels;
+    ar >> m_diagonal;
+    delete [] m_data;
+    init(config, m_labels, false);
+    ar >> boost::serialization::make_array(m_data, m_data_size);
+
+    int unigram_len=0;
+    ar >> unigram_len;
+    unigram = VectorReal(unigram_len);
+    ar >> boost::serialization::make_array(unigram.data(), unigram_len);
+
+    // FactoredOutputLogBiLinearModel
+    ar >> word_to_class;
+    ar >> indexes;
+
+    int F_rows=0, F_cols=0;
+    ar >> F_rows >> F_cols;
+    F = MatrixReal(F_rows, F_cols);
+    ar >> boost::serialization::make_array(F.data(), F_rows*F_cols);
+
+    int FB_len=0;
+    ar >> FB_len;
+    FB = VectorReal(FB_len);
+    ar >> boost::serialization::make_array(FB.data(), FB_len);
+  }
+  BOOST_SERIALIZATION_SPLIT_MEMBER();
+
 public:
   std::vector<int> word_to_class;
   std::vector<int> indexes;
@@ -237,18 +375,9 @@ public:
   VectorReal FB;
 
 private:
+  mutable std::unordered_map<std::pair<int,Words>, Real> m_context_class_cache;
+  mutable std::unordered_map<Words, Real, container_hash<Words> > m_context_cache;
 };
-
-
-inline VectorReal softMax(const VectorReal& v) {
-  Real max = v.maxCoeff();
-  return (v.array() - (log((v.array() - max).exp().sum()) + max)).exp();
-}
-
-inline VectorReal logSoftMax(const VectorReal& v) {
-  Real max = v.maxCoeff();
-  return v.array() - log((v.array() - max).exp().sum()) - max;
-}
 
 }
 
