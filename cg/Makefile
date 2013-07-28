@@ -1,15 +1,14 @@
 LOCAL_LIBS=${HOME}/packages
 CXXFLAGS = -g -std=c++0x -fPIC -shared -O3 -fopenmp -Wall -I.. -I${LOCAL_LIBS}/include -m64 -I/usr/include/eigen3
-LDFLAGS = -g -std=c++0x -O3 -fopenmp -L${LOCAL_LIBS}/lib64 -L${LOCAL_LIBS}/lib -lboost_program_options -lboost_serialization -lgfortran
+LDFLAGS = -g -std=c++0x -O3 -fopenmp -L${LOCAL_LIBS}/lib64 -L${LOCAL_LIBS}/lib -lboost_program_options -lboost_serialization
 FFLAGS = -Wall -g -O3  
 CXX=g++
-FC=gfortran
 
 CXXFLAGS += -DEIGEN_DONT_PARALLELIZE
 
-local_objs = log_bilinear_model.o nlm.o #lbfgs.o # lbfgs_wrapper.o
+local_objs = cnlm.o
 
-all: train_sgd train_factored_sgd
+all: train_nlm train_cnlm
 
 -include makefile.depend
 
@@ -17,19 +16,7 @@ all: train_sgd train_factored_sgd
 # Local stuff
 #-----------------------#
 
-train_sgd: train_sgd.o $(local_objs)
-	$(CXX) -o $@ $^ $(LDFLAGS)
-
-train_factored_sgd: train_factored_sgd.o $(local_objs)
-	$(CXX) -o $@ $^ $(LDFLAGS)
-
-train_clbl: train_clbl.o $(local_objs)
-	$(CXX) -o $@ $^ $(LDFLAGS)
-
-train_mlbl: train_mlbl.o $(local_objs)
-	$(CXX) -o $@ $^ $(LDFLAGS)
-
-train_z: train_z.o $(local_objs)
+train_cnlm: train_cnlm.o $(local_objs)
 	$(CXX) -o $@ $^ $(LDFLAGS)
 
 %.o: %.cc
@@ -37,16 +24,13 @@ train_z: train_z.o $(local_objs)
 
 %.o: %.c
 	${CC} $(CFLAGS) -c $< -o $@
-#
-# %.o: %.f
-#	$(FC) $(FFLAGS) -c $< -o $@
-#
+
 CDEC = ../../cdec
 BOOST_INCLUDE=$(LOCAL_LIBS)/include
 cdec_ff_lbl.o: cdec_ff_lbl.cc
 	$(CXX) -shared -fPIC $(CXXFLAGS) -I$(CDEC)/utils -I$(CDEC)/mteval -I$(CDEC)/decoder $< -c
 
-libcdec_ff_lbl.so: cdec_ff_lbl.o nlm.o
+libcdec_ff_cnlm.so: cdec_ff_cnlm.o cnlm.o
 	$(CXX) -shared -L../../cdec/decoder -lcdec -Wl,-soname,$@ -o $@ $^ $(LDFLAGS)
 
 .PHONY: depend echo
@@ -57,4 +41,4 @@ clean:
 	rm -f *.o
 
 clobber: clean
-	rm makefile.depend train_sgd libcdec_ff_lbl.so
+	rm makefile.depend train_cnlm libcdec_ff_nlm.so libcdec_ff_cnlm.so

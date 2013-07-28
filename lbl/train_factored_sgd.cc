@@ -28,7 +28,7 @@
 #include <Eigen/Core>
 
 // Local
-#include "lbl/log_bilinear_model.h"
+#include "lbl/nlm.h"
 #include "lbl/log_add.h"
 #include "corpus/corpus.h"
 
@@ -54,19 +54,19 @@ void cache_data(int start, int end,
                 const vector<size_t>& indices,
                 TrainingInstances &result);
 
-Real sgd_gradient(FactoredOutputLogBiLinearModel& model,
+Real sgd_gradient(FactoredOutputNLM& model,
                 const Corpus& training_corpus, 
                 const TrainingInstances &indexes,
                 Real lambda, 
-                LogBiLinearModel::WordVectorsType& g_R,
-                LogBiLinearModel::WordVectorsType& g_Q,
-                LogBiLinearModel::ContextTransformsType& g_C,
-                LogBiLinearModel::WeightsType& g_B,
+                NLM::WordVectorsType& g_R,
+                NLM::WordVectorsType& g_Q,
+                NLM::ContextTransformsType& g_C,
+                NLM::WeightsType& g_B,
                 MatrixReal & g_F,
                 VectorReal & g_FB);
 
 
-Real perplexity(const FactoredOutputLogBiLinearModel& model, const Corpus& test_corpus, int stride=1);
+Real perplexity(const FactoredOutputNLM& model, const Corpus& test_corpus, int stride=1);
 void freq_bin_type(const std::string &corpus, int num_classes, std::vector<int>& classes, Dict& dict, VectorReal& class_bias);
 void classes_from_file(const std::string &class_file, vector<int>& classes, Dict& dict, VectorReal& class_bias);
 
@@ -229,7 +229,7 @@ void learn(const variables_map& vm, ModelData& config) {
   }
   //////////////////////////////////////////////
 
-  FactoredOutputLogBiLinearModel model(config, dict, vm.count("diagonal-contexts"), classes);
+  FactoredOutputNLM model(config, dict, vm.count("diagonal-contexts"), classes);
   model.FB = class_bias;
 
   if (vm.count("model-in")) {
@@ -275,23 +275,23 @@ void learn(const variables_map& vm, ModelData& config) {
     assert((R_size+Q_size+context_width*C_size+B_size+M_size) == model.num_weights());
 
     Real* gradient_data = new Real[model.num_weights()];
-    LogBiLinearModel::WeightsType gradient(gradient_data, model.num_weights());
+    NLM::WeightsType gradient(gradient_data, model.num_weights());
 
-    LogBiLinearModel::WordVectorsType g_R(gradient_data, num_words, word_width);
-    LogBiLinearModel::WordVectorsType g_Q(gradient_data+R_size, num_words, word_width);
+    NLM::WordVectorsType g_R(gradient_data, num_words, word_width);
+    NLM::WordVectorsType g_Q(gradient_data+R_size, num_words, word_width);
 
-    LogBiLinearModel::ContextTransformsType g_C;
+    NLM::ContextTransformsType g_C;
     Real* ptr = gradient_data+2*R_size;
     for (int i=0; i<context_width; i++) {
       if (vm.count("diagonal-contexts"))
-          g_C.push_back(LogBiLinearModel::ContextTransformType(ptr, word_width, 1));
+          g_C.push_back(NLM::ContextTransformType(ptr, word_width, 1));
       else
-          g_C.push_back(LogBiLinearModel::ContextTransformType(ptr, word_width, word_width));
+          g_C.push_back(NLM::ContextTransformType(ptr, word_width, word_width));
       ptr += C_size;
     }
 
-    LogBiLinearModel::WeightsType g_B(ptr, B_size);
-    LogBiLinearModel::WeightsType g_M(ptr+B_size, M_size);
+    NLM::WeightsType g_B(ptr, B_size);
+    NLM::WeightsType g_M(ptr+B_size, M_size);
     MatrixReal g_F(num_classes, word_width);
     VectorReal g_FB(num_classes);
     //////////////////////////////////////////////
@@ -419,14 +419,14 @@ void cache_data(int start, int end, const Corpus& training_corpus, const vector<
 }
 
 
-Real sgd_gradient(FactoredOutputLogBiLinearModel& model,
+Real sgd_gradient(FactoredOutputNLM& model,
                 const Corpus& training_corpus,
                 const TrainingInstances &training_instances,
                 Real lambda, 
-                LogBiLinearModel::WordVectorsType& g_R,
-                LogBiLinearModel::WordVectorsType& g_Q,
-                LogBiLinearModel::ContextTransformsType& g_C,
-                LogBiLinearModel::WeightsType& g_B,
+                NLM::WordVectorsType& g_R,
+                NLM::WordVectorsType& g_Q,
+                NLM::ContextTransformsType& g_C,
+                NLM::WeightsType& g_B,
                 MatrixReal& g_F,
                 VectorReal& g_FB) {
   Real f=0;
@@ -473,6 +473,11 @@ Real sgd_gradient(FactoredOutputLogBiLinearModel& model,
       cerr << w << " " << c << " " << c_start << " " << c_end << endl;
     assert(w >= c_start && w < c_end);
 
+    // a simple sigmoid non-linearity
+    prediction_vectors.row(instance) = (1.0 + (-prediction_vectors.row(instance)).array().exp()).inverse(); // sigmoid
+    //for (int x=0; x<word_width; ++x)
+    //  prediction_vectors.row(instance)(x) *= (prediction_vectors.row(instance)(x) > 0 ? 1 : 0.01); // rectifier
+
     VectorReal class_conditional_scores = model.F * prediction_vectors.row(instance).transpose() + model.FB;
     VectorReal word_conditional_scores  = model.class_R(c) * prediction_vectors.row(instance).transpose() + model.class_B(c);
 
@@ -500,6 +505,12 @@ Real sgd_gradient(FactoredOutputLogBiLinearModel& model,
     g_F += class_conditional_probs * prediction_vectors.row(instance);
     g_FB += class_conditional_probs;
     g_B.segment(c_start, c_end-c_start) += word_conditional_probs;
+
+    // a simple sigmoid non-linearity
+    weightedRepresentations.row(instance).array() *= 
+      prediction_vectors.row(instance).array() * (1.0 - prediction_vectors.row(instance).array()); // sigmoid
+    //for (int x=0; x<word_width; ++x)
+    //  weightedRepresentations.row(instance)(x) *= (prediction_vectors.row(instance)(x) > 0 ? 1 : 0.01); // rectifier
   }
 //  clock_t iteration_time = clock() - iteration_start;
 
@@ -527,8 +538,8 @@ Real sgd_gradient(FactoredOutputLogBiLinearModel& model,
   return f;
 }
 
-
-Real perplexity(const FactoredOutputLogBiLinearModel& model, const Corpus& test_corpus, int stride) {
+/*
+Real perplexity(const FactoredOutputNLM& model, const Corpus& test_corpus, int stride) {
   Real p=0.0;
 
   int word_width = model.config.word_representation_size;
@@ -563,6 +574,11 @@ Real perplexity(const FactoredOutputLogBiLinearModel& model, const Corpus& test_
         prediction_vector += q_context_products[i].row(v_i).transpose();
       }
 
+      // a simple non-linearity
+      prediction_vector = (1.0 + (-prediction_vector).array().exp()).inverse(); // sigmoid
+//      for (int x=0; x<word_width; ++x)
+//        prediction_vector(x) *= (prediction_vector(x) > 0 ? 1 : 0.01); // rectifier
+
       int c = model.get_class(w);
       int c_start = model.indexes.at(c);
       VectorReal class_probs = logSoftMax(model.F * prediction_vector + model.FB);
@@ -580,6 +596,47 @@ Real perplexity(const FactoredOutputLogBiLinearModel& model, const Corpus& test_
     #pragma omp master
     cerr << endl;
   }
+
+  return p;
+}
+*/
+Real perplexity(const FactoredOutputNLM& model, const Corpus& test_corpus, int stride) {
+  Real p=0.0;
+
+  int context_width = model.config.ngram_order-1;
+  int tokens=0;
+  WordId start_id = model.label_set().Lookup("<s>");
+  WordId end_id = model.label_set().Lookup("</s>");
+
+  #pragma omp master
+  cerr << "Calculating perplexity for " << test_corpus.size()/stride << " tokens";
+
+  std::vector<WordId> context(context_width);
+
+  size_t thread_num = omp_get_thread_num();
+  size_t num_threads = omp_get_num_threads();
+  for (size_t s = (thread_num*stride); s < test_corpus.size(); s += (num_threads*stride)) {
+    WordId w = test_corpus.at(s);
+    int context_start = s - context_width;
+    bool sentence_start = (s==0);
+
+    for (int i=context_width-1; i>=0; --i) {
+      int j=context_start+i;
+      sentence_start = (sentence_start || j<0 || test_corpus.at(j) == end_id);
+      int v_i = (sentence_start ? start_id : test_corpus.at(j));
+
+      context.at(i) = v_i;
+    }
+    Real log_prob = model.log_prob(w, context, true, false);
+    p += log_prob;
+
+    #pragma omp master
+    if (tokens % 1000 == 0) { cerr << "."; cerr.flush(); }
+
+    tokens++;
+  }
+  #pragma omp master
+  cerr << endl;
 
   return p;
 }
@@ -634,14 +691,14 @@ void freq_bin_type(const std::string &corpus, int num_classes, vector<int>& clas
 
       classes.push_back(id+1);
 
-      cerr << " " << classes.size() << ": " << classes.back() << " " << mass << endl;
+//      cerr << " " << classes.size() << ": " << classes.back() << " " << mass << endl;
       mass=0;
     }
   }
   if (classes.back() != int(dict.size()))
     classes.push_back(dict.size());
 
-  cerr << " " << classes.size() << ": " << classes.back() << " " << mass << endl;
+//  cerr << " " << classes.size() << ": " << classes.back() << " " << mass << endl;
   class_bias.array() -= log(eos_sum+sum);
 
   cerr << "Binned " << dict.size() << " types in " << classes.size()-1 << " classes with an average of " 
