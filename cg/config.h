@@ -14,7 +14,7 @@ struct ModelData {
 
   ModelData() : step_size(0.1), l2_parameter(0.0), threads(1), iteration_size(1), 
                 verbose(false), ngram_order(3), word_representation_size(100), 
-                classes(1), nonlinear(false), diagonal(false)
+                classes(1), nonlinear(false), diagonal(false), source_window_width(-1)
   {}
 
   float       step_size;
@@ -27,6 +27,7 @@ struct ModelData {
   int         classes;
   bool        nonlinear;
   bool        diagonal;
+  int         source_window_width;
 
   friend class boost::serialization::access;
   template<class Archive>
@@ -41,6 +42,7 @@ struct ModelData {
     ar & classes;
     ar & nonlinear;
     ar & diagonal;
+    ar & source_window_width;
   }
 };
 typedef boost::shared_ptr<ModelData> ModelDataPtr;

@@ -1,6 +1,7 @@
 // STL
 #include <vector>
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <omp.h>
 #include <time.h>
@@ -39,7 +40,7 @@ void classes_from_file(const std::string &class_file, vector<int>& classes, Dict
 
 
 int main(int argc, char **argv) {
-  cout << "Online training for  neural translation models: Copyright 2013 Phil Blunsom, " 
+  cout << "Online training for neural translation models: Copyright 2013 Phil Blunsom, " 
        << REVISION << '\n' << endl;
 
   ///////////////////////////////////////////////////////////////////////////////////////
@@ -89,6 +90,8 @@ int main(int argc, char **argv) {
         "number of classes for factored output.")
     ("class-file", value<string>(), 
         "file containing word to class mappings in the format <class> <word> <frequence>.")
+    ("window", value<int>()->default_value(-1), 
+        "Width of window of source words conditioned on.")
     ("verbose,v", "print perplexity for each sentence (1) or input token (2) ")
     ("randomise", "visit the training tokens in random order")
     ("diagonal-contexts", "Use diagonal context matrices (usually faster).")
@@ -120,6 +123,7 @@ int main(int argc, char **argv) {
   config.classes = vm["classes"].as<int>();
   config.diagonal = vm.count("diagonal-contexts");
   config.nonlinear= vm.count("non-linear");
+  config.source_window_width = vm["window"].as<int>();
 
   cerr << "################################" << endl;
   cerr << "# Config Summary:" << endl;
@@ -135,7 +139,8 @@ int main(int argc, char **argv) {
   cerr << "# classes = " << config.classes << endl;
   cerr << "# diagonal = " << config.diagonal << endl;
   cerr << "# non-linear = " << config.nonlinear << endl;
-  cerr << "################################" << endl;
+  cerr << "# width = " << config.source_window_width << endl;
+  cerr << "################################" << endl << endl;
 
   omp_set_num_threads(config.threads);
 
@@ -237,9 +242,16 @@ void learn(const variables_map& vm, ModelData& config) {
     test_target_in.close();
   }
   //////////////////////////////////////////////
+  
+  assert (source_corpus.size() == target_corpus.size());
+  assert (test_source_corpus.size() == test_target_corpus.size());
 
   ConditionalNLM model(config, source_dict, target_dict, classes);
   model.FB = class_bias;
+
+  for (size_t s=0; s<source_corpus.size(); ++s)
+    model.length_ratio += (Real(source_corpus.at(s).size()) / Real(target_corpus.at(s).size()));
+  model.length_ratio /= Real(source_corpus.size());
 
   if (vm.count("model-in")) {
     std::ifstream f(vm["model-in"].as<string>().c_str());
@@ -268,13 +280,24 @@ void learn(const variables_map& vm, ModelData& config) {
 
     size_t minibatch_counter=0;
     size_t minibatch_size = vm["minibatch-size"].as<int>();
+
+    #pragma omp master
+    {
+      cerr << endl << fixed << setprecision(2);
+      cerr << " |" << setw(target_corpus.size()/(minibatch_size*100)+8) << " ITERATION";
+      cerr << setw(10) << "TIME" << setw(10) << "-LLH";
+      if (vm.count("test-source"))
+        cerr << setw(13) << "HELDOUT PPL";
+      cerr << " |" << endl;
+    }
+
     for (int iteration=0; iteration < vm["iterations"].as<int>(); ++iteration) {
       clock_t iteration_start=clock();
       #pragma omp master
       {
         av_f=0.0;
         pp=0.0;
-        cout << "Iteration " << iteration << ": "; cout.flush();
+//        cout << "Iteration " << iteration << ": "; cout.flush();
 
         if (vm.count("randomise"))
           std::random_shuffle(training_indices.begin(), training_indices.end());
@@ -282,6 +305,9 @@ void learn(const variables_map& vm, ModelData& config) {
 
       TrainingInstances training_instances;
       Real step_size = vm["step-size"].as<float>();
+
+      #pragma omp master
+      cerr << " |" << setw(6) << iteration << " "; 
 
       for (size_t start=0; start < target_corpus.size() && (int)start < vm["instances"].as<int>(); ++minibatch_counter) {
         #pragma omp barrier
@@ -292,7 +318,7 @@ void learn(const variables_map& vm, ModelData& config) {
         global_gradient.setZero();
 
         gradient.setZero();
-        Real lambda = config.l2_parameter*(end-start)/num_training_instances; 
+        Real lambda = config.l2_parameter*(end-start)/Real(target_corpus.size()); 
 
         cache_data(start, end, training_indices, training_instances);
         Real f = model.gradient(source_corpus, target_corpus, training_instances, lambda, gradient);
@@ -306,20 +332,23 @@ void learn(const variables_map& vm, ModelData& config) {
 
         #pragma omp master
         {
-          adaGrad.array() += global_gradient.array().square();
-          for (int w=0; w<model.num_weights(); ++w)
-            if (adaGrad(w)) model.W(w) -= (step_size*global_gradient(w) / sqrt(adaGrad(w)));
+          // l2 regulariser contributions. Not very efficient
+          av_f += (0.5*lambda*model.W.squaredNorm());
+          global_gradient.array() += (lambda * model.W.array()); 
 
-          // regularisation
-          if (lambda > 0) av_f += (0.5*lambda*model.l2_gradient_update(step_size*lambda));
+          adaGrad.array() += global_gradient.array().square();
+          for (int w=0; w<model.num_weights(); ++w) {
+            if (adaGrad(w)) 
+              model.W(w) -= (step_size*global_gradient(w)/ sqrt(adaGrad(w)));
+          }
 
           if (minibatch_counter % 100 == 0) { cerr << "."; cout.flush(); }
         }
 
         start += minibatch_size;
       }
-      #pragma omp master
-      cerr << endl;
+//      #pragma omp master
+//      cerr << endl;
 
       Real iteration_time = (clock()-iteration_start) / (Real)CLOCKS_PER_SEC;
       if (vm.count("test-source")) {
@@ -333,11 +362,13 @@ void learn(const variables_map& vm, ModelData& config) {
       #pragma omp master
       {
         pp = exp(-pp/num_test_instances);
-        cerr << " | Time: " << iteration_time << " seconds, Average f = " << av_f/num_training_instances;
+        //cerr << " Time: " << iteration_time << " seconds, Average f = " << av_f/num_training_instances;
+        cerr << setw(10) << iteration_time << setw(10) << av_f/num_training_instances;
         if (vm.count("test-source")) {
-          cerr << ", Test Perplexity = " << pp; 
+          //cerr << ", Heldout Perplexity = " << pp; 
+          cerr << setw(13) << pp; 
         }
-        cerr << " |" << endl << endl;
+        cerr << " |" << endl;
       }
     }
   }
@@ -373,8 +404,8 @@ Real perplexity(const ConditionalNLM& model, const vector<Sentence>& test_source
   int tokens=0;
   WordId start_id = model.label_set().Lookup("<s>");
 
-  #pragma omp master
-  cerr << "Calculating perplexity for " << test_target_corpus.size() << " sentences";
+//  #pragma omp master
+//  cerr << "Calculating perplexity for " << test_target_corpus.size() << " sentences";
 
   std::vector<WordId> context(context_width);
 
@@ -382,10 +413,12 @@ Real perplexity(const ConditionalNLM& model, const vector<Sentence>& test_source
   size_t num_threads = omp_get_num_threads();
   for (size_t s = thread_num; s < test_target_corpus.size(); s += num_threads) {
     const Sentence& sent = test_target_corpus.at(s);
-    for (size_t s_i=0; s_i < sent.size(); ++s_i) {
-      WordId w = sent.at(s_i);
-      int context_start = s_i - context_width;
-      bool sentence_start = (s_i==0);
+    VectorReal s_rep = VectorReal::Zero(model.config.word_representation_size);
+//    model.source_representation(test_source_corpus.at(s), s_rep);
+    for (size_t t_i=0; t_i < sent.size(); ++t_i) {
+      WordId w = sent.at(t_i);
+      int context_start = t_i - context_width;
+      bool sentence_start = (t_i==0);
 
       for (int i=context_width-1; i>=0; --i) {
         int j=context_start+i;
@@ -394,17 +427,18 @@ Real perplexity(const ConditionalNLM& model, const vector<Sentence>& test_source
 
         context.at(i) = v_i;
       }
-      Real log_prob = model.log_prob(w, context, test_source_corpus.at(s));
+//      Real log_prob = model.log_prob(w, context, s_rep);
+      Real log_prob = model.log_prob(w, context, test_source_corpus.at(s), false, t_i);
       p += log_prob;
 
-      #pragma omp master
-      if (tokens % 1000 == 0) { cerr << "."; cerr.flush(); }
+//      #pragma omp master
+//      if (tokens % 1000 == 0) { cerr << "."; cerr.flush(); }
 
       tokens++;
     }
   }
-  #pragma omp master
-  cerr << endl;
+//  #pragma omp master
+//  cerr << endl;
 
   return p;
 }

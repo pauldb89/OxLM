@@ -36,9 +36,12 @@ public:
   const Dict& label_set() const { return m_target_labels; }
   Dict& label_set() { return m_target_labels; }
 
+  const Dict& source_label_set() const { return m_source_labels; }
+  Dict& source_label_set() { return m_source_labels; }
+
   Real l2_gradient_update(Real sigma) { 
     W -= W*sigma; 
-    return W.array().square().sum();
+    return W.squaredNorm();
   }
 
   WordId label_id(const Word& l) const { return m_target_labels.Lookup(l); }
@@ -52,7 +55,9 @@ public:
   Real gradient(const std::vector<Sentence>& source_corpus, const std::vector<Sentence>& target_corpus, 
                 const TrainingInstances &training_instances, Real lambda, WeightsType& g_W);
 
-  Real log_prob(const WordId w, const std::vector<WordId>& context, const Sentence& source, bool cache=false) const;
+  void source_representation(const Sentence& source, int target_index, VectorReal& result) const;
+  Real log_prob(const WordId w, const std::vector<WordId>& context, const Sentence& source, bool cache=false, int target_index=-1) const;
+  Real log_prob(const WordId w, const std::vector<WordId>& context, const VectorReal& source, bool cache=false) const;
 
   Eigen::Block<WordVectorsType> class_R(const int c) {
     int c_start = indexes.at(c), c_end = indexes.at(c+1);
@@ -96,6 +101,7 @@ public:
 
     ar << word_to_class;
     ar << indexes;
+    ar << length_ratio;
   }
 
   template<class Archive>
@@ -108,6 +114,7 @@ public:
 
     ar >> word_to_class;
     ar >> indexes;
+    ar >> length_ratio;
   }
   BOOST_SERIALIZATION_SPLIT_MEMBER();
 
@@ -135,6 +142,7 @@ public:
   WeightsType           FB; // output class biases
 
   WeightsType           W;  // All the parameters in one vector
+  Real length_ratio;
 
 private:
   void init(bool init_weights=false);

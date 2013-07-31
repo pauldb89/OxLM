@@ -27,7 +27,8 @@ ConditionalNLM::ConditionalNLM(const ModelData& config,
                                      const Dict& target_labels, 
                                      const std::vector<int>& classes) 
   : config(config), R(0,0,0), Q(0,0,0), F(0,0,0), S(0,0,0), B(0,0), FB(0,0), W(0,0), 
-    m_source_labels(source_labels), m_target_labels(target_labels), indexes(classes) {
+    length_ratio(1), m_source_labels(source_labels), m_target_labels(target_labels),
+    indexes(classes) {
     init(true);
 
     assert (!classes.empty());
@@ -103,7 +104,30 @@ void ConditionalNLM::allocate_data() {
 }
 
 
-Real ConditionalNLM::log_prob(const WordId w, const std::vector<WordId>& context, const Sentence& source, bool cache) const {
+void ConditionalNLM::source_representation(const Sentence& source, int target_index, VectorReal& result) const {
+  result = VectorReal::Zero(config.word_representation_size);
+  if (target_index < 0 || config.source_window_width < 0) {
+    for (auto s_i : source)
+      result += S.row(s_i);
+  }
+  else {
+    int centre = floor(Real(target_index)*length_ratio);
+    for (int i= max(centre-config.source_window_width, 0); 
+         i < min(int(source.size()),centre+config.source_window_width); ++i)
+      result += S.row(source.at(i));
+  }
+}
+
+
+Real ConditionalNLM::log_prob(const WordId w, const std::vector<WordId>& context, const Sentence& source, 
+                              bool cache, int target_index) const {
+  VectorReal s;
+  source_representation(source, target_index, s);
+  return log_prob(w, context, s, cache);
+}
+
+
+Real ConditionalNLM::log_prob(WordId w, const std::vector<WordId>& context, const VectorReal& source, bool cache) const {
   VectorReal prediction_vector = VectorReal::Zero(config.word_representation_size);
   int width = config.ngram_order-1;
   int gap = width-context.size();
@@ -116,8 +140,7 @@ Real ConditionalNLM::log_prob(const WordId w, const std::vector<WordId>& context
 
   //////////////////////////////////////////////////////////////////
   // Source prediction_vector contributions
-  for (auto s_i : source)
-    prediction_vector += S.row(s_i);
+  prediction_vector += source;
   //////////////////////////////////////////////////////////////////
 
   // a simple non-linearity
@@ -209,12 +232,17 @@ Real ConditionalNLM::gradient(const std::vector<Sentence>& source_corpus, const 
   instance_counter=0;
   for (int instance=0; instance < instances; ++instance) {
     const TrainingInstance& t = training_instances.at(instance);
-    VectorReal s_vec = VectorReal::Zero(word_width);
-    for (auto s_i : source_corpus.at(t))
-      s_vec += S.row(s_i);
+//    VectorReal s_vec = VectorReal::Zero(word_width);
+//    for (auto s_i : source_corpus.at(t))
+//      s_vec += S.row(s_i);
 
     const Sentence& target_sent = target_corpus.at(t);
     for (int t_i=0; t_i < int(target_sent.size()); ++t_i, ++instance_counter) {
+      VectorReal s_vec = VectorReal::Zero(word_width);
+      //for (auto s_i : source_corpus.at(t))
+      //  s_vec += S.row(s_i);
+      source_representation(source_corpus.at(t), t_i, s_vec);
+
       prediction_vectors.row(instance_counter) += s_vec;
     }
   }
@@ -297,21 +325,32 @@ Real ConditionalNLM::gradient(const std::vector<Sentence>& source_corpus, const 
       const TrainingInstance& t = training_instances.at(instance);
       const Sentence& sent = target_corpus.at(t);
       VectorReal sentence_weightedReps = VectorReal::Zero(word_width);
-      for (int s_i=0; s_i < int(sent.size()); ++s_i, ++instance_counter) {
-        int j = s_i-context_width+i;
+      for (int t_i=0; t_i < int(sent.size()); ++t_i, ++instance_counter) {
+        int j = t_i-context_width+i;
 
         bool sentence_start = (j<0);
         int v_i = (sentence_start ? start_id : sent.at(j));
 
         g_Q.row(v_i) += context_gradients.row(instance_counter);
 
-        sentence_weightedReps += weightedRepresentations.row(instance_counter);
+        if (config.source_window_width < 0) {
+          //sentence_weightedReps += weightedRepresentations.row(instance_counter);
+          for (auto s_i : source_corpus.at(t))
+            g_S.row(s_i) += weightedRepresentations.row(instance_counter);
+        }
+        else {
+          int centre = floor(Real(t_i)*length_ratio);
+          const Sentence& source_sent = source_corpus.at(t);
+          for (int i= max(centre-config.source_window_width, 0); 
+               i < min(int(source_sent.size()),centre+config.source_window_width); ++i)
+            g_S.row(source_sent.at(i)) += weightedRepresentations.row(instance_counter);
+        }
       }
 
       //////////////////////////////////////////////////////////////////
       // Source word representations gradient
-      for (auto s_i : source_corpus.at(t))
-        g_S.row(s_i) += sentence_weightedReps;
+//      for (auto s_i : source_corpus.at(t))
+//        g_S.row(s_i) += sentence_weightedReps;
       //////////////////////////////////////////////////////////////////
     }
     context_gradient_update(g_C.at(i), context_vectors.at(i), weightedRepresentations);
