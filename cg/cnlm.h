@@ -25,6 +25,7 @@ public:
   typedef Eigen::Map<VectorReal> WeightsType;
 
 public:
+  ConditionalNLM();
   ConditionalNLM(const ModelData& config, const Dict& source_vocab, const Dict& target_vocab, const std::vector<int>& classes);
   ~ConditionalNLM() { delete [] m_data; }
 
@@ -56,8 +57,12 @@ public:
                 const TrainingInstances &training_instances, Real lambda, WeightsType& g_W);
 
   void source_representation(const Sentence& source, int target_index, VectorReal& result) const;
+  void hidden_layer(const std::vector<WordId>& context, const VectorReal& source, VectorReal& result) const;
+
   Real log_prob(const WordId w, const std::vector<WordId>& context, const Sentence& source, bool cache=false, int target_index=-1) const;
   Real log_prob(const WordId w, const std::vector<WordId>& context, const VectorReal& source, bool cache=false) const;
+  void class_log_probs(const std::vector<WordId>& context, const VectorReal& source, const VectorReal& prediction_vector, VectorReal& result, bool cache=false) const;
+  void word_log_probs(int c, const std::vector<WordId>& context, const VectorReal& source, const VectorReal& prediction_vector, VectorReal& result, bool cache=false) const;
 
   Eigen::Block<WordVectorsType> class_R(const int c) {
     int c_start = indexes.at(c), c_end = indexes.at(c+1);
@@ -85,6 +90,11 @@ public:
     return word_to_class[w];
   }
 
+  int map_class_to_word_index(int c, int wc) const {
+    int c_start = indexes.at(c);
+    return wc + c_start; 
+  }
+
   void clear_cache() { 
     m_context_cache.clear(); 
     m_context_cache.reserve(1000000);
@@ -97,6 +107,7 @@ public:
   void save(Archive & ar, const unsigned int version) const {
     ar << config;
     ar << m_target_labels;
+    ar << m_source_labels;
     ar << boost::serialization::make_array(m_data, m_data_size);
 
     ar << word_to_class;
@@ -108,6 +119,7 @@ public:
   void load(Archive & ar, const unsigned int version) {
     ar >> config;
     ar >> m_target_labels;
+    ar >> m_source_labels;
     delete [] m_data;
     init(false);
     ar >> boost::serialization::make_array(m_data, m_data_size);
@@ -125,6 +137,13 @@ public:
     else                return v * C.at(i);
   }
 
+  MatrixReal window_product(int i, const MatrixReal& v, bool transpose=false) const {
+    if (config.diagonal)
+      return (T.at(i).asDiagonal() * v.transpose()).transpose();
+    else if (transpose) return v * T.at(i).transpose();
+    else                return v * T.at(i);
+  }
+
   void context_gradient_update(ContextTransformType& g_C, const MatrixReal& v,const MatrixReal& w) const {
     if (config.diagonal) g_C += (v.cwiseProduct(w).colwise().sum()).transpose();
     else                 g_C += (v.transpose() * w); 
@@ -134,6 +153,7 @@ public:
   ModelData config;
 
   ContextTransformsType C;  // Context position transforms
+  ContextTransformsType T;  // Context position transforms
   WordVectorsType       R;  // output word representations
   WordVectorsType       Q;  // context word representations
   WordVectorsType       F;  // class representations
@@ -148,7 +168,8 @@ private:
   void init(bool init_weights=false);
   void allocate_data();
   void map_parameters(WeightsType& w, WordVectorsType& r, WordVectorsType& q, WordVectorsType& f, 
-                      WordVectorsType& s, ContextTransformsType& c, WeightsType& b, WeightsType& fb) const;
+                      WordVectorsType& s, ContextTransformsType& c, ContextTransformsType& t, 
+                      WeightsType& b, WeightsType& fb) const;
 
   Dict m_source_labels, m_target_labels;
   int m_data_size;
@@ -157,8 +178,8 @@ private:
   std::vector<int> word_to_class; // map from word id to class
   std::vector<int> indexes;       // vocab spans for each class
 
-  mutable std::unordered_map<std::pair<int,Words>, Real> m_context_class_cache;
-  mutable std::unordered_map<Words, Real, container_hash<Words> > m_context_cache;
+  mutable std::unordered_map<std::pair<int,Words>, VectorReal> m_context_class_cache;
+  mutable std::unordered_map<Words, VectorReal, container_hash<Words> > m_context_cache;
 };
 
 typedef std::shared_ptr<ConditionalNLM> ConditionalNLMPtr;

@@ -1,6 +1,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/random.hpp>
+#include <boost/archive/text_iarchive.hpp>
 
 #include <math.h>
 #include <iostream>
@@ -22,10 +23,12 @@ static boost::mt19937 linear_model_rng(static_cast<unsigned> (std::time(0)));
 static uniform_01<> linear_model_uniform_dist;
 
 
+ConditionalNLM::ConditionalNLM() : R(0,0,0), Q(0,0,0), F(0,0,0), S(0,0,0), B(0,0), FB(0,0), W(0,0), m_data(0) {}
+
 ConditionalNLM::ConditionalNLM(const ModelData& config, 
-                                     const Dict& source_labels, 
-                                     const Dict& target_labels, 
-                                     const std::vector<int>& classes) 
+                               const Dict& source_labels, 
+                               const Dict& target_labels, 
+                               const std::vector<int>& classes) 
   : config(config), R(0,0,0), Q(0,0,0), F(0,0,0), S(0,0,0), B(0,0), FB(0,0), W(0,0), 
     length_ratio(1), m_source_labels(source_labels), m_target_labels(target_labels),
     indexes(classes) {
@@ -66,7 +69,7 @@ void ConditionalNLM::init(bool init_weights) {
   }
   else W.setZero();
 
-  map_parameters(W, R, Q, F, S, C, B, FB); 
+  map_parameters(W, R, Q, F, S, C, T, B, FB); 
 /*
 #pragma omp master
   if (true) {
@@ -90,32 +93,59 @@ void ConditionalNLM::allocate_data() {
   int num_context_words = context_types();
   int word_width = config.word_representation_size;
   int context_width = config.ngram_order-1;
+  int window_width = max(config.source_window_width, 0);
 
   int R_size = num_output_words * word_width;
   int Q_size = num_context_words * word_width;;
   int F_size = config.classes * word_width;;
   int S_size = num_source_words * word_width;;
-  int C_size = (config.diagonal ? word_width : word_width*word_width);
+  int C_size = context_width * (config.diagonal ? word_width : word_width*word_width);
+  int T_size = (2*window_width + 1) * (config.diagonal ? word_width : word_width*word_width);
   int B_size = num_output_words;
   int FB_size = config.classes;
 
-  m_data_size = R_size + Q_size + F_size + S_size + context_width*C_size + B_size + FB_size;
+  m_data_size = R_size + Q_size + F_size + S_size + C_size + T_size + B_size + FB_size;
   m_data = new Real[m_data_size];
 }
 
 
 void ConditionalNLM::source_representation(const Sentence& source, int target_index, VectorReal& result) const {
   result = VectorReal::Zero(config.word_representation_size);
-  if (target_index < 0 || config.source_window_width < 0) {
+  int window = config.source_window_width;
+
+  if (target_index < 0 || window < 0) {
     for (auto s_i : source)
       result += S.row(s_i);
   }
   else {
-    int centre = floor(Real(target_index)*length_ratio);
-    for (int i= max(centre-config.source_window_width, 0); 
-         i < min(int(source.size()),centre+config.source_window_width); ++i)
-      result += S.row(source.at(i));
+    int source_len = source.size();
+    int centre = min(floor(Real(target_index)*length_ratio + 0.5), double(source_len-1));
+    int start = max(centre-window, 0);
+    int end = min(source_len, centre+window+1);
+
+    for (int i=start; i < end; ++i)
+      result += window_product(i-centre+window, S.row(source.at(i))).transpose();
   }
+}
+
+
+void ConditionalNLM::hidden_layer(const std::vector<WordId>& context, const VectorReal& source, VectorReal& result) const {
+  result = VectorReal::Zero(config.word_representation_size);
+  int width = config.ngram_order-1;
+  int gap = width-context.size();
+  assert(static_cast<int>(context.size()) <= width);
+  for (int i=gap; i < width; i++)
+    if (config.diagonal) result += C.at(i).asDiagonal() * Q.row(context.at(i-gap)).transpose();
+    else                 result += Q.row(context.at(i-gap)) * C.at(i);
+
+  //////////////////////////////////////////////////////////////////
+  // Source result contributions
+  result += source;
+  //////////////////////////////////////////////////////////////////
+
+  // a simple non-linearity
+  if (config.nonlinear)
+    result = (1.0 + (-result).array().exp()).inverse(); // sigmoid
 }
 
 
@@ -127,58 +157,55 @@ Real ConditionalNLM::log_prob(const WordId w, const std::vector<WordId>& context
 }
 
 
+
 Real ConditionalNLM::log_prob(WordId w, const std::vector<WordId>& context, const VectorReal& source, bool cache) const {
-  VectorReal prediction_vector = VectorReal::Zero(config.word_representation_size);
-  int width = config.ngram_order-1;
-  int gap = width-context.size();
-  assert(static_cast<int>(context.size()) <= width);
-  for (int i=gap; i < width; i++)
-    if (config.diagonal) prediction_vector += C.at(i).asDiagonal() * Q.row(context.at(i-gap)).transpose();
-    else                 prediction_vector += Q.row(context.at(i-gap)) * C.at(i);
+  VectorReal prediction_vector;
+  hidden_layer(context, source, prediction_vector);
 
-  int c = get_class(w);
+  int c = get_class(w), c_start = indexes.at(c);
 
-  //////////////////////////////////////////////////////////////////
-  // Source prediction_vector contributions
-  prediction_vector += source;
-  //////////////////////////////////////////////////////////////////
+  VectorReal c_lps, w_lps;
+  class_log_probs(context, source, prediction_vector, c_lps, cache); // p( . | context, source)
+  word_log_probs(c, context, source, prediction_vector, w_lps, cache); // p( . | c, context, source)
 
-  // a simple non-linearity
-  if (config.nonlinear)
-    prediction_vector = (1.0 + (-prediction_vector).array().exp()).inverse(); // sigmoid
+  return c_lps(c) + w_lps(w - c_start); 
+}
 
+
+void ConditionalNLM::class_log_probs(const std::vector<WordId>& context, 
+                                     const VectorReal& source, const VectorReal& prediction_vector, 
+                                     VectorReal& result, 
+                                     bool cache) const {
   // log p(c | context) 
-  Real class_log_prob = 0;
-  std::pair<std::unordered_map<Words, Real, container_hash<Words> >::iterator, bool> context_cache_result;
-  if (cache) context_cache_result = m_context_cache.insert(make_pair(context,0));
+  std::pair<std::unordered_map<Words, VectorReal, container_hash<Words> >::iterator, bool> context_cache_result;
+  if (cache) context_cache_result = m_context_cache.insert(make_pair(context, VectorReal::Zero(config.classes)));
   if (cache && !context_cache_result.second) {
-    assert (context_cache_result.first->second != 0);
-    class_log_prob = F.row(c)*prediction_vector + FB(c) - context_cache_result.first->second;
+    result = context_cache_result.first->second;
   }
   else {
     Real c_log_z=0;
-    VectorReal class_probs = logSoftMax(F*prediction_vector + FB, &c_log_z);
+    result = logSoftMax(F*prediction_vector + FB, &c_log_z);
     assert(c_log_z != 0);
-    class_log_prob = class_probs(c);
-    if (cache) context_cache_result.first->second = c_log_z;
+    if (cache) context_cache_result.first->second = result;
   }
+}
 
+
+void ConditionalNLM::word_log_probs(int c, const std::vector<WordId>& context, 
+                                    const VectorReal& source, const VectorReal& prediction_vector, 
+                                    VectorReal& result,
+                                    bool cache) const {
   // log p(w | c, context) 
-  Real word_log_prob = 0;
-  std::pair<std::unordered_map<std::pair<int,Words>, Real>::iterator, bool> class_context_cache_result;
-  if (cache) class_context_cache_result = m_context_class_cache.insert(make_pair(make_pair(c,context),0));
+  std::pair<std::unordered_map<std::pair<int,Words>, VectorReal>::iterator, bool> class_context_cache_result;
+  if (cache) class_context_cache_result = m_context_class_cache.insert(make_pair(make_pair(c,context),VectorReal()));
   if (cache && !class_context_cache_result.second) {
-    word_log_prob  = R.row(w)*prediction_vector + B(w) - class_context_cache_result.first->second;
+    result = class_context_cache_result.first->second;
   }
   else {
-    int c_start = indexes.at(c);
     Real w_log_z=0;
-    VectorReal word_probs = logSoftMax(class_R(c)*prediction_vector + class_B(c), &w_log_z);
-    word_log_prob = word_probs(w-c_start);
-    if (cache) class_context_cache_result.first->second = w_log_z;
+    result = logSoftMax(class_R(c)*prediction_vector + class_B(c), &w_log_z);
+    if (cache) class_context_cache_result.first->second = result;
   }
-
-  return class_log_prob + word_log_prob;
 }
 
 
@@ -186,15 +213,16 @@ Real ConditionalNLM::gradient(const std::vector<Sentence>& source_corpus, const 
                               const TrainingInstances &training_instances,
                               Real lambda, WeightsType& g_W) {
   WordVectorsType g_R(0,0,0), g_Q(0,0,0), g_F(0,0,0), g_S(0,0,0);
-  ContextTransformsType g_C;
+  ContextTransformsType g_C, g_T;
   WeightsType g_B(0,0), g_FB(0,0);
-  map_parameters(g_W, g_R, g_Q, g_F, g_S, g_C, g_B, g_FB);
+  map_parameters(g_W, g_R, g_Q, g_F, g_S, g_C, g_T, g_B, g_FB);
 
   Real f=0;
   WordId start_id = label_set().Convert("<s>");
 
   int word_width = config.word_representation_size;
   int context_width = config.ngram_order-1;
+  int window = config.source_window_width;
 
   int tokens=0;
   for (auto instance : training_instances)
@@ -259,8 +287,10 @@ Real ConditionalNLM::gradient(const std::vector<Sentence>& source_corpus, const 
   for (int instance=0; instance < instances; instance++) {
     const TrainingInstance& t = training_instances.at(instance);
     const Sentence& sent = target_corpus.at(t);
-    for (int s_i=0; s_i < int(sent.size()); ++s_i, ++instance_counter) {
-      WordId w = sent.at(s_i);
+    const Sentence& source_sent = source_corpus.at(t);
+    int source_len = source_sent.size();
+    for (int t_i=0; t_i < int(sent.size()); ++t_i, ++instance_counter) {
+      WordId w = sent.at(t_i);
 
       int c = get_class(w);
       int c_start = indexes.at(c), c_end = indexes.at(c+1);
@@ -311,6 +341,23 @@ Real ConditionalNLM::gradient(const std::vector<Sentence>& source_corpus, const 
         //for (int x=0; x<word_width; ++x)
         //  weightedRepresentations.row(instance_counter)(x) *= (prediction_vectors.row(instance_counter)(x) > 0 ? 1 : 0.01); // rectifier
       }
+
+      //////////////////////////////////////////////////////////////////
+      // Source word representations gradient
+      if (window < 0) {
+        for (auto s_i : source_sent)
+          g_S.row(s_i) += weightedRepresentations.row(instance_counter);
+      }
+      else {
+        int centre = min(floor(Real(t_i)*length_ratio + 0.5), double(source_len-1));
+        int start = max(centre-window, 0);
+        int end = min(source_len, centre+window+1);
+        for (int i=start; i < end; ++i) {
+          g_S.row(source_sent.at(i)) += window_product(i-centre+window, weightedRepresentations.row(instance_counter), true);
+          context_gradient_update(g_T.at(i-centre+window), S.row(source_sent.at(i)), weightedRepresentations.row(instance_counter));
+        }
+      }
+      //////////////////////////////////////////////////////////////////
     }
   }
   //  clock_t iteration_time = clock() - iteration_start;
@@ -324,6 +371,7 @@ Real ConditionalNLM::gradient(const std::vector<Sentence>& source_corpus, const 
     for (int instance=0; instance < instances; ++instance) {
       const TrainingInstance& t = training_instances.at(instance);
       const Sentence& sent = target_corpus.at(t);
+
       VectorReal sentence_weightedReps = VectorReal::Zero(word_width);
       for (int t_i=0; t_i < int(sent.size()); ++t_i, ++instance_counter) {
         int j = t_i-context_width+i;
@@ -332,26 +380,7 @@ Real ConditionalNLM::gradient(const std::vector<Sentence>& source_corpus, const 
         int v_i = (sentence_start ? start_id : sent.at(j));
 
         g_Q.row(v_i) += context_gradients.row(instance_counter);
-
-        if (config.source_window_width < 0) {
-          //sentence_weightedReps += weightedRepresentations.row(instance_counter);
-          for (auto s_i : source_corpus.at(t))
-            g_S.row(s_i) += weightedRepresentations.row(instance_counter);
-        }
-        else {
-          int centre = floor(Real(t_i)*length_ratio);
-          const Sentence& source_sent = source_corpus.at(t);
-          for (int i= max(centre-config.source_window_width, 0); 
-               i < min(int(source_sent.size()),centre+config.source_window_width); ++i)
-            g_S.row(source_sent.at(i)) += weightedRepresentations.row(instance_counter);
-        }
       }
-
-      //////////////////////////////////////////////////////////////////
-      // Source word representations gradient
-//      for (auto s_i : source_corpus.at(t))
-//        g_S.row(s_i) += sentence_weightedReps;
-      //////////////////////////////////////////////////////////////////
     }
     context_gradient_update(g_C.at(i), context_vectors.at(i), weightedRepresentations);
   }
@@ -361,18 +390,21 @@ Real ConditionalNLM::gradient(const std::vector<Sentence>& source_corpus, const 
 }
 
 void ConditionalNLM::map_parameters(WeightsType& w, WordVectorsType& r, WordVectorsType& q, WordVectorsType& f, 
-                                    WordVectorsType& s, ContextTransformsType& c, WeightsType& b, WeightsType& fb) const {
+                                    WordVectorsType& s, ContextTransformsType& c, ContextTransformsType& t, 
+                                    WeightsType& b, WeightsType& fb) const {
   int num_source_words = source_types();
   int num_output_words = output_types();
   int num_context_words = context_types();
   int word_width = config.word_representation_size;
   int context_width = config.ngram_order-1;
+  int window_width = max(config.source_window_width,0);
 
   int R_size = num_output_words * word_width;
   int Q_size = num_context_words * word_width;;
   int F_size = config.classes * word_width;
   int S_size = num_source_words * word_width;
   int C_size = (config.diagonal ? word_width : word_width*word_width);
+  int T_size = (config.diagonal ? word_width : word_width*word_width);
 
   Real* ptr = w.data();
 
@@ -390,6 +422,13 @@ void ConditionalNLM::map_parameters(WeightsType& w, WordVectorsType& r, WordVect
     if (config.diagonal) c.push_back(ContextTransformType(ptr, word_width, 1));
     else                 c.push_back(ContextTransformType(ptr, word_width, word_width));
     ptr += C_size;
+  }
+
+  t.clear();
+  for (int i=0; i<(2*window_width+1); i++) {
+    if (config.diagonal) t.push_back(ContextTransformType(ptr, word_width, 1));
+    else                 t.push_back(ContextTransformType(ptr, word_width, word_width));
+    ptr += T_size;
   }
 
   new (&b)  WeightsType(ptr, num_output_words);

@@ -278,21 +278,21 @@ void learn(const variables_map& vm, ModelData& config) {
     Real* gradient_data = new Real[model.num_weights()];
     ConditionalNLM::WeightsType gradient(gradient_data, model.num_weights());
 
-    size_t minibatch_counter=0;
     size_t minibatch_size = vm["minibatch-size"].as<int>();
 
     #pragma omp master
     {
       cerr << endl << fixed << setprecision(2);
       cerr << " |" << setw(target_corpus.size()/(minibatch_size*100)+8) << " ITERATION";
-      cerr << setw(10) << "TIME" << setw(10) << "-LLH";
+      cerr << setw(11) << "TIME (s)" << setw(10) << "-LLH";
       if (vm.count("test-source"))
         cerr << setw(13) << "HELDOUT PPL";
       cerr << " |" << endl;
     }
 
     for (int iteration=0; iteration < vm["iterations"].as<int>(); ++iteration) {
-      clock_t iteration_start=clock();
+      //clock_t iteration_start=clock();
+      time_t iteration_start=time(0);
       #pragma omp master
       {
         av_f=0.0;
@@ -309,6 +309,7 @@ void learn(const variables_map& vm, ModelData& config) {
       #pragma omp master
       cerr << " |" << setw(6) << iteration << " "; 
 
+      size_t minibatch_counter=0;
       for (size_t start=0; start < target_corpus.size() && (int)start < vm["instances"].as<int>(); ++minibatch_counter) {
         #pragma omp barrier
 
@@ -350,7 +351,8 @@ void learn(const variables_map& vm, ModelData& config) {
 //      #pragma omp master
 //      cerr << endl;
 
-      Real iteration_time = (clock()-iteration_start) / (Real)CLOCKS_PER_SEC;
+      //Real iteration_time = (clock()-iteration_start) / (Real)CLOCKS_PER_SEC;
+      int iteration_time = difftime(time(0),iteration_start);
       if (vm.count("test-source")) {
         Real local_pp = perplexity(model, test_source_corpus, test_target_corpus);
 
@@ -362,13 +364,16 @@ void learn(const variables_map& vm, ModelData& config) {
       #pragma omp master
       {
         pp = exp(-pp/num_test_instances);
-        //cerr << " Time: " << iteration_time << " seconds, Average f = " << av_f/num_training_instances;
-        cerr << setw(10) << iteration_time << setw(10) << av_f/num_training_instances;
+        cerr << setw(11) << iteration_time << setw(10) << av_f/num_training_instances;
         if (vm.count("test-source")) {
-          //cerr << ", Heldout Perplexity = " << pp; 
           cerr << setw(13) << pp; 
         }
         cerr << " |" << endl;
+
+        //cerr << " T norms:";
+        //for (auto t : model.T)
+        //  cerr << " " << t.norm();
+        //cerr << endl;
       }
     }
   }
