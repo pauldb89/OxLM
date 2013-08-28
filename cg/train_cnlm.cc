@@ -167,7 +167,7 @@ void learn(const variables_map& vm, ModelData& config) {
     config.classes = classes.size()-1;
   }
   else
-    freq_bin_type(vm["input"].as<string>(), config.classes, classes, target_dict, class_bias);
+    freq_bin_type(vm["target"].as<string>(), config.classes, classes, target_dict, class_bias);
   //////////////////////////////////////////////
 
 
