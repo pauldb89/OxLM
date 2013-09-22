@@ -54,11 +54,12 @@ public:
   Real* data() { return m_data; }
 
   Real gradient(const std::vector<Sentence>& source_corpus, const std::vector<Sentence>& target_corpus, 
-                const TrainingInstances &training_instances, Real lambda, WeightsType& g_W);
+                const TrainingInstances &training_instances, Real lambda, Real source_lambda, WeightsType& g_W);
 
   void source_representation(const Sentence& source, int target_index, VectorReal& result) const;
   void hidden_layer(const std::vector<WordId>& context, const VectorReal& source, VectorReal& result) const;
 
+  Real log_prob(const WordId w, const std::vector<WordId>& context, bool cache=false) const;
   Real log_prob(const WordId w, const std::vector<WordId>& context, const Sentence& source, bool cache=false, int target_index=-1) const;
   Real log_prob(const WordId w, const std::vector<WordId>& context, const VectorReal& source, bool cache=false) const;
   void class_log_probs(const std::vector<WordId>& context, const VectorReal& source, const VectorReal& prediction_vector, VectorReal& result, bool cache=false) const;

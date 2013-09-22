@@ -30,11 +30,11 @@ cg: cg.o $(local_objs)
 
 CDEC = ../../cdec
 BOOST_INCLUDE=$(LOCAL_LIBS)/include
-cdec_ff_lbl.o: cdec_ff_lbl.cc
+cdec_ff_cnlm.o: cdec_ff_cnlm.cc
 	$(CXX) -shared -fPIC $(CXXFLAGS) -I$(CDEC)/utils -I$(CDEC)/mteval -I$(CDEC)/decoder $< -c
 
 libcdec_ff_cnlm.so: cdec_ff_cnlm.o cnlm.o
-	$(CXX) -shared -L../../cdec/decoder -lcdec -Wl,-soname,$@ -o $@ $^ $(LDFLAGS)
+	$(CXX) -shared -L$(CDEC)/decoder -lcdec -Wl,-soname,$@ -o $@ $^ $(LDFLAGS)
 
 .PHONY: depend echo
 depend:

@@ -54,7 +54,7 @@ typedef map<Context, HypothesisPtr> Hypotheses;
 typedef vector<HypothesisPtr> Beam;
 
 
-void beam_search(const ConditionalNLM& model, const Sentence& source, int beam_width, double word_penalty) {
+void beam_search(const ConditionalNLM& model, const Sentence& source, int beam_width, double word_penalty, const Sentence& target) {
   WordId start_id = model.label_set().Lookup("<s>");
   WordId end_id = model.label_set().Lookup("</s>");
   
@@ -68,7 +68,8 @@ void beam_search(const ConditionalNLM& model, const Sentence& source, int beam_w
 
   Real best = numeric_limits<Real>::max();
   //for (int t_i=0; t_i < int(source.size()*2); ++t_i) {
-  for (int t_i=0; t_i < int(source.size()*2) && !old_beam.empty(); ++t_i) {
+  int max_len = (target.empty() ? source.size()*2 : target.size());
+  for (int t_i=0; t_i < max_len && !old_beam.empty(); ++t_i) {
     seen_contexts.clear();
     model.source_representation(source, t_i, source_vector);
 
@@ -91,11 +92,15 @@ void beam_search(const ConditionalNLM& model, const Sentence& source, int beam_w
         for (WordId w=0; w < word_probs.rows(); ++w) {
           Real wlp = -word_probs(w);
           WordId w_id = model.map_class_to_word_index(c, w);
+
+          if (w_id == end_id && !target.empty() && t_i != int(target.size()-1))
+            continue;
+
           context.back() = w_id;
 
           HypothesisPtr new_h(new Hypothesis(context, h->score + clp + wlp - word_penalty, h));
 
-          if (best < (new_h->score-1)) continue;
+          if (best < new_h->score) continue;
           else if (w_id == end_id) best = new_h->score;
 
           // recombine this hypothesis if it has been seen before
@@ -103,7 +108,7 @@ void beam_search(const ConditionalNLM& model, const Sentence& source, int beam_w
           if (new_h->score < hyp_ptr.first->second->score) {
             *hyp_ptr.first->second = *new_h;
           }
-          else {
+          else if (hyp_ptr.second) {
             if (w_id == end_id) completed.push_back(new_h); 
             else                new_beam.push_back(new_h);
           }
@@ -248,6 +253,8 @@ int main(int argc, char **argv) {
   generic.add_options()
     ("source,s", value<string>(), 
         "corpus of sentences, one per line")
+    ("target,t", value<string>(), 
+        "reference translations of the source sentences, one per line")
     ("samples", value<int>(),
         "number of samples from the nlm")
     ("beam", value<int>()->default_value(10), 
@@ -292,6 +299,10 @@ int main(int argc, char **argv) {
   // process the input sentences
   string line, token;
   ifstream source_in(vm["source"].as<string>().c_str());
+  ifstream* target_in=NULL;
+  if (vm.count("target"))
+    target_in = new ifstream(vm["target"].as<string>().c_str());
+
   int source_counter=0;
   while (getline(source_in, line)) {
     // read the sentence
@@ -301,16 +312,26 @@ int main(int argc, char **argv) {
       s.push_back(model.source_label_set().Convert(token));
     s.push_back(end_id);
 
+    Sentence t;
+    if (target_in) {
+      assert(getline(*target_in, line));
+      stringstream target_line_stream(line);
+      while (target_line_stream >> token) 
+        t.push_back(model.label_set().Convert(token));
+      t.push_back(end_id);
+    }
+
     if (vm.count("samples"))  
       sample_search(model, s, 
                     vm["samples"].as<int>(), vm["k-best"].as<int>(), source_counter, 
                     vm["word-penalty"].as<double>());
     else
-      beam_search(model, s, vm["beam"].as<int>(), vm["word-penalty"].as<double>());
+      beam_search(model, s, vm["beam"].as<int>(), vm["word-penalty"].as<double>(), t);
 
     source_counter++;
   }
   source_in.close();
+  if (target_in) delete target_in;
   //////////////////////////////////////////////
 
   return 0;

@@ -9,6 +9,7 @@
 #include <vector>
 #include <random>
 #include <cstring>
+#include <omp.h>
 
 #include "cnlm.h"
 #include "utils.h"
@@ -157,6 +158,11 @@ Real ConditionalNLM::log_prob(const WordId w, const std::vector<WordId>& context
 }
 
 
+Real ConditionalNLM::log_prob(WordId w, const std::vector<WordId>& context, bool cache) const {
+  const VectorReal s = VectorReal::Zero(config.word_representation_size);
+  return log_prob(w, context, s, cache);
+}
+
 
 Real ConditionalNLM::log_prob(WordId w, const std::vector<WordId>& context, const VectorReal& source, bool cache) const {
   VectorReal prediction_vector;
@@ -211,7 +217,7 @@ void ConditionalNLM::word_log_probs(int c, const std::vector<WordId>& context,
 
 Real ConditionalNLM::gradient(const std::vector<Sentence>& source_corpus, const std::vector<Sentence>& target_corpus, 
                               const TrainingInstances &training_instances,
-                              Real lambda, WeightsType& g_W) {
+                              Real lambda, Real source_lambda, WeightsType& g_W) {
   WordVectorsType g_R(0,0,0), g_Q(0,0,0), g_F(0,0,0), g_S(0,0,0);
   ContextTransformsType g_C, g_T;
   WeightsType g_B(0,0), g_FB(0,0);
@@ -229,7 +235,7 @@ Real ConditionalNLM::gradient(const std::vector<Sentence>& source_corpus, const 
     tokens += target_corpus.at(instance).size();
 
   //////////////////////////////////////////////////////////////////
-  // LM prediction_vector contributions
+  // LM prediction_vector contributions:
   // form matrices of the ngram histories
   //  clock_t cache_start = clock();
   int instances=training_instances.size();
@@ -385,6 +391,29 @@ Real ConditionalNLM::gradient(const std::vector<Sentence>& source_corpus, const 
     context_gradient_update(g_C.at(i), context_vectors.at(i), weightedRepresentations);
   }
   //  clock_t context_time = clock() - context_start;
+
+  #pragma omp master 
+  {
+    f += (0.5*lambda*(R.squaredNorm() + Q.squaredNorm() + B.squaredNorm() + F.squaredNorm() + FB.squaredNorm()));
+    for (size_t c=0; c<C.size(); ++c)
+      f += (0.5*lambda*C.at(c).squaredNorm());
+
+    f += (0.5*source_lambda*S.squaredNorm());
+    for (size_t t=0; t<T.size(); ++t)
+      f += (0.5*source_lambda*T.at(t).squaredNorm());
+
+    g_R.array() += (lambda*R.array());
+    g_Q.array() += (lambda*Q.array());
+    g_F.array() += (lambda*F.array());
+    g_B.array() += (lambda*B.array());
+    g_FB.array() += (lambda*FB.array());
+    for (size_t c=0; c<C.size(); ++c)
+      g_C.at(c).array() += (lambda*C.at(c).array());
+
+    g_S.array() += (source_lambda*S.array());
+    for (size_t t=0; t<T.size(); ++t)
+      g_T.at(t).array() += (source_lambda*T.at(t).array());
+  }
 
   return f;
 }

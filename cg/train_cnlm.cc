@@ -78,6 +78,8 @@ int main(int argc, char **argv) {
         "base filename of model output files")
     ("lambda,r", value<float>()->default_value(0.0), 
         "regularisation strength parameter")
+    ("source-lambda", value<float>(), 
+        "source regularisation strength parameter")
     ("dump-frequency", value<int>()->default_value(0), 
         "dump model every n minibatches.")
     ("word-width", value<int>()->default_value(100), 
@@ -116,6 +118,10 @@ int main(int argc, char **argv) {
 
   ModelData config;
   config.l2_parameter = vm["lambda"].as<float>();
+  if (vm.count("source-lambda"))
+    config.source_l2_parameter = vm["source-lambda"].as<float>();
+  else
+    config.source_l2_parameter = config.l2_parameter;
   config.word_representation_size = vm["word-width"].as<int>();
   config.threads = vm["threads"].as<int>();
   config.ngram_order = vm["order"].as<int>();
@@ -133,7 +139,8 @@ int main(int argc, char **argv) {
   cerr << "# model-out = " << vm["model-out"].as<string>() << endl;
   cerr << "# source = " << vm["source"].as<string>() << endl;
   cerr << "# minibatch-size = " << vm["minibatch-size"].as<int>() << endl;
-  cerr << "# lambda = " << vm["lambda"].as<float>() << endl;
+  cerr << "# lambda = " << config.l2_parameter << endl;
+  cerr << "# source-lambda = " << config.source_l2_parameter << endl;
   cerr << "# iterations = " << vm["iterations"].as<int>() << endl;
   cerr << "# threads = " << vm["threads"].as<int>() << endl;
   cerr << "# classes = " << config.classes << endl;
@@ -320,9 +327,10 @@ void learn(const variables_map& vm, ModelData& config) {
 
         gradient.setZero();
         Real lambda = config.l2_parameter*(end-start)/Real(target_corpus.size()); 
+        Real source_lambda = config.source_l2_parameter*(end-start)/Real(target_corpus.size()); 
 
         cache_data(start, end, training_indices, training_instances);
-        Real f = model.gradient(source_corpus, target_corpus, training_instances, lambda, gradient);
+        Real f = model.gradient(source_corpus, target_corpus, training_instances, lambda, source_lambda, gradient);
 
         #pragma omp critical 
         {
@@ -334,8 +342,14 @@ void learn(const variables_map& vm, ModelData& config) {
         #pragma omp master
         {
           // l2 regulariser contributions. Not very efficient
-          av_f += (0.5*lambda*model.W.squaredNorm());
-          global_gradient.array() += (lambda * model.W.array()); 
+          //av_f += 0.5*lambda*(model.C.squaredNorm() + model.R.squaredNorm() + 
+          //                    model.Q.squaredNorm() + model.B.squaredNorm() + 
+          //                    model.F.squaredNorm() + model.FB.squaredNorm());
+          //av_f += 0.5*source_lambda*(model.T.squaredNorm() + model.S.squaredNorm());
+          //
+          //av_f += (0.5*lambda*model.W.squaredNorm());
+          
+          //global_gradient.array() += (lambda * model.W.array()); 
 
           adaGrad.array() += global_gradient.array().square();
           for (int w=0; w<model.num_weights(); ++w) {

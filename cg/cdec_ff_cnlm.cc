@@ -8,7 +8,7 @@
 
 // pyp stuff
 #include "corpus/corpus.h"
-#include "cg/nlm.h"
+#include "cg/cnlm.h"
 
 // cdec stuff
 #include "stringlib.h"
@@ -76,7 +76,7 @@ struct SimplePair {
 class FF_LBLLM : public FeatureFunction {
  public:
   FF_LBLLM(const string& lm_file, const string& feat, const string& reffile) 
-    : lm(ModelData(), oxlm::Dict(), true), fid(FD::Convert(feat)), fid_oov(FD::Convert(feat+"_OOV"))
+    : fid(FD::Convert(feat)), fid_oov(FD::Convert(feat+"_OOV"))
   {
     {
       cerr << "Reading LM from " << lm_file << " ...\n";
@@ -90,18 +90,6 @@ class FF_LBLLM : public FeatureFunction {
       ia >> lm;
       dict = lm.label_set();
     }
-    /*
-    {
-      ifstream z_ifile((lm_file+".z").c_str(), ios::in);
-      if (!z_ifile.good()) {
-        cerr << "Failed to open " << (lm_file+".z") << " for reading\n";
-        abort();
-      }
-      cerr << "Reading LM Z from " << lm_file+".z" << " ...\n";
-      boost::archive::text_iarchive ia(z_ifile);
-      ia >> z_approx;
-    }
-    */
     
     cerr << "Initializing map contents (map size=" << dict.max() << ")\n";
     for (int i = 1; i < dict.max(); ++i)
@@ -130,6 +118,20 @@ class FF_LBLLM : public FeatureFunction {
       cerr << "last_id = " << last_id << " but id = " << id << endl;
       abort();
     }
+
+    cerr << "\n  PrepareForInput(smeta.GetSentenceID=" << id << "), source sentence =";
+    const Lattice& lattice = smeta.GetSourceLattice();
+    oxlm::Sentence s;
+    for(unsigned i = 0; i < lattice.size(); ++i) {
+      //cerr << " " << TD::Convert(lattice[i][0].label); // the ith word id
+      //cerr << " " << lm.source_label_set().Convert(TD::Convert(lattice[i][0].label)); // the ith word id
+      s.push_back(lm.source_label_set().Convert(TD::Convert(lattice[i][0].label))); // the ith word id
+    }
+    //cerr << endl;
+
+    s.push_back(kSTOP);
+    lm.source_representation(s, -1, curr_source_vec);
+
     /*
     if (last_id < ref_sents.size() && last_id < id) {
       cerr << "  ** LBLLM: Adapting LM using previously translated references for sentences [" << last_id << ',' << id << ")\n";
@@ -217,7 +219,8 @@ class FF_LBLLM : public FeatureFunction {
 //      cerr << dict.Convert(xx[j]) << " ";
 //    cerr << " | " << dict.Convert(word);
     
-    double s = lm.log_prob(word, xx, true, false);
+    //double s = lm.log_prob(word, xx, curr_source_vec, true);
+    double s = lm.log_prob(word, xx, true);
 
 //    cerr << "), s = " << s << endl;
 
@@ -361,10 +364,12 @@ class FF_LBLLM : public FeatureFunction {
   WordID kUNKNOWN;
   WordID kNONE;
   WordID kSTAR;
-  oxlm::FactoredOutputNLM lm;
+  oxlm::VectorReal curr_source_vec;
+  oxlm::ConditionalNLM lm;
   const int fid;
   const int fid_oov;
   vector<int> cdec2lbl; // cdec2lbl[TD::Convert("word")] returns the index in the lbl model
+  vector<int> cdec2source_lbl; 
 
   // stuff for online updating of LM
   vector<vector<WordID>> ref_sents;
