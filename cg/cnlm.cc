@@ -282,13 +282,10 @@ Real ConditionalNLM::gradient(const std::vector<Sentence>& source_corpus, const 
   }
   //////////////////////////////////////////////////////////////////
 
-  //  clock_t cache_time = clock() - cache_start;
-
   // the weighted sum of word representations
   MatrixReal weightedRepresentations = MatrixReal::Zero(tokens, word_width);
 
   // calculate the function and gradient for each ngram
-  //  clock_t iteration_start = clock();
   instance_counter=0;
   for (int instance=0; instance < instances; instance++) {
     const TrainingInstance& t = training_instances.at(instance);
@@ -309,7 +306,7 @@ Real ConditionalNLM::gradient(const std::vector<Sentence>& source_corpus, const 
       if (config.nonlinear) {
         prediction_vectors.row(instance_counter) = (1.0 + (-prediction_vectors.row(instance_counter)).array().exp()).inverse(); // sigmoid
         //for (int x=0; x<word_width; ++x)
-        //  prediction_vectors.row(instance_counter)(x) *= (prediction_vectors.row(instance_counter)(x) > 0 ? 1 : 0.01); // rectifier
+        //  prediction_vector(x) *= (prediction_vector(x) > 0 ? 1 : 0.01); // rectifier
       }
 
       VectorReal class_conditional_scores = F * prediction_vectors.row(instance_counter).transpose() + FB;
@@ -366,9 +363,7 @@ Real ConditionalNLM::gradient(const std::vector<Sentence>& source_corpus, const 
       //////////////////////////////////////////////////////////////////
     }
   }
-  //  clock_t iteration_time = clock() - iteration_start;
 
-  //  clock_t context_start = clock();
   MatrixReal context_gradients = MatrixReal::Zero(word_width, tokens);
   for (int i=0; i<context_width; ++i) {
     context_gradients = context_product(i, weightedRepresentations, true); // weightedRepresentations*C(i)^T
@@ -390,7 +385,6 @@ Real ConditionalNLM::gradient(const std::vector<Sentence>& source_corpus, const 
     }
     context_gradient_update(g_C.at(i), context_vectors.at(i), weightedRepresentations);
   }
-  //  clock_t context_time = clock() - context_start;
 
   #pragma omp master 
   {

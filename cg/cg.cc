@@ -156,7 +156,7 @@ void sample_search(const ConditionalNLM& model, const Sentence& source,
   VectorReal prediction_vector, source_vector, class_probs, word_probs;
   set< pair<Real,Sentence> > samples;
 
-  for (int sample=0; sample < num_samples; ++sample) {
+  for (int sample_count=0; sample_count < num_samples; ++sample_count) {
     Sentence sample(model.config.ngram_order-1, start_id);
     Real sample_log_prob=0;
     while (sample.back() != end_id) {
