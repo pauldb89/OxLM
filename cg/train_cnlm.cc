@@ -377,6 +377,7 @@ void learn(const variables_map& vm, ModelData& config) {
 
       #pragma omp master
       {
+//          cerr << pp << " " << num_test_instances << " " << pp/num_test_instances; 
         pp = exp(-pp/num_test_instances);
         cerr << setw(11) << iteration_time << setw(10) << av_f/num_training_instances;
         if (vm.count("test-source")) {
