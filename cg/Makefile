@@ -1,6 +1,6 @@
 LOCAL_LIBS=${HOME}/packages
-CXXFLAGS = -g -std=c++0x -fPIC -shared -O3 -fopenmp -Wall -I.. -I${LOCAL_LIBS}/include -m64 -I/usr/include/eigen3
-LDFLAGS = -g -std=c++0x -O3 -fopenmp -L${LOCAL_LIBS}/lib64 -L${LOCAL_LIBS}/lib -lboost_program_options -lboost_serialization
+CXXFLAGS = -g -std=c++0x -fPIC -shared -fopenmp -Wall -I.. -I${LOCAL_LIBS}/include -m64 -I/usr/include/eigen3
+LDFLAGS = -g -std=c++0x -fopenmp -L${LOCAL_LIBS}/lib64 -L${LOCAL_LIBS}/lib -lboost_program_options -lboost_serialization
 FFLAGS = -Wall -g -O3  
 CXX=g++
 
