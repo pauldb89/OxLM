@@ -8,7 +8,7 @@ CXXFLAGS += -DEIGEN_DONT_PARALLELIZE
 
 local_objs = cnlm.o
 
-all: train_cnlm cg perplexity
+all: train_cnlm cg perplexity label
 
 -include makefile.depend
 
@@ -23,6 +23,9 @@ cg: cg.o $(local_objs)
 	$(CXX) -o $@ $^ $(LDFLAGS)
 
 perplexity: perplexity.o $(local_objs)
+	$(CXX) -o $@ $^ $(LDFLAGS)
+
+label: label.o $(local_objs)
 	$(CXX) -o $@ $^ $(LDFLAGS)
 
 %.o: %.cc
