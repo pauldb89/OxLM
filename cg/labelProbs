@@ -18,9 +18,10 @@ def main(argv):
 
     for label in labelCounts:
         logLabelCount = log(labelCounts[label])
-        print label, logLabelCount/logTotal
+        print label, logLabelCount - logTotal
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         print "Syntax:", sys.argv[0], "trainingLabels"
+        sys.exit()
     main(sys.argv)
