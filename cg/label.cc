@@ -111,7 +111,7 @@ int main(int argc, char **argv) {
     // read in sentences and assign labels
     ifstream sentences_in(vm["sentences"].as<string>().c_str());
 
-
+    Real condSentenceProb;
     while(getline(sentences_in, line)) {
         // get a sentence
         Sentence s;
@@ -134,7 +134,12 @@ int main(int argc, char **argv) {
             l.push_back(model.source_label_set().Convert(labelText));
             l.push_back(end_id);
 
-            Real condSentenceProb = getSentenceProb(s, l, model);
+            try {
+                condSentenceProb = getSentenceProb(s, l, model);
+            }
+            catch(WordClassException e) {
+                condSentenceProb = 0.0;
+            }
             Real condLabelProb = condSentenceProb + labelLogProb;
 
             labelCondProbs.push_back(condLabelProb);
