@@ -6,7 +6,6 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
-#include <exception>
 
 #include <Eigen/Dense>
 
@@ -16,16 +15,6 @@
 
 
 namespace oxlm {
-
-class WordClassException : public std::exception {
-public:
-  WordClassException(std::string m) : msg(m) {};
-  ~WordClassException() throw() {};
-  const char* what() const throw() { return msg.c_str(); }
-
-private:
-  std::string msg;
-};
 
 
 class ConditionalNLM {
@@ -97,12 +86,9 @@ public:
   }
 
   int get_class(const WordId& w) const {
-    if (w >= 0 && w < int(word_to_class.size())) return word_to_class[w];
-    else throw(WordClassException("Failed to find word in class dictionary."));
-
-//    assert(w >= 0 && w < int(word_to_class.size())
-//           && "ERROR: Failed to find word in class dictionary.");
-//    return word_to_class[w];
+    assert(w >= 0 && w < int(word_to_class.size()) 
+           && "ERROR: Failed to find word in class dictionary.");
+    return word_to_class[w];
   }
 
   int map_class_to_word_index(int c, int wc) const {
