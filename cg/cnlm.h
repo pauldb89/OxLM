@@ -17,15 +17,6 @@
 
 namespace oxlm {
 
-//class WordClassException: public std::exception {
-//public:
-//  WordClassException(const std::string &message);
-//  ~WordClassException() throw();
-//  virtual const char * what() const throw();
-//private:
-//  std::string msg;
-//};
-
 class WordClassException : public std::exception {
 public:
   WordClassException(std::string m) : msg(m) {};
