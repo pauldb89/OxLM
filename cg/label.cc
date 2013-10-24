@@ -37,7 +37,7 @@ typedef std::pair<std::string, Real> LabelLogProb;
 typedef std::vector<LabelLogProb> LabelLogProbs;
 typedef Sentence Label;
 
-Real getSentenceProb(Sentence s, Label l, ConditionalNLM model);
+Real getSentenceProb(Sentence& s, Label& l, ConditionalNLM& model);
 
 int main(int argc, char **argv) {
 
@@ -115,9 +115,10 @@ int main(int argc, char **argv) {
     while(getline(sentences_in, line)) {
         // get a sentence
         Sentence s;
+        s.clear();
         stringstream sentence_stream(line);
         while (sentence_stream >> token)
-            s.push_back(model.label_set().Convert(token));
+            s.push_back(model.label_set().Convert(token, true));
         s.push_back(end_id);
 
         // calculate probability of labels given
@@ -156,7 +157,7 @@ int main(int argc, char **argv) {
 
 }
 
-Real getSentenceProb(Sentence s, Label l, ConditionalNLM model) {
+Real getSentenceProb(Sentence& s, Label& l, ConditionalNLM& model) {
 
     WordId start_id = model.label_set().Lookup("<s>");
     int context_width = model.config.ngram_order-1;
