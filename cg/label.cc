@@ -169,19 +169,25 @@ Real getSentenceProb(Sentence s, Label l, ConditionalNLM model) {
     Real sentence_p=0.0;
     for (size_t s_i=0; s_i < s.size(); ++s_i) {
       WordId w = s.at(s_i);
-      int context_start = s_i - context_width;
-      bool sentence_start = (s_i==0);
-
-      for (int i=context_width-1; i>=0; --i) {
-        int j=context_start+i;
-        sentence_start = (sentence_start || j<0);
-        int v_i = (sentence_start ? start_id : s.at(j));
-
-        context.at(i) = v_i;
+      if(model.label_set().valid(w)) {
+        int context_start = s_i - context_width;
+        bool sentence_start = (s_i==0);
+  
+        for (int i=context_width-1; i>=0; --i) {
+          int j=context_start+i;
+          sentence_start = (sentence_start || j<0);
+          int v_i = (sentence_start ? start_id : s.at(j));
+  
+          context.at(i) = v_i;
+        }
+  
+        Real log_prob = model.log_prob(w, context, l, false, s_i);
+        sentence_p += log_prob;
       }
-
-      Real log_prob = model.log_prob(w, context, l, false, s_i);
-      sentence_p += log_prob;
+      else {
+        cerr << "Ignoring word for s_i=" << s_i << endl;
+      }
+      
 
    }
 
