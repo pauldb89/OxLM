@@ -63,8 +63,6 @@ int main(int argc, char **argv) {
           "list of labels and their probability, one per line")
       ("sentences,s", value<string>(),
           "sentences to be labelled, one per line")
-      ("threads", value<int>()->default_value(1),
-          "number of worker threads.")
       ("model-in,m", value<string>(),
           "model to generate from")
       ("reference,r", value<string>(), "reference labels, one per line")
