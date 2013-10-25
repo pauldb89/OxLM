@@ -133,7 +133,7 @@ int main(int argc, char **argv) {
             // set up label for model query
             Label l;
             l.push_back(model.source_label_set().Convert(labelText));
-            l.push_back(end_id);
+            if (model.config.source_eos) l.push_back(end_id);
 
             Real condSentenceProb = getSentenceProb(s, l, model);
             
