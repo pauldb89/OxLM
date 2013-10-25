@@ -136,8 +136,10 @@ void ConditionalNLM::hidden_layer(const std::vector<WordId>& context, const Vect
   int gap = width-context.size();
   assert(static_cast<int>(context.size()) <= width);
   for (int i=gap; i < width; i++)
-    if (config.diagonal) result += C.at(i).asDiagonal() * Q.row(context.at(i-gap)).transpose();
-    else                 result += Q.row(context.at(i-gap)) * C.at(i);
+    if (m_target_labels.valid(context.at(i-gap))) {
+      if (config.diagonal) result += C.at(i).asDiagonal() * Q.row(context.at(i-gap)).transpose();
+      else                 result += Q.row(context.at(i-gap)) * C.at(i);
+    }
 
   //////////////////////////////////////////////////////////////////
   // Source result contributions
