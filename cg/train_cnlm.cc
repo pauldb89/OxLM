@@ -335,7 +335,6 @@ void learn(const variables_map& vm, ModelData& config) {
 
         cache_data(start, end, training_indices, training_instances);
         Real f = model.gradient(source_corpus, target_corpus, training_instances, lambda, source_lambda, gradient);
-
         #pragma omp critical 
         {
           global_gradient += gradient;

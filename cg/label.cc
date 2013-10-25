@@ -6,6 +6,7 @@
 #include <time.h>
 #include <math.h>
 #include <random>
+#include <assert.h>
 
 // Boost
 #include <boost/program_options/parsers.hpp>
@@ -66,6 +67,7 @@ int main(int argc, char **argv) {
           "number of worker threads.")
       ("model-in,m", value<string>(),
           "model to generate from")
+      ("reference,r", value<string>(), "reference labels, one per line")
 //      ("print-sentence-llh", "print the LLH of each sentence")
 //      ("print-corpus-ppl", "print perplexity of the corpus")
       ;
@@ -105,13 +107,13 @@ int main(int argc, char **argv) {
         LabelLogProb labelInfo = make_pair(label, probability);
         labelLogProbs.push_back(labelInfo);
     }
-
     labels_in.close();
+
+
+    vector<string> predictedLabels;
 
     // read in sentences and assign labels
     ifstream sentences_in(vm["sentences"].as<string>().c_str());
-
-    
     while(getline(sentences_in, line)) {
         // get a sentence
         Sentence s;
@@ -150,7 +152,33 @@ int main(int argc, char **argv) {
             if (labelCondProbs.at(l_i) > maxVal) maxIndex = l_i;
         }
         string maxLabel = labelLogProbs.at(maxIndex).first;
+        predictedLabels.push_back(maxLabel);
+
         cout << line << " ||| " << maxLabel << endl;
+    }
+    sentences_in.close();
+
+    // Load reference labels, if provided, and get accuracy
+    if (vm.count("reference")) {
+        ifstream reflabels_in(vm["reference"].as<string>().c_str());
+
+        vector<string> referenceLabels;
+        string referenceLabel;
+        while (reflabels_in >> referenceLabel) referenceLabels.push_back(referenceLabel);
+        assert(referenceLabels.size()==predictedLabels.size() && "Label list size mismatch!");
+
+        size_t correct;
+        size_t total;
+
+        for(size_t i=0; i<referenceLabels.size(); i++) {
+            if (referenceLabels.at(i) == predictedLabels.at(i)) correct++;
+            total++;
+        }
+        Real accuracy = static_cast<Real>(correct)/static_cast<Real>(total);
+
+        cout << "#######################" << endl << "# Accuracy = " << accuracy << endl << "#######################" << endl;
+
+        reflabels_in.close();
     }
 
     return 0;
@@ -184,7 +212,6 @@ Real getSentenceProb(Sentence& s, Label& l, ConditionalNLM& model) {
       else {
         cerr << "Ignoring word for s_i=" << s_i << endl;
       }
-      
 
    }
 
