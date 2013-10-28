@@ -170,8 +170,8 @@ int main(int argc, char **argv) {
         while (reflabels_in >> referenceLabel) referenceLabels.push_back(referenceLabel);
         assert(referenceLabels.size()==predictedLabels.size() && "Label list size mismatch!");
 
-        size_t correct;
-        size_t total;
+        size_t correct = 0;
+        size_t total = 0;
 
         for(size_t i=0; i<referenceLabels.size(); i++) {
             if (referenceLabels.at(i) == predictedLabels.at(i)) correct++;
