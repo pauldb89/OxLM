@@ -131,7 +131,7 @@ int main(int argc, char **argv) {
   config.diagonal = vm.count("diagonal-contexts");
   config.nonlinear= vm.count("non-linear");
   config.source_window_width = vm["window"].as<int>();
-  config.source_eos = !vm.count("source_eos");
+  config.source_eos = !vm.count("no-source-eos");
 
   cerr << "################################" << endl;
   cerr << "# Config Summary:" << endl;
