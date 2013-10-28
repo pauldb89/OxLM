@@ -68,6 +68,8 @@ int main(int argc, char **argv) {
       ("model-in,m", value<string>(),
           "model to generate from")
       ("reference,r", value<string>(), "reference labels, one per line")
+      ("no-sentence-predictions", "do not print sentence predictions for individual sentences")
+      ("raw-scores", "print only raw scores")
 //      ("print-sentence-llh", "print the LLH of each sentence")
 //      ("print-corpus-ppl", "print perplexity of the corpus")
       ;
@@ -154,7 +156,8 @@ int main(int argc, char **argv) {
         string maxLabel = labelLogProbs.at(maxIndex).first;
         predictedLabels.push_back(maxLabel);
 
-        cout << line << " ||| " << maxLabel << endl;
+        if(!vm.count("no-sentence-predictions") && !vm.count("raw-scores")) cout << line << " ||| " << maxLabel << endl;
+        if(vm.count("raw-scores")) cout << maxLabel << endl;
     }
     sentences_in.close();
 
@@ -210,7 +213,7 @@ Real getSentenceProb(Sentence& s, Label& l, ConditionalNLM& model) {
         sentence_p += log_prob;
       }
       else {
-        cerr << "Ignoring word for s_i=" << s_i << endl;
+//        cerr << "Ignoring word for s_i=" << s_i << endl;
       }
 
    }
