@@ -131,7 +131,7 @@ int main(int argc, char **argv) {
   config.diagonal = vm.count("diagonal-contexts");
   config.nonlinear= vm.count("non-linear");
   config.source_window_width = vm["window"].as<int>();
-  config.source_eos = !vm.count("window");
+  config.source_eos = !vm.count("no-source-eos");
 
   cerr << "################################" << endl;
   cerr << "# Config Summary:" << endl;
@@ -141,6 +141,7 @@ int main(int argc, char **argv) {
   cerr << "# model-out = " << vm["model-out"].as<string>() << endl;
   cerr << "# source = " << vm["source"].as<string>() << endl;
   cerr << "# minibatch-size = " << vm["minibatch-size"].as<int>() << endl;
+  cerr << "# word-width = " << config.word_representation_size << endl;
   cerr << "# lambda = " << config.l2_parameter << endl;
   cerr << "# source-lambda = " << config.source_l2_parameter << endl;
   cerr << "# iterations = " << vm["iterations"].as<int>() << endl;
