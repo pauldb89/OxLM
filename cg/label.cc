@@ -54,8 +54,6 @@ int main(int argc, char **argv) {
     options_description cmdline_specific("Command line specific options");
     cmdline_specific.add_options()
       ("help,h", "print help message")
-      ("config,c", value<string>(),
-          "config file specifying additional command line options")
       ;
     options_description generic("Allowed options");
     generic.add_options()
@@ -68,18 +66,12 @@ int main(int argc, char **argv) {
       ("reference,r", value<string>(), "reference labels, one per line")
       ("no-sentence-predictions", "do not print sentence predictions for individual sentences")
       ("raw-scores", "print only raw scores")
-//      ("print-sentence-llh", "print the LLH of each sentence")
-//      ("print-corpus-ppl", "print perplexity of the corpus")
       ;
     options_description config_options, cmdline_options;
     config_options.add(generic);
     cmdline_options.add(generic).add(cmdline_specific);
 
     store(parse_command_line(argc, argv, cmdline_options), vm);
-    if (vm.count("config") > 0) {
-      ifstream config(vm["config"].as<string>().c_str());
-      store(parse_config_file(config, cmdline_options), vm);
-    }
     notify(vm);
     ///////////////////////////////////////////////////////////////////////////////////////
 
