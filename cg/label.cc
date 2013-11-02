@@ -6,6 +6,7 @@
 #include <time.h>
 #include <math.h>
 #include <random>
+#include <assert.h>
 
 // Boost
 #include <boost/program_options/parsers.hpp>
@@ -53,8 +54,6 @@ int main(int argc, char **argv) {
     options_description cmdline_specific("Command line specific options");
     cmdline_specific.add_options()
       ("help,h", "print help message")
-      ("config,c", value<string>(),
-          "config file specifying additional command line options")
       ;
     options_description generic("Allowed options");
     generic.add_options()
@@ -62,22 +61,17 @@ int main(int argc, char **argv) {
           "list of labels and their probability, one per line")
       ("sentences,s", value<string>(),
           "sentences to be labelled, one per line")
-      ("threads", value<int>()->default_value(1),
-          "number of worker threads.")
       ("model-in,m", value<string>(),
           "model to generate from")
-//      ("print-sentence-llh", "print the LLH of each sentence")
-//      ("print-corpus-ppl", "print perplexity of the corpus")
+      ("reference,r", value<string>(), "reference labels, one per line")
+      ("no-sentence-predictions", "do not print sentence predictions for individual sentences")
+      ("raw-scores", "print only raw scores")
       ;
     options_description config_options, cmdline_options;
     config_options.add(generic);
     cmdline_options.add(generic).add(cmdline_specific);
 
     store(parse_command_line(argc, argv, cmdline_options), vm);
-    if (vm.count("config") > 0) {
-      ifstream config(vm["config"].as<string>().c_str());
-      store(parse_config_file(config, cmdline_options), vm);
-    }
     notify(vm);
     ///////////////////////////////////////////////////////////////////////////////////////
 
@@ -105,13 +99,13 @@ int main(int argc, char **argv) {
         LabelLogProb labelInfo = make_pair(label, probability);
         labelLogProbs.push_back(labelInfo);
     }
-
     labels_in.close();
+
+
+    vector<string> predictedLabels;
 
     // read in sentences and assign labels
     ifstream sentences_in(vm["sentences"].as<string>().c_str());
-
-    
     while(getline(sentences_in, line)) {
         // get a sentence
         Sentence s;
@@ -133,7 +127,7 @@ int main(int argc, char **argv) {
             // set up label for model query
             Label l;
             l.push_back(model.source_label_set().Convert(labelText));
-            l.push_back(end_id);
+            if (model.config.source_eos) l.push_back(end_id);
 
             Real condSentenceProb = getSentenceProb(s, l, model);
             
@@ -150,7 +144,34 @@ int main(int argc, char **argv) {
             if (labelCondProbs.at(l_i) > maxVal) maxIndex = l_i;
         }
         string maxLabel = labelLogProbs.at(maxIndex).first;
-        cout << line << " ||| " << maxLabel << endl;
+        predictedLabels.push_back(maxLabel);
+
+        if(!vm.count("no-sentence-predictions") && !vm.count("raw-scores")) cout << line << " ||| " << maxLabel << endl;
+        if(vm.count("raw-scores")) cout << maxLabel << endl;
+    }
+    sentences_in.close();
+
+    // Load reference labels, if provided, and get accuracy
+    if (vm.count("reference")) {
+        ifstream reflabels_in(vm["reference"].as<string>().c_str());
+
+        vector<string> referenceLabels;
+        string referenceLabel;
+        while (reflabels_in >> referenceLabel) referenceLabels.push_back(referenceLabel);
+        assert(referenceLabels.size()==predictedLabels.size() && "Label list size mismatch!");
+
+        size_t correct = 0;
+        size_t total = 0;
+
+        for(size_t i=0; i<referenceLabels.size(); i++) {
+            if (referenceLabels.at(i) == predictedLabels.at(i)) correct++;
+            total++;
+        }
+        Real accuracy = static_cast<Real>(correct)/static_cast<Real>(total);
+
+        cout << "#######################" << endl << "# Accuracy = " << accuracy << endl << "#######################" << endl;
+
+        reflabels_in.close();
     }
 
     return 0;
@@ -182,9 +203,8 @@ Real getSentenceProb(Sentence& s, Label& l, ConditionalNLM& model) {
         sentence_p += log_prob;
       }
       else {
-        cerr << "Ignoring word for s_i=" << s_i << endl;
+//        cerr << "Ignoring word for s_i=" << s_i << endl;
       }
-      
 
    }
 

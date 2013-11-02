@@ -22,7 +22,7 @@
 #include "cg/cnlm.h"
 #include "corpus/corpus.h"
 
-static const char *REVISION = "$Rev: 247 $";
+static const char *REVISION = "$Rev: 248 $";
 
 // Namespaces
 using namespace boost;
@@ -94,8 +94,9 @@ int main(int argc, char **argv) {
         "file containing word to class mappings in the format <class> <word> <frequence>.")
     ("window", value<int>()->default_value(-1), 
         "Width of window of source words conditioned on.")
+    ("no-source-eos", "do not add end of sentence tag to source representations.")
     ("verbose,v", "print perplexity for each sentence (1) or input token (2) ")
-    ("randomise", "visit the training tokens in random order")
+    ("randomise", "visit the training tokens in random order.")
     ("diagonal-contexts", "Use diagonal context matrices (usually faster).")
     ("non-linear", "use a non-linear hidden layer.")
     ;
@@ -130,6 +131,7 @@ int main(int argc, char **argv) {
   config.diagonal = vm.count("diagonal-contexts");
   config.nonlinear= vm.count("non-linear");
   config.source_window_width = vm["window"].as<int>();
+  config.source_eos = !vm.count("no-source-eos");
 
   cerr << "################################" << endl;
   cerr << "# Config Summary:" << endl;
@@ -139,6 +141,7 @@ int main(int argc, char **argv) {
   cerr << "# model-out = " << vm["model-out"].as<string>() << endl;
   cerr << "# source = " << vm["source"].as<string>() << endl;
   cerr << "# minibatch-size = " << vm["minibatch-size"].as<int>() << endl;
+  cerr << "# word-width = " << config.word_representation_size << endl;
   cerr << "# lambda = " << config.l2_parameter << endl;
   cerr << "# source-lambda = " << config.source_l2_parameter << endl;
   cerr << "# iterations = " << vm["iterations"].as<int>() << endl;
@@ -147,6 +150,7 @@ int main(int argc, char **argv) {
   cerr << "# diagonal = " << config.diagonal << endl;
   cerr << "# non-linear = " << config.nonlinear << endl;
   cerr << "# width = " << config.source_window_width << endl;
+  cerr << "# source-eos = " << config.source_eos << endl;
   cerr << "################################" << endl << endl;
 
   omp_set_num_threads(config.threads);
@@ -189,7 +193,8 @@ void learn(const variables_map& vm, ModelData& config) {
     Sentence& s = target_corpus.back();
     while (line_stream >> token) 
       s.push_back(target_dict.Convert(token));
-    s.push_back(end_id);
+    if (config.source_eos)
+            s.push_back(end_id);
     num_training_instances += s.size();
   }
   target_in.close();
@@ -331,7 +336,6 @@ void learn(const variables_map& vm, ModelData& config) {
 
         cache_data(start, end, training_indices, training_instances);
         Real f = model.gradient(source_corpus, target_corpus, training_instances, lambda, source_lambda, gradient);
-
         #pragma omp critical 
         {
           global_gradient += gradient;
