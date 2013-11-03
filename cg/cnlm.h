@@ -54,7 +54,7 @@ public:
   Real* data() { return m_data; }
 
   Real gradient(const std::vector<Sentence>& source_corpus, const std::vector<Sentence>& target_corpus, 
-                const TrainingInstances &training_instances, Real lambda, Real source_lambda, WeightsType& g_W);
+                const TrainingInstances &training_instances, Real l2, Real source_l2, WeightsType& g_W);
 
   void source_representation(const Sentence& source, int target_index, VectorReal& result) const;
   void hidden_layer(const std::vector<WordId>& context, const VectorReal& source, VectorReal& result) const;

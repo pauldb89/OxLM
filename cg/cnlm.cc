@@ -3,6 +3,7 @@
 #include <boost/random.hpp>
 #include <boost/archive/text_iarchive.hpp>
 
+
 #include <math.h>
 #include <iostream>
 #include <fstream>
@@ -13,6 +14,7 @@
 
 #include "cnlm.h"
 #include "utils.h"
+
 
 
 using namespace std;
@@ -219,7 +221,7 @@ void ConditionalNLM::word_log_probs(int c, const std::vector<WordId>& context,
 
 Real ConditionalNLM::gradient(const std::vector<Sentence>& source_corpus, const std::vector<Sentence>& target_corpus, 
                               const TrainingInstances &training_instances,
-                              Real lambda, Real source_lambda, WeightsType& g_W) {
+                              Real l2, Real source_l2, WeightsType& g_W) {
   WordVectorsType g_R(0,0,0), g_Q(0,0,0), g_F(0,0,0), g_S(0,0,0);
   ContextTransformsType g_C, g_T;
   WeightsType g_B(0,0), g_FB(0,0);
@@ -390,25 +392,29 @@ Real ConditionalNLM::gradient(const std::vector<Sentence>& source_corpus, const 
 
   #pragma omp master 
   {
-    f += (0.5*lambda*(R.squaredNorm() + Q.squaredNorm() + B.squaredNorm() + F.squaredNorm() + FB.squaredNorm()));
-    for (size_t c=0; c<C.size(); ++c)
-      f += (0.5*lambda*C.at(c).squaredNorm());
+    if (l2 > 0.0 || source_l2 > 0.0) {
+      // l2 objective contributions
+      f += (0.5*l2*(R.squaredNorm() + Q.squaredNorm() + B.squaredNorm() + F.squaredNorm() + FB.squaredNorm()));
+      for (size_t c=0; c<C.size(); ++c)
+        f += (0.5*l2*C.at(c).squaredNorm());
 
-    f += (0.5*source_lambda*S.squaredNorm());
-    for (size_t t=0; t<T.size(); ++t)
-      f += (0.5*source_lambda*T.at(t).squaredNorm());
+      f += (0.5*source_l2*S.squaredNorm());
+      for (size_t t=0; t<T.size(); ++t)
+        f += (0.5*source_l2*T.at(t).squaredNorm());
 
-    g_R.array() += (lambda*R.array());
-    g_Q.array() += (lambda*Q.array());
-    g_F.array() += (lambda*F.array());
-    g_B.array() += (lambda*B.array());
-    g_FB.array() += (lambda*FB.array());
-    for (size_t c=0; c<C.size(); ++c)
-      g_C.at(c).array() += (lambda*C.at(c).array());
+      // l2 gradient contributions
+      g_R.array() += (l2*R.array());
+      g_Q.array() += (l2*Q.array());
+      g_F.array() += (l2*F.array());
+      g_B.array() += (l2*B.array());
+      g_FB.array() += (l2*FB.array());
+      for (size_t c=0; c<C.size(); ++c)
+        g_C.at(c).array() += (l2*C.at(c).array());
 
-    g_S.array() += (source_lambda*S.array());
-    for (size_t t=0; t<T.size(); ++t)
-      g_T.at(t).array() += (source_lambda*T.at(t).array());
+      g_S.array() += (source_l2*S.array());
+      for (size_t t=0; t<T.size(); ++t)
+        g_T.at(t).array() += (source_l2*T.at(t).array());
+    }
   }
 
   return f;

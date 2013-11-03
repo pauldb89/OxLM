@@ -310,7 +310,7 @@ int main(int argc, char **argv) {
     Sentence s;
     while (line_stream >> token) 
       s.push_back(model.source_label_set().Convert(token));
-    s.push_back(end_id);
+    if (model.config.source_eos) s.push_back(end_id);
 
     Sentence t;
     if (target_in) {

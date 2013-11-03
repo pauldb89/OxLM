@@ -76,9 +76,11 @@ int main(int argc, char **argv) {
         "initial model")
     ("model-out,o", value<string>()->default_value("model"), 
         "base filename of model output files")
-    ("lambda,r", value<float>()->default_value(0.0), 
-        "regularisation strength parameter")
-    ("source-lambda", value<float>(), 
+    ("l2,r", value<float>()->default_value(0.0), 
+        "l2 regularisation strength parameter")
+    ("l1", value<float>()->default_value(0.0), 
+        "l1 regularisation strength parameter")
+    ("source-l2", value<float>(), 
         "source regularisation strength parameter")
     ("dump-frequency", value<int>()->default_value(0), 
         "dump model every n minibatches.")
@@ -118,9 +120,10 @@ int main(int argc, char **argv) {
   }
 
   ModelData config;
-  config.l2_parameter = vm["lambda"].as<float>();
-  if (vm.count("source-lambda"))
-    config.source_l2_parameter = vm["source-lambda"].as<float>();
+  config.l1_parameter = vm["l1"].as<float>();
+  config.l2_parameter = vm["l2"].as<float>();
+  if (vm.count("source-l2"))
+    config.source_l2_parameter = vm["source-l2"].as<float>();
   else
     config.source_l2_parameter = config.l2_parameter;
   config.word_representation_size = vm["word-width"].as<int>();
@@ -142,8 +145,9 @@ int main(int argc, char **argv) {
   cerr << "# source = " << vm["source"].as<string>() << endl;
   cerr << "# minibatch-size = " << vm["minibatch-size"].as<int>() << endl;
   cerr << "# word-width = " << config.word_representation_size << endl;
-  cerr << "# lambda = " << config.l2_parameter << endl;
-  cerr << "# source-lambda = " << config.source_l2_parameter << endl;
+  cerr << "# l1 = " << config.l1_parameter << endl;
+  cerr << "# l2 = " << config.l2_parameter << endl;
+  cerr << "# source-l2 = " << config.source_l2_parameter << endl;
   cerr << "# iterations = " << vm["iterations"].as<int>() << endl;
   cerr << "# threads = " << vm["threads"].as<int>() << endl;
   cerr << "# classes = " << config.classes << endl;
@@ -193,8 +197,7 @@ void learn(const variables_map& vm, ModelData& config) {
     Sentence& s = target_corpus.back();
     while (line_stream >> token) 
       s.push_back(target_dict.Convert(token));
-    if (config.source_eos)
-            s.push_back(end_id);
+    s.push_back(end_id);
     num_training_instances += s.size();
   }
   target_in.close();
@@ -207,7 +210,8 @@ void learn(const variables_map& vm, ModelData& config) {
     Sentence& s = source_corpus.back();
     while (line_stream >> token) 
       s.push_back(source_dict.Convert(token));
-    s.push_back(end_id);
+    if (config.source_eos)
+      s.push_back(end_id);
   }
   source_in.close();
   //////////////////////////////////////////////
@@ -230,7 +234,8 @@ void learn(const variables_map& vm, ModelData& config) {
         }
         s.push_back(w);
       }
-      s.push_back(end_id);
+      if (config.source_eos)
+        s.push_back(end_id);
     }
     test_source_in.close();
 
@@ -331,11 +336,12 @@ void learn(const variables_map& vm, ModelData& config) {
         global_gradient.setZero();
 
         gradient.setZero();
-        Real lambda = config.l2_parameter*(end-start)/Real(target_corpus.size()); 
-        Real source_lambda = config.source_l2_parameter*(end-start)/Real(target_corpus.size()); 
+        Real l2 = config.l2_parameter*(end-start)/Real(target_corpus.size()); 
+        Real l1 = config.l1_parameter*(end-start)/Real(target_corpus.size()); 
+        Real l2_source = config.source_l2_parameter*(end-start)/Real(target_corpus.size()); 
 
         cache_data(start, end, training_indices, training_instances);
-        Real f = model.gradient(source_corpus, target_corpus, training_instances, lambda, source_lambda, gradient);
+        Real f = model.gradient(source_corpus, target_corpus, training_instances, l2, l2_source, gradient);
         #pragma omp critical 
         {
           global_gradient += gradient;
@@ -346,23 +352,32 @@ void learn(const variables_map& vm, ModelData& config) {
         #pragma omp master
         {
           // l2 regulariser contributions. Not very efficient
-          //av_f += 0.5*lambda*(model.C.squaredNorm() + model.R.squaredNorm() + 
+          //av_f += 0.5*l2*(model.C.squaredNorm() + model.R.squaredNorm() + 
           //                    model.Q.squaredNorm() + model.B.squaredNorm() + 
           //                    model.F.squaredNorm() + model.FB.squaredNorm());
-          //av_f += 0.5*source_lambda*(model.T.squaredNorm() + model.S.squaredNorm());
+          //av_f += 0.5*source_l2*(model.T.squaredNorm() + model.S.squaredNorm());
           //
-          //av_f += (0.5*lambda*model.W.squaredNorm());
+          //av_f += (0.5*l2*model.W.squaredNorm());
           
-          //global_gradient.array() += (lambda * model.W.array()); 
+          //global_gradient.array() += (l2 * model.W.array()); 
 
           adaGrad.array() += global_gradient.array().square();
           for (int w=0; w<model.num_weights(); ++w) {
-            if (adaGrad(w)) 
-              model.W(w) -= (step_size*global_gradient(w)/ sqrt(adaGrad(w)));
+            if (adaGrad(w)) {
+              if (l1 > 0.0) {
+                Real scale = step_size / sqrt(adaGrad(w));
+                Real w1 = model.W(w) - scale*global_gradient(w);
+                Real w2 = max(Real(0.0), abs(w1) - scale*l1);
+                model.W(w) = w1 >= 0.0 ? w2 : -w2;
+              }
+              else
+                model.W(w) -= (step_size*global_gradient(w)/ sqrt(adaGrad(w)));
+            }
           }
 
           if (minibatch_counter % 100 == 0) { cerr << "."; cout.flush(); }
         }
+        if (l1 > 0.0) av_f += (l1 * model.W.lpNorm<1>());
 
         start += minibatch_size;
       }
