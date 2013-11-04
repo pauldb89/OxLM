@@ -40,8 +40,8 @@ public:
   const Dict& source_label_set() const { return m_source_labels; }
   Dict& source_label_set() { return m_source_labels; }
 
-  Real l2_gradient_update(Real sigma) { 
-    W -= W*sigma; 
+  Real l2_gradient_update(Real sigma) {
+    W -= W*sigma;
     return W.squaredNorm();
   }
 
@@ -53,7 +53,7 @@ public:
 
   Real* data() { return m_data; }
 
-  Real gradient(const std::vector<Sentence>& source_corpus, const std::vector<Sentence>& target_corpus, 
+  Real gradient(const std::vector<Sentence>& source_corpus, const std::vector<Sentence>& target_corpus,
                 const TrainingInstances &training_instances, Real l2, Real source_l2, WeightsType& g_W);
 
   void source_representation(const Sentence& source, int target_index, VectorReal& result) const;
@@ -86,20 +86,20 @@ public:
   }
 
   int get_class(const WordId& w) const {
-    assert(w >= 0 && w < int(word_to_class.size()) 
+    assert(w >= 0 && w < int(word_to_class.size())
            && "ERROR: Failed to find word in class dictionary.");
     return word_to_class[w];
   }
 
   int map_class_to_word_index(int c, int wc) const {
     int c_start = indexes.at(c);
-    return wc + c_start; 
+    return wc + c_start;
   }
 
-  void clear_cache() { 
-    m_context_cache.clear(); 
+  void clear_cache() {
+    m_context_cache.clear();
     m_context_cache.reserve(1000000);
-    m_context_class_cache.clear(); 
+    m_context_class_cache.clear();
     m_context_class_cache.reserve(1000000);
   }
 
@@ -147,14 +147,14 @@ public:
 
   void context_gradient_update(ContextTransformType& g_C, const MatrixReal& v,const MatrixReal& w) const {
     if (config.diagonal) g_C += (v.cwiseProduct(w).colwise().sum()).transpose();
-    else                 g_C += (v.transpose() * w); 
+    else                 g_C += (v.transpose() * w);
   }
 
 public:
   ModelData config;
 
   ContextTransformsType C;  // Context position transforms
-  ContextTransformsType T;  // Context position transforms
+  ContextTransformsType T;  // source window context transforms
   WordVectorsType       R;  // output word representations
   WordVectorsType       Q;  // context word representations
   WordVectorsType       F;  // class representations
@@ -168,8 +168,8 @@ public:
 private:
   void init(bool init_weights=false);
   void allocate_data();
-  void map_parameters(WeightsType& w, WordVectorsType& r, WordVectorsType& q, WordVectorsType& f, 
-                      WordVectorsType& s, ContextTransformsType& c, ContextTransformsType& t, 
+  void map_parameters(WeightsType& w, WordVectorsType& r, WordVectorsType& q, WordVectorsType& f,
+                      WordVectorsType& s, ContextTransformsType& c, ContextTransformsType& t,
                       WeightsType& b, WeightsType& fb) const;
 
   Dict m_source_labels, m_target_labels;
