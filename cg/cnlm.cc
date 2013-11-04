@@ -28,11 +28,11 @@ static uniform_01<> linear_model_uniform_dist;
 
 ConditionalNLM::ConditionalNLM() : R(0,0,0), Q(0,0,0), F(0,0,0), S(0,0,0), B(0,0), FB(0,0), W(0,0), m_data(0) {}
 
-ConditionalNLM::ConditionalNLM(const ModelData& config, 
-                               const Dict& source_labels, 
-                               const Dict& target_labels, 
-                               const std::vector<int>& classes) 
-  : config(config), R(0,0,0), Q(0,0,0), F(0,0,0), S(0,0,0), B(0,0), FB(0,0), W(0,0), 
+ConditionalNLM::ConditionalNLM(const ModelData& config,
+                               const Dict& source_labels,
+                               const Dict& target_labels,
+                               const std::vector<int>& classes)
+  : config(config), R(0,0,0), Q(0,0,0), F(0,0,0), S(0,0,0), B(0,0), FB(0,0), W(0,0),
     length_ratio(1), m_source_labels(source_labels), m_target_labels(target_labels),
     indexes(classes) {
     init(true);
@@ -72,7 +72,7 @@ void ConditionalNLM::init(bool init_weights) {
   }
   else W.setZero();
 
-  map_parameters(W, R, Q, F, S, C, T, B, FB); 
+  map_parameters(W, R, Q, F, S, C, T, B, FB);
 /*
 #pragma omp master
   if (true) {
@@ -154,7 +154,7 @@ void ConditionalNLM::hidden_layer(const std::vector<WordId>& context, const Vect
 }
 
 
-Real ConditionalNLM::log_prob(const WordId w, const std::vector<WordId>& context, const Sentence& source, 
+Real ConditionalNLM::log_prob(const WordId w, const std::vector<WordId>& context, const Sentence& source,
                               bool cache, int target_index) const {
   VectorReal s;
   source_representation(source, target_index, s);
@@ -178,15 +178,15 @@ Real ConditionalNLM::log_prob(WordId w, const std::vector<WordId>& context, cons
   class_log_probs(context, source, prediction_vector, c_lps, cache); // p( . | context, source)
   word_log_probs(c, context, source, prediction_vector, w_lps, cache); // p( . | c, context, source)
 
-  return c_lps(c) + w_lps(w - c_start); 
+  return c_lps(c) + w_lps(w - c_start);
 }
 
 
-void ConditionalNLM::class_log_probs(const std::vector<WordId>& context, 
-                                     const VectorReal& source, const VectorReal& prediction_vector, 
-                                     VectorReal& result, 
+void ConditionalNLM::class_log_probs(const std::vector<WordId>& context,
+                                     const VectorReal& source, const VectorReal& prediction_vector,
+                                     VectorReal& result,
                                      bool cache) const {
-  // log p(c | context) 
+  // log p(c | context)
   std::pair<std::unordered_map<Words, VectorReal, container_hash<Words> >::iterator, bool> context_cache_result;
   if (cache) context_cache_result = m_context_cache.insert(make_pair(context, VectorReal::Zero(config.classes)));
   if (cache && !context_cache_result.second) {
@@ -201,11 +201,11 @@ void ConditionalNLM::class_log_probs(const std::vector<WordId>& context,
 }
 
 
-void ConditionalNLM::word_log_probs(int c, const std::vector<WordId>& context, 
-                                    const VectorReal& source, const VectorReal& prediction_vector, 
+void ConditionalNLM::word_log_probs(int c, const std::vector<WordId>& context,
+                                    const VectorReal& source, const VectorReal& prediction_vector,
                                     VectorReal& result,
                                     bool cache) const {
-  // log p(w | c, context) 
+  // log p(w | c, context)
   std::pair<std::unordered_map<std::pair<int,Words>, VectorReal>::iterator, bool> class_context_cache_result;
   if (cache) class_context_cache_result = m_context_class_cache.insert(make_pair(make_pair(c,context),VectorReal()));
   if (cache && !class_context_cache_result.second) {
@@ -219,7 +219,7 @@ void ConditionalNLM::word_log_probs(int c, const std::vector<WordId>& context,
 }
 
 
-Real ConditionalNLM::gradient(const std::vector<Sentence>& source_corpus, const std::vector<Sentence>& target_corpus, 
+Real ConditionalNLM::gradient(const std::vector<Sentence>& source_corpus, const std::vector<Sentence>& target_corpus,
                               const TrainingInstances &training_instances,
                               Real l2, Real source_l2, WeightsType& g_W) {
   WordVectorsType g_R(0,0,0), g_Q(0,0,0), g_F(0,0,0), g_S(0,0,0);
@@ -244,7 +244,7 @@ Real ConditionalNLM::gradient(const std::vector<Sentence>& source_corpus, const 
   //  clock_t cache_start = clock();
   int instances=training_instances.size();
   int instance_counter=0;
-  vector<MatrixReal> context_vectors(context_width, MatrixReal::Zero(tokens, word_width)); 
+  vector<MatrixReal> context_vectors(context_width, MatrixReal::Zero(tokens, word_width));
   for (int instance=0; instance < instances; ++instance) {
     const TrainingInstance& t = training_instances.at(instance);
     const Sentence& sent = target_corpus.at(t);
@@ -322,6 +322,7 @@ Real ConditionalNLM::gradient(const std::vector<Sentence>& source_corpus, const 
       VectorReal class_conditional_probs = class_conditional_log_probs.exp();
       VectorReal word_conditional_probs  = word_conditional_log_probs.exp();
 
+      // df/d(prediction_vectors)
       weightedRepresentations.row(instance_counter) -= (F.row(c) - class_conditional_probs.transpose() * F);
       weightedRepresentations.row(instance_counter) -= (R.row(w) - word_conditional_probs.transpose() * class_R(c));
 
@@ -330,12 +331,12 @@ Real ConditionalNLM::gradient(const std::vector<Sentence>& source_corpus, const 
       f -= (class_conditional_log_probs(c) + word_conditional_log_probs(w-c_start));
 
       // do the gradient updates:
-      //   data contributions: 
-      g_F.row(c) -= prediction_vectors.row(instance_counter).transpose();
-      g_R.row(w) -= prediction_vectors.row(instance_counter).transpose();
+      //   data contributions:
+      g_F.row(c) -= prediction_vectors.row(instance_counter);
+      g_R.row(w) -= prediction_vectors.row(instance_counter);
       g_FB(c)    -= 1.0;
       g_B(w)     -= 1.0;
-      //   model contributions: 
+      //   model contributions:
       g_R.block(c_start, 0, c_end-c_start, g_R.cols()) += word_conditional_probs * prediction_vectors.row(instance_counter);
       g_F += class_conditional_probs * prediction_vectors.row(instance_counter);
       g_FB += class_conditional_probs;
@@ -343,7 +344,7 @@ Real ConditionalNLM::gradient(const std::vector<Sentence>& source_corpus, const 
 
       // a simple sigmoid non-linearity
       if (config.nonlinear) {
-        weightedRepresentations.row(instance_counter).array() *= 
+        weightedRepresentations.row(instance_counter).array() *=
           prediction_vectors.row(instance_counter).array() * (1.0 - prediction_vectors.row(instance_counter).array()); // sigmoid
         //for (int x=0; x<word_width; ++x)
         //  weightedRepresentations.row(instance_counter)(x) *= (prediction_vectors.row(instance_counter)(x) > 0 ? 1 : 0.01); // rectifier
@@ -390,7 +391,7 @@ Real ConditionalNLM::gradient(const std::vector<Sentence>& source_corpus, const 
     context_gradient_update(g_C.at(i), context_vectors.at(i), weightedRepresentations);
   }
 
-  #pragma omp master 
+  #pragma omp master
   {
     if (l2 > 0.0 || source_l2 > 0.0) {
       // l2 objective contributions
@@ -420,8 +421,8 @@ Real ConditionalNLM::gradient(const std::vector<Sentence>& source_corpus, const 
   return f;
 }
 
-void ConditionalNLM::map_parameters(WeightsType& w, WordVectorsType& r, WordVectorsType& q, WordVectorsType& f, 
-                                    WordVectorsType& s, ContextTransformsType& c, ContextTransformsType& t, 
+void ConditionalNLM::map_parameters(WeightsType& w, WordVectorsType& r, WordVectorsType& q, WordVectorsType& f,
+                                    WordVectorsType& s, ContextTransformsType& c, ContextTransformsType& t,
                                     WeightsType& b, WeightsType& fb) const {
   int num_source_words = source_types();
   int num_output_words = output_types();
