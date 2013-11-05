@@ -4,6 +4,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/archive/text_oarchive.hpp>
 #include <iostream>
+#include <functional>
 #include <fstream>
 #include <vector>
 
@@ -12,11 +13,10 @@
 #include "corpus/corpus.h"
 #include "cg/config.h"
 #include "cg/utils.h"
-#include "cg/cnlm.h"
 
 namespace oxlm {
 
-class GeneralConditionalNLM : public ConditionalNLM {
+class GeneralConditionalNLM {
 public:
   typedef Eigen::Map<MatrixReal> ContextTransformType;
   typedef std::vector<ContextTransformType> ContextTransformsType;
@@ -25,19 +25,16 @@ public:
 
 public:
   GeneralConditionalNLM();
-  GeneralConditionalNLM(const ModelData& config, const Dict& source_vocab, const Dict& target_vocab, const std::vector<int>& classes);
+  GeneralConditionalNLM(const ModelData& config, const Dict& target_vocab, const std::vector<int>& classes);
   ~GeneralConditionalNLM() { delete [] m_data; }
+  void initialize();
 
-  int source_types() const { return m_source_labels.size(); }
   int output_types() const { return m_target_labels.size(); }
   int context_types() const { return m_target_labels.size(); }
 
   int labels() const { return m_target_labels.size(); }
   const Dict& label_set() const { return m_target_labels; }
   Dict& label_set() { return m_target_labels; }
-
-  const Dict& source_label_set() const { return m_source_labels; }
-  Dict& source_label_set() { return m_source_labels; }
 
   Real l2_gradient_update(Real sigma) {
     W -= W*sigma;
@@ -48,18 +45,24 @@ public:
 
   const Word& label_str(WordId i) const { return m_target_labels.Convert(i); }
 
-  int num_weights() const { return m_data_size; }
+  virtual int num_weights() const { return m_data_size; }
 
   Real* data() { return m_data; }
 
-  Real gradient(const std::vector<Sentence>& source_corpus, const std::vector<Sentence>& target_corpus,
-                const TrainingInstances &training_instances, Real l2, Real source_l2, WeightsType& g_W);
+  Real gradient_(
+      const std::vector<Sentence>& target_corpus,
+      const TrainingInstances& training_instances,
+      // std::function<void(TrainingInstance, VectorReal)> source_repr_callback,
+      // std::function<void(TrainingInstance, int, int, VectorReal)> source_grad_callback,
+      Real l2, Real source_l2, WeightsType& g_W);
+
+  virtual void source_repr_callback(TrainingInstance t, int t_i, VectorReal& r) = 0;
+  virtual void source_grad_callback(TrainingInstance t, int t_i, int instance_counter, const VectorReal& grads) = 0;
 
   void source_representation(const Sentence& source, int target_index, VectorReal& result) const;
   void hidden_layer(const std::vector<WordId>& context, const VectorReal& source, VectorReal& result) const;
 
   Real log_prob(const WordId w, const std::vector<WordId>& context, bool cache=false) const;
-  Real log_prob(const WordId w, const std::vector<WordId>& context, const Sentence& source, bool cache=false, int target_index=-1) const;
   Real log_prob(const WordId w, const std::vector<WordId>& context, const VectorReal& source, bool cache=false) const;
   void class_log_probs(const std::vector<WordId>& context, const VectorReal& source, const VectorReal& prediction_vector, VectorReal& result, bool cache=false) const;
   void word_log_probs(int c, const std::vector<WordId>& context, const VectorReal& source, const VectorReal& prediction_vector, VectorReal& result, bool cache=false) const;
@@ -104,30 +107,28 @@ public:
 
   friend class boost::serialization::access;
   template<class Archive>
-  void save(Archive & ar, const unsigned int version) const {
-    ar << config;
-    ar << m_target_labels;
-    ar << m_source_labels;
-    ar << boost::serialization::make_array(m_data, m_data_size);
+    void save(Archive & ar, const unsigned int version) const {
+      ar << config;
+      ar << m_target_labels;
+      ar << boost::serialization::make_array(m_data, m_data_size);
 
-    ar << word_to_class;
-    ar << indexes;
-    ar << length_ratio;
-  }
+      ar << word_to_class;
+      ar << indexes;
+      ar << length_ratio;
+    }
 
   template<class Archive>
-  void load(Archive & ar, const unsigned int version) {
-    ar >> config;
-    ar >> m_target_labels;
-    ar >> m_source_labels;
-    delete [] m_data;
-    init(false);
-    ar >> boost::serialization::make_array(m_data, m_data_size);
+    void load(Archive & ar, const unsigned int version) {
+      ar >> config;
+      ar >> m_target_labels;
+      delete [] m_data;
+      init(false);
+      ar >> boost::serialization::make_array(m_data, m_data_size);
 
-    ar >> word_to_class;
-    ar >> indexes;
-    ar >> length_ratio;
-  }
+      ar >> word_to_class;
+      ar >> indexes;
+      ar >> length_ratio;
+    }
   BOOST_SERIALIZATION_SPLIT_MEMBER();
 
   MatrixReal context_product(int i, const MatrixReal& v, bool transpose=false) const {
@@ -135,13 +136,6 @@ public:
       return (C.at(i).asDiagonal() * v.transpose()).transpose();
     else if (transpose) return v * C.at(i).transpose();
     else                return v * C.at(i);
-  }
-
-  MatrixReal window_product(int i, const MatrixReal& v, bool transpose=false) const {
-    if (config.diagonal)
-      return (T.at(i).asDiagonal() * v.transpose()).transpose();
-    else if (transpose) return v * T.at(i).transpose();
-    else                return v * T.at(i);
   }
 
   void context_gradient_update(ContextTransformType& g_C, const MatrixReal& v,const MatrixReal& w) const {
@@ -153,25 +147,23 @@ public:
   ModelData config;
 
   ContextTransformsType C;  // Context position transforms
-  ContextTransformsType T;  // Context position transforms
   WordVectorsType       R;  // output word representations
   WordVectorsType       Q;  // context word representations
   WordVectorsType       F;  // class representations
-  WordVectorsType       S;  // source word representations
   WeightsType           B;  // output word biases
   WeightsType           FB; // output class biases
 
   WeightsType           W;  // All the parameters in one vector
   Real length_ratio;
 
-private:
-  void init(bool init_weights=false);
-  void allocate_data();
-  void map_parameters(WeightsType& w, WordVectorsType& r, WordVectorsType& q, WordVectorsType& f,
-                      WordVectorsType& s, ContextTransformsType& c, ContextTransformsType& t,
-                      WeightsType& b, WeightsType& fb) const;
+protected:
+  virtual void init(bool init_weights=false);
+  virtual void allocate_data();
+  void map_parameters_(WeightsType& w, WordVectorsType& r, WordVectorsType& q,
+                       WordVectorsType& f, ContextTransformsType& c,
+                       WeightsType& b, WeightsType& fb) const;
 
-  Dict m_source_labels, m_target_labels;
+  Dict m_target_labels;
   int m_data_size;
   Real* m_data;
 
