@@ -16,6 +16,11 @@
 
 namespace oxlm {
 
+/*
+ * This class implemented a conditional neural language model.
+ * Bla bla bla about what it actually does.
+ * Possibly a link to further reading.
+ */
 class GeneralConditionalNLM {
 public:
   typedef Eigen::Map<MatrixReal> ContextTransformType;
