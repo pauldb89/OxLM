@@ -3,7 +3,7 @@ import argparse
 from itertools import chain, izip
 from os.path import join as pjoin
 
-REVISION = "$Rev: 1 $"
+REVISION = "$Rev: 2 $"
 
 class DefaultHelpParser(argparse.ArgumentParser):
     def error(self, message):
