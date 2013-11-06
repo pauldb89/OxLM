@@ -27,6 +27,11 @@ def main():
                         help='Original target corpus (target sentences).')
     parser.add_argument('-o', '--output', dest='outputdir', default='.',
                         help='Output directory for new source/target files.')
+    parser.add_argument('-s', '--output-source-file', dest='outputsource', default='source_entries',
+                        help='Output filename for new source file.')
+    parser.add_argument('-t', '--output-target-file', dest='outputtarget', default='target_entries',
+                        help='Output filename for new target file.')
+
 
     args = parser.parse_args()
 
@@ -39,11 +44,11 @@ def main():
     new_source_labels = ["s%d" % num for num in numbers]
     new_target_labels = list(chain.from_iterable(izip(source_lines, target_lines)))
 
-    with open(pjoin(args.outputdir, "source_entries.txt"), 'w') as f:
+    with open(pjoin(args.outputdir, args.outputsource), 'w') as f:
         for line in new_source_labels:
             f.write("%s\n" % line)
 
-    with open(pjoin(args.outputdir, "target_entries.txt"), 'w') as f:
+    with open(pjoin(args.outputdir, args.outputtarget), 'w') as f:
         for line in new_target_labels:
             f.write("%s\n" % line)
 
