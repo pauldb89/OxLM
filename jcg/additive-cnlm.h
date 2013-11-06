@@ -21,7 +21,7 @@ class ConditionalNLM : public GeneralConditionalNLM {
 public:
   ConditionalNLM();
   ConditionalNLM(const ModelData& config, const Dict& source_vocab, const Dict& target_vocab, const std::vector<int>& classes);
-  ~ConditionalNLM() { delete [] a_data; }
+  ~ConditionalNLM() {}
 
   int source_types() const { return m_source_labels.size(); }
 
@@ -33,8 +33,6 @@ public:
                 const TrainingInstances &training_instances, Real l2, Real source_l2, WeightsType& g_W);
 
   Real log_prob(const WordId w, const std::vector<WordId>& context, const Sentence& source, bool cache=false, int target_index=-1) const;
-
-  /*virtual*/int num_weights() const { return m_data_size + a_data_size; }
 
   MatrixReal window_product(int i, const MatrixReal& v, bool transpose=false) const {
     if (config.diagonal)
@@ -49,7 +47,6 @@ public:
 
   ContextTransformsType T;  // source window context transforms
   WordVectorsType       S;  // source word representations
-  WeightsType           WA; // All the parameters in one vector
 
   ContextTransformsType g_T;  // source window context transforms
   WordVectorsType       g_S;  // source word representations
@@ -58,13 +55,11 @@ public:
 
 protected:
   /*virtual*/void init(bool init_weights=false);
-  /*virtual*/void allocate_data();
-  void map_parameters(WeightsType& wa, WordVectorsType& s,
+  /*virtual*/int calculateDataSize(bool allocate=false);
+  void map_parameters(Real*& ptr, WordVectorsType& s,
                       ContextTransformsType& t) const;
 
   Dict m_source_labels;
-  int a_data_size;
-  Real* a_data;
 
 public:
   friend class boost::serialization::access;
@@ -86,7 +81,6 @@ public:
     ar >> m_target_labels;
     ar >> m_source_labels;
     delete [] m_data;
-    delete [] a_data;
     // TODO(kmh): Clean up archiving
     init(false);
     ar >> boost::serialization::make_array(m_data, m_data_size);

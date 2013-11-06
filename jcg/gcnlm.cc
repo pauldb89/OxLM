@@ -38,7 +38,7 @@ GeneralConditionalNLM::GeneralConditionalNLM(const ModelData& config,
 
   }
 
-void GeneralConditionalNLM::initialize() {
+void GeneralConditionalNLM::initWordToClass() {
 
   assert (!indexes.empty());
   word_to_class.reserve(m_target_labels.size());
@@ -49,21 +49,10 @@ void GeneralConditionalNLM::initialize() {
     }
   }
   assert (m_target_labels.size() == word_to_class.size());
-
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  std::normal_distribution<Real> gaussian(0,0.1);
-  for (int i = 0; i < F.rows(); i++) {
-    FB(i) = gaussian(gen);
-    for (int j = 0; j < F.cols(); j++) {
-      F(i,j) = gaussian(gen);
-    }
-  }
 }
 
 void GeneralConditionalNLM::init(bool init_weights) {
-  cout << "In parent";
-  allocate_data();
+  calculateDataSize(true);
 
   new (&W) WeightsType(m_data, m_data_size);
   if (init_weights) {
@@ -75,12 +64,12 @@ void GeneralConditionalNLM::init(bool init_weights) {
   }
   else W.setZero();
 
-  map_parameters_(W, R, Q, F, C, B, FB);
-  // map_parameters_(W, &R, &Q, &F, &C, &B, &FB);
+  Real* ptr = W.data();
+  map_parameters(ptr, R, Q, F, C, B, FB);
 }
 
 
-void GeneralConditionalNLM::allocate_data() {
+int GeneralConditionalNLM::calculateDataSize(bool allocate) {
   int num_output_words = output_types();
   int num_context_words = context_types();
   int word_width = config.word_representation_size;
@@ -93,8 +82,12 @@ void GeneralConditionalNLM::allocate_data() {
   int B_size = num_output_words;
   int FB_size = config.classes;
 
-  m_data_size = R_size + Q_size + F_size + C_size + B_size + FB_size;
-  m_data = new Real[m_data_size];
+  int data_size = R_size + Q_size + F_size + C_size + B_size + FB_size;
+  if (allocate) {
+    m_data_size = data_size;
+    m_data = new Real[m_data_size];
+  }
+  return data_size;
 }
 
 
@@ -178,11 +171,11 @@ Real GeneralConditionalNLM::gradient_(
     const TrainingInstances& training_instances,
     // std::function<void(TrainingInstance, VectorReal)> source_repr_callback,
     // std::function<void(TrainingInstance, int, int, VectorReal)> source_grad_callback,
-    Real l2, Real source_l2, WeightsType& g_W) {
+    Real l2, Real source_l2, Real*& ptr) {
   WordVectorsType g_R(0,0,0), g_Q(0,0,0), g_F(0,0,0);
   ContextTransformsType g_C;
   WeightsType g_B(0,0), g_FB(0,0);
-  map_parameters_(g_W, g_R, g_Q, g_F, g_C, g_B, g_FB);
+  map_parameters(ptr, g_R, g_Q, g_F, g_C, g_B, g_FB);
   // map_parameters_(g_W, &g_R, &g_Q, &g_F, &g_C, &g_B, &g_FB);
 
   Real f=0;
@@ -300,8 +293,7 @@ Real GeneralConditionalNLM::gradient_(
 
       //////////////////////////////////////////////////////////////////
       // Source word representations gradient
-      VectorReal vr = weightedRepresentations.row(instance_counter);
-      source_grad_callback(t, t_i, instance_counter, vr);
+      source_grad_callback(t, t_i, instance_counter, weightedRepresentations.row(instance_counter));
       /*
        * if (window < 0) {
        *   for (auto s_i : source_sent)
@@ -366,7 +358,7 @@ Real GeneralConditionalNLM::gradient_(
   return f;
 }
 
-void GeneralConditionalNLM::map_parameters_(WeightsType& w, WordVectorsType& r, WordVectorsType& q, WordVectorsType& f,
+void GeneralConditionalNLM::map_parameters(Real*& ptr, WordVectorsType& r, WordVectorsType& q, WordVectorsType& f,
                                             ContextTransformsType& c, WeightsType& b, WeightsType& fb) const {
   int num_output_words = output_types();
   int num_context_words = context_types();
@@ -377,8 +369,6 @@ void GeneralConditionalNLM::map_parameters_(WeightsType& w, WordVectorsType& r, 
   int Q_size = num_context_words * word_width;;
   int F_size = config.classes * word_width;
   int C_size = (config.diagonal ? word_width : word_width*word_width);
-
-  Real* ptr = w.data();
 
   new (&r) WordVectorsType(ptr, num_output_words, word_width);
   ptr += R_size;
@@ -397,4 +387,5 @@ void GeneralConditionalNLM::map_parameters_(WeightsType& w, WordVectorsType& r, 
   new (&b)  WeightsType(ptr, num_output_words);
   ptr += num_output_words;
   new (&fb) WeightsType(ptr, config.classes);
+  ptr += config.classes;
 }

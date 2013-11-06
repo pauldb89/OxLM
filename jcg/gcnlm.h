@@ -1,5 +1,5 @@
-#ifndef OXLM_JCG_CNLM_H
-#define OXLM_JCG_CNLM_H
+#ifndef OXLM_JCG_GCNLM_H
+#define OXLM_JCG_GCNLM_H
 
 #include <boost/shared_ptr.hpp>
 #include <boost/archive/text_oarchive.hpp>
@@ -27,7 +27,7 @@ public:
   GeneralConditionalNLM();
   GeneralConditionalNLM(const ModelData& config, const Dict& target_vocab, const std::vector<int>& classes);
   ~GeneralConditionalNLM() { delete [] m_data; }
-  void initialize();
+  void initWordToClass();
 
   int output_types() const { return m_target_labels.size(); }
   int context_types() const { return m_target_labels.size(); }
@@ -54,7 +54,7 @@ public:
       const TrainingInstances& training_instances,
       // std::function<void(TrainingInstance, VectorReal)> source_repr_callback,
       // std::function<void(TrainingInstance, int, int, VectorReal)> source_grad_callback,
-      Real l2, Real source_l2, WeightsType& g_W);
+      Real l2, Real source_l2, Real*& g_ptr);
 
   virtual void source_repr_callback(TrainingInstance t, int t_i, VectorReal& r) = 0;
   virtual void source_grad_callback(TrainingInstance t, int t_i, int instance_counter, const VectorReal& grads) = 0;
@@ -105,31 +105,33 @@ public:
     m_context_class_cache.reserve(1000000);
   }
 
-  friend class boost::serialization::access;
-  template<class Archive>
-    void save(Archive & ar, const unsigned int version) const {
-      ar << config;
-      ar << m_target_labels;
-      ar << boost::serialization::make_array(m_data, m_data_size);
-
-      ar << word_to_class;
-      ar << indexes;
-      ar << length_ratio;
-    }
-
-  template<class Archive>
-    void load(Archive & ar, const unsigned int version) {
-      ar >> config;
-      ar >> m_target_labels;
-      delete [] m_data;
-      init(false);
-      ar >> boost::serialization::make_array(m_data, m_data_size);
-
-      ar >> word_to_class;
-      ar >> indexes;
-      ar >> length_ratio;
-    }
-  BOOST_SERIALIZATION_SPLIT_MEMBER();
+/*
+ *   friend class boost::serialization::access;
+ *   template<class Archive>
+ *     void save(Archive & ar, const unsigned int version) const {
+ *       ar << config;
+ *       ar << m_target_labels;
+ *       ar << boost::serialization::make_array(m_data, m_data_size);
+ *
+ *       ar << word_to_class;
+ *       ar << indexes;
+ *       ar << length_ratio;
+ *     }
+ *
+ *   template<class Archive>
+ *     void load(Archive & ar, const unsigned int version) {
+ *       ar >> config;
+ *       ar >> m_target_labels;
+ *       delete [] m_data;
+ *       init(false);
+ *       ar >> boost::serialization::make_array(m_data, m_data_size);
+ *
+ *       ar >> word_to_class;
+ *       ar >> indexes;
+ *       ar >> length_ratio;
+ *     }
+ *   BOOST_SERIALIZATION_SPLIT_MEMBER();
+ */
 
   MatrixReal context_product(int i, const MatrixReal& v, bool transpose=false) const {
     if (config.diagonal)
@@ -158,10 +160,10 @@ public:
 
 protected:
   virtual void init(bool init_weights=false);
-  virtual void allocate_data();
-  void map_parameters_(WeightsType& w, WordVectorsType& r, WordVectorsType& q,
-                       WordVectorsType& f, ContextTransformsType& c,
-                       WeightsType& b, WeightsType& fb) const;
+  virtual int calculateDataSize(bool allocate=false);
+  void map_parameters(Real*& ptr, WordVectorsType& r, WordVectorsType& q,
+                      WordVectorsType& f, ContextTransformsType& c,
+                      WeightsType& b, WeightsType& fb) const;
 
   Dict m_target_labels;
   int m_data_size;
@@ -177,4 +179,4 @@ protected:
 typedef std::shared_ptr<GeneralConditionalNLM> GeneralConditionalNLMPtr;
 
 }  // namespace oxlm
-#endif  // OXLM_JCG_CNLM_H
+#endif  // OXLM_JCG_GCNLM_H

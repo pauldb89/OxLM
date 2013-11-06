@@ -26,38 +26,42 @@ static boost::mt19937 linear_model_rng(static_cast<unsigned> (std::time(0)));
 static uniform_01<> linear_model_uniform_dist;
 
 
-ConditionalNLM::ConditionalNLM() : GeneralConditionalNLM(), S(0,0,0), WA(0,0), g_S(0,0,0), a_data(0) {}
+ConditionalNLM::ConditionalNLM() : GeneralConditionalNLM(), S(0,0,0), g_S(0,0,0) {}
 
 ConditionalNLM::ConditionalNLM(const ModelData& config,
                                const Dict& source_labels,
                                const Dict& target_labels,
                                const std::vector<int>& classes)
-  : GeneralConditionalNLM(config, target_labels, classes), S(0,0,0), WA(0,0), g_S(0,0,0),
+  : GeneralConditionalNLM(config, target_labels, classes), S(0,0,0), g_S(0,0,0),
   m_source_labels(source_labels) {
     init(true);
-    initialize();
+    initWordToClass();
   }
 
 void ConditionalNLM::init(bool init_weights) {
-  cout << "In child";
-  GeneralConditionalNLM::init(init_weights);
-  allocate_data();
+  calculateDataSize(true);  // Calculates space requirements for this class and
+                            //the parent and allocates space accordingly.
 
-  new (&WA) WeightsType(a_data, a_data_size);
+  new (&W) WeightsType(m_data, m_data_size);
   if (init_weights) {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::normal_distribution<Real> gaussian(0,0.1);
-    for (int i=0; i<a_data_size; i++)
-      WA(i) = gaussian(gen);
+    for (int i=0; i<m_data_size; i++)
+      W(i) = gaussian(gen);
   }
-  else WA.setZero();
+  else W.setZero();
 
-  map_parameters(WA, S, T);
+  Real* ptr = W.data();
+  // cerr << "Ptr: " << ptr << endl;
+  map_parameters(ptr, S, T);
+  // cerr << "Ptr: " << ptr << endl;
+  GeneralConditionalNLM::map_parameters(ptr, R, Q, F, C, B, FB);
+  // cerr << "Ptr: " << ptr << endl;
 }
 
-void ConditionalNLM::allocate_data() {
-  GeneralConditionalNLM::allocate_data();
+int ConditionalNLM::calculateDataSize(bool allocate) {
+  int parent_size = GeneralConditionalNLM::calculateDataSize(false);
 
   int num_source_words = source_types();
   int word_width = config.word_representation_size;
@@ -66,8 +70,12 @@ void ConditionalNLM::allocate_data() {
   int S_size = num_source_words * word_width;;
   int T_size = (2*window_width + 1) * (config.diagonal ? word_width : word_width*word_width);
 
-  a_data_size = S_size + T_size;
-  a_data = new Real[a_data_size];
+  int data_size = parent_size + S_size + T_size;
+  if (allocate) {
+    m_data_size = data_size;
+    m_data = new Real[m_data_size];
+  }
+  return data_size;
 }
 
 void ConditionalNLM::source_representation(const Sentence& source, int target_index, VectorReal& result) const {
@@ -99,17 +107,15 @@ Real ConditionalNLM::log_prob(const WordId w, const std::vector<WordId>& context
 Real ConditionalNLM::gradient(std::vector<Sentence>& source_corpus_,
                               const std::vector<Sentence>& target_corpus,
                               const TrainingInstances &training_instances,
-                              Real l2, Real source_l2, WeightsType& g_Joint) {
+                              Real l2, Real source_l2, WeightsType& g_W) {
 
   source_corpus = source_corpus_;
 
-  // get g_WA from g_W
-  WeightsType g_W(g_Joint.data(), m_data_size);
-  WeightsType g_WA(g_Joint.data() + m_data_size, a_data_size);
-  map_parameters(g_WA, g_S, g_T);
+  Real* ptr = g_W.data();
+  map_parameters(ptr, g_S, g_T);  // Allocates data for child.
 
   Real f = 0.0;
-  f = gradient_(target_corpus, training_instances, l2, source_l2, g_W);
+  f = gradient_(target_corpus, training_instances, l2, source_l2, ptr);  // Allocates data for parent.
 
   #pragma omp master
   {
@@ -139,20 +145,20 @@ void ConditionalNLM::source_grad_callback(TrainingInstance t, int t_i, int insta
   int window = config.source_window_width;
   if (window < 0) {
     for (auto s_i : source_sent)
-      g_S.row(s_i) += grads.row(instance_counter);
+      g_S.row(s_i) += grads;
   }
   else {
     int centre = min(floor(Real(t_i)*length_ratio + 0.5), double(source_len-1));
     int start = max(centre-window, 0);
     int end = min(source_len, centre+window+1);
     for (int i=start; i < end; ++i) {
-      g_S.row(source_sent.at(i)) += window_product(i-centre+window, grads.row(instance_counter), true);
-      context_gradient_update(g_T.at(i-centre+window), S.row(source_sent.at(i)), grads.row(instance_counter));
+      g_S.row(source_sent.at(i)) += window_product(i-centre+window, grads, true);
+      context_gradient_update(g_T.at(i-centre+window), S.row(source_sent.at(i)), grads);
     }
   }
 }
 
-void ConditionalNLM::map_parameters(WeightsType& wa, WordVectorsType& s,
+void ConditionalNLM::map_parameters(Real*& ptr, WordVectorsType& s,
                                     ContextTransformsType& t) const {
   int num_source_words = source_types();
   int word_width = config.word_representation_size;
@@ -162,7 +168,7 @@ void ConditionalNLM::map_parameters(WeightsType& wa, WordVectorsType& s,
   // TODO(kmh): T_size probably wrong - take window width into account.
   int T_size = (config.diagonal ? word_width : word_width*word_width);
 
-  Real* ptr = wa.data();
+  // Real* ptr = wa.data();
 
   new (&s) WordVectorsType(ptr, num_source_words, word_width);
   ptr += S_size;
