@@ -1,7 +1,7 @@
 #include <iostream>
 #include <string>
 
-#include "pyp/boost_serializers.h"
+#include "cpyp/boost_serializers.h"
 #include <boost/serialization/vector.hpp>
 #include <boost/archive/binary_iarchive.hpp>
 
@@ -334,7 +334,7 @@ class FF_HPYPLM : public FeatureFunction {
   WordID kUNKNOWN;
   WordID kNONE;
   WordID kSTAR;
-  oxlm::PYPLM<kORDER> lm; 
+  oxlm::PYPLM<kORDER> lm;
   const int fid;
   const int fid_oov;
   vector<int> cdec2pyp; // cdec2pyp[TD::Convert("word")] returns the index in the pyp model

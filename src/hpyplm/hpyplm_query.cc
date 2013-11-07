@@ -5,7 +5,7 @@
 #include "hpyplm.h"
 #include "corpus/corpus.h"
 
-#include "pyp/boost_serializers.h"
+#include "cpyp/boost_serializers.h"
 #include <boost/serialization/vector.hpp>
 #include <boost/archive/binary_iarchive.hpp>
 

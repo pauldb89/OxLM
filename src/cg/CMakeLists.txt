@@ -1,6 +1,16 @@
+#############################################
 # Libraries
+#############################################
+
+# use SHARED after cnlm if *.so requried
 add_library(cnlm SHARED cnlm.cc cnlm.h)
 
+#############################################
 # Executables
-add_executable(train_cnlm train_cnlm.cc)
-target_link_libraries(train_cnlm ${Boost_LIBRARIES} cnlm)
+#############################################
+
+set(EXECUTABLES train_cnlm cg perplexity label printconfig)
+foreach(f ${EXECUTABLES})
+  add_executable(${f} ${f}.cc)
+  target_link_libraries(${f} cnlm)
+endforeach(f)

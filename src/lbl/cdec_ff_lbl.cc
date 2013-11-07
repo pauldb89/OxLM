@@ -1,7 +1,6 @@
 #include <iostream>
 #include <string>
 
-#include "pyp/boost_serializers.h"
 #include <boost/serialization/vector.hpp>
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
@@ -75,7 +74,7 @@ struct SimplePair {
 
 class FF_LBLLM : public FeatureFunction {
  public:
-  FF_LBLLM(const string& lm_file, const string& feat, const string& reffile) 
+  FF_LBLLM(const string& lm_file, const string& feat, const string& reffile)
     : lm(ModelData(), oxlm::Dict(), true), fid(FD::Convert(feat)), fid_oov(FD::Convert(feat+"_OOV"))
     //: lm(ModelData(), oxlm::Dict(), true, std::vector<int>()), fid(FD::Convert(feat)), fid_oov(FD::Convert(feat+"_OOV"))
   {
@@ -103,7 +102,7 @@ class FF_LBLLM : public FeatureFunction {
       ia >> z_approx;
     }
     */
-    
+
     cerr << "Initializing map contents (map size=" << dict.max() << ")\n";
     for (int i = 1; i < dict.max(); ++i)
       AddToWordMap(i);
@@ -202,8 +201,8 @@ class FF_LBLLM : public FeatureFunction {
 
   inline double WordProb(WordID word, WordID const* context) const {
     vector<WordID> xx;
-    for (int i=0; i<kORDER-1 && context && (*context != kNONE); ++i) { 
-      xx.push_back(*context++); 
+    for (int i=0; i<kORDER-1 && context && (*context != kNONE); ++i) {
+      xx.push_back(*context++);
     }
     //if (xx.size() != kORDER-1) return 0;
 
@@ -211,13 +210,13 @@ class FF_LBLLM : public FeatureFunction {
       xx.resize(kORDER-1, kSTART);
     else
       xx.resize(kORDER-1, kUNKNOWN);
-    
+
     reverse(xx.begin(),xx.end());
 //    cerr << "LEN=" << xx.size() << ", (";
 //    for (unsigned j = 0; j < xx.size(); ++j)
 //      cerr << dict.Convert(xx[j]) << " ";
 //    cerr << " | " << dict.Convert(word);
-    
+
     double s = lm.log_prob(word, xx, true, false);
 
 //    cerr << "), s = " << s << endl;
@@ -227,7 +226,7 @@ class FF_LBLLM : public FeatureFunction {
 
   // first = prob, second = unk
   inline SimplePair LookupProbForBufferContents(int i) const {
-    if (buffer_[i] == kUNKNOWN) 
+    if (buffer_[i] == kUNKNOWN)
       return SimplePair(0.0, 1.0);
     double p = WordProb(buffer_[i], &buffer_[i+1]);
     return SimplePair(p, 0.0);
@@ -362,7 +361,7 @@ class FF_LBLLM : public FeatureFunction {
   WordID kUNKNOWN;
   WordID kNONE;
   WordID kSTAR;
-  //oxlm::PYPLM<kORDER> lm; 
+  //oxlm::PYPLM<kORDER> lm;
   //oxlm::NLM lm;
   //oxlm::NLMApproximateZ z_approx;
   oxlm::FactoredOutputNLM lm;

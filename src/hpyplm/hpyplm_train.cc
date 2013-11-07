@@ -9,7 +9,7 @@
 #include "pyp/crp.h"
 #include "pyp/tied_parameter_resampler.h"
 
-#include "pyp/boost_serializers.h"
+#include "cpyp/boost_serializers.h"
 #include <boost/serialization/vector.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 
