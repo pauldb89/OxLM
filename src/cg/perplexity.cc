@@ -19,7 +19,7 @@
 #include <Eigen/Core>
 
 // Local
-#include "cg/cnlm.h"
+#include "cg/additive-cnlm.h"
 #include "corpus/corpus.h"
 
 static const char *REVISION = "$Rev: 247 $";
@@ -36,29 +36,29 @@ typedef vector<WordId> Context;
 
 
 int main(int argc, char **argv) {
-  cerr << "Score sentences with a trained neural translation models: Copyright 2013 Phil Blunsom, " 
+  cerr << "Score sentences with a trained neural translation models: Copyright 2013 Phil Blunsom, "
        << REVISION << '\n' << endl;
 
   ///////////////////////////////////////////////////////////////////////////////////////
   // Command line processing
-  variables_map vm; 
+  variables_map vm;
 
   // Command line processing
   options_description cmdline_specific("Command line specific options");
   cmdline_specific.add_options()
     ("help,h", "print help message")
-    ("config,c", value<string>(), 
+    ("config,c", value<string>(),
         "config file specifying additional command line options")
     ;
   options_description generic("Allowed options");
   generic.add_options()
-    ("source,s", value<string>(), 
+    ("source,s", value<string>(),
         "corpus of sentences, one per line")
-    ("target,t", value<string>(), 
+    ("target,t", value<string>(),
         "reference translations of the source sentences, one per line")
-    ("threads", value<int>()->default_value(1), 
+    ("threads", value<int>()->default_value(1),
         "number of worker threads.")
-    ("model-in,m", value<string>(), 
+    ("model-in,m", value<string>(),
         "model to generate from")
     ("print-sentence-llh", "print the LLH of each sentence")
     ("print-corpus-ppl", "print perplexity of the corpus")
@@ -67,22 +67,22 @@ int main(int argc, char **argv) {
   config_options.add(generic);
   cmdline_options.add(generic).add(cmdline_specific);
 
-  store(parse_command_line(argc, argv, cmdline_options), vm); 
+  store(parse_command_line(argc, argv, cmdline_options), vm);
   if (vm.count("config") > 0) {
     ifstream config(vm["config"].as<string>().c_str());
-    store(parse_config_file(config, cmdline_options), vm); 
+    store(parse_config_file(config, cmdline_options), vm);
   }
   notify(vm);
   ///////////////////////////////////////////////////////////////////////////////////////
-  
-  if (vm.count("help") || !vm.count("source") || !vm.count("model-in") || !vm.count("target")) { 
-    cerr << cmdline_options << "\n"; 
-    return 1; 
+
+  if (vm.count("help") || !vm.count("source") || !vm.count("model-in") || !vm.count("target")) {
+    cerr << cmdline_options << "\n";
+    return 1;
   }
 
   omp_set_num_threads(vm["threads"].as<int>());
 
-  ConditionalNLM model;
+  AdditiveCNLM model;
   std::ifstream f(vm["model-in"].as<string>().c_str());
   boost::archive::text_iarchive ar(f);
   ar >> model;
@@ -107,14 +107,14 @@ int main(int argc, char **argv) {
     // read the sentence
     stringstream line_stream(line);
     Sentence s;
-    while (line_stream >> token) 
+    while (line_stream >> token)
       s.push_back(model.source_label_set().Convert(token));
     s.push_back(end_id);
 
     Sentence t;
     assert(getline(target_in, line));
     stringstream target_line_stream(line);
-    while (target_line_stream >> token) 
+    while (target_line_stream >> token)
       t.push_back(model.label_set().Convert(token));
     t.push_back(end_id);
 
@@ -147,7 +147,7 @@ int main(int argc, char **argv) {
   source_in.close();
   target_in.close();
   //////////////////////////////////////////////
-  
+
   if (vm.count("print-corpus-ppl"))
     cout << "Corpus Perplexity = " << exp(-pp/tokens) << endl;
 

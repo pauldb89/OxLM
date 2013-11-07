@@ -1,5 +1,5 @@
-#ifndef _UTILS_H_
-#define _UTILS_H_
+#ifndef CG_UTILS_H
+#define CG_UTILS_H
 
 // STL
 #include <vector>
@@ -42,12 +42,12 @@ inline VectorReal logSoftMax(const VectorReal& v, Real* lz=0) {
 template <typename T>
 struct Log
 {
-    static T zero() { return -std::numeric_limits<T>::infinity(); } 
+    static T zero() { return -std::numeric_limits<T>::infinity(); }
 
     static T add(T l1, T l2)
     {
         if (l1 == zero()) return l2;
-        if (l1 > l2) 
+        if (l1 > l2)
             return l1 + std::log(1 + exp(l2 - l1));
         else
             return l2 + std::log(1 + exp(l1 - l2));
@@ -67,7 +67,7 @@ struct UnigramDistribution {
 
   void read(const std::string& filename) {
     std::ifstream file(filename.c_str());
-    std::cerr << "Reading unigram distribution from " 
+    std::cerr << "Reading unigram distribution from "
       << filename.c_str() << "." << std::endl;
 
     double sum=0;
@@ -75,15 +75,15 @@ struct UnigramDistribution {
     while (file >> value >> key) {
       double v = boost::lexical_cast<double>(value);
       sum += v;
-      prob_to_token.insert(std::make_pair(sum, key));   
-      token_to_prob.insert(std::make_pair(key, v));   
+      prob_to_token.insert(std::make_pair(sum, key));
+      token_to_prob.insert(std::make_pair(key, v));
     }
   }
 
   double prob(const std::string& s) const {
     std::map<std::string, double>::const_iterator it
       = token_to_prob.find(s);
-    return it != token_to_prob.end() ? it->second : 0.0; 
+    return it != token_to_prob.end() ? it->second : 0.0;
   }
 
   bool empty() const { return prob_to_token.empty(); }
@@ -91,4 +91,4 @@ struct UnigramDistribution {
 
 
 } // namespace oxlm
-#endif // _UTILS_H_
+#endif  // CG_UTILS_H

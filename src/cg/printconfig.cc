@@ -15,7 +15,7 @@
 #include <boost/archive/text_iarchive.hpp>
 
 // Local
-#include "cg/cnlm.h"
+#include "cg/additive-cnlm.h"
 #include "corpus/corpus.h"
 
 using namespace boost;
@@ -55,7 +55,7 @@ int main(int argc, char **argv) {
       return 1;
     }
 
-    ConditionalNLM model;
+    AdditiveCNLM model;
     std::ifstream f(vm["model"].as<string>().c_str());
     boost::archive::text_iarchive ar(f);
     ar >> model;

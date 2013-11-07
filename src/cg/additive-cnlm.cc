@@ -13,8 +13,8 @@
 #include <cstring>
 #include <omp.h>
 
-#include "cg/jcg/additive-cnlm.h"
-#include "cg/jcg/gcnlm.h"
+#include "cg/additive-cnlm.h"
+#include "cg/cnlm.h"
 #include "cg/utils.h"
 
 using namespace std;
@@ -26,19 +26,19 @@ static boost::mt19937 linear_model_rng(static_cast<unsigned> (std::time(0)));
 static uniform_01<> linear_model_uniform_dist;
 
 
-ConditionalNLM::ConditionalNLM() : GeneralConditionalNLM(), S(0,0,0), g_S(0,0,0) {}
+AdditiveCNLM::AdditiveCNLM() : CNLMBase(), S(0,0,0), g_S(0,0,0) {}
 
-ConditionalNLM::ConditionalNLM(const ModelData& config,
+AdditiveCNLM::AdditiveCNLM(const ModelData& config,
                                const Dict& source_labels,
                                const Dict& target_labels,
                                const std::vector<int>& classes)
-  : GeneralConditionalNLM(config, target_labels, classes), S(0,0,0), g_S(0,0,0),
+  : CNLMBase(config, target_labels, classes), S(0,0,0), g_S(0,0,0),
   m_source_labels(source_labels) {
     init(true);
     initWordToClass();
   }
 
-void ConditionalNLM::init(bool init_weights) {
+void AdditiveCNLM::init(bool init_weights) {
   calculateDataSize(true);  // Calculates space requirements for this class and
                             //the parent and allocates space accordingly.
 
@@ -56,12 +56,12 @@ void ConditionalNLM::init(bool init_weights) {
   // cerr << "Ptr: " << ptr << endl;
   map_parameters(ptr, S, T);
   // cerr << "Ptr: " << ptr << endl;
-  GeneralConditionalNLM::map_parameters(ptr, R, Q, F, C, B, FB);
+  CNLMBase::map_parameters(ptr, R, Q, F, C, B, FB);
   // cerr << "Ptr: " << ptr << endl;
 }
 
-int ConditionalNLM::calculateDataSize(bool allocate) {
-  int parent_size = GeneralConditionalNLM::calculateDataSize(false);
+int AdditiveCNLM::calculateDataSize(bool allocate) {
+  int parent_size = CNLMBase::calculateDataSize(false);
 
   int num_source_words = source_types();
   int word_width = config.word_representation_size;
@@ -78,7 +78,7 @@ int ConditionalNLM::calculateDataSize(bool allocate) {
   return data_size;
 }
 
-void ConditionalNLM::source_representation(const Sentence& source, int target_index, VectorReal& result) const {
+void AdditiveCNLM::source_representation(const Sentence& source, int target_index, VectorReal& result) const {
   result = VectorReal::Zero(config.word_representation_size);
   int window = config.source_window_width;
 
@@ -97,14 +97,14 @@ void ConditionalNLM::source_representation(const Sentence& source, int target_in
   }
 }
 
-Real ConditionalNLM::log_prob(const WordId w, const std::vector<WordId>& context, const Sentence& source,
+Real AdditiveCNLM::log_prob(const WordId w, const std::vector<WordId>& context, const Sentence& source,
                               bool cache, int target_index) const {
   VectorReal s;
   source_representation(source, target_index, s);
-  return GeneralConditionalNLM::log_prob(w, context, s, cache);
+  return CNLMBase::log_prob(w, context, s, cache);
 }
 
-Real ConditionalNLM::gradient(std::vector<Sentence>& source_corpus_,
+Real AdditiveCNLM::gradient(std::vector<Sentence>& source_corpus_,
                               const std::vector<Sentence>& target_corpus,
                               const TrainingInstances &training_instances,
                               Real l2, Real source_l2, WeightsType& g_W) {
@@ -134,11 +134,11 @@ Real ConditionalNLM::gradient(std::vector<Sentence>& source_corpus_,
   return f;
 }
 
-void ConditionalNLM::source_repr_callback(TrainingInstance t, int t_i, VectorReal& r) {
+void AdditiveCNLM::source_repr_callback(TrainingInstance t, int t_i, VectorReal& r) {
   source_representation(source_corpus.at(t), t_i, r);
 }
 
-void ConditionalNLM::source_grad_callback(TrainingInstance t, int t_i, int instance_counter, const VectorReal& grads) {
+void AdditiveCNLM::source_grad_callback(TrainingInstance t, int t_i, int instance_counter, const VectorReal& grads) {
   // Source word representations gradient
   const Sentence& source_sent = source_corpus.at(t);
   int source_len = source_sent.size();
@@ -158,7 +158,7 @@ void ConditionalNLM::source_grad_callback(TrainingInstance t, int t_i, int insta
   }
 }
 
-void ConditionalNLM::map_parameters(Real*& ptr, WordVectorsType& s,
+void AdditiveCNLM::map_parameters(Real*& ptr, WordVectorsType& s,
                                     ContextTransformsType& t) const {
   int num_source_words = source_types();
   int word_width = config.word_representation_size;

@@ -19,7 +19,7 @@
 #include <Eigen/Core>
 
 // Local
-#include "cg/cnlm.h"
+#include "cg/additive-cnlm.h"
 #include "corpus/corpus.h"
 
 static const char *REVISION = "$Rev: 247 $";
@@ -33,7 +33,7 @@ using namespace Eigen;
 
 
 typedef vector<WordId> Context;
-//bool contextLT(const Context& lhs, const Context& rhs) 
+//bool contextLT(const Context& lhs, const Context& rhs)
 //{ return lhs < rhs; }
 
 struct Hypothesis;
@@ -45,19 +45,19 @@ struct Hypothesis {
   HypothesisPtr prev;
 };
 
-bool hypothesisLT(const Hypothesis& lhs, const Hypothesis& rhs) 
+bool hypothesisLT(const Hypothesis& lhs, const Hypothesis& rhs)
 { return lhs.score < rhs.score; }
-bool hypothesisPtrLT(const HypothesisPtr& lhs, const HypothesisPtr& rhs) 
+bool hypothesisPtrLT(const HypothesisPtr& lhs, const HypothesisPtr& rhs)
 { return lhs->score < rhs->score; }
 
 typedef map<Context, HypothesisPtr> Hypotheses;
 typedef vector<HypothesisPtr> Beam;
 
 
-void beam_search(const ConditionalNLM& model, const Sentence& source, int beam_width, double word_penalty, const Sentence& target) {
+void beam_search(const AdditiveCNLM& model, const Sentence& source, int beam_width, double word_penalty, const Sentence& target) {
   WordId start_id = model.label_set().Lookup("<s>");
   WordId end_id = model.label_set().Lookup("</s>");
-  
+
   Beam old_beam, new_beam, completed;
   Hypotheses seen_contexts;
   VectorReal prediction_vector, source_vector, class_probs, word_probs;
@@ -109,7 +109,7 @@ void beam_search(const ConditionalNLM& model, const Sentence& source, int beam_w
             *hyp_ptr.first->second = *new_h;
           }
           else if (hyp_ptr.second) {
-            if (w_id == end_id) completed.push_back(new_h); 
+            if (w_id == end_id) completed.push_back(new_h);
             else                new_beam.push_back(new_h);
           }
         }
@@ -137,14 +137,14 @@ void beam_search(const ConditionalNLM& model, const Sentence& source, int beam_w
     next_h = next_h->prev;
   }
   reverse(result.begin(), result.end());
-  for (auto s : result) 
+  for (auto s : result)
     cout << model.label_set().Convert(s) << " ";
   //cout << " = " << completed.front()->score << endl;
   cout << endl;
 }
 
 
-void sample_search(const ConditionalNLM& model, const Sentence& source, 
+void sample_search(const AdditiveCNLM& model, const Sentence& source,
                    int num_samples, int k_best, int source_counter, double word_penalty) {
   WordId start_id = model.label_set().Lookup("<s>");
   WordId end_id = model.label_set().Lookup("</s>");
@@ -185,7 +185,7 @@ void sample_search(const ConditionalNLM& model, const Sentence& source,
       accumulator=0;
       model.word_log_probs(c, context, source_vector, prediction_vector, word_probs, false);
 
-      //        word_probs.array() *= 0.7; 
+      //        word_probs.array() *= 0.7;
       //        word_probs.array() -= log(word_probs.array().exp().sum());
 
       for (WordId w=0; w < word_probs.rows(); ++w) {
@@ -235,59 +235,59 @@ void sample_search(const ConditionalNLM& model, const Sentence& source,
 
 
 int main(int argc, char **argv) {
-  cerr << "Conditional generation from neural translation models: Copyright 2013 Phil Blunsom, " 
+  cerr << "Conditional generation from neural translation models: Copyright 2013 Phil Blunsom, "
        << REVISION << '\n' << endl;
 
   ///////////////////////////////////////////////////////////////////////////////////////
   // Command line processing
-  variables_map vm; 
+  variables_map vm;
 
   // Command line processing
   options_description cmdline_specific("Command line specific options");
   cmdline_specific.add_options()
     ("help,h", "print help message")
-    ("config,c", value<string>(), 
+    ("config,c", value<string>(),
         "config file specifying additional command line options")
     ;
   options_description generic("Allowed options");
   generic.add_options()
-    ("source,s", value<string>(), 
+    ("source,s", value<string>(),
         "corpus of sentences, one per line")
-    ("target,t", value<string>(), 
+    ("target,t", value<string>(),
         "reference translations of the source sentences, one per line")
     ("samples", value<int>(),
         "number of samples from the nlm")
-    ("beam", value<int>()->default_value(10), 
+    ("beam", value<int>()->default_value(10),
         "number of hypotheses to extend at each generation step")
-    ("k-best", value<int>()->default_value(1), 
+    ("k-best", value<int>()->default_value(1),
         "output k-best samples.")
-    ("model-in,m", value<string>(), 
+    ("model-in,m", value<string>(),
         "model to generate from")
-    ("threads", value<int>()->default_value(1), 
+    ("threads", value<int>()->default_value(1),
         "number of worker threads.")
-    ("word-penalty", value<double>()->default_value(0), 
+    ("word-penalty", value<double>()->default_value(0),
         "word penalty added to the sample log prob for each word generated.")
     ;
   options_description config_options, cmdline_options;
   config_options.add(generic);
   cmdline_options.add(generic).add(cmdline_specific);
 
-  store(parse_command_line(argc, argv, cmdline_options), vm); 
+  store(parse_command_line(argc, argv, cmdline_options), vm);
   if (vm.count("config") > 0) {
     ifstream config(vm["config"].as<string>().c_str());
-    store(parse_config_file(config, cmdline_options), vm); 
+    store(parse_config_file(config, cmdline_options), vm);
   }
   notify(vm);
   ///////////////////////////////////////////////////////////////////////////////////////
-  
-  if (vm.count("help") || !vm.count("source") || !vm.count("model-in")) { 
-    cerr << cmdline_options << "\n"; 
-    return 1; 
+
+  if (vm.count("help") || !vm.count("source") || !vm.count("model-in")) {
+    cerr << cmdline_options << "\n";
+    return 1;
   }
 
   omp_set_num_threads(vm["threads"].as<int>());
 
-  ConditionalNLM model;
+  AdditiveCNLM model;
   std::ifstream f(vm["model-in"].as<string>().c_str());
   boost::archive::text_iarchive ar(f);
   ar >> model;
@@ -308,7 +308,7 @@ int main(int argc, char **argv) {
     // read the sentence
     stringstream line_stream(line);
     Sentence s;
-    while (line_stream >> token) 
+    while (line_stream >> token)
       s.push_back(model.source_label_set().Convert(token));
     if (model.config.source_eos) s.push_back(end_id);
 
@@ -316,14 +316,14 @@ int main(int argc, char **argv) {
     if (target_in) {
       assert(getline(*target_in, line));
       stringstream target_line_stream(line);
-      while (target_line_stream >> token) 
+      while (target_line_stream >> token)
         t.push_back(model.label_set().Convert(token));
       t.push_back(end_id);
     }
 
-    if (vm.count("samples"))  
-      sample_search(model, s, 
-                    vm["samples"].as<int>(), vm["k-best"].as<int>(), source_counter, 
+    if (vm.count("samples"))
+      sample_search(model, s,
+                    vm["samples"].as<int>(), vm["k-best"].as<int>(), source_counter,
                     vm["word-penalty"].as<double>());
     else
       beam_search(model, s, vm["beam"].as<int>(), vm["word-penalty"].as<double>(), t);

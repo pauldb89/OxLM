@@ -19,7 +19,7 @@
 #include <Eigen/Core>
 
 // Local
-#include "cg/cnlm.h"
+#include "cg/additive-cnlm.h"
 #include "corpus/corpus.h"
 
 static const char *REVISION = "$Rev: 248 $";
@@ -34,7 +34,7 @@ using namespace Eigen;
 
 void learn(const variables_map& vm, ModelData& config);
 void cache_data(int start, int end, const vector<size_t>& indices, TrainingInstances &result);
-Real perplexity(const ConditionalNLM& model, const vector<Sentence>& test_source_corpus, const vector<Sentence>& test_target_corpus);
+Real perplexity(const AdditiveCNLM& model, const vector<Sentence>& test_source_corpus, const vector<Sentence>& test_target_corpus);
 void freq_bin_type(const std::string &corpus, int num_classes, std::vector<int>& classes, Dict& dict, VectorReal& class_bias);
 void classes_from_file(const std::string &class_file, vector<int>& classes, Dict& dict, VectorReal& class_bias);
 
@@ -263,7 +263,7 @@ void learn(const variables_map& vm, ModelData& config) {
   assert (source_corpus.size() == target_corpus.size());
   assert (test_source_corpus.size() == test_target_corpus.size());
 
-  ConditionalNLM model(config, source_dict, target_dict, classes);
+  AdditiveCNLM model(config, source_dict, target_dict, classes);
   model.FB = class_bias;
 
   for (size_t s=0; s<source_corpus.size(); ++s)
@@ -293,7 +293,7 @@ void learn(const variables_map& vm, ModelData& config) {
   #pragma omp parallel shared(global_gradient, pp, av_f)
   {
     Real* gradient_data = new Real[model.num_weights()];
-    ConditionalNLM::WeightsType gradient(gradient_data, model.num_weights());
+    AdditiveCNLM::WeightsType gradient(gradient_data, model.num_weights());
 
     size_t minibatch_size = vm["minibatch-size"].as<int>();
 
@@ -436,7 +436,7 @@ void cache_data(int start, int end, const vector<size_t>& indices, TrainingInsta
 }
 
 
-Real perplexity(const ConditionalNLM& model, const vector<Sentence>& test_source_corpus, const vector<Sentence>& test_target_corpus) {
+Real perplexity(const AdditiveCNLM& model, const vector<Sentence>& test_source_corpus, const vector<Sentence>& test_target_corpus) {
   Real p=0.0;
 
   int context_width = model.config.ngram_order-1;

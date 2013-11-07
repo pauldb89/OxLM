@@ -1,5 +1,5 @@
-#ifndef OXLM_JCG_ADDITIVE_CNLM_H
-#define OXLM_JCG_ADDITIVE_CNLM_H
+#ifndef CG_ADDITIVE_CNLM_H
+#define CG_ADDITIVE_CNLM_H
 
 #include <boost/shared_ptr.hpp>
 #include <boost/archive/text_oarchive.hpp>
@@ -13,15 +13,15 @@
 #include "cg/config.h"
 #include "cg/utils.h"
 
-#include "cg/jcg/gcnlm.h"
+#include "cg/cnlm.h"
 
 namespace oxlm {
 
-class ConditionalNLM : public GeneralConditionalNLM {
+class AdditiveCNLM : public CNLMBase {
 public:
-  ConditionalNLM();
-  ConditionalNLM(const ModelData& config, const Dict& source_vocab, const Dict& target_vocab, const std::vector<int>& classes);
-  ~ConditionalNLM() {}
+  AdditiveCNLM();
+  AdditiveCNLM(const ModelData& config, const Dict& source_vocab, const Dict& target_vocab, const std::vector<int>& classes);
+  ~AdditiveCNLM() {}
 
   int source_types() const { return m_source_labels.size(); }
 
@@ -92,7 +92,7 @@ public:
   BOOST_SERIALIZATION_SPLIT_MEMBER();
 };
 
-typedef std::shared_ptr<ConditionalNLM> ConditionalNLMPtr;
+typedef std::shared_ptr<AdditiveCNLM> AdditiveCNLMPtr;
 
 }  // namespace oxlm
-#endif  // OXLM_JCG_ADDITIVE_CNLM_H
+#endif  // CG_ADDITIVE_CNLM_H

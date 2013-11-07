@@ -7,7 +7,7 @@
 
 // pyp stuff
 #include "corpus/corpus.h"
-#include "cg/cnlm.h"
+#include "cg/additive-cnlm.h"
 
 // cdec stuff
 #include "stringlib.h"
@@ -364,7 +364,7 @@ class FF_LBLLM : public FeatureFunction {
   WordID kNONE;
   WordID kSTAR;
   oxlm::VectorReal curr_source_vec;
-  oxlm::ConditionalNLM lm;
+  oxlm::AdditiveCNLM lm;
   const int fid;
   const int fid_oov;
   vector<int> cdec2lbl; // cdec2lbl[TD::Convert("word")] returns the index in the lbl model

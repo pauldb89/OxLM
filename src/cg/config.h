@@ -1,5 +1,5 @@
-#ifndef _CONFIG_H_
-#define _CONFIG_H_
+#ifndef CG_CONFIG_H
+#define CG_CONFIG_H
 
 #include <iostream>
 #include <fstream>
@@ -12,8 +12,8 @@ namespace oxlm {
 struct ModelData {
   enum ZType { Sampled, Exact };
 
-  ModelData() : step_size(0.1), l2_parameter(0.0), l1_parameter(0.0), source_l2_parameter(0.0), threads(1), 
-                iteration_size(1), verbose(false), ngram_order(3), word_representation_size(100), 
+  ModelData() : step_size(0.1), l2_parameter(0.0), l1_parameter(0.0), source_l2_parameter(0.0), threads(1),
+                iteration_size(1), verbose(false), ngram_order(3), word_representation_size(100),
                 classes(1), nonlinear(false), diagonal(false), source_window_width(-1), source_eos(true)
   {}
 
@@ -54,4 +54,4 @@ struct ModelData {
 typedef boost::shared_ptr<ModelData> ModelDataPtr;
 
 } // namespace oxlm
-#endif // _CONFIG_H_
+#endif  // CG_CONFIG_H

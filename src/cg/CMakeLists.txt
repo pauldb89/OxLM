@@ -3,7 +3,7 @@
 #############################################
 
 # use SHARED after cnlm if *.so requried
-add_library(cnlm SHARED cnlm.cc cnlm.h)
+add_library(cnlm SHARED cnlm.cc cnlm.h additive-cnlm.cc additive-cnlm.h)
 
 #############################################
 # Executables
