@@ -138,6 +138,10 @@ public:
  *   BOOST_SERIALIZATION_SPLIT_MEMBER();
  */
 
+  void map_parameters(Real*& ptr, WordVectorsType& r, WordVectorsType& q,
+                      WordVectorsType& f, ContextTransformsType& c,
+                      WeightsType& b, WeightsType& fb) const;
+
   MatrixReal context_product(int i, const MatrixReal& v, bool transpose=false) const {
     if (config.diagonal)
       return (C.at(i).asDiagonal() * v.transpose()).transpose();
@@ -166,9 +170,6 @@ public:
 protected:
   virtual void init(bool init_weights=false);
   virtual int calculateDataSize(bool allocate=false);
-  void map_parameters(Real*& ptr, WordVectorsType& r, WordVectorsType& q,
-                      WordVectorsType& f, ContextTransformsType& c,
-                      WeightsType& b, WeightsType& fb) const;
 
   Dict m_target_labels;
   int m_data_size;

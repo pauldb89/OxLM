@@ -356,7 +356,7 @@ Real CNLMBase::gradient_(
 }
 
 void CNLMBase::map_parameters(Real*& ptr, WordVectorsType& r, WordVectorsType& q, WordVectorsType& f,
-                                            ContextTransformsType& c, WeightsType& b, WeightsType& fb) const {
+                              ContextTransformsType& c, WeightsType& b, WeightsType& fb) const {
   int num_output_words = output_types();
   int num_context_words = context_types();
   int word_width = config.word_representation_size;

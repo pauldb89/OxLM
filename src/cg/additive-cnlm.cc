@@ -53,11 +53,8 @@ void AdditiveCNLM::init(bool init_weights) {
   else W.setZero();
 
   Real* ptr = W.data();
-  // cerr << "Ptr: " << ptr << endl;
   map_parameters(ptr, S, T);
-  // cerr << "Ptr: " << ptr << endl;
   CNLMBase::map_parameters(ptr, R, Q, F, C, B, FB);
-  // cerr << "Ptr: " << ptr << endl;
 }
 
 int AdditiveCNLM::calculateDataSize(bool allocate) {

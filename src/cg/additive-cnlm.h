@@ -45,6 +45,9 @@ public:
   /*virtual*/void source_grad_callback(TrainingInstance t, int t_i, int instance_counter, const VectorReal& grads);
   void source_representation(const Sentence& source, int target_index, VectorReal& result) const;
 
+  void map_parameters(Real*& ptr, WordVectorsType& s,
+                      ContextTransformsType& t) const;
+
   ContextTransformsType T;  // source window context transforms
   WordVectorsType       S;  // source word representations
 
@@ -56,8 +59,6 @@ public:
 protected:
   /*virtual*/void init(bool init_weights=false);
   /*virtual*/int calculateDataSize(bool allocate=false);
-  void map_parameters(Real*& ptr, WordVectorsType& s,
-                      ContextTransformsType& t) const;
 
   Dict m_source_labels;
 

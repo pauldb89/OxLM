@@ -7,6 +7,8 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/archive/text_oarchive.hpp>
 
+#include "utils/utils.h"
+
 namespace oxlm {
 
 struct ModelData {
@@ -14,7 +16,8 @@ struct ModelData {
 
   ModelData() : step_size(0.1), l2_parameter(0.0), l1_parameter(0.0), source_l2_parameter(0.0), threads(1),
                 iteration_size(1), verbose(false), ngram_order(3), word_representation_size(100),
-                classes(1), nonlinear(false), diagonal(false), source_window_width(-1), source_eos(true)
+                classes(1), nonlinear(false), diagonal(false), source_window_width(-1), source_eos(true),
+                updates(Bools())
   {}
 
   float       step_size;
@@ -31,6 +34,9 @@ struct ModelData {
   bool        diagonal;
   int         source_window_width;
   bool        source_eos;
+
+  // Parameters that should not be stored.
+  Bools       updates;
 
   friend class boost::serialization::access;
   template<class Archive>

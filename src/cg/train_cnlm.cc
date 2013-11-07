@@ -101,6 +101,14 @@ int main(int argc, char **argv) {
     ("randomise", "visit the training tokens in random order.")
     ("diagonal-contexts", "Use diagonal context matrices (usually faster).")
     ("non-linear", "use a non-linear hidden layer.")
+    ("updateT", value<bool>()->default_value(true), "update T weights?")
+    ("updateS", value<bool>()->default_value(true), "update S weights?")
+    ("updateC", value<bool>()->default_value(true), "update C weights?")
+    ("updateR", value<bool>()->default_value(true), "update R weights?")
+    ("updateQ", value<bool>()->default_value(true), "update Q weights?")
+    ("updateF", value<bool>()->default_value(true), "update F weights?")
+    ("updateFB", value<bool>()->default_value(true), "update FB weights?")
+    ("updateB", value<bool>()->default_value(true), "update B weights?")
     ;
   options_description config_options, cmdline_options;
   config_options.add(generic);
@@ -136,26 +144,35 @@ int main(int argc, char **argv) {
   config.source_window_width = vm["window"].as<int>();
   config.source_eos = !vm.count("no-source-eos");
 
+  Bools updates;
+  updates.T = vm["updateT"].as<bool>();
+  updates.S = vm["updateS"].as<bool>();
+  updates.C = vm["updateC"].as<bool>();
+  updates.R = vm["updateR"].as<bool>();
+  updates.Q = vm["updateQ"].as<bool>();
+  updates.F = vm["updateF"].as<bool>();
+  updates.FB = vm["updateFB"].as<bool>();
+  updates.B = vm["updateB"].as<bool>();
+  config.updates = updates;
+
   cerr << "################################" << endl;
-  cerr << "# Config Summary:" << endl;
-  cerr << "# order = " << vm["order"].as<int>() << endl;
-  if (vm.count("model-in"))
-    cerr << "# model-in = " << vm["model-in"].as<string>() << endl;
-  cerr << "# model-out = " << vm["model-out"].as<string>() << endl;
-  cerr << "# source = " << vm["source"].as<string>() << endl;
-  cerr << "# minibatch-size = " << vm["minibatch-size"].as<int>() << endl;
-  cerr << "# word-width = " << config.word_representation_size << endl;
-  cerr << "# l1 = " << config.l1_parameter << endl;
-  cerr << "# l2 = " << config.l2_parameter << endl;
-  cerr << "# source-l2 = " << config.source_l2_parameter << endl;
-  cerr << "# iterations = " << vm["iterations"].as<int>() << endl;
-  cerr << "# threads = " << vm["threads"].as<int>() << endl;
-  cerr << "# classes = " << config.classes << endl;
-  cerr << "# diagonal = " << config.diagonal << endl;
-  cerr << "# non-linear = " << config.nonlinear << endl;
-  cerr << "# width = " << config.source_window_width << endl;
-  cerr << "# source-eos = " << config.source_eos << endl;
-  cerr << "################################" << endl << endl;
+  cerr << "# Config Summary" << endl;
+  for (variables_map::iterator iter = vm.begin(); iter != vm.end(); ++iter)
+  {
+    cerr << "# " << iter->first << " = ";
+    const ::std::type_info& type = iter->second.value().type() ;
+    if ( type == typeid( ::std::string ) )
+      cerr << iter->second.as<string>() << endl;
+    if ( type == typeid( int ) )
+      cerr << iter->second.as<int>() << endl;
+    if ( type == typeid( double ) )
+      cerr << iter->second.as<double>() << endl;
+    if ( type == typeid( float ) )
+      cerr << iter->second.as<float>() << endl;
+    if ( type == typeid( bool ) )
+      cerr << (iter->second.as<bool>() ? "true" : "false") << endl;
+  }
+  cerr << "################################" << endl;
 
   omp_set_num_threads(config.threads);
 
@@ -368,11 +385,34 @@ void learn(const variables_map& vm, ModelData& config) {
                 Real scale = step_size / sqrt(adaGrad(w));
                 Real w1 = model.W(w) - scale*global_gradient(w);
                 Real w2 = max(Real(0.0), abs(w1) - scale*l1);
-                model.W(w) = w1 >= 0.0 ? w2 : -w2;
+                global_gradient(w) = w1 >= 0.0 ? w1 + w2 : w1 - w2;
               }
               else
-                model.W(w) -= (step_size*global_gradient(w)/ sqrt(adaGrad(w)));
+                global_gradient(w) = (step_size*global_gradient(w)/ sqrt(adaGrad(w)));
             }
+          }
+
+          // Set unwanted weights to zero.
+          // Map parameters using model, then set to zero.
+          CNLMBase::WordVectorsType g_R(0,0,0), g_Q(0,0,0), g_F(0,0,0), g_S(0,0,0);
+          CNLMBase::ContextTransformsType g_C, g_T;
+          CNLMBase::WeightsType g_B(0,0), g_FB(0,0);
+          Real* ptr = global_gradient.data();
+          model.map_parameters(ptr, g_S, g_T);
+          model.CNLMBase::map_parameters(ptr, g_R, g_Q, g_F, g_C, g_B, g_FB);
+
+          if (!config.updates.T) { for (auto g_t : g_T) g_t.setZero(); }
+          if (!config.updates.C) { for (auto g_c : g_C) g_c.setZero(); }
+          if (!config.updates.S) g_S.setZero();
+          if (!config.updates.R) g_R.setZero();
+          if (!config.updates.Q) g_Q.setZero();
+          if (!config.updates.F) g_F.setZero();
+          if (!config.updates.FB) g_FB.setZero();
+          if (!config.updates.B) g_B.setZero();
+
+          // Make more efficient!
+          for (int w=0; w<model.num_weights(); ++w) {
+            model.W(w) -= global_gradient(w);
           }
 
           if (minibatch_counter % 100 == 0) { cerr << "."; cout.flush(); }
