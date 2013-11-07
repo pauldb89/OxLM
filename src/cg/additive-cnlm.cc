@@ -53,8 +53,7 @@ void AdditiveCNLM::init(bool init_weights) {
   else W.setZero();
 
   Real* ptr = W.data();
-  map_parameters(ptr, S, T);
-  CNLMBase::map_parameters(ptr, R, Q, F, C, B, FB);
+  map_parameters(ptr, R, Q, F, C, B, FB, S, T);
 }
 
 int AdditiveCNLM::calculateDataSize(bool allocate) {
@@ -165,8 +164,6 @@ void AdditiveCNLM::map_parameters(Real*& ptr, WordVectorsType& s,
   // TODO(kmh): T_size probably wrong - take window width into account.
   int T_size = (config.diagonal ? word_width : word_width*word_width);
 
-  // Real* ptr = wa.data();
-
   new (&s) WordVectorsType(ptr, num_source_words, word_width);
   ptr += S_size;
 
@@ -176,4 +173,32 @@ void AdditiveCNLM::map_parameters(Real*& ptr, WordVectorsType& s,
     else                 t.push_back(ContextTransformType(ptr, word_width, word_width));
     ptr += T_size;
   }
+}
+
+void AdditiveCNLM::map_parameters(Real*& ptr, WordVectorsType& r,
+                                  WordVectorsType& q, WordVectorsType& f,
+                                  ContextTransformsType& c, WeightsType& b,
+                                  WeightsType& fb, WordVectorsType& s,
+                                  ContextTransformsType& t) const {
+  int word_width = config.word_representation_size;
+  int num_source_words = source_types();
+  int window_width = max(config.source_window_width,0);
+
+  int S_size = num_source_words * word_width;
+  // TODO(kmh): T_size probably wrong - take window width into account.
+  int T_size = (config.diagonal ? word_width : word_width*word_width);
+
+  // First allocate own elements.
+  new (&s) WordVectorsType(ptr, num_source_words, word_width);
+  ptr += S_size;
+
+  t.clear();
+  for (int i=0; i<(2*window_width+1); i++) {
+    if (config.diagonal) t.push_back(ContextTransformType(ptr, word_width, 1));
+    else                 t.push_back(ContextTransformType(ptr, word_width, word_width));
+    ptr += T_size;
+  }
+
+  // Subsequently allocate parent elements.
+  CNLMBase::map_parameters(ptr, r, q, f, c, b, fb);
 }

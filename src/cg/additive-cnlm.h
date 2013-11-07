@@ -45,7 +45,14 @@ public:
   /*virtual*/void source_grad_callback(TrainingInstance t, int t_i, int instance_counter, const VectorReal& grads);
   void source_representation(const Sentence& source, int target_index, VectorReal& result) const;
 
+  // Allocate only own parameters (not base class weights).
   void map_parameters(Real*& ptr, WordVectorsType& s,
+                      ContextTransformsType& t) const;
+
+  // Lazy function: allocate own and subsequently parent parameters.
+  void map_parameters(Real*& ptr, WordVectorsType& r, WordVectorsType& q,
+                      WordVectorsType& f, ContextTransformsType& c,
+                      WeightsType& b, WeightsType& fb, WordVectorsType& s,
                       ContextTransformsType& t) const;
 
   ContextTransformsType T;  // source window context transforms

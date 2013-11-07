@@ -398,8 +398,7 @@ void learn(const variables_map& vm, ModelData& config) {
           CNLMBase::ContextTransformsType g_C, g_T;
           CNLMBase::WeightsType g_B(0,0), g_FB(0,0);
           Real* ptr = global_gradient.data();
-          model.map_parameters(ptr, g_S, g_T);
-          model.CNLMBase::map_parameters(ptr, g_R, g_Q, g_F, g_C, g_B, g_FB);
+          model.map_parameters(ptr, g_R, g_Q, g_F, g_C, g_B, g_FB, g_S, g_T);
 
           if (!config.updates.T) { for (auto g_t : g_T) g_t.setZero(); }
           if (!config.updates.C) { for (auto g_c : g_C) g_c.setZero(); }
@@ -410,10 +409,8 @@ void learn(const variables_map& vm, ModelData& config) {
           if (!config.updates.FB) g_FB.setZero();
           if (!config.updates.B) g_B.setZero();
 
-          // Make more efficient!
-          for (int w=0; w<model.num_weights(); ++w) {
-            model.W(w) -= global_gradient(w);
-          }
+          // Apply gradients to model.
+          model.W -= global_gradient;
 
           if (minibatch_counter % 100 == 0) { cerr << "."; cout.flush(); }
         }
