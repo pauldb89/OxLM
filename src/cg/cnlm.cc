@@ -341,13 +341,14 @@ Real CNLMBase::gradient_(
         f += (0.5*l2*C.at(c).squaredNorm());
 
       // l2 gradient contributions
-      g_R.array() += (l2*R.array());
-      g_Q.array() += (l2*Q.array());
-      g_F.array() += (l2*F.array());
-      g_B.array() += (l2*B.array());
-      g_FB.array() += (l2*FB.array());
-      for (size_t c=0; c<C.size(); ++c)
-        g_C.at(c).array() += (l2*C.at(c).array());
+      if (config.updates.R)  g_R.array() += (l2*R.array());
+      if (config.updates.Q)  g_Q.array() += (l2*Q.array());
+      if (config.updates.F)  g_F.array() += (l2*F.array());
+      if (config.updates.B)  g_B.array() += (l2*B.array());
+      if (config.updates.FB)  g_FB.array() += (l2*FB.array());
+      if (config.updates.C)
+        for (size_t c=0; c<C.size(); ++c)
+          g_C.at(c).array() += (l2*C.at(c).array());
 
     }
   }

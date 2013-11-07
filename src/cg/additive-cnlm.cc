@@ -122,9 +122,11 @@ Real AdditiveCNLM::gradient(std::vector<Sentence>& source_corpus_,
         f += (0.5*source_l2*T.at(t).squaredNorm());
 
       // l2 gradient contributions
-      g_S.array() += (source_l2*S.array());
-      for (size_t t=0; t<T.size(); ++t)
-        g_T.at(t).array() += (source_l2*T.at(t).array());
+      if (config.updates.S)
+        g_S.array() += (source_l2*S.array());
+      if (config.updates.T)
+        for (size_t t=0; t<T.size(); ++t)
+          g_T.at(t).array() += (source_l2*T.at(t).array());
     }
   }
   return f;
