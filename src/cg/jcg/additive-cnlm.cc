@@ -13,8 +13,8 @@
 #include <cstring>
 #include <omp.h>
 
-#include "jcg/additive-cnlm.h"
-#include "jcg/gcnlm.h"
+#include "cg/jcg/additive-cnlm.h"
+#include "cg/jcg/gcnlm.h"
 #include "cg/utils.h"
 
 using namespace std;

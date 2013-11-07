@@ -19,7 +19,7 @@
 #include <Eigen/Core>
 
 // Local
-#include "jcg/additive-cnlm.h"
+#include "cg/jcg/additive-cnlm.h"
 #include "corpus/corpus.h"
 
 static const char *REVISION = "$Rev: 1 $";

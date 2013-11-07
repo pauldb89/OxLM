@@ -13,7 +13,7 @@
 #include "cg/config.h"
 #include "cg/utils.h"
 
-#include "jcg/gcnlm.h"
+#include "cg/jcg/gcnlm.h"
 
 namespace oxlm {
 
