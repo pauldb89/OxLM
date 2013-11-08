@@ -141,7 +141,10 @@ int main(int argc, char **argv) {
     size_t maxIndex = 0;
     for(size_t l_i = 1; l_i < labelCondProbs.size(); ++l_i)
     {
-      if (labelCondProbs.at(l_i) > maxVal) maxIndex = l_i;
+      if (labelCondProbs.at(l_i) > maxVal) {
+        maxIndex = l_i;
+        maxVal = labelCondProbs.at(l_i);
+      }
     }
     string maxLabel = labelLogProbs.at(maxIndex).first;
     predictedLabels.push_back(maxLabel);
