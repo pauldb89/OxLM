@@ -27,12 +27,6 @@ def main():
             help='Original target corpus (target sentences).')
     parser.add_argument('-o', '--output', dest='outputdir', default='.',
             help='Output directory for new source/target files.')
-    parser.add_argument('-s', '--output-source-file', dest='outputsource',
-            default='source_entries',
-            help='Output filename for new source file.')
-    parser.add_argument('-t', '--output-target-file', dest='outputtarget',
-            default='target_entries',
-            help='Output filename for new target file.')
     parser.add_argument('-p', '--prefix-eval-files', dest='prefix',
             default='test',
             help='Prefix for source and target evaluation files.')
@@ -53,11 +47,11 @@ def main():
     new_source_labels = list(chain.from_iterable(izip(enumeration_source, enumeration_target)))
     new_target_labels = list(chain.from_iterable(izip(source_lines, target_lines)))
 
-    with open(pjoin(args.outputdir, args.outputsource), 'w') as f:
+    with open(pjoin(args.outputdir, "%s_testtrain_source" % args.prefix), 'w') as f:
         for line in new_source_labels:
             f.write("%s\n" % line)
 
-    with open(pjoin(args.outputdir, args.outputtarget), 'w') as f:
+    with open(pjoin(args.outputdir, "%s_testtrain_target" % args.prefix), 'w') as f:
         for line in new_target_labels:
             f.write("%s\n" % line)
 
