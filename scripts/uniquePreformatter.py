@@ -51,11 +51,11 @@ def main():
     new_source_labels = list(chain.from_iterable(izip(enumeration_source, enumeration_target)))
     new_target_labels = list(chain.from_iterable(izip(source_lines, target_lines)))
 
-    with open(pjoin(args.outputdir, "%s_testtrain_source" % args.prefix), 'w') as f:
+    with open(pjoin(args.outputdir, "%s_retrain_source" % args.prefix), 'w') as f:
         for line in new_source_labels:
             f.write("%s\n" % line)
 
-    with open(pjoin(args.outputdir, "%s_testtrain_target" % args.prefix), 'w') as f:
+    with open(pjoin(args.outputdir, "%s_retrain_target" % args.prefix), 'w') as f:
         for line in new_target_labels:
             f.write("%s\n" % line)
 
@@ -64,13 +64,13 @@ def main():
         name = "%s_%s" % (args.prefix, group[0])
         data_lines = group[1]
         reference_lines = group[2]
-        with open(pjoin(args.outputdir, "%s_data" % name), 'w') as f:
+        with open(pjoin(args.outputdir, "%s_test_data" % name), 'w') as f:
             for line in data_lines:
                 f.write("%s\n" % line)
-        with open(pjoin(args.outputdir, "%s_reference" % name), 'w') as f:
+        with open(pjoin(args.outputdir, "%s_test_reference" % name), 'w') as f:
             for line in reference_lines:
                 f.write("%s\n" % line)
-        with open(pjoin(args.outputdir, "%s_candidates" % name), 'w') as f:
+        with open(pjoin(args.outputdir, "%s_test_candidates" % name), 'w') as f:
             for line in range(len(reference_lines)):
                 for offset in range(-5, 5):
                     f.write("%s " % reference_lines[ (line + offset) %

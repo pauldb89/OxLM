@@ -1,21 +1,30 @@
 #!/bin/bash
 
+datadir=$1
+trainprefix=$2
+testprefix=$3
+wordwidth=$4
+
+date=$(date +%Y%m%d-%H)
+expdir=../experiments/kmh/${date}_${trainprefix}_${testprefix}
+
+./europarl-split.sh ${datadir} ${expdir} ${trainprefix} ${testprefix}
+
 # Run training script.
 ../../bin/train_cnlm \
-  -s euro.train.1k_source \
-  -t euro.train.1k_target \
+  -s ${expdir}/data/${trainprefix}_joint_source \
+  -t ${expdir}/data/${trainprefix}_joint_target \
   --l2 1 \
   --step-size 0.1 \
-  --word-width 128 \
-  --model-out euro.train.1k.model
+  --word-width ${wordwidth} \
+  --model-out ${expdir}/${trainprefix}.model
 
 # Train on test data with frozen weights
 ../../bin/train_cnlm \
-  -s euro.dev.full_testtrain_source \
-  -t euro.dev.full_testtrain_target \
-  --model-in euro.train.1k.model \
-  --model-out euro.train.1k_euro.dev.full.testtrained.model \
-  --expand-source-dict true \
+  -s ${expdir}/data/${testprefix}_retrain_source \
+  -t ${expdir}/data/${testprefix}_retrain_target \
+  --model-in ${expdir}/${trainprefix}.model \
+  --model-out ${expdir}/${testprefix}.retrain.model \
   --updateT false \
   --updateC false \
   --updateR false \
@@ -26,7 +35,7 @@
 
 # Evaluate paraphrases
 ../../bin/pp-logprob \
- -l euro.dev.full_target_candidates \
- -s euro.dev.full_target_data \
- -r euro.dev.full_target_reference \
- -m euro.train.1k_euro.dev.full.testtrained.model
+ -l ${expdir}/data/${testprefix}_source_test_candidates \
+ -s ${expdir}/data/${testprefix}_source_test_data \
+ -r ${expdir}/data/${testprefix}_source_test_reference \
+ -m ${expdir}/${testprefix}.retrain.model
