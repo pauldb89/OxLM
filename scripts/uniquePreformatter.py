@@ -45,6 +45,14 @@ def main():
             line.strip().startswith('#')]
     assert len(source_lines) == len(target_lines)
 
+    ## Add source EOS symbol if specified
+    if args.eos_source:
+        source_lines = [line + " " + args.eos_source for line in source_lines]
+
+    ## Add target EOS symbol if specified
+    if args.eos_target:
+        target_lines = [line + " " + args.eos_target for line in target_lines]
+
     enumeration = range(len(source_lines))
     enumeration_source = ["us%d" % num for num in enumeration]
     enumeration_target = ["ut%d" % num for num in enumeration]
