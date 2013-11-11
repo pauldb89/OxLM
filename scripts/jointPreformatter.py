@@ -43,6 +43,14 @@ def main():
     target_lines = [appendTag(line.strip(), 'target') for line  in open(args.target, 'r') if len(line.strip()) > 0 and not line.strip().startswith('#')]
     assert len(source_lines) == len(target_lines)
 
+    if args.eos_source:
+        for line in source_lines:
+            line = line + " " + args.eos_source
+
+    if args.eos_target:
+        for line in target_lines:
+            line = line + " " + args.eos_target
+
     enumeration = range(len(source_lines))
     numbers = list(chain.from_iterable(izip(enumeration, enumeration)))
     new_source_labels = ["s%d" % num for num in numbers]
@@ -50,14 +58,10 @@ def main():
 
     with open(pjoin(args.outputdir, args.outputsource), 'w') as f:
         for line in new_source_labels:
-            if args.eos_source:
-                line = line + " " + args.eos_source
             f.write("%s\n" % line)
 
     with open(pjoin(args.outputdir, args.outputtarget), 'w') as f:
         for line in new_target_labels:
-            if args.eos_target:
-                line = line + " " + args.eos_target
             f.write("%s\n" % line)
 
 if __name__ == '__main__':
