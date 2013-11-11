@@ -26,8 +26,9 @@ python ../jointPreformatter.py \
   ${expdir}/data/${trainprefix}.de.cutoff.txt \
   -o ${expdir}/data \
   -s ${trainprefix}_joint_source \
-  -t ${trainprefix}_joint_target \
-  --target-eos-label _EOS_
+  -t ${trainprefix}_joint_target
+  # --source-eos-label _EOS_EN_ \
+  # --target-eos-label _EOS_DE_
 
 # Step 4: From test data, generate a joint target with a unique source, such
 # that us0 -> English Sentence One and ut0 -> German Sentence One.
@@ -35,8 +36,9 @@ python ../uniquePreformatter.py \
   ${expdir}/data/${testprefix}.en.cutoff.txt \
   ${expdir}/data/${testprefix}.de.cutoff.txt \
   -o ${expdir}/data \
-  -p ${testprefix} \
-  --target-eos-label _EOS_
+  -p ${testprefix}
+  # --source-eos-label _EOS_EN_ \
+  # --target-eos-label _EOS_DE_
 
 # Step 5: Add the test source labels to the training source, so these symbols
 # have been encountered.
