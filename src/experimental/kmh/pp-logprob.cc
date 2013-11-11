@@ -140,8 +140,10 @@ int main(int argc, char **argv) {
     // get index of max label and return max label
     Real maxVal = labelCondProbs.at(0);
     size_t maxIndex = 0;
-    for(size_t l_i = 1; l_i < labelCondProbs.size(); ++l_i)
+    if(vm.count("raw-scores")) cout << "Next sentence" << endl;
+    for(size_t l_i = 0; l_i < labelCondProbs.size(); ++l_i)
     {
+      if(vm.count("raw-scores")) cout << "Comp: " << l_i << ": " << labelCondProbs.at(l_i) << endl;
       if (labelCondProbs.at(l_i) > maxVal) {
         maxIndex = l_i;
         maxVal = labelCondProbs.at(l_i);
@@ -152,6 +154,7 @@ int main(int argc, char **argv) {
 
     if(!vm.count("no-sentence-predictions") && !vm.count("raw-scores")) cout << line << " ||| " << maxLabel << endl;
     if(vm.count("raw-scores")) cout << maxLabel << endl;
+    ++counter;
   }
   sentences_in.close();
 
