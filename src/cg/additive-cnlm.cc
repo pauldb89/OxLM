@@ -38,6 +38,18 @@ AdditiveCNLM::AdditiveCNLM(const ModelData& config,
     initWordToClass();
   }
 
+void AdditiveCNLM::reinitialize(const ModelData& config_,
+                               const Dict& source_labels,
+                               const Dict& target_labels,
+                               const std::vector<int>& classes) {
+  config = config;
+  indexes = classes;
+  m_target_labels = target_labels;
+  m_source_labels = source_labels;
+  init(true);
+  initWordToClass();
+}
+
 void AdditiveCNLM::init(bool init_weights) {
   calculateDataSize(true);  // Calculates space requirements for this class and
                             //the parent and allocates space accordingly.

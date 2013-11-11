@@ -316,20 +316,21 @@ void learn(const variables_map& vm, ModelData& config) {
   //////////////////////////////////////////////
   // Non-frozen model means we just learned a (new) dictionary. This requires
   // re-initializing the model using those dictionaries.
-  if(!frozen_model)
-    model = AdditiveCNLM(config, source_dict, target_dict, classes);
+  if(!frozen_model) {
+    model.reinitialize(config, source_dict, target_dict, classes);
+  }
 
   if(!frozen_model)
     model.FB = class_bias;
 
-  for (size_t s=0; s<source_corpus.size(); ++s)
+  for (size_t s = 0; s < source_corpus.size(); ++s)
     model.length_ratio += (Real(source_corpus.at(s).size()) / Real(target_corpus.at(s).size()));
   model.length_ratio /= Real(source_corpus.size());
 
   vector<size_t> training_indices(target_corpus.size());
   VectorReal unigram = VectorReal::Zero(model.labels());
-  for (size_t i=0; i<training_indices.size(); i++) {
-    for (size_t j=0; j<target_corpus.at(i).size(); j++)
+  for (size_t i = 0; i < training_indices.size(); i++) {
+    for (size_t j = 0; j < target_corpus.at(i).size(); j++)
       unigram(target_corpus.at(i).at(j)) += 1;
     training_indices[i] = i;
   }

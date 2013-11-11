@@ -23,6 +23,8 @@ public:
   AdditiveCNLM(const ModelData& config, const Dict& source_vocab, const Dict& target_vocab, const std::vector<int>& classes);
   ~AdditiveCNLM() {}
 
+  void reinitialize(const ModelData& config, const Dict& source_vocab, const Dict& target_vocab, const std::vector<int>& classes); 
+
   int source_types() const { return m_source_labels.size(); }
 
   const Dict& source_label_set() const { return m_source_labels; }
@@ -63,8 +65,8 @@ public:
 
   std::vector<Sentence> source_corpus;
 
-protected:
   /*virtual*/void init(bool init_weights=false);
+protected:
   /*virtual*/int calculateDataSize(bool allocate=false);
 
   Dict m_source_labels;

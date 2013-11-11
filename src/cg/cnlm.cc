@@ -38,6 +38,7 @@ CNLMBase::CNLMBase(const ModelData& config,
 void CNLMBase::initWordToClass() {
 
   assert (!indexes.empty());
+  word_to_class.clear();
   word_to_class.reserve(m_target_labels.size());
   for (int c = 0; c < int(indexes.size())-1; ++c) {
     int c_end = indexes.at(c+1);
