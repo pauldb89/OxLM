@@ -202,6 +202,27 @@ void learn(const variables_map& vm, ModelData& config) {
     freq_bin_type(vm["target"].as<string>(), config.classes, classes, target_dict, class_bias);
   //////////////////////////////////////////////
 
+  //////////////////////////////////////////////
+  // create and or load the model.
+  // If we do not load, we need to update some aspects of the model later, for
+  // instance push the updated dictionaries. If we do load, we need up modify
+  // aspects of the configuration (esp. weight update settings).
+  AdditiveCNLM model(config, source_dict, target_dict, classes);
+  bool frozen_model = false;
+
+  if (vm.count("model-in")) {
+    std::ifstream f(vm["model-in"].as<string>().c_str());
+    boost::archive::text_iarchive ar(f);
+    ar >> model;
+    target_dict = model.label_set();
+    source_dict = model.source_label_set();
+    // Set dictionary update to false and freeze model parameters in general.
+    frozen_model = true;
+    // Adjust config.update parameter, as this is dependent on the specific
+    // training run and not on the model per se.
+    model.config.updates = config.updates;
+  }
+  //////////////////////////////////////////////
 
   //////////////////////////////////////////////
   // read the training sentences
@@ -212,8 +233,14 @@ void learn(const variables_map& vm, ModelData& config) {
     stringstream line_stream(line);
     target_corpus.push_back(Sentence());
     Sentence& s = target_corpus.back();
-    while (line_stream >> token)
-      s.push_back(target_dict.Convert(token));
+    while (line_stream >> token) {
+      WordId w = target_dict.Convert(token, frozen_model);
+      if (w < 0) {
+        cerr << token << " " << w << endl;
+        assert(!"Word found in training target corpus, which wasn't encountered in originally trained and loaded model.");
+      }
+      s.push_back(w);
+    }
     s.push_back(end_id);
     num_training_instances += s.size();
   }
@@ -225,8 +252,14 @@ void learn(const variables_map& vm, ModelData& config) {
     stringstream line_stream(line);
     source_corpus.push_back(Sentence());
     Sentence& s = source_corpus.back();
-    while (line_stream >> token)
-      s.push_back(source_dict.Convert(token));
+    while (line_stream >> token) {
+        WordId w = source_dict.Convert(token, frozen_model);
+        if (w < 0) {
+          cerr << token << " " << w << endl;
+          assert(!"Word found in training source corpus, which wasn't encountered in originally trained and loaded model.");
+        }
+        s.push_back(w);
+    }
     if (config.source_eos)
       s.push_back(end_id);
   }
@@ -280,18 +313,18 @@ void learn(const variables_map& vm, ModelData& config) {
   assert (source_corpus.size() == target_corpus.size());
   assert (test_source_corpus.size() == test_target_corpus.size());
 
-  AdditiveCNLM model(config, source_dict, target_dict, classes);
-  model.FB = class_bias;
+  //////////////////////////////////////////////
+  // Non-frozen model means we just learned a (new) dictionary. This requires
+  // re-initializing the model using those dictionaries.
+  if(!frozen_model)
+    model = AdditiveCNLM(config, source_dict, target_dict, classes);
+
+  if(!frozen_model)
+    model.FB = class_bias;
 
   for (size_t s=0; s<source_corpus.size(); ++s)
     model.length_ratio += (Real(source_corpus.at(s).size()) / Real(target_corpus.at(s).size()));
   model.length_ratio /= Real(source_corpus.size());
-
-  if (vm.count("model-in")) {
-    std::ifstream f(vm["model-in"].as<string>().c_str());
-    boost::archive::text_iarchive ar(f);
-    ar >> model;
-  }
 
   vector<size_t> training_indices(target_corpus.size());
   VectorReal unigram = VectorReal::Zero(model.labels());
@@ -300,7 +333,11 @@ void learn(const variables_map& vm, ModelData& config) {
       unigram(target_corpus.at(i).at(j)) += 1;
     training_indices[i] = i;
   }
-  model.B = ((unigram.array()+1.0)/(unigram.sum()+unigram.size())).log();
+  if(!frozen_model)
+    model.B = ((unigram.array()+1.0)/(unigram.sum()+unigram.size())).log();
+
+  //////////////////////////////////////////////
+  // Model training.
 
   VectorReal adaGrad = VectorReal::Zero(model.num_weights());
   VectorReal global_gradient(model.num_weights());
