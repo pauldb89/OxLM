@@ -18,7 +18,6 @@ expdir=../../experiments/kmh/${date}_${trainprefix}_${testprefix}
   --step-size 0.1 \
   --word-width ${wordwidth} \
   --no-source-eos \
-  --iterations 2 \
   --model-out ${expdir}/${trainprefix}.model
 
 # Train on test data with frozen weights
@@ -28,7 +27,6 @@ expdir=../../experiments/kmh/${date}_${trainprefix}_${testprefix}
   --no-source-eos \
   --model-in ${expdir}/${trainprefix}.model \
   --model-out ${expdir}/${testprefix}.retrain.model \
-  --iterations 2 \
   --updateT false \
   --updateC false \
   --updateR false \
