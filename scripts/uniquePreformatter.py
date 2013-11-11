@@ -30,6 +30,10 @@ def main():
     parser.add_argument('-p', '--prefix-eval-files', dest='prefix',
             default='test',
             help='Prefix for source and target evaluation files.')
+    parser.add_argument('--source-eos-label', dest='eos_source', type=str, default=None,
+            help='Optional end of sentence label for source sentence.')
+    parser.add_argument('--target-eos-label', dest='eos_target', type=str, default=None,
+            help='Optional end of sentence label for target sentence.')
 
     args = parser.parse_args()
 

@@ -31,6 +31,10 @@ def main():
                         help='Output filename for new source file.')
     parser.add_argument('-t', '--output-target-file', dest='outputtarget', default='target_entries',
                         help='Output filename for new target file.')
+    parser.add_argument('--source-eos-label', dest='eos_source', type=str, default=None,
+            help='Optional end of sentence label for source sentence.')
+    parser.add_argument('--target-eos-label', dest='eos_target', type=str, default=None,
+            help='Optional end of sentence label for target sentence.')
 
 
     args = parser.parse_args()
@@ -46,10 +50,14 @@ def main():
 
     with open(pjoin(args.outputdir, args.outputsource), 'w') as f:
         for line in new_source_labels:
+            if args.eos_source:
+                line = line + " " + args.eos_source
             f.write("%s\n" % line)
 
     with open(pjoin(args.outputdir, args.outputtarget), 'w') as f:
         for line in new_target_labels:
+            if args.eos_target:
+                line = line + " " + args.eos_target
             f.write("%s\n" % line)
 
 if __name__ == '__main__':
