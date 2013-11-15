@@ -9,7 +9,7 @@ Creates three files for the CLDC task:
   3) Source with Label file: "2 L2D10S3" (later used in conversion)
 """
 def usage():
-  print 'cldc_preprocessor.py [--appendix string] [--datadir string] file_list dest_prefix language'
+  print 'cldc_processor.py [--appendix string] [--datadir string] file_list dest_prefix language'
 
 appendix = "_source"
 datadir = "/data/taipan/karher/deep-embeddings/data/alex/tmp"
@@ -62,5 +62,5 @@ for actualfile in filelist:
     line_appendix = ' '.join(tokens)
     target.write("%s\n"%line_appendix)
     source.write("L%dD%dS%d_%s\n"%(label_int,doc_count,sent_count,language))
-    labels.write("%d "%label_int)
+    labels.write("L%dD%dS%d_%s "%(label_int,doc_count,sent_count,language))
     labels.write("L%dD%dS%d_%s\n"%(label_int,doc_count,sent_count,language))
