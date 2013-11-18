@@ -9,10 +9,11 @@ Creates three files for the CLDC task:
   3) Source with Label file: "2 L2D10S3" (later used in conversion)
 """
 def usage():
-  print 'cldc_processor.py [--appendix string] [--datadir string] file_list dest_prefix language'
+  print 'cldc_processor.py [--appendix string] [--datadir string] [--postfix string] file_list dest_prefix language'
 
 appendix = "_source"
 datadir = "/data/taipan/karher/deep-embeddings/data/alex/tmp"
+postfix = "train"
 try:
   opts, args = getopt.getopt(sys.argv[1:], "had:", ["help","appendix=","datadir="])
 except getopt.GetoptError:
@@ -24,10 +25,12 @@ for opt, arg in opts:
     sys.exit()
   elif opt in ('-a', "--appendix"):
     appendix = arg
+  elif opt in ('-p', "--postfix"):
+    postfix = arg
   elif opt in ('-d', "--datadir"):
     datadir = arg
 
-filelist=open(args[0],'r')  
+filelist=open(args[0],'r')
 destprefix=args[1]
 language=args[2]
 word_freq = defaultdict(int)
@@ -46,7 +49,7 @@ for actualfile in filelist:
   file=open("%s/%s/%s"%(datadir,language,actualfile),'r')
   label_str = actualfile[-5] # xxx-L.txt
   label_int = -1
-  if label_str == "M": 
+  if label_str == "M":
     label_int = 1
   if label_str == "G":
     label_int = 2
@@ -61,6 +64,6 @@ for actualfile in filelist:
       tokens[i] = "%s%s"%(tokens[i],appendix)
     line_appendix = ' '.join(tokens)
     target.write("%s\n"%line_appendix)
-    source.write("L%dD%dS%d_%s\n"%(label_int,doc_count,sent_count,language))
-    labels.write("L%dD%dS%d_%s "%(label_int,doc_count,sent_count,language))
-    labels.write("L%dD%dS%d_%s\n"%(label_int,doc_count,sent_count,language))
+    source.write("L%dD%dS%d_%s_%s\n"%(label_int,doc_count,sent_count,language,postfix))
+    labels.write("L%dD%dS%d_%s_%s"%(label_int,doc_count,sent_count,language,postfix))
+    labels.write("L%dD%dS%d_%s_%s\n"%(label_int,doc_count,sent_count,language,postfix))
