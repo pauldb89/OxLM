@@ -65,7 +65,7 @@ def main():
     ostream_target = open(target_path, 'w')
 
     ## Split training set
-    label_train_write(labels, label_repetitions, istream, ostream_source, ostream_target, dynamic_repetitions)
+    label_train_split(labels, label_repetitions, istream, ostream_source, ostream_target, dynamic_repetitions)
 
     ## Cleanup
     istream.close()
