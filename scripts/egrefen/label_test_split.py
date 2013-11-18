@@ -1,7 +1,7 @@
 import sys
 import argparse
 
-REVISION = REVISION = "$Rev: 1 $"
+REVISION = "$Rev: 1 $"
 
 class DefaultHelpParser(argparse.ArgumentParser):
     def error(self, message):

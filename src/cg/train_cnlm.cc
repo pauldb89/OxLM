@@ -40,7 +40,7 @@ void classes_from_file(const std::string &class_file, vector<int>& classes, Dict
 
 
 int main(int argc, char **argv) {
-  cout << "Online training for neural translation models: Copyright 2013 Phil Blunsom, "
+  cerr << "Online training for neural translation models: Copyright 2013 Phil Blunsom, "
        << REVISION << '\n' << endl;
 
   ///////////////////////////////////////////////////////////////////////////////////////
