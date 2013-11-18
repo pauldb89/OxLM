@@ -117,10 +117,14 @@ Real AdditiveCNLM::gradient(std::vector<Sentence>& source_corpus_,
                               const TrainingInstances &training_instances,
                               Real l2, Real source_l2, WeightsType& g_W) {
 
+#pragma omp master
   source_corpus = source_corpus_;
+#pragma omp barrier
 
   Real* ptr = g_W.data();
+#pragma omp master
   map_parameters(ptr, g_S, g_T);  // Allocates data for child.
+#pragma omp barrier
 
   Real f = 0.0;
   f = gradient_(target_corpus, training_instances, l2, source_l2, ptr);  // Allocates data for parent.
@@ -154,16 +158,22 @@ void AdditiveCNLM::source_grad_callback(TrainingInstance t, int t_i, int instanc
   int source_len = source_sent.size();
   int window = config.source_window_width;
   if (window < 0) {
+    #pragma omp critical
+    {
     for (auto s_i : source_sent)
       g_S.row(s_i) += grads;
+    }
   }
   else {
     int centre = min(floor(Real(t_i)*length_ratio + 0.5), double(source_len-1));
     int start = max(centre-window, 0);
     int end = min(source_len, centre+window+1);
+    #pragma omp critical
+    {
     for (int i=start; i < end; ++i) {
       g_S.row(source_sent.at(i)) += window_product(i-centre+window, grads, true);
       context_gradient_update(g_T.at(i-centre+window), S.row(source_sent.at(i)), grads);
+    }
     }
   }
 }

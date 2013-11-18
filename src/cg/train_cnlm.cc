@@ -456,7 +456,7 @@ void learn(const variables_map& vm, ModelData& config) {
 
         start += minibatch_size;
       }
-//      #pragma omp master
+     // #pragma omp master
 //      cerr << endl;
 
       //Real iteration_time = (clock()-iteration_start) / (Real)CLOCKS_PER_SEC;
