@@ -10,7 +10,7 @@ class DefaultHelpParser(argparse.ArgumentParser):
         sys.exit(2)
 
 
-def label_train_split(labels, label_repetitions, istream, ostream_source, ostream_target, dynamic_repetitions):
+def split(labels, label_repetitions, istream, ostream_source, ostream_target, dynamic_repetitions):
 
     num_labels = len(labels)
 
@@ -65,7 +65,7 @@ def main():
     ostream_target = open(target_path, 'w')
 
     ## Split training set
-    label_train_split(labels, label_repetitions, istream, ostream_source, ostream_target, dynamic_repetitions)
+    split(labels, label_repetitions, istream, ostream_source, ostream_target, dynamic_repetitions)
 
     ## Cleanup
     istream.close()
