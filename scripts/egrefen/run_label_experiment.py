@@ -5,7 +5,7 @@ import argparse
 
 from copy import deepcopy as copy
 
-REVISION = "$Rev: 1 $"
+REVISION = "$Rev: 2 $"
 
 class DefaultHelpParser(argparse.ArgumentParser):
     def error(self, message):
@@ -13,13 +13,22 @@ class DefaultHelpParser(argparse.ArgumentParser):
         self.print_help()
         sys.exit(2)
 
+def ewrite(message, *args):
+    if not message.endswith('\n'):
+        message = message+"\n"
+    sys.stderr.write(message % tuple(args))
+
+def vwrite(message, *args):
+    message = "VERBOSE: "+message
+    ewrite(message, *args)
+
 def process_args(args):
 
     ## Build arg config
     config = {}
 
     config["group_exec"] = {}
-    config["group_exec"]["python_script_path"] = None                   # Mandatory
+    # config["group_exec"]["python_script_path"] = None                   # Mandatory
     config["group_exec"]["oxcg_bin"] = None                             # Mandatory
 
     config["group_testset_reformat"] = {}
@@ -43,13 +52,13 @@ def process_args(args):
 
         for groupkey in existing_config:
             for key in existing_config[groupkey]:
-                config[groupkey][key] = existing_config["group_exec"][key]
+                config[groupkey][key] = existing_config[groupkey][key]
 
 
     ## Override config with command line args, if non-null
 
-    if args.python_script_path:
-        config["group_exec"]["python_script_path"] = args.python_script_path
+    # if args.python_script_path:
+    #     config["group_exec"]["python_script_path"] = args.python_script_path
     if args.oxcg_bin:
         config["group_exec"]["oxcg_bin"] = args.oxcg_bin
 
@@ -69,11 +78,16 @@ def process_args(args):
     return config
 
 def valid(config, command):
-    ## Validate args
-    throw_error = command in ['t','e','p','tp', 'pe', 'te', 'tpe']
 
-    if not config["group_exec"]["python_script_path"]: throw_error = True
-    if not config["group_exec"]["oxcg_bin"]: throw_error = True
+    ## Validate args
+    throw_error = False
+
+    if not command:
+        return throw_error
+
+    # if not config["group_exec"]["python_script_path"]: throw_error = True
+    if 't' in command or 'e' in command:
+        if not config["group_exec"]["oxcg_bin"]: throw_error = True
 
     if 'p' in command:
         if not config["group_testset_reformat"]["test_sentences"]: throw_error = True
@@ -87,7 +101,7 @@ def saveconfig(config, configfile):
     config = copy(config)
 
     # Clean group_exec
-    if not config["group_exec"]["python_script_path"]:              del config["group_exec"]["python_script_path"]
+    # if not config["group_exec"]["python_script_path"]:              del config["group_exec"]["python_script_path"]
     if not config["group_exec"]["oxcg_bin"]:                        del config["group_exec"]["oxcg_bin"]
     if not config["group_exec"]:                                    del config["group_exec"]
 
@@ -109,16 +123,15 @@ def saveconfig(config, configfile):
 def print_config(config):
 
     if config["group_testset_reformat"]["labels"]:
-        labels = ", ".join(config["group_testset_reformat"]["labels"])
+        labels = ", ".join(config["group_testset_reformat"]["labels"].split(','))
     else:
         labels = None
 
     output="""
-    #############################################################
+    ###################### Configuration ########################
     #############################################################
     ## Path options
     ## ------------
-    ## python script path = %s
     ## oxlm bin path = %s
     #############################################################
     ## Test set preprocessing options
@@ -130,10 +143,10 @@ def print_config(config):
     ## repetitions = %d
     ## dynamic repretitions = %s
     #############################################################
-    #############################################################
+    ################### End of Configuration ####################
     """ % (
             ## path options
-            config["group_exec"]["python_script_path"],
+            # config["group_exec"]["python_script_path"],
             config["group_exec"]["oxcg_bin"],
 
             ## preprocessing options
@@ -145,10 +158,24 @@ def print_config(config):
             config["group_testset_reformat"]["dynamic_repetitions"]
         )
 
-    sys.stderr.write(output)
+    ewrite(output)
 
-def process_testset():
-    pass
+def process_testset(labels, label_repetitions, istream, ostream_source, ostream_target, dynamic_repetitions):
+
+    num_labels = len(labels)
+
+    test_sentences = [line.strip() for line in istream if len(line.strip()) > 0 and not line.strip().startswith('#')]
+    num_test_sentences = len(test_sentences)
+
+    for k in range(num_test_sentences):
+        for i in range(num_labels):
+            ostream_source.write('s(%d,%d)\n' % (k, i))
+            ostream_target.write('%s\n' % test_sentences[k])
+            if dynamic_repetitions:
+                label_repetitions = len(test_sentences[k].split())
+            for n in range(label_repetitions):
+                ostream_source.write('s(%d,%d)\n' % (k, i))
+                ostream_target.write('%s\n' % labels[i])
 
 def process_dataset():
     pass
@@ -169,7 +196,7 @@ def main():
 
     group_exec = parser.add_argument_group("executable/script paths")
 
-    group_exec.add_argument('--python-scripts', dest="python_script_path", help="Path for python helper scripts.", default=None)
+    # group_exec.add_argument('--python-scripts', dest="python_script_path", help="Path for python helper scripts.", default=None)
     group_exec.add_argument('--oxcg-bin', dest='oxcg_bin', help="Path for oxcg/bin directory.", default=None)
 
     group_testset_reformat = parser.add_argument_group("test set reformatting arguments")
@@ -191,6 +218,9 @@ def main():
 
     args = parser.parse_args()
 
+    if args.verbose:
+        vwrite("Run CNLM label experiments. Copyright 2013 Ed Grefenstette, %s.", REVISION)
+
     config = process_args(args)
 
     if args.verbose:
@@ -205,10 +235,10 @@ def main():
         configfile.close()
         if args.saveandcontinue_config_path:
             if args.verbose:
-                sys.stderr.write("Saved configuration to %s and continuing.\n" % args.save_config_path)
+                vwrite("Saved configuration to %s and continuing.", args.save_config_path)
         else:
             if args.verbose:
-                sys.stderr.write("Saved configuration to %s and quitting.\n" % args.save_config_path)
+                vwrite("Saved configuration to %s and quitting.", args.save_config_path)
             sys.exit(0)
 
     if not (valid(config, args.command)):
@@ -220,10 +250,31 @@ def main():
 
     if must_train:
         raise NotImplementedError("Training not implemented yet")
+
     if must_preprocess:
-        raise NotImplementedError("")
+        if args.verbose:
+            vwrite("Preprocessing test script %s.", config["group_testset_reformat"]["test_sentences"])
+
+        ppconfig = config["group_testset_reformat"]
+        istream = open(ppconfig["test_sentences"])
+        ostream_source = open(ppconfig["output_source"], 'w')
+        ostream_target = open(ppconfig["output_target"], 'w')
+        process_testset(labels=ppconfig["labels"],
+                        label_repetitions=ppconfig["repetitions"],
+                        istream=istream,
+                        ostream_source=ostream_source,
+                        ostream_target=ostream_target,
+                        dynamic_repetitions=ppconfig["dynamic_repetitions"])
+        istream.close()
+        ostream_source.close()
+        ostream_target.close()
+
+        if args.verbose:
+            vwrite("Done preprocessing test script.")
+            vwrite("Output written to %s and %s.", ppconfig["output_source"], ppconfig["output_target"])
+
     if must_evaluate:
-        raise NotImplementedError
+        raise NotImplementedError("Evaluation not implemented yet")
 
 if __name__ == '__main__':
     main()
