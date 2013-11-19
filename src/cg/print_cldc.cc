@@ -84,7 +84,7 @@ int main(int argc, char **argv) {
     stringstream sentence_stream(line);
     sentence_stream >> topic >> word;
 
-    WordId id = model.label_set().Lookup(word);
+    WordId id = model.source_label_set().Lookup(word);
     assert(id > -1);
     result = model.S.row(id);
     outfile << topic;

@@ -7,7 +7,7 @@ for lang in "de" "en"
 do
   for filelist in \
     "train/${lang}.100" "train/${lang}.200" "train/${lang}.500" \
-    "train/${lang}.1000" "train/${lang}.5000" "train/${lang}.10000" \
+    "train/${lang}.1000" "train/${lang}.5000" "train/${lang}.10000"
   do
     if [ ${lang} == "de" ]
     then
@@ -15,9 +15,9 @@ do
     else
       appendix="_source"
     fi
-    filename="${dataroot}/${filelist}"
+    filename="${dataroot}/${filelist}.txt"
     outdir="${expdir}/${filelist}"
-    python cldc_processor.py --appendix ${appendix} --datadir "${datadir}/tmp" \
+    python cldc_preprocessor.py --appendix ${appendix} --datadir "${dataroot}/tmp" \
       --postfix "train" ${filename} ${outdir} ${lang}
   done
 done
@@ -31,8 +31,8 @@ do
   else
     appendix="_source"
   fi
-  filename="${dataroot}/${filelist}"
+  filename="${dataroot}/${filelist}.txt"
   outdir="${expdir}/${filelist}"
-  python cldc_processor.py --appendix ${appendix} --datadir "${datadir}/tmp" \
+  python cldc_preprocessor.py --appendix ${appendix} --datadir "${dataroot}/tmp" \
     --postfix "test" ${filename} ${outdir} ${lang}
 done

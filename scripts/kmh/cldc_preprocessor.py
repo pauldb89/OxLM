@@ -15,7 +15,7 @@ appendix = "_source"
 datadir = "/data/taipan/karher/deep-embeddings/data/alex/tmp"
 postfix = "train"
 try:
-  opts, args = getopt.getopt(sys.argv[1:], "had:", ["help","appendix=","datadir="])
+  opts, args = getopt.getopt(sys.argv[1:], "hadp:", ["help","appendix=","datadir=","postfix="])
 except getopt.GetoptError:
   usage()
   sys.exit(2)
@@ -65,5 +65,5 @@ for actualfile in filelist:
     line_appendix = ' '.join(tokens)
     target.write("%s\n"%line_appendix)
     source.write("L%dD%dS%d_%s_%s\n"%(label_int,doc_count,sent_count,language,postfix))
-    labels.write("L%dD%dS%d_%s_%s"%(label_int,doc_count,sent_count,language,postfix))
+    labels.write("L%dD%dS%d_%s_%s "%(label_int,doc_count,sent_count,language,postfix))
     labels.write("L%dD%dS%d_%s_%s\n"%(label_int,doc_count,sent_count,language,postfix))
