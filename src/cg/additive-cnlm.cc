@@ -46,8 +46,31 @@ void AdditiveCNLM::reinitialize(const ModelData& config_,
   indexes = classes;
   m_target_labels = target_labels;
   m_source_labels = source_labels;
+  delete [] m_data;
   init(true);
   initWordToClass();
+}
+
+// Installs a new source dictionary in the model (initialized randomly) and
+// pushes all other vectors over from existing m_data.
+void AdditiveCNLM::expandSource(const Dict& source_labels) {
+  // Collect sizes and pointers.
+  Real* old_data = m_data;
+  int old_size = calculateDataSize(false);
+  int old_S_size = source_types() * config.word_representation_size;
+  int new_S_size = source_labels.size() * config.word_representation_size;
+
+  // Replace source dictionary and get new data vector with random weights.
+  m_source_labels = source_labels;
+  init(true);
+
+  // Copy over all data from old vector (S is at the beginning, so use an offset
+  // of size old_S_size on old and new_S_size on new vector.
+  for (int i = 0; i < (old_size - old_S_size); ++i)
+    m_data[i + new_S_size] = old_data[i + old_S_size];
+
+  // Delete old data source.
+  delete [] old_data;
 }
 
 void AdditiveCNLM::init(bool init_weights) {
