@@ -22,7 +22,7 @@
 #include "cg/additive-cnlm.h"
 #include "corpus/corpus.h"
 
-static const char *REVISION = "$Rev: 247 $";
+static const char *REVISION = "$Rev: 248 $";
 
 // Namespaces
 using namespace boost;
@@ -120,19 +120,21 @@ int main(int argc, char **argv) {
 
     Real sentence_p=0.0;
     for (size_t t_i=0; t_i < t.size(); ++t_i) {
-      WordId w = t.at(t_i);
-      int context_start = t_i - context_width;
-      bool sentence_start = (t_i==0);
-
-      for (int i=context_width-1; i>=0; --i) {
-        int j=context_start+i;
-        sentence_start = (sentence_start || j<0);
-        int v_i = (sentence_start ? start_id : t.at(j));
-
-        context.at(i) = v_i;
+      if(model.label_set().valid(w)) {
+        WordId w = t.at(t_i);
+        int context_start = t_i - context_width;
+        bool sentence_start = (t_i==0);
+  
+        for (int i=context_width-1; i>=0; --i) {
+          int j=context_start+i;
+          sentence_start = (sentence_start || j<0);
+          int v_i = (sentence_start ? start_id : t.at(j));
+  
+          context.at(i) = v_i;
+        }
+        Real log_prob = model.log_prob(w, context, s, false, t_i);
+        sentence_p += log_prob;
       }
-      Real log_prob = model.log_prob(w, context, s, false, t_i);
-      sentence_p += log_prob;
 
       tokens++;
 
