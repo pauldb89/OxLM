@@ -574,7 +574,7 @@ Real perplexity(const AdditiveCNLM& model, const vector<Sentence>& test_source_c
 
 
 void freq_bin_type(const std::string &corpus, int num_classes, vector<int>& classes, Dict& dict, VectorReal& class_bias) {
-freq_bin_type(corpus, num_classes, classes, dict, class_bias, "</s>");
+  freq_bin_type(corpus, num_classes, classes, dict, class_bias, "</s>");
 }
 
 void freq_bin_type(const std::string &corpus, int num_classes, vector<int>& classes, Dict& dict, VectorReal& class_bias, const std::string& eos) {
