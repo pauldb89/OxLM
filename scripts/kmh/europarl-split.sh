@@ -12,12 +12,12 @@ testprefix=$4
 mkdir -p ${expdir}/data
 
 # Step 1: Remove singletons from training data.
-python ../map_unknowns.py -u _UNK_EN_ ${datadir}/${trainprefix}.en.txt > ${expdir}/data/${trainprefix}.en.cutoff.txt
-python ../map_unknowns.py -u _UNK_DE_ ${datadir}/${trainprefix}.de.txt > ${expdir}/data/${trainprefix}.de.cutoff.txt
+python ../map_unknowns.py --cutoff 0 -u _UNK_EN_ ${datadir}/${trainprefix}.en.txt > ${expdir}/data/${trainprefix}.en.cutoff.txt
+python ../map_unknowns.py --cutoff 0 -u _UNK_DE_ ${datadir}/${trainprefix}.de.txt > ${expdir}/data/${trainprefix}.de.cutoff.txt
 
 # Step 2: Remove unknown wors from test data conditional on training data.
-python ../map_unknowns.py -u _UNK_EN_ ${datadir}/${trainprefix}.en.txt ${datadir}/${testprefix}.en.txt > ${expdir}/data/${testprefix}.en.cutoff.txt
-python ../map_unknowns.py -u _UNK_DE_ ${datadir}/${trainprefix}.de.txt ${datadir}/${testprefix}.de.txt > ${expdir}/data/${testprefix}.de.cutoff.txt
+python ../map_unknowns.py --cutoff 0 -u _UNK_EN_ ${datadir}/${trainprefix}.en.txt ${datadir}/${testprefix}.en.txt > ${expdir}/data/${testprefix}.en.cutoff.txt
+python ../map_unknowns.py --cutoff 0 -u _UNK_DE_ ${datadir}/${trainprefix}.de.txt ${datadir}/${testprefix}.de.txt > ${expdir}/data/${testprefix}.de.cutoff.txt
 
 # Step 3: From training data, generate a joint target with a shared source, such
 # that S0 -> English Sentence One and S0 -> German Sentence One.

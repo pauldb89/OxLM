@@ -58,10 +58,11 @@ fi
   --updateB false
 
 # Evaluate paraphrases
-../../bin/pp-logprob \
+../../bin/pp-altprob \
  --no-sentence-predictions \
- -l ${expdir}/data/${testprefix}_source_test_candidates \
- -s ${expdir}/data/${testprefix}_source_test_data \
- -r ${expdir}/data/${testprefix}_source_test_reference \
+ --raw-scores \
+ -l ${expdir}/data/${testprefix}_source_alttest_candidates \
+ -s ${expdir}/data/${testprefix}_source_alttest_symbols \
+ -t ${expdir}/data/${testprefix}_source_alttest_targets \
  -m ${expdir}/${testprefix}.retrain.model \
- > ${expdir}/result
+ | tee ${expdir}/result
