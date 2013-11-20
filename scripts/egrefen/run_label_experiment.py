@@ -4,6 +4,7 @@ import argparse
 # import shlex
 
 from copy import deepcopy as copy
+from collections import OrderedDict
 
 from yaml import load as yload
 from yaml import dump as ydump
@@ -25,47 +26,51 @@ class DefaultHelpParser(argparse.ArgumentParser):
 
 class DefaultActionObject(object):
     """docstring for ActionObject"""
+
     def __init__(self, argv):
 
-        parser, args = self.parse(argv)
+        self.parser, self.args = self.parse(argv)
 
-        self.command = args.command
+        self.command = self.args.command
 
-        if args.verbose:
+        if self.args.verbose:
             self.vwrite("Run CNLM label experiments. Copyright 2013 Ed Grefenstette, %s.", REVISION)
 
         self.config = {}
 
-        if args.save_config_path:
-            configfile = open(args.save_config_path, 'w')
-
-            self.save_config(configfile)
-            configfile.close()
-
-            if args.verbose:
-                self.vwrite("Saved configuration to %s and quitting.", args.save_config_path)
-                sys.exit(0)
+        if self.args.save_config_path:
+            self.save()
 
         if not self.valid():
-            parser.error("No command specified.")
+            self.parser.error("No command specified.")
 
         must_ready = 'r' in self.command
         must_train = 't' in self.command
         must_preprocess = 'p' in self.command
         must_evaluate = 'e' in self.command
 
-        self.actions = []
+        self.actions = OrderedDict()
 
-        if must_ready: self.actions.append(ActionReadyTrainingData(self))
-        if must_train: self.actions.append(ActionTrainModel(self))
-        if must_preprocess: self.actions.append(ActionPreprocessTestset(self))
-        if must_evaluate: self.actions.append(ActionEvaluateModel(self))
+        if must_ready:
+            self.actions['r'] = ActionReadyTrainingData(self)
+        if must_train:
+            self.actions['t'] = ActionTrainModel(self)
+        if must_preprocess:
+            self.actions['p'] = ActionPreprocessTestset(self)
+        if must_evaluate:
+            self.actions['e'] = ActionEvaluateModel(self)
 
-        for action in self.actions:
-            action.initialise_config()
-            action.process_args(args)
+        for actionkey in self.actions:
+            self.actions[actionkey].initialise_config()
+
+        if self.args.config:
+            self.load_config()
+
+        for actionkey in self.actions:
+            action = self.actions[actionkey]
+            action.process_args()
             if not action.valid():
-                parser.error("Not enough arguments.")
+                self.parser.error("Not enough arguments.")
 
         if must_ready:
             raise NotImplementedError("Readying dataset not implemented yet")
@@ -74,26 +79,7 @@ class DefaultActionObject(object):
             raise NotImplementedError("Training not implemented yet")
 
         if must_preprocess:
-            if args.verbose:
-                self.vwrite("Preprocessing test script %s.", self.config["group_testset_reformat"]["test_sentences"])
-
-            ppconfig = self.config["group_testset_reformat"]
-            istream = open(ppconfig["test_sentences"])
-            ostream_source = open(ppconfig["output_source"], 'w')
-            ostream_target = open(ppconfig["output_target"], 'w')
-            self.process_testset(labels=ppconfig["labels"],
-                                 label_repetitions=ppconfig["repetitions"],
-                                 istream=istream,
-                                 ostream_source=ostream_source,
-                                 ostream_target=ostream_target,
-                                 dynamic_repetitions=ppconfig["dynamic_repetitions"])
-            istream.close()
-            ostream_source.close()
-            ostream_target.close()
-
-            if args.verbose:
-                self.vwrite("Done preprocessing test script.")
-                self.vwrite("Output written to %s and %s.", ppconfig["output_source"], ppconfig["output_target"])
+            self.actions['p'].do_action()
 
         if must_evaluate:
             raise NotImplementedError("Evaluation not implemented yet")
@@ -146,20 +132,14 @@ class DefaultActionObject(object):
         self.config["group_exec"] = {}
         self.config["group_exec"]["oxcg_bin"] = None  # Mandatory
 
-    def load_config(self, args):
+    def load_config(self):
         ## Load configuration if specified
 
-        existing_config = yload(open(args.config), YLoader)
+        existing_config = yload(open(self.args.config), YLoader)
 
         for groupkey in existing_config:
             for key in existing_config[groupkey]:
                 self.config[groupkey][key] = existing_config[groupkey][key]
-
-    def process_args(self, args):
-        ## Override config with command line args, if non-null
-
-        if args.oxcg_bin:
-            self.config["group_exec"]["oxcg_bin"] = args.oxcg_bin
 
     def valid(self):
 
@@ -179,6 +159,30 @@ class DefaultActionObject(object):
         if not cleanconfig["group_exec"]: del cleanconfig["group_exec"]
         return cleanconfig
 
+    def save(self):
+        configfile = open(self.args.save_config_path, 'w')
+
+        actions = [ActionReadyTrainingData(self),
+                   ActionTrainModel(self),
+                   ActionPreprocessTestset(self),
+                   ActionEvaluateModel(self)]
+
+        for action in actions:
+            action.initialise_config()
+
+        if self.args.config:
+            self.load_config()
+
+        for action in actions:
+            action.process_args()
+
+        self.save_config(configfile)
+        configfile.close()
+
+        if self.args.verbose:
+            self.vwrite("Saved configuration to %s and quitting.", self.args.save_config_path)
+            sys.exit(0)
+
     def save_config(self, configfile):
         cleanconfig = self.config_clean_copy(self.config)
         ydump(cleanconfig, configfile, YDumper, default_flow_style=False)
@@ -194,11 +198,9 @@ class ActionReadyTrainingData(DefaultActionObject):
 
     def initialise_config(self):
         that=self.that
-        raise NotImplementedError
 
-    def process_args(self, args):
+    def process_args(self):
         that=self.that
-        raise NotImplementedError
 
     def valid(self):
         that=self.that
@@ -227,22 +229,22 @@ class ActionPreprocessTestset(DefaultActionObject):
         that.config["group_testset_reformat"]["dynamic_repetitions"] = False     # Optional
 
 
-    def process_args(self, args):
+    def process_args(self):
         that=self.that
 
         ## Override config with command line args, if non-null
-        if args.test_sentences:
-            that.config["group_testset_reformat"]["test_sentences"] = args.test_sentences
-        if args.output_source:
-            that.config["group_testset_reformat"]["output_source"] = args.output_source
-        if args.output_target:
-            that.config["group_testset_reformat"]["output_target"] = args.output_target
-        if args.labels:
-            that.config["group_testset_reformat"]["labels"] = args.labels
-        if args.repetitions:
-            that.config["group_testset_reformat"]["repetitions"] = args.repetitions
-        if args.dynamic_repetitions:
-            that.config["group_testset_reformat"]["dynamic_repetitions"] = args.dynamic_repetitions
+        if that.args.test_sentences:
+            that.config["group_testset_reformat"]["test_sentences"] = that.args.test_sentences
+        if that.args.output_source:
+            that.config["group_testset_reformat"]["output_source"] = that.args.output_source
+        if that.args.output_target:
+            that.config["group_testset_reformat"]["output_target"] = that.args.output_target
+        if that.args.labels:
+            that.config["group_testset_reformat"]["labels"] = that.args.labels
+        if that.args.repetitions:
+            that.config["group_testset_reformat"]["repetitions"] = that.args.repetitions
+        if that.args.dynamic_repetitions:
+            that.config["group_testset_reformat"]["dynamic_repetitions"] = that.args.dynamic_repetitions
 
     def valid(self):
         that=self.that
@@ -264,6 +266,47 @@ class ActionPreprocessTestset(DefaultActionObject):
         if not that.config["group_testset_reformat"]:                        del cleanconfig["group_testset_reformat"]
         return cleanconfig
 
+    def process_testset(self, labels, label_repetitions, istream, ostream_source, ostream_target, dynamic_repetitions):
+
+        num_labels = len(labels)
+
+        test_sentences = [line.strip() for line in istream if len(line.strip()) > 0 and not line.strip().startswith('#')]
+        num_test_sentences = len(test_sentences)
+
+        for k in range(num_test_sentences):
+            for i in range(num_labels):
+                ostream_source.write('s(%d,%d)\n' % (k, i))
+                ostream_target.write('%s\n' % test_sentences[k])
+                if dynamic_repetitions:
+                    label_repetitions = len(test_sentences[k].split())
+                for n in range(label_repetitions):
+                    ostream_source.write('s(%d,%d)\n' % (k, i))
+                    ostream_target.write('%s\n' % labels[i])
+
+    def do_action(self):
+        that=self.that
+        if that.args.verbose:
+            that.vwrite("Preprocessing test script %s.", that.config["group_testset_reformat"]["test_sentences"])
+
+        ppconfig = that.config["group_testset_reformat"]
+        istream = open(ppconfig["test_sentences"])
+        ostream_source = open(ppconfig["output_source"], 'w')
+        ostream_target = open(ppconfig["output_target"], 'w')
+        self.process_testset(labels=ppconfig["labels"],
+                             label_repetitions=ppconfig["repetitions"],
+                             istream=istream,
+                             ostream_source=ostream_source,
+                             ostream_target=ostream_target,
+                             dynamic_repetitions=ppconfig["dynamic_repetitions"])
+        istream.close()
+        ostream_source.close()
+        ostream_target.close()
+
+        if that.args.verbose:
+            that.vwrite("Done preprocessing test script.")
+            that.vwrite("Output written to %s and %s.", ppconfig["output_source"], ppconfig["output_target"])
+
+
 class ActionTrainModel(DefaultActionObject):
     """docstring for ActionTrainModel"""
     def __init__(self, that):
@@ -271,11 +314,13 @@ class ActionTrainModel(DefaultActionObject):
 
     def initialise_config(self):
         that=self.that
-        raise NotImplementedError
+        that.config["group_exec"] = {}
+        that.config["group_exec"]["oxcg_bin"] = None  # Mandatory
 
-    def process_args(self, args):
+    def process_args(self):
         that=self.that
-        raise NotImplementedError
+        if that.args.oxcg_bin:
+            that.config["group_exec"]["oxcg_bin"] = that.args.oxcg_bin
 
     def valid(self):
         that=self.that
@@ -296,11 +341,13 @@ class ActionEvaluateModel(DefaultActionObject):
 
     def initialise_config(self):
         that=self.that
-        raise NotImplementedError
+        that.config["group_exec"] = {}
+        that.config["group_exec"]["oxcg_bin"] = None  # Mandatory
 
-    def process_args(self, args):
+    def process_args(self):
         that=self.that
-        raise NotImplementedError
+        if that.args.oxcg_bin:
+            that.config["group_exec"]["oxcg_bin"] = that.args.oxcg_bin
 
     def valid(self):
         that=self.that
@@ -331,7 +378,7 @@ def run_evaluation():
     pass
 
 def main(argv):
-    DefaultActionObject(argv)
+    mainAction = DefaultActionObject(argv)
 
 if __name__ == '__main__':
     main(sys.argv[1:])
