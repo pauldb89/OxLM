@@ -6,7 +6,7 @@ export OMP_NUM_THREADS=24
 
 ARRAY=()
 
-datadir="/data/taipan/karher/Corpora/Europarl/parallel"
+# datadir="/data/taipan/karher/Corpora/Europarl/parallel"
 datadir="/data/taipan/karher/oxlm/sample"
 traindata="mini"
 testdata="mini"
@@ -16,7 +16,7 @@ for step in 0.05
 do
   for l2 in 1
   do
-    for its in 10
+    for its in 1 2 3 4 5 6 7 8
     do
       for nonlinearity in "false"
       do
