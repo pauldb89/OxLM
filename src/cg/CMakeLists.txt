@@ -10,7 +10,7 @@ add_library(cnlm SHARED cnlm.cc cnlm.h additive-cnlm.cc additive-cnlm.h)
 #############################################
 
 # add_executable(train_cnlm train_cnlm.cc cnlm.cc additive-cnlm.cc)
-set(EXECUTABLES train_cnlm cg perplexity label printconfig)
+set(EXECUTABLES train_cnlm cg perplexity label printconfig print_cldc)
 foreach(f ${EXECUTABLES})
   add_executable(${f} ${f}.cc)
   target_link_libraries(${f} cnlm)

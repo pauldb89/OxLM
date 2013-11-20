@@ -97,6 +97,7 @@ int main(int argc, char **argv) {
     ("window", value<int>()->default_value(-1),
         "Width of window of source words conditioned on.")
     ("no-source-eos", "do not add end of sentence tag to source representations.")
+    ("replace-source-dict", "replace the source dictionary of a loaded model with a new one.")
     ("verbose,v", "print perplexity for each sentence (1) or input token (2) ")
     ("randomise", "visit the training tokens in random order.")
     ("diagonal-contexts", "Use diagonal context matrices (usually faster).")
@@ -209,13 +210,19 @@ void learn(const variables_map& vm, ModelData& config) {
   // aspects of the configuration (esp. weight update settings).
   AdditiveCNLM model(config, source_dict, target_dict, classes);
   bool frozen_model = false;
+  bool replace_source_dict = false;
+  if (vm.count("replace-source-dict")) {
+    assert(vm.count("model-in"));
+    replace_source_dict = true;
+  }
 
   if (vm.count("model-in")) {
     std::ifstream f(vm["model-in"].as<string>().c_str());
     boost::archive::text_iarchive ar(f);
     ar >> model;
     target_dict = model.label_set();
-    source_dict = model.source_label_set();
+    if(!replace_source_dict)
+      source_dict = model.source_label_set();
     // Set dictionary update to false and freeze model parameters in general.
     frozen_model = true;
     // Adjust config.update parameter, as this is dependent on the specific
@@ -253,12 +260,14 @@ void learn(const variables_map& vm, ModelData& config) {
     source_corpus.push_back(Sentence());
     Sentence& s = source_corpus.back();
     while (line_stream >> token) {
-        WordId w = source_dict.Convert(token, frozen_model);
-        if (w < 0) {
-          cerr << token << " " << w << endl;
-          assert(!"Word found in training source corpus, which wasn't encountered in originally trained and loaded model.");
-        }
-        s.push_back(w);
+      // Add words if the source dict is not frozen or if replace_source_dict is
+      // set in which case the source_dict is new and hence unfrozen.
+      WordId w = source_dict.Convert(token, (frozen_model && !replace_source_dict));
+      if (w < 0) {
+        cerr << token << " " << w << endl;
+        assert(!"Word found in training source corpus, which wasn't encountered in originally trained and loaded model.");
+      }
+      s.push_back(w);
     }
     if (config.source_eos)
       s.push_back(end_id);
@@ -318,6 +327,11 @@ void learn(const variables_map& vm, ModelData& config) {
   // re-initializing the model using those dictionaries.
   if(!frozen_model) {
     model.reinitialize(config, source_dict, target_dict, classes);
+    cerr << "(Re)initializing model based on training data." << endl;
+  }
+  else if(replace_source_dict) {
+    model.expandSource(source_dict);
+    cerr << "Replacing source dictionary based on training data." << endl;
   }
 
   if(!frozen_model)
@@ -456,7 +470,7 @@ void learn(const variables_map& vm, ModelData& config) {
 
         start += minibatch_size;
       }
-//      #pragma omp master
+     // #pragma omp master
 //      cerr << endl;
 
       //Real iteration_time = (clock()-iteration_start) / (Real)CLOCKS_PER_SEC;

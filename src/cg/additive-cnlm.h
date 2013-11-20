@@ -23,7 +23,8 @@ public:
   AdditiveCNLM(const ModelData& config, const Dict& source_vocab, const Dict& target_vocab, const std::vector<int>& classes);
   ~AdditiveCNLM() {}
 
-  void reinitialize(const ModelData& config, const Dict& source_vocab, const Dict& target_vocab, const std::vector<int>& classes); 
+  void reinitialize(const ModelData& config, const Dict& source_vocab, const Dict& target_vocab, const std::vector<int>& classes);
+  void expandSource(const Dict& source_labels);
 
   int source_types() const { return m_source_labels.size(); }
 
