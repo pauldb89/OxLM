@@ -29,7 +29,15 @@ class DefaultActionObject(object):
 
     def __init__(self, argv):
 
-        self.parser, self.args = self.parse(argv)
+        self.actionObjects = [ActionReadyTrainingData(self),
+                              ActionTrainModel(self),
+                              ActionPreprocessTestset(self),
+                              ActionEvaluateModel(self)]
+
+        self.parser = self.get_parser()
+        for action in self.actionObjects:
+            action.extend_parser()
+        self.args = self.get_args(argv)
 
         self.command = self.args.command
 
@@ -84,38 +92,17 @@ class DefaultActionObject(object):
         if must_evaluate:
             raise NotImplementedError("Evaluation not implemented yet")
 
-    @staticmethod
-    def parse(argv):
+    def get_parser(self):
         parser = DefaultHelpParser(description='Run CNLM label experiments.', epilog="Copyright 2013 Ed Grefenstette, %s" % REVISION)
         parser.add_argument('-c', '--config', help="Load configuration file CONFIG.", default=None)
         parser.add_argument('--save-config', dest="save_config_path", metavar="CONFIGPATH", help="Save configuration and quit.", type=str, default=None)
         parser.add_argument('-v', '--verbose', default=False, action='store_true', help="Verbose output to stderr.")
 
-        group_exec = parser.add_argument_group("executable/script paths")
-
-        # group_exec.add_argument('--python-scripts', dest="python_script_path", help="Path for python helper scripts.", default=None)
-        group_exec.add_argument('--oxcg-bin', dest='oxcg_bin', help="Path for oxcg/bin directory.", default=None)
-
-        group_testset_reformat = parser.add_argument_group("test set reformatting arguments")
-
-        group_testset_reformat.add_argument('--test-sentences', dest='test_sentences', type=str,
-                            help='Test sentences (one per line).', default=None)
-        group_testset_reformat.add_argument('--output-source', dest='output_source', type=str, default=None,
-                            help='Output source file.')
-        group_testset_reformat.add_argument('--output-target', dest='output_target', type=str, default=None,
-                            help='Output target file.')
-        group_testset_reformat.add_argument('-l', '--labels', dest='labels', default=None,
-                            help='List of comma-separated labels, of the form "label1,label2,...,labeln".')
-        group_testset_reformat.add_argument('-r', '--repetitions', dest='repetitions', default=None, type=int,
-                            help='(OPTIONAL) Number of times the label lines are repeated (advanced feature).')
-        group_testset_reformat.add_argument('-d', '--dynamic-repetitions', dest='dynamic_repetitions', default=None, action='store_true',
-                            help='(OPTIONAL) Base number of times label lines are repeated on the length of the source sentence (advanced feature).')
-
         parser.add_argument('command', metavar="COMMAND", default=None, help="Command(s) to be executed. One or more of t(rain model), p(rocess test set), e(valuate model).", nargs="?")
+        return parser
 
-        args = parser.parse_args(argv)
-
-        return parser, args
+    def get_args(self, argv):
+        return self.parser.parse_args(argv)
 
     @classmethod
     def ewrite(self, message, *args):
@@ -162,18 +149,13 @@ class DefaultActionObject(object):
     def save(self):
         configfile = open(self.args.save_config_path, 'w')
 
-        actions = [ActionReadyTrainingData(self),
-                   ActionTrainModel(self),
-                   ActionPreprocessTestset(self),
-                   ActionEvaluateModel(self)]
-
-        for action in actions:
+        for action in self.actionObjects:
             action.initialise_config()
 
         if self.args.config:
             self.load_config()
 
-        for action in actions:
+        for action in self.actionObjects:
             action.process_args()
 
         self.save_config(configfile)
@@ -196,6 +178,9 @@ class ActionReadyTrainingData(DefaultActionObject):
     def __init__(self, that):
         self.that = that
 
+    def extend_parser(self):
+        that=self.that
+
     def initialise_config(self):
         that=self.that
 
@@ -217,6 +202,23 @@ class ActionPreprocessTestset(DefaultActionObject):
     """docstring for ActionPreprocessTestset"""
     def __init__(self, that):
         self.that = that
+
+    def extend_parser(self):
+        that=self.that
+        group_testset_reformat = that.parser.add_argument_group("test set reformatting arguments")
+
+        group_testset_reformat.add_argument('--test-sentences', dest='test_sentences', type=str,
+                                            help='Test sentences (one per line).', default=None)
+        group_testset_reformat.add_argument('--output-source', dest='output_source', type=str, default=None,
+                                             help='Output source file.')
+        group_testset_reformat.add_argument('--output-target', dest='output_target', type=str, default=None,
+                                            help='Output target file.')
+        group_testset_reformat.add_argument('-l', '--labels', dest='labels', default=None,
+                                            help='List of comma-separated labels, of the form "label1,label2,...,labeln".')
+        group_testset_reformat.add_argument('-r', '--repetitions', dest='repetitions', default=None, type=int,
+                                            help='(OPTIONAL) Number of times the label lines are repeated (advanced feature).')
+        group_testset_reformat.add_argument('-d', '--dynamic-repetitions', dest='dynamic_repetitions', default=None, action='store_true',
+                                            help='(OPTIONAL) Base number of times label lines are repeated on the length of the source sentence (advanced feature).')
 
     def initialise_config(self):
         that=self.that
@@ -312,6 +314,11 @@ class ActionTrainModel(DefaultActionObject):
     def __init__(self, that):
         self.that = that
 
+    def extend_parser(self):
+        that=self.that
+        group_exec = that.parser.add_argument_group("executable/script paths")
+        group_exec.add_argument('--oxcg-bin', dest='oxcg_bin', help="Path for oxcg/bin directory.", default=None)
+
     def initialise_config(self):
         that=self.that
         that.config["group_exec"] = {}
@@ -338,6 +345,9 @@ class ActionEvaluateModel(DefaultActionObject):
     """docstring for ActionTrainModel"""
     def __init__(self, that):
         self.that = that
+
+    def extend_parser(self):
+        that=self.that
 
     def initialise_config(self):
         that=self.that
