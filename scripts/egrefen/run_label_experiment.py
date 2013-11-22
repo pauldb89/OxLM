@@ -16,7 +16,7 @@ except ImportError:
     from yaml import Loader as YLoader
     from yaml import Dumper as YDumper
 
-REVISION = "$Rev: 3 $"
+REVISION = "$Rev: 6 $"
 
 class DefaultHelpParser(argparse.ArgumentParser):
     def error(self, message):
@@ -198,6 +198,40 @@ class ActionReadyTrainingData(DefaultActionObject):
         that=self.that
         raise NotImplementedError
 
+class ActionTrainModel(DefaultActionObject):
+    """docstring for ActionTrainModel"""
+    def __init__(self, that):
+        self.that = that
+
+    def extend_parser(self):
+        that=self.that
+        group_exec = that.parser.add_argument_group("executable/script paths")
+        group_exec.add_argument('--oxcg-bin', dest='oxcg_bin', help="Path for oxcg/bin directory.", default=None)
+
+        group_train = that.parser.add_argument_group("Training parameters")
+
+    def initialise_config(self):
+        that=self.that
+        that.config["group_exec"] = {}
+        that.config["group_exec"]["oxcg_bin"] = None  # Mandatory
+
+    def process_args(self):
+        that=self.that
+        if that.args.oxcg_bin:
+            that.config["group_exec"]["oxcg_bin"] = that.args.oxcg_bin
+
+    def valid(self):
+        that=self.that
+        throw_error = False
+        if not that.config["group_exec"]["oxcg_bin"]: throw_error = True
+
+        raise NotImplementedError
+        return not throw_error
+
+    def config_clean_copy(self, cleanconfig):
+        that=self.that
+        raise NotImplementedError
+
 class ActionPreprocessTestset(DefaultActionObject):
     """docstring for ActionPreprocessTestset"""
     def __init__(self, that):
@@ -219,6 +253,7 @@ class ActionPreprocessTestset(DefaultActionObject):
                                             help='(OPTIONAL) Number of times the label lines are repeated (advanced feature).')
         group_testset_reformat.add_argument('-d', '--dynamic-repetitions', dest='dynamic_repetitions', default=None, action='store_true',
                                             help='(OPTIONAL) Base number of times label lines are repeated on the length of the source sentence (advanced feature).')
+        group_testset_reformat.add_argument('--data-dict-output', dest="datadict_output", matavar="DATADICT", default=None, help="Output file for data dictionary.")
 
     def initialise_config(self):
         that=self.that
@@ -227,6 +262,7 @@ class ActionPreprocessTestset(DefaultActionObject):
         that.config["group_testset_reformat"]["output_source"] = None            # Mandatory
         that.config["group_testset_reformat"]["output_target"] = None            # Mandatory
         that.config["group_testset_reformat"]["labels"] = None                   # Mandatory
+        that.config["group_testset_reformat"]["datadict"] = None                 # Mandatory
         that.config["group_testset_reformat"]["repetitions"] = 1                 # Optional
         that.config["group_testset_reformat"]["dynamic_repetitions"] = False     # Optional
 
@@ -247,6 +283,8 @@ class ActionPreprocessTestset(DefaultActionObject):
             that.config["group_testset_reformat"]["repetitions"] = that.args.repetitions
         if that.args.dynamic_repetitions:
             that.config["group_testset_reformat"]["dynamic_repetitions"] = that.args.dynamic_repetitions
+        if that.args.datadict_output:
+            that.config["group_testset_reformat"]["datadict"] = that.args.datadict_output
 
     def valid(self):
         that=self.that
@@ -255,6 +293,7 @@ class ActionPreprocessTestset(DefaultActionObject):
         if not that.config["group_testset_reformat"]["output_source"]: throw_error = True
         if not that.config["group_testset_reformat"]["output_target"]: throw_error = True
         if not that.config["group_testset_reformat"]["labels"]: throw_error = True
+        if not that.config["group_testset_reformat"]["datadict"]: throw_error = True
         return not throw_error
 
     def config_clean_copy(self, cleanconfig):
@@ -265,6 +304,7 @@ class ActionPreprocessTestset(DefaultActionObject):
         if not that.config["group_testset_reformat"]["labels"]:              del cleanconfig["group_testset_reformat"]["labels"]
         if that.config["group_testset_reformat"]["repetitions"] is 1:        del cleanconfig["group_testset_reformat"]["repetitions"]
         if not that.config["group_testset_reformat"]["dynamic_repetitions"]: del cleanconfig["group_testset_reformat"]["dynamic_repetitions"]
+        if not that.config["group_testset_reformat"]["datadict"]:            del cleanconfig["group_testset_reformat"]["datadict"]
         if not that.config["group_testset_reformat"]:                        del cleanconfig["group_testset_reformat"]
         return cleanconfig
 
@@ -275,15 +315,24 @@ class ActionPreprocessTestset(DefaultActionObject):
         test_sentences = [line.strip() for line in istream if len(line.strip()) > 0 and not line.strip().startswith('#')]
         num_test_sentences = len(test_sentences)
 
+        datadict = {}
+
         for k in range(num_test_sentences):
+            sentence = test_sentences[k]
+            sdict = datadict.setdefault(sentence,{})
             for i in range(num_labels):
-                ostream_source.write('s(%d,%d)\n' % (k, i))
-                ostream_target.write('%s\n' % test_sentences[k])
+                theta_k_i = 's(%d,%d)' % (k, i)
+                label = labels[i]
+                sdict[theta_k_i] = label
+                ostream_source.write('%s\n' % theta_k_i)
+                ostream_target.write('%s\n' % sentence)
                 if dynamic_repetitions:
                     label_repetitions = len(test_sentences[k].split())
                 for n in range(label_repetitions):
-                    ostream_source.write('s(%d,%d)\n' % (k, i))
-                    ostream_target.write('%s\n' % labels[i])
+                    ostream_source.write('%s\n' % theta_k_i)
+                    ostream_target.write('%s\n' % label)
+
+        return datadict
 
     def do_action(self):
         that=self.that
@@ -294,52 +343,23 @@ class ActionPreprocessTestset(DefaultActionObject):
         istream = open(ppconfig["test_sentences"])
         ostream_source = open(ppconfig["output_source"], 'w')
         ostream_target = open(ppconfig["output_target"], 'w')
-        self.process_testset(labels=ppconfig["labels"],
-                             label_repetitions=ppconfig["repetitions"],
-                             istream=istream,
-                             ostream_source=ostream_source,
-                             ostream_target=ostream_target,
-                             dynamic_repetitions=ppconfig["dynamic_repetitions"])
+        datadict = self.process_testset(labels=ppconfig["labels"],
+                                        label_repetitions=ppconfig["repetitions"],
+                                        istream=istream,
+                                        ostream_source=ostream_source,
+                                        ostream_target=ostream_target,
+                                        dynamic_repetitions=ppconfig["dynamic_repetitions"])
         istream.close()
         ostream_source.close()
         ostream_target.close()
 
+        ddictstream = open(ppconfig['datadict'], 'w')
+        ydump(datadict, ddictstream, YDumper, default_flow_style=False)
+        ddictstream.close()
+
         if that.args.verbose:
             that.vwrite("Done preprocessing test script.")
             that.vwrite("Output written to %s and %s.", ppconfig["output_source"], ppconfig["output_target"])
-
-
-class ActionTrainModel(DefaultActionObject):
-    """docstring for ActionTrainModel"""
-    def __init__(self, that):
-        self.that = that
-
-    def extend_parser(self):
-        that=self.that
-        group_exec = that.parser.add_argument_group("executable/script paths")
-        group_exec.add_argument('--oxcg-bin', dest='oxcg_bin', help="Path for oxcg/bin directory.", default=None)
-
-    def initialise_config(self):
-        that=self.that
-        that.config["group_exec"] = {}
-        that.config["group_exec"]["oxcg_bin"] = None  # Mandatory
-
-    def process_args(self):
-        that=self.that
-        if that.args.oxcg_bin:
-            that.config["group_exec"]["oxcg_bin"] = that.args.oxcg_bin
-
-    def valid(self):
-        that=self.that
-        throw_error = False
-        if not that.config["group_exec"]["oxcg_bin"]: throw_error = True
-
-        raise NotImplementedError
-        return not throw_error
-
-    def config_clean_copy(self, cleanconfig):
-        that=self.that
-        raise NotImplementedError
 
 class ActionEvaluateModel(DefaultActionObject):
     """docstring for ActionTrainModel"""
@@ -348,41 +368,52 @@ class ActionEvaluateModel(DefaultActionObject):
 
     def extend_parser(self):
         that=self.that
+        group_eval = that.parser.add_argument_group("evaluation arguments")
+        group_eval.add_argument("--eval-thetas", dest="evaluation_thetas", default=None, help="Theta labels for test set.")
+        group_eval.add_argument("--eval-targets", dest="evaluation_targets", default=None, help="Test sentences and label enumerations.")
+        group_eval.add_argument("--data-dict", dest="datadict", default=None, help="Input file for data dictionary.")
 
     def initialise_config(self):
         that=self.that
         that.config["group_exec"] = {}
         that.config["group_exec"]["oxcg_bin"] = None  # Mandatory
 
+        that.config["group_eval"] = {}
+        that.config["group_eval"]["evaluation_thetas"] = None # Mandatory
+        that.config["group_eval"]["evaluation_targets"] = None # Mandatory
+        that.config["group_eval"]["datadict"] = None # Mandatory
+
     def process_args(self):
         that=self.that
         if that.args.oxcg_bin:
             that.config["group_exec"]["oxcg_bin"] = that.args.oxcg_bin
+
+        if that.args.evaluation_thetas:
+            that.config["group_eval"]["evaluation_thetas"] = that.args.evaluation_thetas
+        if that.args.evaluation_targets:
+            that.config["group_eval"]["evaluation_targets"] = that.args.evaluation_targets
+        if that.args.evaluation.datadict:
+            that.config["group_eval"]["datadict"] = that.args.datadict
 
     def valid(self):
         that=self.that
         throw_error = False
         if not that.config["group_exec"]["oxcg_bin"]: throw_error = True
 
-        raise NotImplementedError
+        if not that.config["group_eval"]["evaluation_thetas"]: throw_error = True
+        if not that.config["group_eval"]["evaluation_targets"]: throw_error = True
+        if not that.config["group_eval"]["datadict"]: throw_error = True
         return not throw_error
 
     def config_clean_copy(self, cleanconfig):
         that=self.that
         raise NotImplementedError
 
-def get_estimates(theta_source, joint_target):
+    def do_action(self):
+        that=self.that
+        self.theta_source = that.config["group_eval"]["evaluation_thetas"]
+        self.joint_target = that.config["group_eval"]["evaluation_targets"]
 
-    # Get evaluation lines
-    source_lines = [line.strip() for line in theta_source]
-    target_lines = [line.strip() for line in joint_target]
-
-    assert len(source_lines) == len(target_lines), "Source and target not well aligned"
-
-    zlines = zip(source_lines,target_lines)
-    zlines==zlines
-
-    # [(theta_k, sentence_k)]
 
 def run_evaluation():
     pass
