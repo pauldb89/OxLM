@@ -1,10 +1,12 @@
 import sys
 import argparse
-# import subprocess
-# import shlex
+import os
+import shlex
+from tempfile import gettempdir
 
 from copy import deepcopy as copy
 from collections import OrderedDict
+from subprocess import Popen, PIPE
 
 from yaml import load as yload
 from yaml import dump as ydump
@@ -372,6 +374,7 @@ class ActionEvaluateModel(DefaultActionObject):
         group_eval.add_argument("--eval-thetas", dest="evaluation_thetas", default=None, help="Theta labels for test set.")
         group_eval.add_argument("--eval-targets", dest="evaluation_targets", default=None, help="Test sentences and label enumerations.")
         group_eval.add_argument("--data-dict", dest="datadict", default=None, help="Input file for data dictionary.")
+        group_eval.add_argument("--candidate", dest="input_model", default=None, help="Path to model to be evaluated.")
 
     def initialise_config(self):
         that=self.that
@@ -382,6 +385,7 @@ class ActionEvaluateModel(DefaultActionObject):
         that.config["group_eval"]["evaluation_thetas"] = None # Mandatory
         that.config["group_eval"]["evaluation_targets"] = None # Mandatory
         that.config["group_eval"]["datadict"] = None # Mandatory
+        that.config["group_eval"]["input_model"] = None # Mandatory
 
     def process_args(self):
         that=self.that
@@ -394,6 +398,8 @@ class ActionEvaluateModel(DefaultActionObject):
             that.config["group_eval"]["evaluation_targets"] = that.args.evaluation_targets
         if that.args.evaluation.datadict:
             that.config["group_eval"]["datadict"] = that.args.datadict
+        if that.args.input_model:
+            that.config["group_eval"]["input_model"] = that.args.input_model
 
     def valid(self):
         that=self.that
@@ -403,6 +409,7 @@ class ActionEvaluateModel(DefaultActionObject):
         if not that.config["group_eval"]["evaluation_thetas"]: throw_error = True
         if not that.config["group_eval"]["evaluation_targets"]: throw_error = True
         if not that.config["group_eval"]["datadict"]: throw_error = True
+        if not that.config["group_eval"]["input_model"]: throw_error = True
         return not throw_error
 
     def config_clean_copy(self, cleanconfig):
@@ -413,6 +420,37 @@ class ActionEvaluateModel(DefaultActionObject):
         that=self.that
         self.theta_source = that.config["group_eval"]["evaluation_thetas"]
         self.joint_target = that.config["group_eval"]["evaluation_targets"]
+        self.datadict = yload(open(that.config["group_eval"]["datadict"]), YLoader)
+        self.modelpath = that.config["group_eval"]["input_model"]
+        self.mapmodelpath = os.path.join(gettempdir(), "mapmodel")
+
+    def learn_map_thetas(self):
+        that=self.that
+        train_binary = os.path.join(that.config["group_exec"]["oxcg_bin"],"train_cnlm")
+
+        source_and_target_args = ["-s", self.theta_source, "-t", self.joint_target, "-m", self.modelpath, "-o", self.mapmodelpath]
+        freeze_weights_args=["--updateT=false", "--updateS=false", "--updateC=false", "--updateR=false", "--updateQ=true", "--updateF=false", "--updateFB=false", "--updateB=false"]
+
+        args = [train_binary] + source_and_target_args + freeze_weights_args
+
+        map_estimate_process = Popen(args, stdout=PIPE, stderr=PIPE)
+        output, error = map_estimate_process.communicate()
+
+    def get_estimates(self):
+        that=self.that
+
+        source_lines = [line.strip() for line in open(self.theta_source)]
+        target_lines = [line.strip() for line in open(self.joint_target)]
+
+        perplexity_binary = os.path.join(that.config["group_exec"]["oxcg_bin"],"perplexity")
+        args = [perplexity_binary, "-m", self.mapmodelpath, "-s", self.theta_source, "-t", self.joint_target, "--print-sentence-llh"]
+
+        cond_probs_process = Popen(args, stdout=PIPE, stderr=PIPE)
+        cond_probs, _ = cond_probs_process.communicate()
+
+        score_tuples = zip(source_lines, target_lines, cond_probs)
+
+        return score_tuples
 
 
 def run_evaluation():
