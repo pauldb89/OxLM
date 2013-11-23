@@ -156,8 +156,7 @@ Real AdditiveCNLM::gradient(std::vector<Sentence>& source_corpus_,
 #pragma omp barrier
 
   // Allocates data for parent.
-  Real f = 0.0;
-  f = gradient_(target_corpus, training_instances, l2, source_l2, ptr); 
+  Real f = gradient_(target_corpus, training_instances, l2, source_l2, ptr); 
 
   #pragma omp master
   {
@@ -203,18 +202,18 @@ void AdditiveCNLM::source_grad_callback(TrainingInstance t, int t_i,
     int end = min(source_len, centre+window+1);
     #pragma omp critical
     {
-    for (int i=start; i < end; ++i) {
-      g_S.row(source_sent.at(i)) 
-        += window_product(i-centre+window, grads, true);
-      context_gradient_update(g_T.at(i-centre+window), 
-                              S.row(source_sent.at(i)), grads);
-    }
+      for (int i=start; i < end; ++i) {
+        g_S.row(source_sent.at(i)) 
+          += window_product(i-centre+window, grads.transpose(), true);
+        context_gradient_update(g_T.at(i-centre+window), 
+            S.row(source_sent.at(i)), grads.transpose());
+      }
     }
   }
 }
 
 void AdditiveCNLM::map_parameters(Real*& ptr, WordVectorsType& s,
-                                    ContextTransformsType& t) const {
+                                  ContextTransformsType& t) const {
   int num_source_words = source_types();
   int word_width = config.word_representation_size;
   int window_width = max(config.source_window_width,0);
@@ -265,3 +264,4 @@ void AdditiveCNLM::map_parameters(Real*& ptr, WordVectorsType& r,
   // Subsequently allocate parent elements.
   CNLMBase::map_parameters(ptr, r, q, f, c, b, fb);
 }
+

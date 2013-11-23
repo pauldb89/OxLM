@@ -472,8 +472,8 @@ void learn(const variables_map& vm, ModelData& config) {
 
           // Set unwanted weights to zero.
           // Map parameters using model, then set to zero.
-          CNLMBase::WordVectorsType g_R(0,0,0), g_Q(0,0,0), g_F(0,0,0), 
-                                    g_S(0,0,0);
+          CNLMBase::WordVectorsType g_R(0,0,0), g_Q(0,0,0), 
+                                    g_F(0,0,0), g_S(0,0,0);
           CNLMBase::ContextTransformsType g_C, g_T;
           CNLMBase::WeightsType g_B(0,0), g_FB(0,0);
           Real* ptr = global_gradient.data();

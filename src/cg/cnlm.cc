@@ -328,6 +328,7 @@ Real CNLMBase::gradient_(
       // Source word representations gradient
       source_grad_callback(t, t_i, instance_counter, 
                            weightedRepresentations.row(instance_counter));
+      //////////////////////////////////////////////////////////////////
       /*
        * if (window < 0) {
        *   for (auto s_i : source_sent)
