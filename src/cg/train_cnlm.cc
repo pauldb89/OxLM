@@ -21,6 +21,7 @@
 #include "utils/conditional_omp.h"
 #include "cg/additive-cnlm.h"
 #include "corpus/corpus.h"
+#include "corpus/alignment.h"
 
 static const char *REVISION = "$Rev: 248 $";
 
@@ -60,6 +61,8 @@ int main(int argc, char **argv) {
         "corpus of sentences, one per line")
     ("target,t", value<string>(),
         "corpus of sentences, one per line")
+    ("alignment,a", value<string>(),
+        "Moses style alignment of source and target")
     ("test-source", value<string>(),
         "corpus of test sentences to be evaluated at each iteration")
     ("test-target", value<string>(),
