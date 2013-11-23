@@ -34,7 +34,7 @@ using namespace Eigen;
 
 void learn(const variables_map& vm, ModelData& config);
 void cache_data(int start, int end, const vector<size_t>& indices, TrainingInstances &result);
-Real perplexity(const AdditiveCNLM& model, const vector<Sentence>& test_source_corpus, const vector<Sentence>& test_target_corpus);
+Real log_likelihood(const AdditiveCNLM& model, const vector<Sentence>& test_source_corpus, const vector<Sentence>& test_target_corpus);
 void freq_bin_type(const std::string &corpus, int num_classes, std::vector<int>& classes, Dict& dict, VectorReal& class_bias);
 void classes_from_file(const std::string &class_file, vector<int>& classes, Dict& dict, VectorReal& class_bias);
 
@@ -476,7 +476,7 @@ void learn(const variables_map& vm, ModelData& config) {
       //Real iteration_time = (clock()-iteration_start) / (Real)CLOCKS_PER_SEC;
       int iteration_time = difftime(time(0),iteration_start);
       if (vm.count("test-source")) {
-        Real local_pp = perplexity(model, test_source_corpus, test_target_corpus);
+        Real local_pp = log_likelihood(model, test_source_corpus, test_target_corpus);
 
         #pragma omp critical
         { pp += local_pp; }
@@ -525,7 +525,9 @@ void cache_data(int start, int end, const vector<size_t>& indices, TrainingInsta
 }
 
 
-Real perplexity(const AdditiveCNLM& model, const vector<Sentence>& test_source_corpus, const vector<Sentence>& test_target_corpus) {
+Real log_likelihood(const AdditiveCNLM& model, 
+                    const vector<Sentence>& test_source_corpus, 
+                    const vector<Sentence>& test_target_corpus) {
   Real p=0.0;
 
   int context_width = model.config.ngram_order-1;
@@ -533,7 +535,7 @@ Real perplexity(const AdditiveCNLM& model, const vector<Sentence>& test_source_c
   WordId start_id = model.label_set().Lookup("<s>");
 
 //  #pragma omp master
-//  cerr << "Calculating perplexity for " << test_target_corpus.size() << " sentences";
+//  cerr << "Calculating log_likelihood for " << test_target_corpus.size() << " sentences";
 
   std::vector<WordId> context(context_width);
 
