@@ -145,14 +145,17 @@ Real AdditiveCNLM::gradient(std::vector<Sentence>& source_corpus_,
                             const std::vector<Sentence>& target_corpus,
                             const TrainingInstances &training_instances,
                             Real l2, Real source_l2, WeightsType& g_W) {
-
 #pragma omp master
   source_corpus = source_corpus_;
-#pragma omp barrier
 
   Real* ptr = g_W.data();
-#pragma omp master
-  map_parameters(ptr, g_S, g_T);  // Allocates data for child.
+  if (omp_get_thread_num() == 0)
+    map_parameters(ptr, g_S, g_T);  // Allocates data for child.
+  else { // TODO: come up with a better fix for this hack
+    int word_width = config.word_representation_size;
+    ptr += (source_types()*word_width) 
+           + g_T.size()*word_width*(config.diagonal ? 1 : word_width);
+  }
 #pragma omp barrier
 
   // Allocates data for parent.
@@ -192,8 +195,8 @@ void AdditiveCNLM::source_grad_callback(TrainingInstance t, int t_i,
   if (window < 0) {
     #pragma omp critical
     {
-    for (auto s_i : source_sent)
-      g_S.row(s_i) += grads;
+      for (auto s_i : source_sent)
+        g_S.row(s_i) += grads;
     }
   }
   else {
@@ -216,7 +219,7 @@ void AdditiveCNLM::map_parameters(Real*& ptr, WordVectorsType& s,
                                   ContextTransformsType& t) const {
   int num_source_words = source_types();
   int word_width = config.word_representation_size;
-  int window_width = max(config.source_window_width,0);
+  int window_width = max(config.source_window_width, 0);
 
   int S_size = num_source_words * word_width;
   // TODO(kmh): T_size probably wrong - take window width into account.
