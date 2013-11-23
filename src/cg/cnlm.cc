@@ -10,8 +10,8 @@
 #include <vector>
 #include <random>
 #include <cstring>
-#include <omp.h>
 
+#include "utils/conditional_omp.h"
 #include "cg/cnlm.h"
 #include "cg/utils.h"
 

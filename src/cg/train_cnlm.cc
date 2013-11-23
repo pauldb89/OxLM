@@ -3,7 +3,6 @@
 #include <iostream>
 #include <iomanip>
 #include <fstream>
-#include <omp.h>
 #include <time.h>
 #include <math.h>
 
@@ -19,6 +18,7 @@
 #include <Eigen/Core>
 
 // Local
+#include "utils/conditional_omp.h"
 #include "cg/additive-cnlm.h"
 #include "corpus/corpus.h"
 
