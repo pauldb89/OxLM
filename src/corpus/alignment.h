@@ -7,14 +7,16 @@
 #include<boost/bimap.hpp>
 #include<iostream>
 #include<assert.h>
+#include<memory>
 
 typedef boost::bimap< boost::bimaps::multiset_of<int>, 
         boost::bimaps::multiset_of<int>, 
         boost::bimaps::set_of_relation<> > Alignment;
 typedef Alignment::relation AlignmentPoint;
 typedef std::vector<Alignment> Alignments;
+typedef std::shared_ptr<Alignment> AlignmentPtr;
 
-inline bool read_alignment(std::istream &in, Alignment &a)
+inline bool read_alignment(std::istream &in, AlignmentPtr a)
 {
   std::string buf, token;
   if (!std::getline(in, buf)) return false;
@@ -25,7 +27,7 @@ inline bool read_alignment(std::istream &in, Alignment &a)
     assert(hyphen != std::string::npos);
     int s=boost::lexical_cast<int,std::string>(token.substr(0,hyphen));
     int t=boost::lexical_cast<int,std::string>(token.substr(hyphen+1,token.size()-hyphen-1));
-    a.insert(AlignmentPoint(s,t));
+    a->insert(AlignmentPoint(s,t));
   }
 
   return true;
