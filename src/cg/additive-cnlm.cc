@@ -99,7 +99,8 @@ int AdditiveCNLM::calculateDataSize(bool allocate) {
   int window_width = max(config.source_window_width, 0);
 
   int S_size = num_source_words * word_width;;
-  int T_size = (2*window_width + 1) * (config.diagonal ? word_width : word_width*word_width);
+  int T_size = (2*window_width + 1) 
+               * (config.diagonal ? word_width : word_width*word_width);
 
   int data_size = parent_size + S_size + T_size;
   if (allocate) {
@@ -109,7 +110,9 @@ int AdditiveCNLM::calculateDataSize(bool allocate) {
   return data_size;
 }
 
-void AdditiveCNLM::source_representation(const Sentence& source, int target_index, VectorReal& result) const {
+void AdditiveCNLM::source_representation(const Sentence& source, 
+                                         int target_index, 
+                                         VectorReal& result) const {
   result = VectorReal::Zero(config.word_representation_size);
   int window = config.source_window_width;
 
@@ -119,26 +122,29 @@ void AdditiveCNLM::source_representation(const Sentence& source, int target_inde
   }
   else {
     int source_len = source.size();
-    int centre = min(floor(Real(target_index)*length_ratio + 0.5), double(source_len-1));
+    int centre = min(floor(Real(target_index)*length_ratio + 0.5), 
+                     double(source_len-1));
     int start = max(centre-window, 0);
     int end = min(source_len, centre+window+1);
 
     for (int i=start; i < end; ++i)
-      result += window_product(i-centre+window, S.row(source.at(i))).transpose();
+      result += window_product(i-centre+window, 
+                               S.row(source.at(i))).transpose();
   }
 }
 
-Real AdditiveCNLM::log_prob(const WordId w, const std::vector<WordId>& context, const Sentence& source,
-                              bool cache, int target_index) const {
+Real AdditiveCNLM::log_prob(const WordId w, const std::vector<WordId>& context, 
+                            const Sentence& source, bool cache, 
+                            int target_index) const {
   VectorReal s;
   source_representation(source, target_index, s);
   return CNLMBase::log_prob(w, context, s, cache);
 }
 
 Real AdditiveCNLM::gradient(std::vector<Sentence>& source_corpus_,
-                              const std::vector<Sentence>& target_corpus,
-                              const TrainingInstances &training_instances,
-                              Real l2, Real source_l2, WeightsType& g_W) {
+                            const std::vector<Sentence>& target_corpus,
+                            const TrainingInstances &training_instances,
+                            Real l2, Real source_l2, WeightsType& g_W) {
 
 #pragma omp master
   source_corpus = source_corpus_;
@@ -149,8 +155,9 @@ Real AdditiveCNLM::gradient(std::vector<Sentence>& source_corpus_,
   map_parameters(ptr, g_S, g_T);  // Allocates data for child.
 #pragma omp barrier
 
+  // Allocates data for parent.
   Real f = 0.0;
-  f = gradient_(target_corpus, training_instances, l2, source_l2, ptr);  // Allocates data for parent.
+  f = gradient_(target_corpus, training_instances, l2, source_l2, ptr); 
 
   #pragma omp master
   {
@@ -171,11 +178,14 @@ Real AdditiveCNLM::gradient(std::vector<Sentence>& source_corpus_,
   return f;
 }
 
-void AdditiveCNLM::source_repr_callback(TrainingInstance t, int t_i, VectorReal& r) {
+void AdditiveCNLM::source_repr_callback(TrainingInstance t, int t_i, 
+                                        VectorReal& r) {
   source_representation(source_corpus.at(t), t_i, r);
 }
 
-void AdditiveCNLM::source_grad_callback(TrainingInstance t, int t_i, int instance_counter, const VectorReal& grads) {
+void AdditiveCNLM::source_grad_callback(TrainingInstance t, int t_i, 
+                                        int instance_counter, 
+                                        const VectorReal& grads) {
   // Source word representations gradient
   const Sentence& source_sent = source_corpus.at(t);
   int source_len = source_sent.size();
@@ -194,8 +204,10 @@ void AdditiveCNLM::source_grad_callback(TrainingInstance t, int t_i, int instanc
     #pragma omp critical
     {
     for (int i=start; i < end; ++i) {
-      g_S.row(source_sent.at(i)) += window_product(i-centre+window, grads, true);
-      context_gradient_update(g_T.at(i-centre+window), S.row(source_sent.at(i)), grads);
+      g_S.row(source_sent.at(i)) 
+        += window_product(i-centre+window, grads, true);
+      context_gradient_update(g_T.at(i-centre+window), 
+                              S.row(source_sent.at(i)), grads);
     }
     }
   }
@@ -216,8 +228,10 @@ void AdditiveCNLM::map_parameters(Real*& ptr, WordVectorsType& s,
 
   t.clear();
   for (int i=0; i<(2*window_width+1); i++) {
-    if (config.diagonal) t.push_back(ContextTransformType(ptr, word_width, 1));
-    else                 t.push_back(ContextTransformType(ptr, word_width, word_width));
+    if (config.diagonal) 
+      t.push_back(ContextTransformType(ptr, word_width, 1));
+    else
+      t.push_back(ContextTransformType(ptr, word_width, word_width));
     ptr += T_size;
   }
 }
@@ -241,8 +255,10 @@ void AdditiveCNLM::map_parameters(Real*& ptr, WordVectorsType& r,
 
   t.clear();
   for (int i=0; i<(2*window_width+1); i++) {
-    if (config.diagonal) t.push_back(ContextTransformType(ptr, word_width, 1));
-    else                 t.push_back(ContextTransformType(ptr, word_width, word_width));
+    if (config.diagonal) 
+      t.push_back(ContextTransformType(ptr, word_width, 1));
+    else
+      t.push_back(ContextTransformType(ptr, word_width, word_width));
     ptr += T_size;
   }
 
