@@ -451,6 +451,7 @@ void learn(const variables_map& vm, ModelData& config) {
           global_gradient += gradient;
           av_f += f;
         }
+        if (l1 > 0.0) av_f += (l1 * model.W.lpNorm<1>());
         #pragma omp barrier
 
         #pragma omp master
@@ -458,15 +459,15 @@ void learn(const variables_map& vm, ModelData& config) {
           adaGrad.array() += global_gradient.array().square();
           for (int w=0; w<model.num_weights(); ++w) {
             if (adaGrad(w)) {
+              Real scale = step_size / sqrt(adaGrad(w));
+              global_gradient(w) = scale * global_gradient(w);
+
               if (l1 > 0.0) {
-                Real scale = step_size / sqrt(adaGrad(w));
-                Real w1 = model.W(w) - scale*global_gradient(w);
+                Real w1 = model.W(w) - global_gradient(w);
                 Real w2 = max(Real(0.0), abs(w1) - scale*l1);
-                global_gradient(w) = w1 >= 0.0 ? w1 + w2 : w1 - w2;
+                global_gradient(w) 
+                  = w1 >= 0.0 ? model.W(w) - w2 : model.W(w) + w2;
               }
-              else
-                global_gradient(w) = step_size
-                                     * global_gradient(w)/sqrt(adaGrad(w));
             }
           }
 
@@ -493,7 +494,6 @@ void learn(const variables_map& vm, ModelData& config) {
 
           if (minibatch_counter % 100 == 0) { cerr << "."; cout.flush(); }
         }
-        if (l1 > 0.0) av_f += (l1 * model.W.lpNorm<1>());
 
         start += minibatch_size;
       }
