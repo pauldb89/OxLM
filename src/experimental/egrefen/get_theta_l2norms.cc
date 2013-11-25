@@ -21,6 +21,7 @@
 #include "utils/conditional_omp.h"
 #include "cg/additive-cnlm.h"
 #include "corpus/corpus.h"
+#include "cg/utils.h"
 
 static const char *REVISION = "$Rev: 248 $";
 
@@ -46,7 +47,7 @@ int main(int argc, char **argv) {
   // Command line processing
   options_description cmdline_specific("Command line specific options");
   cmdline_specific.add_options()
-    ("help,h", "print help message")
+    ("help,h", "print help message");
   options_description generic("Allowed options");
   generic.add_options()
     ("source,s", value<string>(),
@@ -85,16 +86,18 @@ int main(int argc, char **argv) {
   Real pp=0.0;
   std::vector<WordId> context(context_width);
 
-  cout << model.S;
+  MatrixReal S = model.S;
 
-  // while (cin >> token) {
-  //   // read the sentence
-  //   WordId label = model.source_label_set().Convert(token);
+  while (cin >> token) {
+    // read the sentence
+    WordId sid = model.source_label_set().Convert(token);
 
-  //   cout << token << "\t" << l2norm << endl;
-  // }
+    VectorReal r = S.row(sid);
+
+    cout << token << "\t" << r << endl;
+  }
+
   source_in.close();
-  target_in.close();
   //////////////////////////////////////////////
 
   if (vm.count("print-corpus-ppl"))
