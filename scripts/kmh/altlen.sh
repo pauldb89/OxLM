@@ -18,21 +18,21 @@ else
   datadir="${PWD}/../../sample"
 fi
 echo $datadir
-traindata="mini"
-testdata="mini"
+traindata="length"
+testdata="length"
 wordwidth=28
 
 for step in 0.05 0.1
 do
   for l2 in 0.1 0.5 1
   do
-    for its in 5 8 10 15
+    for its in 10
     do
       for nonlinearity in "false"
       do
         for order in 2
         do
-          for its2 in 5 10 15
+          for its2 in 10
           do
             for l2s in 0 0.01 0.1 1
             do
