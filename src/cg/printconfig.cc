@@ -2,7 +2,6 @@
 #include <vector>
 #include <iostream>
 #include <fstream>
-#include <omp.h>
 #include <time.h>
 #include <math.h>
 #include <random>
@@ -15,6 +14,7 @@
 #include <boost/archive/text_iarchive.hpp>
 
 // Local
+#include "utils/conditional_omp.h"
 #include "cg/additive-cnlm.h"
 #include "corpus/corpus.h"
 

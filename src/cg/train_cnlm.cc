@@ -3,7 +3,6 @@
 #include <iostream>
 #include <iomanip>
 #include <fstream>
-#include <omp.h>
 #include <time.h>
 #include <math.h>
 
@@ -19,8 +18,10 @@
 #include <Eigen/Core>
 
 // Local
+#include "utils/conditional_omp.h"
 #include "cg/additive-cnlm.h"
 #include "corpus/corpus.h"
+#include "corpus/alignment.h"
 
 static const char *REVISION = "$Rev: 248 $";
 
@@ -31,37 +32,25 @@ using namespace std;
 using namespace oxlm;
 using namespace Eigen;
 
-#include <dlfcn.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <signal.h>
-
-void sigUsr1Handler(int sig)
-{
-    fprintf(stderr, "Exiting on SIGUSR1\n");
-    void (*_mcleanup)(void);
-    _mcleanup = (void (*)(void))dlsym(RTLD_DEFAULT, "_mcleanup");
-    if (_mcleanup == NULL)
-         fprintf(stderr, "Unable to find gprof exit hook\n");
-    else _mcleanup();
-    _exit(0);
-}
-
-
-
 void learn(const variables_map& vm, ModelData& config);
-void cache_data(int start, int end, const vector<size_t>& indices, TrainingInstances &result);
-Real perplexity(const AdditiveCNLM& model, const vector<Sentence>& test_source_corpus, const vector<Sentence>& test_target_corpus);
-void freq_bin_type(const std::string &corpus, int num_classes, std::vector<int>& classes, Dict& dict, VectorReal& class_bias);
-void classes_from_file(const std::string &class_file, vector<int>& classes, Dict& dict, VectorReal& class_bias);
+void cache_data(int start, int end, const vector<size_t>& indices,
+                TrainingInstances &result);
+Real log_likelihood(const AdditiveCNLM& model,
+                    const vector<Sentence>& test_source_corpus,
+                    const vector<Sentence>& test_target_corpus);
+void freq_bin_type(const std::string &corpus, int num_classes,
+                   std::vector<int>& classes,
+                   Dict& dict, VectorReal& class_bias);
+void classes_from_file(const std::string &class_file, vector<int>& classes,
+                       Dict& dict, VectorReal& class_bias);
 
 
 int main(int argc, char **argv) {
-  signal(SIGUSR1, sigUsr1Handler);
-  cout << "Online training for neural translation models: Copyright 2013 Phil Blunsom, "
+  cout << "Online training for neural translation models: \
+           Copyright 2013 Phil Blunsom, "
        << REVISION << '\n' << endl;
 
-  ///////////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
   // Command line processing
   variables_map vm;
 
@@ -78,6 +67,8 @@ int main(int argc, char **argv) {
         "corpus of sentences, one per line")
     ("target,t", value<string>(),
         "corpus of sentences, one per line")
+    ("alignment,a", value<string>(),
+        "Moses style alignment of source and target")
     ("test-source", value<string>(),
         "corpus of test sentences to be evaluated at each iteration")
     ("test-target", value<string>(),
@@ -111,11 +102,14 @@ int main(int argc, char **argv) {
     ("classes", value<int>()->default_value(100),
         "number of classes for factored output.")
     ("class-file", value<string>(),
-        "file containing word to class mappings in the format <class> <word> <frequence>.")
+        "file containing word to class mappings in the format: \
+         <class> <word> <frequence>.")
     ("window", value<int>()->default_value(-1),
         "Width of window of source words conditioned on.")
-    ("no-source-eos", "do not add end of sentence tag to source representations.")
-    ("replace-source-dict", "replace the source dictionary of a loaded model with a new one.")
+    ("no-source-eos", "do not add end of sentence tag to source \
+                       representations.")
+    ("replace-source-dict", "replace the source dictionary of a loaded model \
+                             with a new one.")
     ("verbose,v", "print perplexity for each sentence (1) or input token (2) ")
     ("randomise", "visit the training tokens in random order.")
     ("diagonal-contexts", "Use diagonal context matrices (usually faster).")
@@ -139,7 +133,7 @@ int main(int argc, char **argv) {
     store(parse_config_file(config, cmdline_options), vm);
   }
   notify(vm);
-  ///////////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
 
   if (vm.count("help") || !vm.count("source") || !vm.count("target")) {
     cout << cmdline_options << "\n";
@@ -202,26 +196,31 @@ int main(int argc, char **argv) {
 
 
 void learn(const variables_map& vm, ModelData& config) {
-  vector<Sentence> target_corpus, source_corpus, test_target_corpus, test_source_corpus;
+  vector<Sentence> target_corpus, source_corpus;
+  vector<Sentence> test_target_corpus, test_source_corpus;
   Dict target_dict, source_dict;
   WordId end_id = target_dict.Convert("</s>");
   size_t num_training_instances=0, num_test_instances=0;
 
-  //////////////////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////////////
   // separate the word types into classes using
   // frequency binning
   vector<int> classes;
   VectorReal class_bias = VectorReal::Zero(config.classes);
   if (vm.count("class-file")) {
     cerr << "--class-file set, ignoring --classes." << endl;
-    classes_from_file(vm["class-file"].as<string>(), classes, target_dict, class_bias);
+    classes_from_file(vm["class-file"].as<string>(), classes, target_dict,
+                      class_bias);
     config.classes = classes.size()-1;
   }
   else
-    freq_bin_type(vm["target"].as<string>(), config.classes, classes, target_dict, class_bias);
-  //////////////////////////////////////////////
+    freq_bin_type(vm["target"].as<string>(), config.classes, classes,
+                  target_dict, class_bias);
+  //////////////////////////////////////////////////////////////////////////////
 
-  //////////////////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////////////
   // create and or load the model.
   // If we do not load, we need to update some aspects of the model later, for
   // instance push the updated dictionaries. If we do load, we need up modify
@@ -247,9 +246,10 @@ void learn(const variables_map& vm, ModelData& config) {
     // training run and not on the model per se.
     model.config.updates = config.updates;
   }
-  //////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
 
-  //////////////////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////////////
   // read the training sentences
   ifstream target_in(vm["target"].as<string>().c_str());
   string line, token;
@@ -262,7 +262,8 @@ void learn(const variables_map& vm, ModelData& config) {
       WordId w = target_dict.Convert(token, frozen_model);
       if (w < 0) {
         cerr << token << " " << w << endl;
-        assert(!"Word found in training target corpus, which wasn't encountered in originally trained and loaded model.");
+        assert(!"Word found in training target corpus, which wasn't \
+                 encountered in originally trained and loaded model.");
       }
       s.push_back(w);
     }
@@ -278,12 +279,14 @@ void learn(const variables_map& vm, ModelData& config) {
     source_corpus.push_back(Sentence());
     Sentence& s = source_corpus.back();
     while (line_stream >> token) {
-      // Add words if the source dict is not frozen or if replace_source_dict is
-      // set in which case the source_dict is new and hence unfrozen.
-      WordId w = source_dict.Convert(token, (frozen_model && !replace_source_dict));
+      // Add words if the source dict is not frozen or if replace_source_dict
+      // is set in which case the source_dict is new and hence unfrozen.
+      WordId w = source_dict.Convert(token,
+                                     (frozen_model && !replace_source_dict));
       if (w < 0) {
         cerr << token << " " << w << endl;
-        assert(!"Word found in training source corpus, which wasn't encountered in originally trained and loaded model.");
+        assert(!"Word found in training source corpus, which wasn't \
+                 encountered in originally trained and loaded model.");
       }
       s.push_back(w);
     }
@@ -291,9 +294,10 @@ void learn(const variables_map& vm, ModelData& config) {
       s.push_back(end_id);
   }
   source_in.close();
-  //////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
 
-  //////////////////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////////////
   // read the test sentences
   bool have_test = vm.count("test-source");
   if (have_test) {
@@ -335,12 +339,21 @@ void learn(const variables_map& vm, ModelData& config) {
     }
     test_target_in.close();
   }
-  //////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
 
   assert (source_corpus.size() == target_corpus.size());
   assert (test_source_corpus.size() == test_target_corpus.size());
 
-  //////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
+  // read the alignment
+  AlignmentPtr alignment;
+  if (vm.count("alignment")) {
+    ifstream alignment_in(vm["alignment"].as<string>().c_str());
+    read_alignment(alignment_in, alignment);
+  }
+
+
+  //////////////////////////////////////////////////////////////////////////////
   // Non-frozen model means we just learned a (new) dictionary. This requires
   // re-initializing the model using those dictionaries.
   if(!frozen_model) {
@@ -356,7 +369,8 @@ void learn(const variables_map& vm, ModelData& config) {
     model.FB = class_bias;
 
   for (size_t s = 0; s < source_corpus.size(); ++s)
-    model.length_ratio += (Real(source_corpus.at(s).size()) / Real(target_corpus.at(s).size()));
+    model.length_ratio += (Real(source_corpus.at(s).size())
+                           / Real(target_corpus.at(s).size()));
   model.length_ratio /= Real(source_corpus.size());
 
   vector<size_t> training_indices(target_corpus.size());
@@ -369,9 +383,9 @@ void learn(const variables_map& vm, ModelData& config) {
   if(!frozen_model)
     model.B = ((unigram.array()+1.0)/(unigram.sum()+unigram.size())).log();
 
-  //////////////////////////////////////////////
-  // Model training.
 
+  //////////////////////////////////////////////////////////////////////////////
+  // Model training.
   VectorReal adaGrad = VectorReal::Zero(model.num_weights());
   VectorReal global_gradient(model.num_weights());
   Real av_f=0.0;
@@ -387,7 +401,8 @@ void learn(const variables_map& vm, ModelData& config) {
     #pragma omp master
     {
       cerr << endl << fixed << setprecision(2);
-      cerr << " |" << setw(target_corpus.size()/(minibatch_size*100)+8) << " ITERATION";
+      cerr << " |" << setw(target_corpus.size()/(minibatch_size*100)+8)
+           << " ITERATION";
       cerr << setw(11) << "TIME (s)" << setw(10) << "-LLH";
       if (vm.count("test-source"))
         cerr << setw(13) << "HELDOUT PPL";
@@ -395,13 +410,11 @@ void learn(const variables_map& vm, ModelData& config) {
     }
 
     for (int iteration=0; iteration < vm["iterations"].as<int>(); ++iteration) {
-      //clock_t iteration_start=clock();
       time_t iteration_start=time(0);
       #pragma omp master
       {
         av_f=0.0;
         pp=0.0;
-//        cout << "Iteration " << iteration << ": "; cout.flush();
 
         if (vm.count("randomise"))
           std::random_shuffle(training_indices.begin(), training_indices.end());
@@ -414,7 +427,8 @@ void learn(const variables_map& vm, ModelData& config) {
       cerr << " |" << setw(6) << iteration << " ";
 
       size_t minibatch_counter=0;
-      for (size_t start=0; start < target_corpus.size() && (int)start < vm["instances"].as<int>(); ++minibatch_counter) {
+      for (size_t start=0; start < target_corpus.size()
+           && (int)start < vm["instances"].as<int>(); ++minibatch_counter) {
         #pragma omp barrier
 
         size_t end = min(target_corpus.size(), start + minibatch_size);
@@ -425,46 +439,41 @@ void learn(const variables_map& vm, ModelData& config) {
         gradient.setZero();
         Real l2 = config.l2_parameter*(end-start)/Real(target_corpus.size());
         Real l1 = config.l1_parameter*(end-start)/Real(target_corpus.size());
-        Real l2_source = config.source_l2_parameter*(end-start)/Real(target_corpus.size());
+        Real l2_source = config.source_l2_parameter
+                         * (end-start)/Real(target_corpus.size());
 
         cache_data(start, end, training_indices, training_instances);
-        Real f = model.gradient(source_corpus, target_corpus, training_instances, l2, l2_source, gradient);
+        Real f = model.gradient(source_corpus, target_corpus,
+                                training_instances, l2, l2_source, gradient);
         #pragma omp critical
         {
           global_gradient += gradient;
           av_f += f;
         }
+        if (l1 > 0.0) av_f += (l1 * model.W.lpNorm<1>());
         #pragma omp barrier
 
         #pragma omp master
         {
-          // l2 regulariser contributions. Not very efficient
-          //av_f += 0.5*l2*(model.C.squaredNorm() + model.R.squaredNorm() +
-          //                    model.Q.squaredNorm() + model.B.squaredNorm() +
-          //                    model.F.squaredNorm() + model.FB.squaredNorm());
-          //av_f += 0.5*source_l2*(model.T.squaredNorm() + model.S.squaredNorm());
-          //
-          //av_f += (0.5*l2*model.W.squaredNorm());
-
-          //global_gradient.array() += (l2 * model.W.array());
-
           adaGrad.array() += global_gradient.array().square();
           for (int w=0; w<model.num_weights(); ++w) {
             if (adaGrad(w)) {
+              Real scale = step_size / sqrt(adaGrad(w));
+              global_gradient(w) = scale * global_gradient(w);
+
               if (l1 > 0.0) {
-                Real scale = step_size / sqrt(adaGrad(w));
-                Real w1 = model.W(w) - scale*global_gradient(w);
+                Real w1 = model.W(w) - global_gradient(w);
                 Real w2 = max(Real(0.0), abs(w1) - scale*l1);
-                global_gradient(w) = w1 >= 0.0 ? w1 + w2 : w1 - w2;
+                global_gradient(w)
+                  = w1 >= 0.0 ? model.W(w) - w2 : model.W(w) + w2;
               }
-              else
-                global_gradient(w) = (step_size*global_gradient(w)/ sqrt(adaGrad(w)));
             }
           }
 
           // Set unwanted weights to zero.
           // Map parameters using model, then set to zero.
-          CNLMBase::WordVectorsType g_R(0,0,0), g_Q(0,0,0), g_F(0,0,0), g_S(0,0,0);
+          CNLMBase::WordVectorsType g_R(0,0,0), g_Q(0,0,0),
+                                    g_F(0,0,0), g_S(0,0,0);
           CNLMBase::ContextTransformsType g_C, g_T;
           CNLMBase::WeightsType g_B(0,0), g_FB(0,0);
           Real* ptr = global_gradient.data();
@@ -484,17 +493,14 @@ void learn(const variables_map& vm, ModelData& config) {
 
           if (minibatch_counter % 100 == 0) { cerr << "."; cout.flush(); }
         }
-        if (l1 > 0.0) av_f += (l1 * model.W.lpNorm<1>());
 
         start += minibatch_size;
       }
-     // #pragma omp master
-//      cerr << endl;
 
-      //Real iteration_time = (clock()-iteration_start) / (Real)CLOCKS_PER_SEC;
       int iteration_time = difftime(time(0),iteration_start);
       if (vm.count("test-source")) {
-        Real local_pp = perplexity(model, test_source_corpus, test_target_corpus);
+        Real local_pp = log_likelihood(model, test_source_corpus,
+                                       test_target_corpus);
 
         #pragma omp critical
         { pp += local_pp; }
@@ -503,9 +509,9 @@ void learn(const variables_map& vm, ModelData& config) {
 
       #pragma omp master
       {
-//          cerr << pp << " " << num_test_instances << " " << pp/num_test_instances;
         pp = exp(-pp/num_test_instances);
-        cerr << setw(11) << iteration_time << setw(10) << av_f/num_training_instances;
+        cerr << setw(11) << iteration_time << setw(10)
+             << av_f/num_training_instances;
         if (vm.count("test-source")) {
           cerr << setw(13) << pp;
         }
@@ -528,7 +534,8 @@ void learn(const variables_map& vm, ModelData& config) {
 }
 
 
-void cache_data(int start, int end, const vector<size_t>& indices, TrainingInstances &result) {
+void cache_data(int start, int end, const vector<size_t>& indices,
+                TrainingInstances &result) {
   assert (start>=0 && start < end);
 
   size_t thread_num = omp_get_thread_num();
@@ -543,15 +550,14 @@ void cache_data(int start, int end, const vector<size_t>& indices, TrainingInsta
 }
 
 
-Real perplexity(const AdditiveCNLM& model, const vector<Sentence>& test_source_corpus, const vector<Sentence>& test_target_corpus) {
+Real log_likelihood(const AdditiveCNLM& model,
+                    const vector<Sentence>& test_source_corpus,
+                    const vector<Sentence>& test_target_corpus) {
   Real p=0.0;
 
   int context_width = model.config.ngram_order-1;
   int tokens=0;
   WordId start_id = model.label_set().Lookup("<s>");
-
-//  #pragma omp master
-//  cerr << "Calculating perplexity for " << test_target_corpus.size() << " sentences";
 
   std::vector<WordId> context(context_width);
 
@@ -574,23 +580,20 @@ Real perplexity(const AdditiveCNLM& model, const vector<Sentence>& test_source_c
         context.at(i) = v_i;
       }
 //      Real log_prob = model.log_prob(w, context, s_rep);
-      Real log_prob = model.log_prob(w, context, test_source_corpus.at(s), false, t_i);
+      Real log_prob = model.log_prob(w, context, test_source_corpus.at(s),
+                                     false, t_i);
       p += log_prob;
-
-//      #pragma omp master
-//      if (tokens % 1000 == 0) { cerr << "."; cerr.flush(); }
 
       tokens++;
     }
   }
-//  #pragma omp master
-//  cerr << endl;
 
   return p;
 }
 
 
-void freq_bin_type(const std::string &corpus, int num_classes, vector<int>& classes, Dict& dict, VectorReal& class_bias) {
+void freq_bin_type(const std::string &corpus, int num_classes,
+                   vector<int>& classes, Dict& dict, VectorReal& class_bias) {
   ifstream in(corpus.c_str());
   string line, token;
 
@@ -603,7 +606,8 @@ void freq_bin_type(const std::string &corpus, int num_classes, vector<int>& clas
     stringstream line_stream(line);
     while (line_stream >> token) {
       if (token == eos) continue;
-      int w_id = tmp_dict.insert(make_pair(token,tmp_dict.size())).first->second;
+      int w_id = tmp_dict.insert(
+          make_pair(token,tmp_dict.size())).first->second;
       assert (w_id <= int(counts.size()));
       if (w_id == int(counts.size())) counts.push_back( make_pair(token, 1) );
       else                            counts[w_id].second += 1;
@@ -613,7 +617,8 @@ void freq_bin_type(const std::string &corpus, int num_classes, vector<int>& clas
   }
 
   sort(counts.begin(), counts.end(),
-       [](const pair<string,int>& a, const pair<string,int>& b) -> bool { return a.second > b.second; });
+       [](const pair<string,int>& a, const pair<string,int>& b) ->
+       bool { return a.second > b.second; });
 
   classes.clear();
   classes.push_back(0);
@@ -622,40 +627,34 @@ void freq_bin_type(const std::string &corpus, int num_classes, vector<int>& clas
   class_bias(0) = log(eos_sum);
   int bin_size = sum / (num_classes-1);
 
-//  int bin_size = counts.size()/(num_classes);
-
   int mass=0;
   for (int i=0; i < int(counts.size()); ++i) {
     WordId id = dict.Convert(counts.at(i).first);
-
-//    if ((mass += 1) > bin_size) {
 
     if ((mass += counts.at(i).second) > bin_size) {
       bin_size = (sum -= mass) / (num_classes - classes.size());
       class_bias(classes.size()-1) = log(mass);
 
-
-//      class_bias(classes.size()-1) = 1;
-
       classes.push_back(id+1);
 
-//      cerr << " " << classes.size() << ": " << classes.back() << " " << mass << endl;
       mass=0;
     }
   }
   if (classes.back() != int(dict.size()))
     classes.push_back(dict.size());
 
-//  cerr << " " << classes.size() << ": " << classes.back() << " " << mass << endl;
   class_bias.array() -= log(eos_sum+sum);
 
-  cerr << "Binned " << dict.size() << " types in " << classes.size()-1 << " classes with an average of "
-       << float(dict.size()) / float(classes.size()-1) << " types per bin." << endl;
+  cerr << "Binned " << dict.size() << " types in " << classes.size()-1
+       << " classes with an average of "
+       << float(dict.size()) / float(classes.size()-1)
+       << " types per bin." << endl;
   in.close();
 }
 
 
-void classes_from_file(const std::string &class_file, vector<int>& classes, Dict& dict, VectorReal& class_bias) {
+void classes_from_file(const std::string &class_file, vector<int>& classes,
+                       Dict& dict, VectorReal& class_bias) {
   ifstream in(class_file.c_str());
 
   vector<int> class_freqs(1,0);
@@ -675,7 +674,6 @@ void classes_from_file(const std::string &class_file, vector<int>& classes, Dict
     if (!prev_class_str.empty() && class_str != prev_class_str) {
       class_freqs.push_back(log(mass));
       classes.push_back(w_id+1);
-//      cerr << " " << classes.size() << ": " << classes.back() << " " << mass << endl;
       mass=0;
     }
     prev_class_str=class_str;
@@ -683,14 +681,15 @@ void classes_from_file(const std::string &class_file, vector<int>& classes, Dict
 
   class_freqs.push_back(log(mass));
   classes.push_back(dict.size());
-//  cerr << " " << classes.size() << ": " << classes.back() << " " << mass << endl;
 
   class_bias = VectorReal::Zero(class_freqs.size());
   for (size_t i=0; i<class_freqs.size(); ++i)
     class_bias(i) = class_freqs.at(i) - log(total_mass);
 
-  cerr << "Read " << dict.size() << " types in " << classes.size()-1 << " classes with an average of "
-       << float(dict.size()) / float(classes.size()-1) << " types per bin." << endl;
+  cerr << "Read " << dict.size() << " types in " << classes.size()-1
+       << " classes with an average of "
+       << float(dict.size()) / float(classes.size()-1)
+       << " types per bin." << endl;
 
   in.close();
 }
