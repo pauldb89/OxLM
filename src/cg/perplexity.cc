@@ -2,7 +2,6 @@
 #include <vector>
 #include <iostream>
 #include <fstream>
-#include <omp.h>
 #include <time.h>
 #include <math.h>
 #include <random>
@@ -19,6 +18,7 @@
 #include <Eigen/Core>
 
 // Local
+#include "utils/conditional_omp.h"
 #include "cg/additive-cnlm.h"
 #include "corpus/corpus.h"
 

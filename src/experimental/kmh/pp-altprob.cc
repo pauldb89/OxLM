@@ -34,8 +34,7 @@ using namespace Eigen;
 
 
 typedef vector<WordId> Context;
-// typedef std::vector<Labels> Labelss;
-typedef std::vector<std::string> StringLabels;
+typedef std::vector<int> IntLabels;
 typedef Sentence Label;
 
 Real getSentenceProb(Sentence& s, Label& l, AdditiveCNLM& model);
@@ -57,12 +56,12 @@ int main(int argc, char **argv) {
   options_description generic("Allowed options");
   generic.add_options()
     ("labels,l", value<string>(),
-     "list of candidate labels, candidates per sentence in one line")
-    ("sentences,s", value<string>(),
-     "sentences to be labelled, one per line")
+     "list of candidate outputs, candidates per sentence in one line, referring to line in targets")
+    ("symbols,s", value<string>(),
+     "symbols to generate from, one per line")
+    ("targets,t", value<string>(), "target sentences, one per line")
     ("model-in,m", value<string>(),
      "model to generate from")
-    ("reference,r", value<string>(), "reference labels, one per line")
     ("no-sentence-predictions", "do not print sentence predictions for individual sentences")
     ("raw-scores", "print only raw scores")
     ;
@@ -74,7 +73,7 @@ int main(int argc, char **argv) {
   notify(vm);
   ///////////////////////////////////////////////////////////////////////////////////////
 
-  if (vm.count("help") || !vm.count("labels") || !vm.count("model-in") || !vm.count("sentences")) {
+  if (vm.count("help") || !vm.count("labels") || !vm.count("model-in") || !vm.count("symbols")) {
     cerr << cmdline_options << "\n";
     return 1;
   }
@@ -86,50 +85,56 @@ int main(int argc, char **argv) {
 
   WordId end_id = model.label_set().Lookup("</s>");
 
+  string line, token;
+  int label;
 
-  // Read in label probabilities
-  ifstream labels_in(vm["labels"].as<string>().c_str());
-  std::vector<StringLabels> labels_per_sentence;
-
-  string label, line, token;
-
-  while(getline(labels_in, line)) {
-    stringstream label_stream(line);
-    StringLabels candidate_labels;
-    while (label_stream >> label)
-      candidate_labels.push_back(label);
-    labels_per_sentence.push_back(candidate_labels);
-  }
-  labels_in.close();
-
-  vector<string> predictedLabels;
-
-  // read in sentences and assign labels
-  ifstream sentences_in(vm["sentences"].as<string>().c_str());
-  int counter = 0;
-  while(getline(sentences_in, line)) {
-    // get a sentence
+  // Read in candidate sentences
+  ifstream targets_in(vm["targets"].as<string>().c_str());
+  std::vector<Sentence> target_sentences;
+  while(getline(targets_in, line)) {
     Sentence s;
     s.clear();
     stringstream sentence_stream(line);
     while (sentence_stream >> token)
       s.push_back(model.label_set().Convert(token, true));
     s.push_back(end_id);
+    target_sentences.push_back(s);
+  }
+  targets_in.close();
 
-    // calculate probability of labels given
+  // Read in candidate sentence pointers
+  ifstream labels_in(vm["labels"].as<string>().c_str());
+  std::vector<IntLabels> candidates_per_symbol;
+
+  while(getline(labels_in, line)) {
+    stringstream label_stream(line);
+    IntLabels candidate_labels;
+    while (label_stream >> label)
+      candidate_labels.push_back(label);
+    candidates_per_symbol.push_back(candidate_labels);
+  }
+  labels_in.close();
+
+  vector<int> predictedLabels;
+
+  // read in symbols and calculate sentence probabilities p(E_i|\theta_g)
+  ifstream sentences_in(vm["symbols"].as<string>().c_str());
+  int counter = 0;
+  while(getline(sentences_in, line)) {
+    // get a symbol
+    Label symbol;
+    symbol.clear();
+    stringstream sentence_stream(line);
+    while (sentence_stream >> token)
+      symbol.push_back(model.source_label_set().Convert(token, true));
+    // if (model.config.source_eos) symbol.push_back(end_id);
+
+    // calculate probability of sentences given that symbol.
     vector<Real> labelCondProbs;
-    StringLabels& labels = labels_per_sentence[counter];
-    for(size_t l_i = 0; l_i < labels.size(); ++l_i) {
+    IntLabels& candidates = candidates_per_symbol[counter];
+    for(size_t c_i = 0; c_i < candidates.size(); ++c_i) {
 
-      // unpack label and probability
-      string labelText = labels.at(l_i);
-
-      // set up label for model query
-      Label l;
-      l.push_back(model.source_label_set().Convert(labelText));
-      if (model.config.source_eos) l.push_back(end_id);
-
-      Real condSentenceProb = getSentenceProb(s, l, model);
+      Real condSentenceProb = getSentenceProb(target_sentences[candidates[c_i]], symbol, model);
 
       Real condLabelProb = condSentenceProb;
       // + labelLogProb; // We have no prior probability on a label (=sentence).
@@ -141,45 +146,33 @@ int main(int argc, char **argv) {
     Real maxVal = labelCondProbs.at(0);
     size_t maxIndex = 0;
     if(vm.count("raw-scores")) cout << "Next sentence" << endl;
-    for(size_t l_i = 0; l_i < labelCondProbs.size(); ++l_i)
+    for(size_t c_i = 0; c_i < labelCondProbs.size(); ++c_i)
     {
-      if(vm.count("raw-scores")) cout << "Comp: " << l_i << ": " << labelCondProbs.at(l_i) << endl;
-      if (labelCondProbs.at(l_i) > maxVal) {
-        maxIndex = l_i;
-        maxVal = labelCondProbs.at(l_i);
+      if(vm.count("raw-scores")) cout << "Comp: " << c_i << ": " << labelCondProbs.at(c_i) << endl;
+      if (labelCondProbs.at(c_i) > maxVal) {
+        maxIndex = c_i;
+        maxVal = labelCondProbs.at(c_i);
       }
     }
-    string maxLabel = labels.at(maxIndex);
-    predictedLabels.push_back(maxLabel);
+    predictedLabels.push_back(maxIndex);
 
-    if(!vm.count("no-sentence-predictions") && !vm.count("raw-scores")) cout << line << " ||| " << maxLabel << endl;
-    if(vm.count("raw-scores")) cout << maxLabel << endl;
+    if(!vm.count("no-sentence-predictions") && !vm.count("raw-scores")) cout << line << " ||| " << maxIndex << endl;
+    if(vm.count("raw-scores")) cout << maxIndex << endl;
     ++counter;
   }
   sentences_in.close();
 
-  // Load reference labels, if provided, and get accuracy
-  if (vm.count("reference")) {
-    ifstream reflabels_in(vm["reference"].as<string>().c_str());
+  // Get accuracy
+  size_t correct = 0;
+  size_t total = 0;
 
-    vector<string> referenceLabels;
-    string referenceLabel;
-    while (reflabels_in >> referenceLabel) referenceLabels.push_back(referenceLabel);
-    assert(referenceLabels.size()==predictedLabels.size() && "Label list size mismatch!");
-
-    size_t correct = 0;
-    size_t total = 0;
-
-    for(size_t i=0; i<referenceLabels.size(); i++) {
-      if (referenceLabels.at(i) == predictedLabels.at(i)) correct++;
-      total++;
-    }
-    Real accuracy = static_cast<Real>(correct)/static_cast<Real>(total);
-
-    cout << "#######################" << endl << "# Accuracy = " << accuracy << endl << "#######################" << endl;
-
-    reflabels_in.close();
+  for(size_t i=0; i<predictedLabels.size(); i++) {
+    if (predictedLabels.at(i) == 0) correct++;
+    total++;
   }
+  Real accuracy = static_cast<Real>(correct)/static_cast<Real>(total);
+
+  cout << "#######################" << endl << "# Accuracy = " << accuracy << endl << "#######################" << endl;
 
   return 0;
 

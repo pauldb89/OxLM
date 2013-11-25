@@ -9,7 +9,7 @@
 # Executables
 #############################################
 
-set(EXECUTABLES pp-logprob)
+set(EXECUTABLES pp-logprob pp-altprob)
 foreach(f ${EXECUTABLES})
   add_executable(${f} ${f}.cc)
   target_link_libraries(${f} cnlm)

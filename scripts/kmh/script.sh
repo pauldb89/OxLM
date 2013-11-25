@@ -19,7 +19,7 @@ do
     do
       for nonlinearity in "true" "false"
       do
-        for order in 3 4
+        for order in 2 3 4
         do
           ARRAY+=("${datadir} ${traindata} ${testdata} ${wordwidth} ${step} ${l2} ${its} ${nonlinearity} ${order}")
         done

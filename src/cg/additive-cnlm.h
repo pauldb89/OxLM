@@ -20,10 +20,12 @@ namespace oxlm {
 class AdditiveCNLM : public CNLMBase {
 public:
   AdditiveCNLM();
-  AdditiveCNLM(const ModelData& config, const Dict& source_vocab, const Dict& target_vocab, const std::vector<int>& classes);
+  AdditiveCNLM(const ModelData& config, const Dict& source_vocab, 
+      const Dict& target_vocab, const std::vector<int>& classes);
   ~AdditiveCNLM() {}
 
-  void reinitialize(const ModelData& config, const Dict& source_vocab, const Dict& target_vocab, const std::vector<int>& classes);
+  void reinitialize(const ModelData& config, const Dict& source_vocab, 
+                    const Dict& target_vocab, const std::vector<int>& classes);
   void expandSource(const Dict& source_labels);
 
   int source_types() const { return m_source_labels.size(); }
@@ -32,21 +34,30 @@ public:
   Dict& source_label_set() { return m_source_labels; }
 
   // Better name needed. Make source_corpus const again.
-  Real gradient(std::vector<Sentence>& source_corpus, const std::vector<Sentence>& target_corpus,
-                const TrainingInstances &training_instances, Real l2, Real source_l2, WeightsType& g_W);
+  Real gradient(std::vector<Sentence>& source_corpus, 
+                const std::vector<Sentence>& target_corpus,
+                const TrainingInstances &training_instances, 
+                Real l2, Real source_l2, WeightsType& g_W);
 
-  Real log_prob(const WordId w, const std::vector<WordId>& context, const Sentence& source, bool cache=false, int target_index=-1) const;
+  Real log_prob(const WordId w, const std::vector<WordId>& context, 
+                const Sentence& source, bool cache=false, 
+                int target_index=-1) const;
 
-  MatrixReal window_product(int i, const MatrixReal& v, bool transpose=false) const {
+  MatrixReal window_product(int i, const MatrixReal& v, 
+                            bool transpose=false) const {
     if (config.diagonal)
       return (T.at(i).asDiagonal() * v.transpose()).transpose();
     else if (transpose) return v * T.at(i).transpose();
     else                return v * T.at(i);
   }
 
-  /*virtual*/void source_repr_callback(TrainingInstance t, int t_i, VectorReal& r);
-  /*virtual*/void source_grad_callback(TrainingInstance t, int t_i, int instance_counter, const VectorReal& grads);
-  void source_representation(const Sentence& source, int target_index, VectorReal& result) const;
+  /*virtual*/void source_repr_callback(TrainingInstance t, int t_i, 
+                                       VectorReal& r);
+  /*virtual*/void source_grad_callback(TrainingInstance t, int t_i, 
+                                       int instance_counter, 
+                                      const VectorReal& grads);
+  void source_representation(const Sentence& source, int target_index, 
+                             VectorReal& result) const;
 
   // Allocate only own parameters (not base class weights).
   void map_parameters(Real*& ptr, WordVectorsType& s,

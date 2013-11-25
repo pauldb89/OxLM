@@ -84,6 +84,21 @@ def main():
                     f.write("%s " % reference_lines[ (line + offset) %
                         len(reference_lines)])
                 f.write("\n")
+        with open(pjoin(args.outputdir, "%s_alttest_symbols" % name), 'w') as symb:
+          with open(pjoin(args.outputdir, "%s_alttest_candidates" % name), 'w') as cand:
+            with open(pjoin(args.outputdir, "%s_alttest_targets" % name), 'w') as targets:
+              count = 0
+              maxlines = len(data_lines)
+              for line in reference_lines:
+                symb.write("%s\n" % line)
+                for i in range(0,9):
+                  cand.write("%d " % ((count+i)%maxlines))
+                cand.write("\n")
+                count += 1
+              for line in data_lines:
+                targets.write("%s\n" % line)
+
+
 
 
 if __name__ == '__main__':
