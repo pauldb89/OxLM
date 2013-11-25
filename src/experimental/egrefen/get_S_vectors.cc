@@ -26,7 +26,7 @@ using namespace oxlm;
 using namespace Eigen;
 
 int main(int argc, char **argv) {
-  cerr << "Get l2 norm of hidden variables: Copyright 2013 Edward Grefenstette, "
+  cerr << "Get vectors of hidden variables: Copyright 2013 Edward Grefenstette, "
        << REVISION << '\n' << endl;
 
   ///////////////////////////////////////////////////////////////////////////////////////
@@ -39,10 +39,8 @@ int main(int argc, char **argv) {
     ("help,h", "print help message");
   options_description generic("Allowed options");
   generic.add_options()
-    ("source,s", value<string>(),
-        "corpus of theta-values, one per line")
     ("model-in,m", value<string>(),
-        "model to generate from")
+        "model to extract thetas from")
     ;
   options_description config_options, cmdline_options;
   config_options.add(generic);
@@ -52,7 +50,7 @@ int main(int argc, char **argv) {
   notify(vm);
   ///////////////////////////////////////////////////////////////////////////////////////
 
-  if (vm.count("help") || !vm.count("source") || !vm.count("model-in")) {
+  if (vm.count("help") || !vm.count("model-in")) {
     cerr << cmdline_options << "\n";
     return 1;
   }
@@ -66,22 +64,17 @@ int main(int argc, char **argv) {
 
   cerr << "Model loaded." << endl;
 
-  string token;
-  ifstream source_in(vm["source"].as<string>().c_str());
+  Dict source_label_dict = model.source_label_set();
+  vector<Word> vocabulary = source_label_dict.getVocab();
+
 
   MatrixReal S = model.S;
-  Real source_l2 = model.config.source_l2_parameter;
-
-  while (source_in >> token) {
-    WordId sid = model.source_label_set().Convert(token);
-
-    VectorReal r = S.row(sid);
-    Real logPtheta = (-0.5*source_l2*r.squaredNorm());
-
-    cout << token << "\t" << logPtheta << endl;
+  
+  for (vector<Word>::const_iterator i=vocabulary.cbegin(); i < vocabulary.end(); i++) {
+    if (*i == "<s>" || *i=="</s>") continue;
+    WordId wid = source_label_dict.Convert(*i);
+    cout << *i << " " << S.row(wid) << endl;
   }
-
-  source_in.close();
 
   return 0;
 }
