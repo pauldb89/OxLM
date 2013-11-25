@@ -31,6 +31,23 @@ using namespace std;
 using namespace oxlm;
 using namespace Eigen;
 
+#include <dlfcn.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <signal.h>
+
+void sigUsr1Handler(int sig)
+{
+    fprintf(stderr, "Exiting on SIGUSR1\n");
+    void (*_mcleanup)(void);
+    _mcleanup = (void (*)(void))dlsym(RTLD_DEFAULT, "_mcleanup");
+    if (_mcleanup == NULL)
+         fprintf(stderr, "Unable to find gprof exit hook\n");
+    else _mcleanup();
+    _exit(0);
+}
+
+
 
 void learn(const variables_map& vm, ModelData& config);
 void cache_data(int start, int end, const vector<size_t>& indices, TrainingInstances &result);
@@ -40,6 +57,7 @@ void classes_from_file(const std::string &class_file, vector<int>& classes, Dict
 
 
 int main(int argc, char **argv) {
+  signal(SIGUSR1, sigUsr1Handler);
   cout << "Online training for neural translation models: Copyright 2013 Phil Blunsom, "
        << REVISION << '\n' << endl;
 

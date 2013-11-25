@@ -7,7 +7,7 @@ export OMP_NUM_THREADS=24
 ARRAY=()
 
 # datadir="/data/taipan/karher/Corpora/Europarl/parallel"
-datadir="/data/taipan/karher/oxlm/sample"
+datadir="${PWD}/../../sample"
 traindata="mini"
 testdata="mini"
 wordwidth=28
