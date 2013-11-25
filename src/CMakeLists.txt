@@ -36,7 +36,7 @@ find_package(Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})
 
 # OpenMP
-find_package(OpenMP REQUIRED)
+# find_package(OpenMP REQUIRED)
 
 #############################################
 # Hackery courtesy of Karl Moritz
