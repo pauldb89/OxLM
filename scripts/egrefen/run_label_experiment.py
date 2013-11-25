@@ -428,10 +428,29 @@ class ActionEvaluateModel(DefaultActionObject):
         that=self.that
         train_binary = os.path.join(that.config["group_exec"]["oxcg_bin"],"train_cnlm")
 
-        source_and_target_args = ["-s", self.theta_source, "-t", self.joint_target, "-m", self.modelpath, "-o", self.mapmodelpath]
-        freeze_weights_args=["--updateT=false", "--updateS=false", "--updateC=false", "--updateR=false", "--updateQ=true", "--updateF=false", "--updateFB=false", "--updateB=false"]
+        source_and_target_args = ["-s", self.theta_source,
+                                  "-t", self.joint_target,
+                                  "-m", self.modelpath,
+                                  "-o", self.mapmodelpath]
 
-        args = [train_binary] + source_and_target_args + freeze_weights_args
+        learning_args = ["--iterations", str(iterations),
+                         "--minibatch-size", str(mbsize),
+                         "--l2", str(lambda_value),
+                         "--step-size", str(stepsize),
+                         "--class-file", classfilepath,
+                         "--no-source-eos=true",
+                         "--replace-source-dict=true"]
+
+        freeze_weights_args=["--updateT=false",
+                             "--updateS=true",
+                             "--updateC=false",
+                             "--updateR=false",
+                             "--updateQ=false",
+                             "--updateF=false",
+                             "--updateFB=false",
+                             "--updateB=false"]
+
+        args = [train_binary] + source_and_target_args +learning_args + freeze_weights_args
 
         map_estimate_process = Popen(args, stdout=PIPE, stderr=PIPE)
         output, error = map_estimate_process.communicate()
