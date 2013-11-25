@@ -39,8 +39,8 @@ def main():
 
     args = parser.parse_args()
 
-    source_lines = [appendTag(line.strip(), 'source') for line  in open(args.source, 'r') if len(line.strip()) > 0 and not line.strip().startswith('#')]
-    target_lines = [appendTag(line.strip(), 'target') for line  in open(args.target, 'r') if len(line.strip()) > 0 and not line.strip().startswith('#')]
+    source_lines = [appendTag(line.strip(), 'source') for line  in open(args.source, 'r') if len(line.strip()) > 0]
+    target_lines = [appendTag(line.strip(), 'target') for line  in open(args.target, 'r') if len(line.strip()) > 0]
     assert len(source_lines) == len(target_lines)
 
     ## Add source EOS symbol if specified
