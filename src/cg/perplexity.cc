@@ -121,7 +121,7 @@ int main(int argc, char **argv) {
     Real sentence_p=0.0;
     for (size_t t_i=0; t_i < t.size(); ++t_i) {
         WordId w = t.at(t_i);
-        if(model.label_set().valid(t.at)) {
+        if(model.label_set().valid(w)) {
         int context_start = t_i - context_width;
         bool sentence_start = (t_i==0);
   
