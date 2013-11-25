@@ -61,3 +61,4 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 
 add_subdirectory(cg)
 add_subdirectory(experimental/kmh)
+add_subdirectory(experimental/egrefen)
