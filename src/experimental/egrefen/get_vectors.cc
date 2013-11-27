@@ -16,7 +16,7 @@
 #include "corpus/corpus.h"
 #include "cg/utils.h"
 
-static const char *REVISION = "$Rev: 3 $";
+static const char *REVISION = "$Rev: 5 $";
 
 // Namespaces
 using namespace boost;
@@ -26,7 +26,7 @@ using namespace oxlm;
 using namespace Eigen;
 
 int main(int argc, char **argv) {
-  cerr << "Get vectors of hidden variables: Copyright 2013 Edward Grefenstette, "
+  cerr << "Get vectors from model: Copyright 2013 Edward Grefenstette, "
        << REVISION << '\n' << endl;
 
   ///////////////////////////////////////////////////////////////////////////////////////
@@ -41,6 +41,12 @@ int main(int argc, char **argv) {
   generic.add_options()
     ("model-in,m", value<string>(),
         "model to extract thetas from")
+  ("source-vectors,s", 
+    "Get source vectors (S matrix).")
+  ("context-vectors,q", 
+    "Get context vectors (Q matrix).")
+  ("output-vectors,r", 
+    "Get output vectors (R matrix).")
     ;
   options_description config_options, cmdline_options;
   config_options.add(generic);
@@ -50,8 +56,21 @@ int main(int argc, char **argv) {
   notify(vm);
   ///////////////////////////////////////////////////////////////////////////////////////
 
-  if (vm.count("help") || !vm.count("model-in")) {
-    cerr << cmdline_options << "\n";
+  if (vm.count("help") || !vm.count("model-in") || (!vm.count("source-vectors") && !vm.count("context-vectors") && !vm.count("output-vectors"))) {
+    cerr << "Missing arguments."
+         << endl
+         << cmdline_options 
+         << endl;
+    return 1;
+  }
+
+  if ((vm.count("source-vectors") && vm.count("context-vectors"))
+      || (vm.count("source-vectors") && vm.count("output-vectors"))
+      || (vm.count("context-vectors") && vm.count("output-vectors"))) {
+    cerr << "Choose at most one of source-vectors, context-vectors, or output-vectors."
+         << endl
+         << cmdline_options 
+         << endl;
     return 1;
   }
 
@@ -64,16 +83,30 @@ int main(int argc, char **argv) {
 
   cerr << "Model loaded." << endl;
 
-  Dict source_label_dict = model.source_label_set();
-  vector<Word> vocabulary = source_label_dict.getVocab();
+  Dict label_dict;
+  vector<Word> vocabulary;
+  MatrixReal M;
 
-
-  MatrixReal S = model.S;
+  if (vm.count("source-vectors")){ 
+    label_dict = model.source_label_set();
+    vocabulary = label_dict.getVocab();
+    M = model.S;
+  }
+  else if (vm.count("context-vectors")){ 
+    label_dict = model.label_set();
+    vocabulary = label_dict.getVocab();
+    M = model.Q;
+  }
+  else if (vm.count("output-vectors")){ 
+    label_dict = model.label_set();
+    vocabulary = label_dict.getVocab();
+    M = model.R;
+  }
   
   for (vector<Word>::const_iterator i=vocabulary.cbegin(); i < vocabulary.end(); i++) {
     if (*i == "<s>" || *i=="</s>") continue;
-    WordId wid = source_label_dict.Convert(*i);
-    cout << *i << " " << S.row(wid) << endl;
+    WordId wid = label_dict.Convert(*i);
+    cout << *i << " " << M.row(wid) << endl;
   }
 
   return 0;
