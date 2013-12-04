@@ -60,6 +60,8 @@ int main(int argc, char **argv) {
         "number of worker threads.")
     ("model-in,m", value<string>(),
         "model to generate from")
+    ("no-source-eos", "do not add end of sentence tag to source \
+                       representations.")
     ("print-sentence-llh", "print the LLH of each sentence")
     ("print-corpus-ppl", "print perplexity of the corpus")
     ;
@@ -109,7 +111,8 @@ int main(int argc, char **argv) {
     Sentence s;
     while (line_stream >> token)
       s.push_back(model.source_label_set().Convert(token));
-    s.push_back(end_id);
+    if !vm.count("no-source-eos") 
+      s.push_back(end_id);
 
     Sentence t;
     assert(getline(target_in, line));
