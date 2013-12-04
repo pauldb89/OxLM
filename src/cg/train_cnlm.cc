@@ -508,9 +508,11 @@ void learn(const variables_map& vm, ModelData& config) {
                                                                      + "it" + std::to_string(iteration) 
                                                                      + ".mb" + std::to_string(minibatch_counter) 
                                                                      + ".model";
-            cout << "Dumping trained model from iteration " << iteration 
+            cout << "Saving trained model from iteration " << iteration 
                                                             << ", minibatch " << minibatch_counter 
                                                             << " to " << partial_model_path << endl;
+            cout.flush();
+
             std::ofstream f(partial_model_path.c_str());
             boost::archive::text_oarchive ar(f);
             ar << model;
