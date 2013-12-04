@@ -501,9 +501,8 @@ void learn(const variables_map& vm, ModelData& config) {
           model.W -= global_gradient;
 
           if (minibatch_counter % 100 == 0) { cerr << "."; cout.flush(); }
-        }
-
-        if ((dump_freq > 0) && (minibatch_counter % dump_freq) == 0 ) {
+        
+          if ((dump_freq > 0) && (minibatch_counter % dump_freq) == 0 ) {
             string partial_model_path = vm["model-out"].as<string>() + ".partial/" 
                                                                      + "it" + std::to_string(iteration) 
                                                                      + ".mb" + std::to_string(minibatch_counter) 
@@ -516,8 +515,11 @@ void learn(const variables_map& vm, ModelData& config) {
             std::ofstream f(partial_model_path.c_str());
             boost::archive::text_oarchive ar(f);
             ar << model;
+          }
+
         }
 
+        
         start += minibatch_size;
       }
 
