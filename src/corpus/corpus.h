@@ -76,6 +76,10 @@ class Dict {
       return i->second;
     }
   }
+
+  inline const std::vector<Word> getVocab() const {
+    return words_;
+  }
   
   inline bool valid(const WordId id) const { return id >= 0; }
 
