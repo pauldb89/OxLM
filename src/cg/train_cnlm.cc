@@ -505,7 +505,7 @@ void learn(const variables_map& vm, ModelData& config) {
 
         if ((dump_freq > 0) && (minibatch_counter % dump_freq) == 0 ) {
             string partial_model_path = vm["model-out"].as<string>() + ".partial/" 
-                                                                     + "iteration" + std::to_string(iteration) 
+                                                                     + "it" + std::to_string(iteration) 
                                                                      + ".mb" + std::to_string(minibatch_counter) 
                                                                      + ".model";
             cout << "Dumping trained model from iteration " << iteration 
