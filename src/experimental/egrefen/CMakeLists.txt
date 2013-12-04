@@ -9,7 +9,7 @@
 # Executables
 #############################################
 
-set(EXECUTABLES get_theta_l2norms get_S_vectors)
+set(EXECUTABLES get_theta_l2norms get_vectors)
 foreach(f ${EXECUTABLES})
   add_executable(${f} ${f}.cc)
   target_link_libraries(${f} cnlm)

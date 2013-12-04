@@ -37,7 +37,7 @@ typedef vector<WordId> Context;
 typedef std::vector<int> IntLabels;
 typedef Sentence Label;
 
-Real getSentenceProb(Sentence& s, Label& l, AdditiveCNLM& model);
+Real getSentenceProb(Sentence& s, Label& l, AdditiveCNLM& model, double penalty);
 
 int main(int argc, char **argv) {
 
@@ -64,6 +64,8 @@ int main(int argc, char **argv) {
      "model to generate from")
     ("no-sentence-predictions", "do not print sentence predictions for individual sentences")
     ("raw-scores", "print only raw scores")
+    ("word-insertion-penalty", value<double>()->default_value(0.0),
+     "word insertion penalty")
     ;
   options_description config_options, cmdline_options;
   config_options.add(generic);
@@ -77,6 +79,8 @@ int main(int argc, char **argv) {
     cerr << cmdline_options << "\n";
     return 1;
   }
+
+  double penalty = vm["word-insertion-penalty"].as<double>();
 
   AdditiveCNLM model;
   std::ifstream f(vm["model-in"].as<string>().c_str());
@@ -134,7 +138,7 @@ int main(int argc, char **argv) {
     IntLabels& candidates = candidates_per_symbol[counter];
     for(size_t c_i = 0; c_i < candidates.size(); ++c_i) {
 
-      Real condSentenceProb = getSentenceProb(target_sentences[candidates[c_i]], symbol, model);
+      Real condSentenceProb = getSentenceProb(target_sentences[candidates[c_i]], symbol, model, penalty);
 
       Real condLabelProb = condSentenceProb;
       // + labelLogProb; // We have no prior probability on a label (=sentence).
@@ -178,7 +182,7 @@ int main(int argc, char **argv) {
 
 }
 
-Real getSentenceProb(Sentence& s, Label& l, AdditiveCNLM& model) {
+Real getSentenceProb(Sentence& s, Label& l, AdditiveCNLM& model, double penalty) {
 
   WordId start_id = model.label_set().Lookup("<s>");
   int context_width = model.config.ngram_order-1;
@@ -200,7 +204,7 @@ Real getSentenceProb(Sentence& s, Label& l, AdditiveCNLM& model) {
       }
 
       Real log_prob = model.log_prob(w, context, l, false, s_i);
-      sentence_p += log_prob;
+      sentence_p += log_prob + log(penalty);
     }
     else {
       //        cerr << "Ignoring word for s_i=" << s_i << endl;

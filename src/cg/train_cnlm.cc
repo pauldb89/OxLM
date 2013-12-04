@@ -5,6 +5,8 @@
 #include <fstream>
 #include <time.h>
 #include <math.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 // Boost
 #include <boost/program_options/parsers.hpp>
@@ -391,6 +393,13 @@ void learn(const variables_map& vm, ModelData& config) {
   Real av_f=0.0;
   Real pp=0;
 
+  const int dump_freq = vm["dump-frequency"].as<int>();
+
+  if (dump_freq > 0) {
+    const string partialdir = vm["model-out"].as<string>() + ".partial/";
+    mkdir(partialdir.c_str(), 0777); // notice that 777 is different than 0777
+  }
+
   #pragma omp parallel shared(global_gradient, pp, av_f)
   {
     Real* gradient_data = new Real[model.num_weights()];
@@ -492,8 +501,25 @@ void learn(const variables_map& vm, ModelData& config) {
           model.W -= global_gradient;
 
           if (minibatch_counter % 100 == 0) { cerr << "."; cout.flush(); }
+        
+          if ((dump_freq > 0) && (minibatch_counter % dump_freq) == 0 ) {
+            string partial_model_path = vm["model-out"].as<string>() + ".partial/" 
+                                                                     + "it" + std::to_string(iteration) 
+                                                                     + ".mb" + std::to_string(minibatch_counter) 
+                                                                     + ".model";
+            cout << "Saving trained model from iteration " << iteration 
+                                                            << ", minibatch " << minibatch_counter 
+                                                            << " to " << partial_model_path << endl;
+            cout.flush();
+
+            std::ofstream f(partial_model_path.c_str());
+            boost::archive::text_oarchive ar(f);
+            ar << model;
+          }
+
         }
 
+        
         start += minibatch_size;
       }
 
@@ -521,6 +547,9 @@ void learn(const variables_map& vm, ModelData& config) {
         //for (auto t : model.T)
         //  cerr << " " << t.norm();
         //cerr << endl;
+
+        
+
       }
     }
   }

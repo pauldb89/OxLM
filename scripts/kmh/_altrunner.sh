@@ -8,12 +8,14 @@ shift; testprefix=$1
 shift; wordwidth=$1
 shift; stepsize=$1
 shift; l2=$1
+shift; l2s=$1
 shift; iterations=$1
+shift; iterations2=$1
 shift; nonlinearbool=$1
 shift; order=$1
 
 date=$(date +%Y%m%d-%H)
-expdir=../../experiments/kmh/${date}_${trainprefix}_${testprefix}_${wordwidth}.${stepsize}.${l2}.${iterations}.${nonlinearbool}.${order}
+expdir=../../experiments/kmh/Z${date}_${trainprefix}_${testprefix}_${wordwidth}.s${stepsize}.l${l2}.${l2s}.i${iterations}.${iterations2}.${nonlinearbool}.${order}
 
 nonlinear=""
 if [ "$nonlinearbool" == "true" ]
@@ -29,6 +31,7 @@ fi
   -t ${expdir}/data/${trainprefix}_joint_target \
   --no-source-eos \
   --l2 ${l2} \
+  --source-l2 ${l2s} \
   --step-size ${stepsize} \
   --iterations ${iterations} \
   --word-width ${wordwidth} \
@@ -44,8 +47,9 @@ fi
   --model-out ${expdir}/${testprefix}.retrain.model \
   --no-source-eos \
   --l2 ${l2} \
+  --source-l2 ${l2s} \
   --step-size ${stepsize} \
-  --iterations ${iterations} \
+  --iterations ${iterations2} \
   --word-width ${wordwidth} \
   --order ${order} \
   ${nonlinear} \
@@ -57,12 +61,16 @@ fi
   --updateFB false \
   --updateB false
 
-# Evaluate paraphrases
-../../bin/pp-altprob \
- --no-sentence-predictions \
- --raw-scores \
- -l ${expdir}/data/${testprefix}_source_alttest_candidates \
- -s ${expdir}/data/${testprefix}_source_alttest_symbols \
- -t ${expdir}/data/${testprefix}_source_alttest_targets \
- -m ${expdir}/${testprefix}.retrain.model \
- | tee ${expdir}/result
+for penalty in 0.1 0.2 0.3 1 2 3 4 5 6 7 8 9 10
+do
+  # Evaluate paraphrases
+  ../../bin/pp-altprob \
+    --no-sentence-predictions \
+    --raw-scores \
+    -l ${expdir}/data/${testprefix}_source_alttest_candidates \
+    -s ${expdir}/data/${testprefix}_source_alttest_symbols \
+    -t ${expdir}/data/${testprefix}_source_alttest_targets \
+    -m ${expdir}/${testprefix}.retrain.model \
+    --word-insertion-penalty ${penalty} \
+    | tee ${expdir}/result.pen${penalty}
+done

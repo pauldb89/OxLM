@@ -32,3 +32,4 @@ IFS=$'\n'
 # declare -p ARRAY
 
 for i in ${ARRAY[@]}; do echo $i; done | xargs -i --max-procs 16 ./cldcrun.sh {}
+# for i in ${ARRAY[@]}; do ./cldcrun.sh ${i} ; done
