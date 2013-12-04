@@ -503,6 +503,19 @@ void learn(const variables_map& vm, ModelData& config) {
           if (minibatch_counter % 100 == 0) { cerr << "."; cout.flush(); }
         }
 
+        if ((dump_freq > 0) && (minibatch_counter % dump_freq) == 0 ) {
+            string partial_model_path = vm["model-out"].as<string>() + ".partial/" 
+                                                                     + "iteration" + std::to_string(iteration) 
+                                                                     + ".mb" + std::to_string(minibatch_counter) 
+                                                                     + ".model";
+            cout << "Dumping trained model from iteration " << iteration 
+                                                            << ", minibatch " << minibatch_counter 
+                                                            << " to " << partial_model_path << endl;
+            std::ofstream f(partial_model_path.c_str());
+            boost::archive::text_oarchive ar(f);
+            ar << model;
+        }
+
         start += minibatch_size;
       }
 
@@ -531,13 +544,7 @@ void learn(const variables_map& vm, ModelData& config) {
         //  cerr << " " << t.norm();
         //cerr << endl;
 
-        if ((dump_freq > 0) && (iteration % dump_freq) == 0 ) {
-            string partial_model_path = vm["model-out"].as<string>() + ".partial/" + "iteration" + std::to_string(iteration/dump_freq)+".model";
-            cout << "Dumping trained model from iteration " << iteration << " to " << partial_model_path << endl;
-            std::ofstream f(partial_model_path.c_str());
-            boost::archive::text_oarchive ar(f);
-            ar << model;
-        }
+        
 
       }
     }
