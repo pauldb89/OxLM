@@ -5,6 +5,8 @@
 #include <fstream>
 #include <time.h>
 #include <math.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 // Boost
 #include <boost/program_options/parsers.hpp>
@@ -391,6 +393,13 @@ void learn(const variables_map& vm, ModelData& config) {
   Real av_f=0.0;
   Real pp=0;
 
+  const int dump_freq = vm["dump-frequency"].as<int>();
+
+  if (dump_freq > 0) {
+    const string partialdir = vm["model-out"].as<string>() + ".partial/";
+    mkdir(partialdir.c_str(), 0777); // notice that 777 is different than 0777
+  }
+
   #pragma omp parallel shared(global_gradient, pp, av_f)
   {
     Real* gradient_data = new Real[model.num_weights()];
@@ -521,6 +530,15 @@ void learn(const variables_map& vm, ModelData& config) {
         //for (auto t : model.T)
         //  cerr << " " << t.norm();
         //cerr << endl;
+
+        if ((dump_freq > 0) && (iteration % dump_freq) == 0 ) {
+            string partial_model_path = vm["model-out"].as<string>() + ".partial/" + "iteration" + std::to_string(iteration/dump_freq)+".model";
+            cout << "Dumping trained model from iteration " << iteration << " to " << partial_model_path << endl;
+            std::ofstream f(partial_model_path.c_str());
+            boost::archive::text_oarchive ar(f);
+            ar << model;
+        }
+
       }
     }
   }
