@@ -47,8 +47,8 @@ def main():
 
     for perplexity in perplexities:
         X = tsne.tsne(vectors, initial_dims = dimensions, perplexity = perplexity)
-        ofilename = "Xpp%f.vectors"
-        with open(pjoin(args.path, ofilename), 'w') as f:
+        ofilename = "Xpp%f.vectors" % perplexity
+        with open(pjoin(args.output, ofilename), 'w') as f:
             for i in range(len(labels)):
                 f.write("%s %s\n" % (labels[i], " ".join(map(str,X[i,:]))))
 
