@@ -3,6 +3,7 @@
 import sys
 import argparse
 from os.path import join as pjoin
+from os.path import abspath
 
 from numpy import array
 
@@ -33,7 +34,7 @@ def main():
     else:
         perplexities = [float(p) for p in args.plist.split(',')]
 
-    sys.path.append(args.path)
+    sys.path.append(abspath(args.path))
     import calc_tsne as tsne
 
     TRAINING_THETAS = args.vectors
