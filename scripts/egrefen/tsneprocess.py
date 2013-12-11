@@ -22,6 +22,8 @@ def main():
                         help='Path to t-sne scripts.')
     parser.add_argument('-o', '--output', type=str, default='.',
                         help='Output directory.')
+    parser.add_argument('--use-python-tsne', dest="python_tsne", action="store_true", default=False,
+                        help='Use python version of t-sne (slower).')
 
     args = parser.parse_args()
 
@@ -35,7 +37,10 @@ def main():
         perplexities = [float(p) for p in args.plist.split(',')]
 
     sys.path.append(abspath(args.path))
-    import calc_tsne as tsne
+    if args.python_tsne:
+        import tsne as tsne
+    else:
+        import calc_tsne as tsne
 
     TRAINING_THETAS = args.vectors
     dimensions = args.dimensions
