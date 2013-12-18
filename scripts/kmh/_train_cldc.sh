@@ -11,6 +11,7 @@ shift; l2=$1
 shift; iterations=$1
 shift; nonlinearbool=$1
 shift; order=$1
+shift; threads=$1
 
 rcvdir="/data/taipan/karher/deep-embeddings/data/alex/cnlm"
 rcvsize="1000"
@@ -38,6 +39,7 @@ fi
   --iterations ${iterations} \
   --word-width ${wordwidth} \
   --order ${order} \
+  --threads ${threads} \
   ${nonlinear} \
   --model-out ${expdir}/${trainprefix}.model
 
@@ -48,11 +50,13 @@ fi
   --model-in ${expdir}/${trainprefix}.model \
   --model-out ${expdir}/retrain.model \
   --no-source-eos \
+  --replace-source-dict \
   --l2 ${l2} \
   --step-size ${stepsize} \
   --iterations ${iterations} \
   --word-width ${wordwidth} \
   --order ${order} \
+  --threads ${threads} \
   ${nonlinear} \
   --updateT false \
   --updateC false \
@@ -79,6 +83,8 @@ do
     -o ${expdir}/cldc/${lang}_test
   python cldc_merger.py ${expdir}/cldc/${lang}_train ${expdir}/cldc/${lang}_train_doc
   python cldc_merger.py ${expdir}/cldc/${lang}_test ${expdir}/cldc/${lang}_test_doc
+  sed -i 's/nan/0.00/g' ${expdir}/cldc/${lang}_train_doc
+  sed -i 's/nan/0.00/g' ${expdir}/cldc/${lang}_test_doc
 done
 
 # Train stuff with Java.

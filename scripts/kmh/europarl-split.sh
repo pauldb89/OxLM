@@ -22,11 +22,11 @@ python ../map_unknowns.py --cutoff 0 -u _UNK_DE_ ${datadir}/${trainprefix}.de.tx
 # Step 3: From training data, generate a joint target with a shared source, such
 # that S0 -> English Sentence One and S0 -> German Sentence One.
 python ../jointPreformatter.py \
-  ${expdir}/data/${trainprefix}.en.cutoff.txt \
-  ${expdir}/data/${trainprefix}.de.cutoff.txt \
+  -s ${expdir}/data/${trainprefix}.en.cutoff.txt \
+  -t ${expdir}/data/${trainprefix}.de.cutoff.txt \
   -o ${expdir}/data \
-  -s ${trainprefix}_joint_source \
-  -t ${trainprefix}_joint_target
+  --output-source-file ${trainprefix}_joint_source \
+  --output-target-file ${trainprefix}_joint_target
   # --source-eos-label _EOS_EN_ \
   # --target-eos-label _EOS_DE_
 
