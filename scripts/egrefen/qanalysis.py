@@ -32,7 +32,7 @@ def main():
     classes = [sid for (sid, vect) in lines]
     vectors = array([vect for (sid, vect) in lines])
 
-    print "Top-5 precision:", 100*get_prec(classes, vectors, args.k)
+    print "Top-%d precision:" % args.k, 100*get_prec(classes, vectors, args.k)
 
 if __name__ == '__main__':
     main()
