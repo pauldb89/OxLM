@@ -3,6 +3,7 @@
 
 #include <boost/shared_ptr.hpp>
 #include <boost/archive/text_oarchive.hpp>
+#include <boost/program_options/variables_map.hpp>
 #include <iostream>
 #include <functional>
 #include <fstream>
@@ -183,6 +184,8 @@ public:
 
   WeightsType           W;  // All the parameters in one vector
   Real length_ratio;
+
+  friend void gradient_check(const boost::program_options::variables_map& vm, ModelData& config, const Real epsilon);
 
 protected:
   virtual void init(bool init_weights=false);
