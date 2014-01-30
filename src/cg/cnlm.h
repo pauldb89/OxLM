@@ -30,7 +30,7 @@ public:
 
 public:
   CNLMBase();
-  CNLMBase(const ModelData& config, const Dict& target_vocab, 
+  CNLMBase(const ModelData& config, const Dict& target_vocab,
            const std::vector<int>& classes);
   ~CNLMBase() { delete [] m_data; }
   void initWordToClass();
@@ -59,32 +59,32 @@ public:
       const std::vector<Sentence>& target_corpus,
       const TrainingInstances& training_instances,
       // std::function<void(TrainingInstance, VectorReal)> source_repr_callback,
-      // std::function<void(TrainingInstance, int, int, VectorReal)> 
+      // std::function<void(TrainingInstance, int, int, VectorReal)>
       //   source_grad_callback,
       Real l2, Real source_l2, Real*& g_ptr);
 
-  virtual void source_repr_callback(TrainingInstance t, int t_i, 
+  virtual void source_repr_callback(TrainingInstance t, int t_i,
                                     VectorReal& r) = 0;
-  virtual void source_grad_callback(TrainingInstance t, int t_i, 
-                                    int instance_counter, 
+  virtual void source_grad_callback(TrainingInstance t, int t_i,
+                                    int instance_counter,
                                     const VectorReal& grads) = 0;
 
-  void source_representation(const Sentence& source, int target_index, 
+  void source_representation(const Sentence& source, int target_index,
                              VectorReal& result) const;
-  void hidden_layer(const std::vector<WordId>& context, 
+  void hidden_layer(const std::vector<WordId>& context,
                     const VectorReal& source, VectorReal& result) const;
 
-  Real log_prob(const WordId w, const std::vector<WordId>& context, 
+  Real log_prob(const WordId w, const std::vector<WordId>& context,
                 bool cache=false) const;
-  Real log_prob(const WordId w, const std::vector<WordId>& context, 
+  Real log_prob(const WordId w, const std::vector<WordId>& context,
                 const VectorReal& source, bool cache=false) const;
-  void class_log_probs(const std::vector<WordId>& context, 
-                       const VectorReal& source, 
-                       const VectorReal& prediction_vector, VectorReal& result, 
+  void class_log_probs(const std::vector<WordId>& context,
+                       const VectorReal& source,
+                       const VectorReal& prediction_vector, VectorReal& result,
                        bool cache=false) const;
-  void word_log_probs(int c, const std::vector<WordId>& context, 
-                      const VectorReal& source, 
-                      const VectorReal& prediction_vector, VectorReal& result, 
+  void word_log_probs(int c, const std::vector<WordId>& context,
+                      const VectorReal& source,
+                      const VectorReal& prediction_vector, VectorReal& result,
                       bool cache=false) const;
 
   Eigen::Block<WordVectorsType> class_R(const int c) {
@@ -157,7 +157,7 @@ public:
                       WordVectorsType& f, ContextTransformsType& c,
                       WeightsType& b, WeightsType& fb) const;
 
-  MatrixReal context_product(int i, const MatrixReal& v, 
+  MatrixReal context_product(int i, const MatrixReal& v,
                              bool transpose=false) const {
     if (config.diagonal)
       return (C.at(i).asDiagonal() * v.transpose()).transpose();
@@ -165,7 +165,7 @@ public:
     else                return v * C.at(i);
   }
 
-  void context_gradient_update(ContextTransformType& g_C, const MatrixReal& v, 
+  void context_gradient_update(ContextTransformType& g_C, const MatrixReal& v,
                                const MatrixReal& w) const {
     if (config.diagonal) g_C += (v.cwiseProduct(w).colwise().sum()).transpose();
     else                 g_C += (v.transpose() * w);
@@ -195,9 +195,9 @@ protected:
   std::vector<int> word_to_class; // map from word id to class
   std::vector<int> indexes;       // vocab spans for each class
 
-  mutable std::unordered_map<std::pair<int,Words>, VectorReal> 
+  mutable std::unordered_map<std::pair<int,Words>, VectorReal>
     m_context_class_cache;
-  mutable std::unordered_map<Words, VectorReal, container_hash<Words> > 
+  mutable std::unordered_map<Words, VectorReal, container_hash<Words> >
     m_context_cache;
 };
 
