@@ -392,8 +392,6 @@ void gradient_check(const variables_map& vm, ModelData& config, const Real epsil
     // We have the gradients (global_gradient) and error (av_f) now for the
     // standard case. Now, iterate over all variables and compare gradient with
     // change in error.
-    // WTF, Ed: We're multithreading here!
-
 
     for (size_t param_index = 0; param_index < model.m_data_size; ++param_index) {
       #pragma omp single
