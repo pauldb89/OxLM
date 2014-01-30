@@ -301,52 +301,7 @@ void gradient_check(const variables_map& vm, ModelData& config, const Real epsil
   //////////////////////////////////////////////////////////////////////////////
 
 
-  //////////////////////////////////////////////////////////////////////////////
-  // read the test sentences
-  bool have_test = vm.count("test-source");
-  if (have_test) {
-    ifstream test_source_in(vm["test-source"].as<string>().c_str());
-    while (getline(test_source_in, line)) {
-      stringstream line_stream(line);
-      Sentence tokens;
-      test_source_corpus.push_back(Sentence());
-      Sentence& s = test_source_corpus.back();
-      while (line_stream >> token) {
-        WordId w = source_dict.Convert(token, true);
-        if (w < 0) {
-          cerr << token << " " << w << endl;
-          assert(!"Unknown word found in test source corpus.");
-        }
-        s.push_back(w);
-      }
-      if (config.source_eos)
-        s.push_back(end_id);
-    }
-    test_source_in.close();
-
-    ifstream test_target_in(vm["test-target"].as<string>().c_str());
-    while (getline(test_target_in, line)) {
-      stringstream line_stream(line);
-      Sentence tokens;
-      test_target_corpus.push_back(Sentence());
-      Sentence& s = test_target_corpus.back();
-      while (line_stream >> token) {
-        WordId w = target_dict.Convert(token, true);
-        if (w < 0) {
-          cerr << token << " " << w << endl;
-          assert(!"Unknown word found in test target corpus.");
-        }
-        s.push_back(w);
-      }
-      s.push_back(end_id);
-      num_test_instances += s.size();
-    }
-    test_target_in.close();
-  }
-  //////////////////////////////////////////////////////////////////////////////
-
   assert (source_corpus.size() == target_corpus.size());
-  assert (test_source_corpus.size() == test_target_corpus.size());
 
   //////////////////////////////////////////////////////////////////////////////
   // read the alignment
@@ -395,187 +350,74 @@ void gradient_check(const variables_map& vm, ModelData& config, const Real epsil
   Real av_f=0.0;
   Real pp=0;
 
-  const int dump_freq = vm["dump-frequency"].as<int>();
-
-  if (dump_freq > 0) {
-    const string partialdir = vm["model-out"].as<string>() + ".partial/";
-    mkdir(partialdir.c_str(), 0777); // notice that 777 is different than 0777
-  }
+  Real delta=0.0;
 
   #pragma omp parallel shared(global_gradient, pp, av_f)
   {
     Real* gradient_data = new Real[model.num_weights()];
     AdditiveCNLM::WeightsType gradient(gradient_data, model.num_weights());
 
-    size_t minibatch_size = vm["minibatch-size"].as<int>();
-
     #pragma omp master
     {
-      cerr << endl << fixed << setprecision(2);
-      cerr << " |" << setw(target_corpus.size()/(minibatch_size*100)+8)
-           << " ITERATION";
-      cerr << setw(11) << "TIME (s)" << setw(10) << "-LLH";
-      if (vm.count("test-source"))
-        cerr << setw(13) << "HELDOUT PPL";
-      cerr << " |" << endl;
+      av_f=0.0;
+      pp=0.0;
+      if (vm.count("randomise"))
+        std::random_shuffle(training_indices.begin(), training_indices.end());
     }
+    TrainingInstances training_instances;
+    Real step_size = vm["step-size"].as<float>();
+    size_t start = 0;
+    size_t end = target_corpus.size();
+    #pragma omp master
+      global_gradient.setZero();
+    gradient.setZero();
+    Real l2 = config.l2_parameter*(end-start)/Real(target_corpus.size());
+    Real l1 = config.l1_parameter*(end-start)/Real(target_corpus.size());
+    Real l2_source = config.source_l2_parameter
+      * (end-start)/Real(target_corpus.size());
 
-    for (int iteration=0; iteration < vm["iterations"].as<int>(); ++iteration) {
-      time_t iteration_start=time(0);
-      #pragma omp master
-      {
-        av_f=0.0;
-        pp=0.0;
+    cache_data(start, end, training_indices, training_instances);
+    Real f = model.gradient(source_corpus, target_corpus,
+                            training_instances, l2, l2_source, gradient);
+    // This is the gradient and error per thread.
+#pragma omp critical
+    {
+      global_gradient += gradient;
+      av_f += f;
+    }
+    if (l1 > 0.0) av_f += (l1 * model.W.lpNorm<1>());
 
-        if (vm.count("randomise"))
-          std::random_shuffle(training_indices.begin(), training_indices.end());
-      }
+#pragma omp barrier
 
-      TrainingInstances training_instances;
-      Real step_size = vm["step-size"].as<float>();
+    // We have the gradients (global_gradient) and error (av_f) now for the
+    // standard case. Now, iterate over all variables and compare gradient with
+    // change in error.
+    // WTF, Ed: We're multithreading here!
 
-      #pragma omp master
-      cerr << " |" << setw(6) << iteration << " ";
 
-      size_t minibatch_counter=0;
-      for (size_t start=0; start < target_corpus.size()
-           && (int)start < vm["instances"].as<int>(); ++minibatch_counter) {
-        #pragma omp barrier
-
-        size_t end = min(target_corpus.size(), start + minibatch_size);
-
-        #pragma omp master
-        global_gradient.setZero();
-
-        gradient.setZero();
-        Real l2 = config.l2_parameter*(end-start)/Real(target_corpus.size());
-        Real l1 = config.l1_parameter*(end-start)/Real(target_corpus.size());
-        Real l2_source = config.source_l2_parameter
-                         * (end-start)/Real(target_corpus.size());
-
-        cache_data(start, end, training_indices, training_instances);
-        Real f = model.gradient(source_corpus, target_corpus,
-                                training_instances, l2, l2_source, gradient);
-
-	for (size_t param_index = 0; param_index < model.m_data_size; param_index++) {
-		model.m_data[param_index] += epsilon; // Parameter + epsilon
-
-		Real f_plus_epsilon = model.gradient(source_corpus, target_corpus,
+    for (size_t param_index = 0; param_index < model.m_data_size; ++param_index) {
+      #pragma omp single
+        delta = 0.0;
+      model.m_data[param_index] += epsilon; // Parameter + epsilon
+      Real f_plus_epsilon = model.gradient(source_corpus, target_corpus,
                              training_instances, l2, l2_source, gradient);
-
-
-		model.m_data[param_index] -= 2*epsilon; // Parameter - epsilon
-
-		Real f_minus_epsilon = model.gradient(source_corpus, target_corpus,
-                                training_instances, l2, l2_source, gradient);
-
-		model.m_data[param_index] += epsilon; // Put paramater back to normal
-
-		Real delta = abs(f_plus_epsilon - f_minus_epsilon);
-	}
-
-        #pragma omp critical
-        {
-          global_gradient += gradient;
-          av_f += f;
-        }
-        if (l1 > 0.0) av_f += (l1 * model.W.lpNorm<1>());
-        #pragma omp barrier
-
-        #pragma omp master
-        {
-          adaGrad.array() += global_gradient.array().square();
-          for (int w=0; w<model.num_weights(); ++w) {
-            if (adaGrad(w)) {
-              Real scale = step_size / sqrt(adaGrad(w));
-              global_gradient(w) = scale * global_gradient(w);
-
-              if (l1 > 0.0) {
-                Real w1 = model.W(w) - global_gradient(w);
-                Real w2 = max(Real(0.0), abs(w1) - scale*l1);
-                global_gradient(w)
-                  = w1 >= 0.0 ? model.W(w) - w2 : model.W(w) + w2;
-              }
-            }
-          }
-
-          // Set unwanted weights to zero.
-          // Map parameters using model, then set to zero.
-          CNLMBase::WordVectorsType g_R(0,0,0), g_Q(0,0,0),
-                                    g_F(0,0,0), g_S(0,0,0);
-          CNLMBase::ContextTransformsType g_C, g_T;
-          CNLMBase::WeightsType g_B(0,0), g_FB(0,0);
-          Real* ptr = global_gradient.data();
-          model.map_parameters(ptr, g_R, g_Q, g_F, g_C, g_B, g_FB, g_S, g_T);
-
-          if (!config.updates.T) { for (auto g_t : g_T) g_t.setZero(); }
-          if (!config.updates.C) { for (auto g_c : g_C) g_c.setZero(); }
-          if (!config.updates.S) g_S.setZero();
-          if (!config.updates.R) g_R.setZero();
-          if (!config.updates.Q) g_Q.setZero();
-          if (!config.updates.F) g_F.setZero();
-          if (!config.updates.FB) g_FB.setZero();
-          if (!config.updates.B) g_B.setZero();
-
-          // Apply gradients to model.
-          model.W -= global_gradient;
-
-          if (minibatch_counter % 100 == 0) { cerr << "."; cout.flush(); }
-
-          if ((dump_freq > 0) && (minibatch_counter % dump_freq) == 0 ) {
-            string partial_model_path = vm["model-out"].as<string>() + ".partial/"
-                                                                     + "it" + std::to_string(iteration)
-                                                                     + ".mb" + std::to_string(minibatch_counter)
-                                                                     + ".model";
-            cout << "Saving trained model from iteration " << iteration
-                                                            << ", minibatch " << minibatch_counter
-                                                            << " to " << partial_model_path << endl;
-            cout.flush();
-
-            std::ofstream f(partial_model_path.c_str());
-            boost::archive::text_oarchive ar(f);
-            ar << model;
-          }
-
-        }
-
-
-        start += minibatch_size;
-      }
-
-      int iteration_time = difftime(time(0),iteration_start);
-      if (vm.count("test-source")) {
-        Real local_pp = log_likelihood(model, test_source_corpus,
-                                       test_target_corpus);
-
-        #pragma omp critical
-        { pp += local_pp; }
-        #pragma omp barrier
-      }
-
-      #pragma omp master
+      model.m_data[param_index] -= 2*epsilon; // Parameter - epsilon
+      Real f_minus_epsilon = model.gradient(source_corpus, target_corpus,
+                                            training_instances, l2, l2_source, gradient);
+      model.m_data[param_index] += epsilon; // Put paramater back to normal
+      // Real delta = abs(f_plus_epsilon - f_minus_epsilon);
+      #pragma omp critical
       {
-        pp = exp(-pp/num_test_instances);
-        cerr << setw(11) << iteration_time << setw(10)
-             << av_f/num_training_instances;
-        if (vm.count("test-source")) {
-          cerr << setw(13) << pp;
-        }
-        cerr << " |" << endl;
-
-        //cerr << " T norms:";
-        //for (auto t : model.T)
-        //  cerr << " " << t.norm();
-        //cerr << endl;
+        delta += f_plus_epsilon - f_minus_epsilon;
+        if (l1 > 0.0) av_f += (l1 * model.W.lpNorm<1>());
+      }
+      #pragma omp single
+      {
+        delta = delta / (2.0 * epsilon);
+        cout << "Delta at " << param_index << ": " << delta << " vs. grad " <<
+          global_gradient[param_index] << endl;
       }
     }
-  }
-
-  if (vm.count("model-out")) {
-    cout << "Writing trained model to " << vm["model-out"].as<string>() << endl;
-    std::ofstream f(vm["model-out"].as<string>().c_str());
-    boost::archive::text_oarchive ar(f);
-    ar << model;
   }
 }
 
