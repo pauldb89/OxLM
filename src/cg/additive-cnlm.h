@@ -20,11 +20,11 @@ namespace oxlm {
 class AdditiveCNLM : public CNLMBase {
 public:
   AdditiveCNLM();
-  AdditiveCNLM(const ModelData& config, const Dict& source_vocab, 
+  AdditiveCNLM(const ModelData& config, const Dict& source_vocab,
       const Dict& target_vocab, const std::vector<int>& classes);
   ~AdditiveCNLM() {}
 
-  void reinitialize(const ModelData& config, const Dict& source_vocab, 
+  void reinitialize(const ModelData& config, const Dict& source_vocab,
                     const Dict& target_vocab, const std::vector<int>& classes);
   void expandSource(const Dict& source_labels);
 
@@ -34,16 +34,16 @@ public:
   Dict& source_label_set() { return m_source_labels; }
 
   // Better name needed. Make source_corpus const again.
-  Real gradient(std::vector<Sentence>& source_corpus, 
+  Real gradient(std::vector<Sentence>& source_corpus,
                 const std::vector<Sentence>& target_corpus,
-                const TrainingInstances &training_instances, 
+                const TrainingInstances &training_instances,
                 Real l2, Real source_l2, WeightsType& g_W);
 
-  Real log_prob(const WordId w, const std::vector<WordId>& context, 
-                const Sentence& source, bool cache=false, 
+  Real log_prob(const WordId w, const std::vector<WordId>& context,
+                const Sentence& source, bool cache=false,
                 int target_index=-1) const;
 
-  MatrixReal window_product(int i, const MatrixReal& v, 
+  MatrixReal window_product(int i, const MatrixReal& v,
                             bool transpose=false) const {
     if (config.diagonal)
       return (T.at(i).asDiagonal() * v.transpose()).transpose();
@@ -51,12 +51,12 @@ public:
     else                return v * T.at(i);
   }
 
-  /*virtual*/void source_repr_callback(TrainingInstance t, int t_i, 
+  /*virtual*/void source_repr_callback(TrainingInstance t, int t_i,
                                        VectorReal& r);
-  /*virtual*/void source_grad_callback(TrainingInstance t, int t_i, 
-                                       int instance_counter, 
+  /*virtual*/void source_grad_callback(TrainingInstance t, int t_i,
+                                       int instance_counter,
                                       const VectorReal& grads);
-  void source_representation(const Sentence& source, int target_index, 
+  void source_representation(const Sentence& source, int target_index,
                              VectorReal& result) const;
 
   // Allocate only own parameters (not base class weights).

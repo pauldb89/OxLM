@@ -192,7 +192,8 @@ int main(int argc, char **argv) {
 
   omp_set_num_threads(config.threads);
 
-  learn(vm, config);
+  // learn(vm, config);
+  gradient_check(vm, config, 0.0001);
 
   return 0;
 }
@@ -455,12 +456,12 @@ void gradient_check(const variables_map& vm, ModelData& config, const Real epsil
         cache_data(start, end, training_indices, training_instances);
         Real f = model.gradient(source_corpus, target_corpus,
                                 training_instances, l2, l2_source, gradient);
-	
+
 	for (size_t param_index = 0; param_index < model.m_data_size; param_index++) {
-		m_data[param_index] += epsilon; // Parameter + epsilon
+		model.m_data[param_index] += epsilon; // Parameter + epsilon
 
 		Real f_plus_epsilon = model.gradient(source_corpus, target_corpus,
-                             gg   training_instances, l2, l2_source, gradient);
+                             training_instances, l2, l2_source, gradient);
 
 
 		model.m_data[param_index] -= 2*epsilon; // Parameter - epsilon
@@ -520,14 +521,14 @@ void gradient_check(const variables_map& vm, ModelData& config, const Real epsil
           model.W -= global_gradient;
 
           if (minibatch_counter % 100 == 0) { cerr << "."; cout.flush(); }
-        
+
           if ((dump_freq > 0) && (minibatch_counter % dump_freq) == 0 ) {
-            string partial_model_path = vm["model-out"].as<string>() + ".partial/" 
-                                                                     + "it" + std::to_string(iteration) 
-                                                                     + ".mb" + std::to_string(minibatch_counter) 
+            string partial_model_path = vm["model-out"].as<string>() + ".partial/"
+                                                                     + "it" + std::to_string(iteration)
+                                                                     + ".mb" + std::to_string(minibatch_counter)
                                                                      + ".model";
-            cout << "Saving trained model from iteration " << iteration 
-                                                            << ", minibatch " << minibatch_counter 
+            cout << "Saving trained model from iteration " << iteration
+                                                            << ", minibatch " << minibatch_counter
                                                             << " to " << partial_model_path << endl;
             cout.flush();
 
@@ -538,7 +539,7 @@ void gradient_check(const variables_map& vm, ModelData& config, const Real epsil
 
         }
 
-        
+
         start += minibatch_size;
       }
 
@@ -566,9 +567,6 @@ void gradient_check(const variables_map& vm, ModelData& config, const Real epsil
         //for (auto t : model.T)
         //  cerr << " " << t.norm();
         //cerr << endl;
-
-        
-
       }
     }
   }

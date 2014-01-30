@@ -15,6 +15,10 @@
 #include "cg/config.h"
 #include "cg/utils.h"
 
+
+//forward declaration
+void gradient_check(const boost::program_options::variables_map& vm, oxlm::ModelData& config, const oxlm::Real epsilon);
+
 namespace oxlm {
 
 /*
@@ -185,7 +189,9 @@ public:
   WeightsType           W;  // All the parameters in one vector
   Real length_ratio;
 
-  friend void gradient_check(const boost::program_options::variables_map& vm, ModelData& config, const Real epsilon);
+  friend void ::gradient_check(const boost::program_options::variables_map& vm, oxlm::ModelData& config, const oxlm::Real epsilon);
+  // friend void ::gradient_check(const boost::program_options::variables_map& vm, oxlm::ModelData& cfg, oxlm::Real e);
+  //friend void gradient_check(const variables_map& vm, ModelData& config, const Real epsilon);
 
 protected:
   virtual void init(bool init_weights=false);

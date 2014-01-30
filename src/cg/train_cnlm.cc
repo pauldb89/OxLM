@@ -501,14 +501,14 @@ void learn(const variables_map& vm, ModelData& config) {
           model.W -= global_gradient;
 
           if (minibatch_counter % 100 == 0) { cerr << "."; cout.flush(); }
-        
+
           if ((dump_freq > 0) && (minibatch_counter % dump_freq) == 0 ) {
-            string partial_model_path = vm["model-out"].as<string>() + ".partial/" 
-                                                                     + "it" + std::to_string(iteration) 
-                                                                     + ".mb" + std::to_string(minibatch_counter) 
+            string partial_model_path = vm["model-out"].as<string>() + ".partial/"
+                                                                     + "it" + std::to_string(iteration)
+                                                                     + ".mb" + std::to_string(minibatch_counter)
                                                                      + ".model";
-            cout << "Saving trained model from iteration " << iteration 
-                                                            << ", minibatch " << minibatch_counter 
+            cout << "Saving trained model from iteration " << iteration
+                                                            << ", minibatch " << minibatch_counter
                                                             << " to " << partial_model_path << endl;
             cout.flush();
 
@@ -519,7 +519,7 @@ void learn(const variables_map& vm, ModelData& config) {
 
         }
 
-        
+
         start += minibatch_size;
       }
 
@@ -548,7 +548,7 @@ void learn(const variables_map& vm, ModelData& config) {
         //  cerr << " " << t.norm();
         //cerr << endl;
 
-        
+
 
       }
     }
