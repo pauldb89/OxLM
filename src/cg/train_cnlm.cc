@@ -686,7 +686,7 @@ void classes_from_file(const std::string &class_file, vector<int>& classes,
                        Dict& dict, VectorReal& class_bias) {
   ifstream in(class_file.c_str());
 
-  vector<int> class_freqs(1,0);
+  vector<int> class_freqs(1,0); // create a vector with a single 0 in it.
   classes.clear();
   classes.push_back(0);
   classes.push_back(2);
