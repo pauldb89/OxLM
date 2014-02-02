@@ -2,5 +2,4 @@ bin/
 build/
 lib/
 .tags*
-*.pyc
-*.DS_Store
+oxlm.*
