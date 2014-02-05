@@ -45,7 +45,11 @@ void freq_bin_type(const std::string &corpus, int num_classes,
                    Dict& dict, VectorReal& class_bias);
 void classes_from_file(const std::string &class_file, vector<int>& classes,
                        Dict& dict, VectorReal& class_bias);
-void load_classes(const variables_map& vm, Dict& target_dict, ModelData& config, vector<int>& classes, VectorReal& class_bias);
+void load_classes(const variables_map& vm, Dict& target_dict, ModelData& config,
+	          vector<int>& classes, VectorReal& class_bias);
+void load_model(const variables_map& vm, ModelData& config, Dict& source_dict, 
+		Dict& target_dict, vector<int>& classes, AdditiveCNLM& model, 
+		bool& frozen_model, bool& replace_source_dict); 
 
 int main(int argc, char **argv) {
   cout << "Online training for neural translation models: \
@@ -219,26 +223,10 @@ void learn(const variables_map& vm, ModelData& config) {
   // instance push the updated dictionaries. If we do load, we need up modify
   // aspects of the configuration (esp. weight update settings).
   AdditiveCNLM model(config, source_dict, target_dict, classes);
-  bool frozen_model = false;
-  bool replace_source_dict = false;
-  if (vm.count("replace-source-dict")) {
-    assert(vm.count("model-in"));
-    replace_source_dict = true;
-  }
-
-  if (vm.count("model-in")) {
-    std::ifstream f(vm["model-in"].as<string>().c_str());
-    boost::archive::text_iarchive ar(f);
-    ar >> model;
-    target_dict = model.label_set();
-    if(!replace_source_dict)
-      source_dict = model.source_label_set();
-    // Set dictionary update to false and freeze model parameters in general.
-    frozen_model = true;
-    // Adjust config.update parameter, as this is dependent on the specific
-    // training run and not on the model per se.
-    model.config.updates = config.updates;
-  }
+  bool frozen_model;
+  bool replace_source_dict;
+  load_model(vm, config, source_dict, target_dict, classes, model, frozen_model,
+             replace_source_dict);
   //////////////////////////////////////////////////////////////////////////////
 
 
@@ -714,7 +702,8 @@ void classes_from_file(const std::string &class_file, vector<int>& classes,
   in.close();
 }
 
-void load_classes(const variables_map& vm, Dict& target_dict, ModelData& config, vector<int>& classes, VectorReal& class_bias) {
+void load_classes(const variables_map& vm, Dict& target_dict, ModelData& config, 
+		  vector<int>& classes, VectorReal& class_bias) {
   classes.clear();
   class_bias = VectorReal::Zero(config.classes);
   if (vm.count("class-file")) {
@@ -728,9 +717,31 @@ void load_classes(const variables_map& vm, Dict& target_dict, ModelData& config,
                   target_dict, class_bias);
 }
 
-//void load_model(args, config, source_dict, target_dict, classes, model, frozen_model, replace_source_dict) {
-//
-//}
+void load_model(const variables_map& vm, ModelData& config, Dict& source_dict, 
+		Dict& target_dict, vector<int>& classes, AdditiveCNLM& model, 
+		bool& frozen_model, bool& replace_source_dict) {
+
+  frozen_model = false;
+  replace_source_dict = false;
+  if (vm.count("replace-source-dict")) {
+    assert(vm.count("model-in"));
+    replace_source_dict = true;
+  }
+
+  if (vm.count("model-in")) {
+    std::ifstream f(vm["model-in"].as<string>().c_str());
+    boost::archive::text_iarchive ar(f);
+    ar >> model;
+    target_dict = model.label_set();
+    if(!replace_source_dict)
+      source_dict = model.source_label_set();
+    // Set dictionary update to false and freeze model parameters in general.
+    frozen_model = true;
+    // Adjust config.update parameter, as this is dependent on the specific
+    // training run and not on the model per se.
+    model.config.updates = config.updates;
+  }
+}
 
 //void read_training_sentences(args, target_dict, frozen_model, end_id, target_corpus, num_training_instances) {
 //
