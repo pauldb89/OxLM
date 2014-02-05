@@ -34,6 +34,10 @@ using namespace std;
 using namespace oxlm;
 using namespace Eigen;
 
+void parse_command_line(int argc, char **argv, variables_map& vm,
+		        options_description& config_options,
+			options_description& cmdline_options);
+void build_config(variables_map& vm, ModelData& config);
 void learn(const variables_map& vm, ModelData& config);
 void cache_data(int start, int end, const vector<size_t>& indices,
                 TrainingInstances &result);
@@ -76,86 +80,8 @@ int main(int argc, char **argv) {
   //////////////////////////////////////////////////////////////////////////////
   // Command line processing
   variables_map vm;
-
-  // Command line processing
-  options_description cmdline_specific("Command line specific options");
-  cmdline_specific.add_options()
-    ("help,h", "print help message")
-    ("config,c", value<string>(),
-        "config file specifying additional command line options")
-    ;
-  options_description generic("Allowed options");
-  generic.add_options()
-    ("source,s", value<string>(),
-        "corpus of sentences, one per line")
-    ("target,t", value<string>(),
-        "corpus of sentences, one per line")
-    ("alignment,a", value<string>(),
-        "Moses style alignment of source and target")
-    ("test-source", value<string>(),
-        "corpus of test sentences to be evaluated at each iteration")
-    ("test-target", value<string>(),
-        "corpus of test sentences to be evaluated at each iteration")
-    ("iterations", value<int>()->default_value(10),
-        "number of passes through the data")
-    ("minibatch-size", value<int>()->default_value(100),
-        "number of sentences per minibatch")
-    ("instances", value<int>()->default_value(std::numeric_limits<int>::max()),
-        "training instances per iteration")
-    ("order,n", value<int>()->default_value(3),
-        "ngram order")
-    ("model-in,m", value<string>(),
-        "initial model")
-    ("model-out,o", value<string>()->default_value("model"),
-        "base filename of model output files")
-    ("l2,r", value<float>()->default_value(0.0),
-        "l2 regularisation strength parameter")
-    ("l1", value<float>()->default_value(0.0),
-        "l1 regularisation strength parameter")
-    ("source-l2", value<float>(),
-        "source regularisation strength parameter")
-    ("dump-frequency", value<int>()->default_value(0),
-        "dump model every n minibatches.")
-    ("word-width", value<int>()->default_value(100),
-        "Width of word representation vectors.")
-    ("threads", value<int>()->default_value(1),
-        "number of worker threads.")
-    ("step-size", value<float>()->default_value(1.0),
-        "SGD batch stepsize, it is normalised by the number of minibatches.")
-    ("classes", value<int>()->default_value(100),
-        "number of classes for factored output.")
-    ("class-file", value<string>(),
-        "file containing word to class mappings in the format: \
-         <class> <word> <frequence>.")
-    ("window", value<int>()->default_value(-1),
-        "Width of window of source words conditioned on.")
-    ("no-source-eos", "do not add end of sentence tag to source \
-                       representations.")
-    ("replace-source-dict", "replace the source dictionary of a loaded model \
-                             with a new one.")
-    ("verbose,v", "print perplexity for each sentence (1) or input token (2) ")
-    ("randomise", "visit the training tokens in random order.")
-    ("diagonal-contexts", "Use diagonal context matrices (usually faster).")
-    ("non-linear", "use a non-linear hidden layer.")
-    ("updateT", value<bool>()->default_value(true), "update T weights?")
-    ("updateS", value<bool>()->default_value(true), "update S weights?")
-    ("updateC", value<bool>()->default_value(true), "update C weights?")
-    ("updateR", value<bool>()->default_value(true), "update R weights?")
-    ("updateQ", value<bool>()->default_value(true), "update Q weights?")
-    ("updateF", value<bool>()->default_value(true), "update F weights?")
-    ("updateFB", value<bool>()->default_value(true), "update FB weights?")
-    ("updateB", value<bool>()->default_value(true), "update B weights?")
-    ;
   options_description config_options, cmdline_options;
-  config_options.add(generic);
-  cmdline_options.add(generic).add(cmdline_specific);
-
-  store(parse_command_line(argc, argv, cmdline_options), vm);
-  if (vm.count("config") > 0) {
-    ifstream config(vm["config"].as<string>().c_str());
-    store(parse_config_file(config, cmdline_options), vm);
-  }
-  notify(vm);
+  parse_command_line(argc, argv, vm, config_options, cmdline_options);
   //////////////////////////////////////////////////////////////////////////////
 
   if (vm.count("help") || !vm.count("source") || !vm.count("target")) {
@@ -163,33 +89,11 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  //////////////////////////////////////////////////////////////////////////////
+  // Build config
   ModelData config;
-  config.l1_parameter = vm["l1"].as<float>();
-  config.l2_parameter = vm["l2"].as<float>();
-  if (vm.count("source-l2"))
-    config.source_l2_parameter = vm["source-l2"].as<float>();
-  else
-    config.source_l2_parameter = config.l2_parameter;
-  config.word_representation_size = vm["word-width"].as<int>();
-  config.threads = vm["threads"].as<int>();
-  config.ngram_order = vm["order"].as<int>();
-  config.verbose = vm.count("verbose");
-  config.classes = vm["classes"].as<int>();
-  config.diagonal = vm.count("diagonal-contexts");
-  config.nonlinear= vm.count("non-linear");
-  config.source_window_width = vm["window"].as<int>();
-  config.source_eos = !vm.count("no-source-eos");
-
-  Bools updates;
-  updates.T = vm["updateT"].as<bool>();
-  updates.S = vm["updateS"].as<bool>();
-  updates.C = vm["updateC"].as<bool>();
-  updates.R = vm["updateR"].as<bool>();
-  updates.Q = vm["updateQ"].as<bool>();
-  updates.F = vm["updateF"].as<bool>();
-  updates.FB = vm["updateFB"].as<bool>();
-  updates.B = vm["updateB"].as<bool>();
-  config.updates = updates;
+  build_config(vm, config);
+  //////////////////////////////////////////////////////////////////////////////
 
   cerr << "################################" << endl;
   cerr << "# Config Summary" << endl;
@@ -219,11 +123,14 @@ int main(int argc, char **argv) {
 
 
 void learn(const variables_map& vm, ModelData& config) {
+  //////////////////////////////////////////////////////////////////////////////
+  // Initialise variables used during learning.
   vector<Sentence> target_corpus, source_corpus;
   vector<Sentence> test_target_corpus, test_source_corpus;
   Dict target_dict, source_dict;
   WordId end_id = target_dict.Convert("</s>");
   size_t num_training_instances=0, num_test_instances=0;
+  //////////////////////////////////////////////////////////////////////////////
 
 
   //////////////////////////////////////////////////////////////////////////////
@@ -580,6 +487,116 @@ void freq_bin_type(const std::string &corpus, int num_classes,
   in.close();
 }
 
+void parse_command_line(int argc, char **argv, variables_map& vm,
+		        options_description& config_options,
+			options_description& cmdline_options) {
+  options_description cmdline_specific("Command line specific options");
+  cmdline_specific.add_options()
+    ("help,h", "print help message")
+    ("config,c", value<string>(),
+        "config file specifying additional command line options")
+    ;
+  options_description generic("Allowed options");
+  generic.add_options()
+    ("source,s", value<string>(),
+        "corpus of sentences, one per line")
+    ("target,t", value<string>(),
+        "corpus of sentences, one per line")
+    ("alignment,a", value<string>(),
+        "Moses style alignment of source and target")
+    ("test-source", value<string>(),
+        "corpus of test sentences to be evaluated at each iteration")
+    ("test-target", value<string>(),
+        "corpus of test sentences to be evaluated at each iteration")
+    ("iterations", value<int>()->default_value(10),
+        "number of passes through the data")
+    ("minibatch-size", value<int>()->default_value(100),
+        "number of sentences per minibatch")
+    ("instances", value<int>()->default_value(std::numeric_limits<int>::max()),
+        "training instances per iteration")
+    ("order,n", value<int>()->default_value(3),
+        "ngram order")
+    ("model-in,m", value<string>(),
+        "initial model")
+    ("model-out,o", value<string>()->default_value("model"),
+        "base filename of model output files")
+    ("l2,r", value<float>()->default_value(0.0),
+        "l2 regularisation strength parameter")
+    ("l1", value<float>()->default_value(0.0),
+        "l1 regularisation strength parameter")
+    ("source-l2", value<float>(),
+        "source regularisation strength parameter")
+    ("dump-frequency", value<int>()->default_value(0),
+        "dump model every n minibatches.")
+    ("word-width", value<int>()->default_value(100),
+        "Width of word representation vectors.")
+    ("threads", value<int>()->default_value(1),
+        "number of worker threads.")
+    ("step-size", value<float>()->default_value(1.0),
+        "SGD batch stepsize, it is normalised by the number of minibatches.")
+    ("classes", value<int>()->default_value(100),
+        "number of classes for factored output.")
+    ("class-file", value<string>(),
+        "file containing word to class mappings in the format: \
+         <class> <word> <frequence>.")
+    ("window", value<int>()->default_value(-1),
+        "Width of window of source words conditioned on.")
+    ("no-source-eos", "do not add end of sentence tag to source \
+                       representations.")
+    ("replace-source-dict", "replace the source dictionary of a loaded model \
+                             with a new one.")
+    ("verbose,v", "print perplexity for each sentence (1) or input token (2) ")
+    ("randomise", "visit the training tokens in random order.")
+    ("diagonal-contexts", "Use diagonal context matrices (usually faster).")
+    ("non-linear", "use a non-linear hidden layer.")
+    ("updateT", value<bool>()->default_value(true), "update T weights?")
+    ("updateS", value<bool>()->default_value(true), "update S weights?")
+    ("updateC", value<bool>()->default_value(true), "update C weights?")
+    ("updateR", value<bool>()->default_value(true), "update R weights?")
+    ("updateQ", value<bool>()->default_value(true), "update Q weights?")
+    ("updateF", value<bool>()->default_value(true), "update F weights?")
+    ("updateFB", value<bool>()->default_value(true), "update FB weights?")
+    ("updateB", value<bool>()->default_value(true), "update B weights?")
+    ;
+  config_options.add(generic);
+  cmdline_options.add(generic).add(cmdline_specific);
+
+  store(parse_command_line(argc, argv, cmdline_options), vm);
+  if (vm.count("config") > 0) {
+    ifstream config(vm["config"].as<string>().c_str());
+    store(parse_config_file(config, cmdline_options), vm);
+  }
+  notify(vm);
+}
+
+void build_config(variables_map& vm, ModelData& config) {
+  config.l1_parameter = vm["l1"].as<float>();
+  config.l2_parameter = vm["l2"].as<float>();
+  if (vm.count("source-l2"))
+    config.source_l2_parameter = vm["source-l2"].as<float>();
+  else
+    config.source_l2_parameter = config.l2_parameter;
+  config.word_representation_size = vm["word-width"].as<int>();
+  config.threads = vm["threads"].as<int>();
+  config.ngram_order = vm["order"].as<int>();
+  config.verbose = vm.count("verbose");
+  config.classes = vm["classes"].as<int>();
+  config.diagonal = vm.count("diagonal-contexts");
+  config.nonlinear= vm.count("non-linear");
+  config.source_window_width = vm["window"].as<int>();
+  config.source_eos = !vm.count("no-source-eos");
+
+  Bools updates;
+  updates.T = vm["updateT"].as<bool>();
+  updates.S = vm["updateS"].as<bool>();
+  updates.C = vm["updateC"].as<bool>();
+  updates.R = vm["updateR"].as<bool>();
+  updates.Q = vm["updateQ"].as<bool>();
+  updates.F = vm["updateF"].as<bool>();
+  updates.FB = vm["updateFB"].as<bool>();
+  updates.B = vm["updateB"].as<bool>();
+  config.updates = updates;
+}
 
 void classes_from_file(const std::string &class_file, vector<int>& classes,
                        Dict& dict, VectorReal& class_bias) {
