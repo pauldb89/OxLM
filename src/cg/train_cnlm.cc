@@ -61,6 +61,12 @@ void read_test_sentences(const variables_map& vm, Dict& source_dict,
 			 vector<Sentence>& test_source_corpus,
 			 vector<Sentence>& test_target_corpus,
 			 size_t& num_test_instances);
+void reinitialise_model(ModelData& config, bool& frozen_model,
+		        bool& replace_source_dict, Dict& source_dict,
+			Dict& target_dict, vector<Sentence>& source_corpus,
+			vector<Sentence>& target_corpus, AdditiveCNLM& model,
+			vector<size_t>& training_indices, VectorReal& unigram,
+			vector<int>& classes, VectorReal& class_bias);
 
 int main(int argc, char **argv) {
   cout << "Online training for neural translation models: \
@@ -266,37 +272,17 @@ void learn(const variables_map& vm, ModelData& config) {
     ifstream alignment_in(vm["alignment"].as<string>().c_str());
     read_alignment(alignment_in, alignment);
   }
-
+  //////////////////////////////////////////////////////////////////////////////
 
   //////////////////////////////////////////////////////////////////////////////
   // Non-frozen model means we just learned a (new) dictionary. This requires
   // re-initializing the model using those dictionaries.
-  if(!frozen_model) {
-    model.reinitialize(config, source_dict, target_dict, classes);
-    cerr << "(Re)initializing model based on training data." << endl;
-  }
-  else if(replace_source_dict) {
-    model.expandSource(source_dict);
-    cerr << "Replacing source dictionary based on training data." << endl;
-  }
-
-  if(!frozen_model)
-    model.FB = class_bias;
-
-  for (size_t s = 0; s < source_corpus.size(); ++s)
-    model.length_ratio += (Real(source_corpus.at(s).size())
-                           / Real(target_corpus.at(s).size()));
-  model.length_ratio /= Real(source_corpus.size());
-
-  vector<size_t> training_indices(target_corpus.size());
-  VectorReal unigram = VectorReal::Zero(model.labels());
-  for (size_t i = 0; i < training_indices.size(); i++) {
-    for (size_t j = 0; j < target_corpus.at(i).size(); j++)
-      unigram(target_corpus.at(i).at(j)) += 1;
-    training_indices[i] = i;
-  }
-  if(!frozen_model)
-    model.B = ((unigram.array()+1.0)/(unigram.sum()+unigram.size())).log();
+  vector<size_t> training_indices;
+  VectorReal unigram;
+  reinitialise_model(config, frozen_model, replace_source_dict, source_dict,
+		     target_dict, source_corpus, target_corpus, model,
+		     training_indices, unigram, classes, class_bias);
+  //////////////////////////////////////////////////////////////////////////////
 
 
   //////////////////////////////////////////////////////////////////////////////
@@ -771,9 +757,41 @@ void read_test_sentences(const variables_map& vm, Dict& source_dict, Dict& targe
   }
 }
 
-//void reinitialise_model(frozen_model, replace_source_dict, source_corpus, target_corpus, model) {
-//
-//}
+void reinitialise_model(ModelData& config, bool& frozen_model,
+		        bool& replace_source_dict, Dict& source_dict,
+			Dict& target_dict, vector<Sentence>& source_corpus,
+			vector<Sentence>& target_corpus, AdditiveCNLM& model,
+			vector<size_t>& training_indices, VectorReal& unigram,
+			vector<int>& classes, VectorReal& class_bias) {
+
+  if(!frozen_model) {
+    model.reinitialize(config, source_dict, target_dict, classes);
+    cerr << "(Re)initializing model based on training data." << endl;
+  }
+  else if(replace_source_dict) {
+    model.expandSource(source_dict);
+    cerr << "Replacing source dictionary based on training data." << endl;
+  }
+
+  if(!frozen_model)
+    model.FB = class_bias;
+
+  for (size_t s = 0; s < source_corpus.size(); ++s)
+    model.length_ratio += (Real(source_corpus.at(s).size())
+                           / Real(target_corpus.at(s).size()));
+
+  model.length_ratio /= Real(source_corpus.size());
+
+  training_indices.assign(target_corpus.size(), size_t());
+  unigram = VectorReal::Zero(model.labels());
+  for (size_t i = 0; i < training_indices.size(); i++) {
+    for (size_t j = 0; j < target_corpus.at(i).size(); j++)
+      unigram(target_corpus.at(i).at(j)) += 1;
+    training_indices[i] = i;
+  }
+  if(!frozen_model)
+    model.B = ((unigram.array()+1.0)/(unigram.sum()+unigram.size())).log();
+}
 
 //void log_likelihood(model, test_source_corpus, test_source) {
 //
