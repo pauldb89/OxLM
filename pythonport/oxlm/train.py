@@ -522,6 +522,7 @@ def reinitialise_model(frozen_model, replace_source_dict, source_corpus, target_
     if not frozen_model:
         model.B = np.log((unigram + 1.0)/(unigram.sum() + unigram.shape))
 
+
 def log_likelihood(model, test_source_corpus, test_source):
     raise NotImplementedError
 

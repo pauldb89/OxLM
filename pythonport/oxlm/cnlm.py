@@ -1,6 +1,10 @@
 from oxlm.config import ModelData
 from oxlm.corpus import Dict
 
+import theano
+import theano.tensor as T
+import numpy as np
+
 class CNLMBase(object):
     """docstring for CNLMBase"""
     def __init__(self, config=None, target_labels=None, classes=None):
@@ -57,6 +61,9 @@ class CNLMBase(object):
 
             self._word_to_class = None # std::vector<int> word_to_class; // map from word id to class
             self._indexes = None # std::vector<int> indexes;       // vocab spans for each class
+
+    def build_model(self, word_ids, num_tokens, order, word_width):
+        contexts = T.imatrix(np.zeros((num_tokens, order), dtype=int))
 
 # def function(self):
 # """Originally:
