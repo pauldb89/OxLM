@@ -47,14 +47,20 @@ void classes_from_file(const std::string &class_file, vector<int>& classes,
                        Dict& dict, VectorReal& class_bias);
 void load_classes(const variables_map& vm, Dict& target_dict, ModelData& config,
 	          vector<int>& classes, VectorReal& class_bias);
-void load_model(const variables_map& vm, ModelData& config, Dict& source_dict, 
-		Dict& target_dict, vector<int>& classes, AdditiveCNLM& model, 
-		bool& frozen_model, bool& replace_source_dict); 
-void read_training_sentences(const variables_map& vm, Dict& target_dict, 
-		             Dict& source_dict, bool& frozen_model, bool& replace_source_dict,
-			     ModelData& config, WordId& end_id, 
-			     vector<Sentence>& target_corpus, vector<Sentence>& source_corpus, 
+void load_model(const variables_map& vm, ModelData& config, Dict& source_dict,
+		Dict& target_dict, vector<int>& classes, AdditiveCNLM& model,
+		bool& frozen_model, bool& replace_source_dict);
+void read_training_sentences(const variables_map& vm, Dict& target_dict,
+                             Dict& source_dict, bool& frozen_model,
+			     bool& replace_source_dict, ModelData& config,
+			     WordId& end_id, vector<Sentence>& target_corpus,
+			     vector<Sentence>& source_corpus,
 			     size_t& num_training_instances);
+void read_test_sentences(const variables_map& vm, Dict& source_dict,
+		         Dict& target_dict, ModelData& config, WordId& end_id,
+			 vector<Sentence>& test_source_corpus,
+			 vector<Sentence>& test_target_corpus,
+			 size_t& num_test_instances);
 
 int main(int argc, char **argv) {
   cout << "Online training for neural translation models: \
@@ -237,55 +243,17 @@ void learn(const variables_map& vm, ModelData& config) {
 
   //////////////////////////////////////////////////////////////////////////////
   // read the training sentences
-  read_training_sentences(vm, target_dict, source_dict, frozen_model, 
-		          replace_source_dict, config, end_id, target_corpus, 
+  read_training_sentences(vm, target_dict, source_dict, frozen_model,
+		          replace_source_dict, config, end_id, target_corpus,
 			  source_corpus, num_training_instances);
   //////////////////////////////////////////////////////////////////////////////
 
 
   //////////////////////////////////////////////////////////////////////////////
   // read the test sentences
-  string line, token;
-  bool have_test = vm.count("test-source");
-  if (have_test) {
-    ifstream test_source_in(vm["test-source"].as<string>().c_str());
-    while (getline(test_source_in, line)) {
-      stringstream line_stream(line);
-      Sentence tokens;
-      test_source_corpus.push_back(Sentence());
-      Sentence& s = test_source_corpus.back();
-      while (line_stream >> token) {
-        WordId w = source_dict.Convert(token, true);
-        if (w < 0) {
-          cerr << token << " " << w << endl;
-          assert(!"Unknown word found in test source corpus.");
-        }
-        s.push_back(w);
-      }
-      if (config.source_eos)
-        s.push_back(end_id);
-    }
-    test_source_in.close();
-
-    ifstream test_target_in(vm["test-target"].as<string>().c_str());
-    while (getline(test_target_in, line)) {
-      stringstream line_stream(line);
-      Sentence tokens;
-      test_target_corpus.push_back(Sentence());
-      Sentence& s = test_target_corpus.back();
-      while (line_stream >> token) {
-        WordId w = target_dict.Convert(token, true);
-        if (w < 0) {
-          cerr << token << " " << w << endl;
-          assert(!"Unknown word found in test target corpus.");
-        }
-        s.push_back(w);
-      }
-      s.push_back(end_id);
-      num_test_instances += s.size();
-    }
-    test_target_in.close();
-  }
+  read_test_sentences(vm, source_dict, target_dict, config, end_id,
+		      test_source_corpus, test_target_corpus,
+		      num_test_instances);
   //////////////////////////////////////////////////////////////////////////////
 
   assert (source_corpus.size() == target_corpus.size());
@@ -668,7 +636,7 @@ void classes_from_file(const std::string &class_file, vector<int>& classes,
   in.close();
 }
 
-void load_classes(const variables_map& vm, Dict& target_dict, ModelData& config, 
+void load_classes(const variables_map& vm, Dict& target_dict, ModelData& config,
 		  vector<int>& classes, VectorReal& class_bias) {
   classes.clear();
   class_bias = VectorReal::Zero(config.classes);
@@ -683,8 +651,8 @@ void load_classes(const variables_map& vm, Dict& target_dict, ModelData& config,
                   target_dict, class_bias);
 }
 
-void load_model(const variables_map& vm, ModelData& config, Dict& source_dict, 
-		Dict& target_dict, vector<int>& classes, AdditiveCNLM& model, 
+void load_model(const variables_map& vm, ModelData& config, Dict& source_dict,
+		Dict& target_dict, vector<int>& classes, AdditiveCNLM& model,
 		bool& frozen_model, bool& replace_source_dict) {
 
   frozen_model = false;
@@ -709,10 +677,10 @@ void load_model(const variables_map& vm, ModelData& config, Dict& source_dict,
   }
 }
 
-void read_training_sentences(const variables_map& vm, Dict& target_dict, 
+void read_training_sentences(const variables_map& vm, Dict& target_dict,
 		             Dict& source_dict, bool& frozen_model, bool& replace_source_dict,
-			     ModelData& config, WordId& end_id, 
-			     vector<Sentence>& target_corpus, vector<Sentence>& source_corpus, 
+			     ModelData& config, WordId& end_id,
+			     vector<Sentence>& target_corpus, vector<Sentence>& source_corpus,
 			     size_t& num_training_instances) {
   ifstream target_in(vm["target"].as<string>().c_str());
   string line, token;
@@ -759,9 +727,49 @@ void read_training_sentences(const variables_map& vm, Dict& target_dict,
   source_in.close();
 }
 
-//void read_test_sentences(args, source_dict, target_dict, configuration, end_id, test_source_corpus, test_target_corpus) {
-//
-//}
+void read_test_sentences(const variables_map& vm, Dict& source_dict, Dict& target_dict, ModelData& config, WordId& end_id, vector<Sentence>& test_source_corpus, vector<Sentence>& test_target_corpus, size_t& num_test_instances) {
+  string line, token;
+  bool have_test = vm.count("test-source");
+  if (have_test) {
+    ifstream test_source_in(vm["test-source"].as<string>().c_str());
+    while (getline(test_source_in, line)) {
+      stringstream line_stream(line);
+      Sentence tokens;
+      test_source_corpus.push_back(Sentence());
+      Sentence& s = test_source_corpus.back();
+      while (line_stream >> token) {
+        WordId w = source_dict.Convert(token, true);
+        if (w < 0) {
+          cerr << token << " " << w << endl;
+          assert(!"Unknown word found in test source corpus.");
+        }
+        s.push_back(w);
+      }
+      if (config.source_eos)
+        s.push_back(end_id);
+    }
+    test_source_in.close();
+
+    ifstream test_target_in(vm["test-target"].as<string>().c_str());
+    while (getline(test_target_in, line)) {
+      stringstream line_stream(line);
+      Sentence tokens;
+      test_target_corpus.push_back(Sentence());
+      Sentence& s = test_target_corpus.back();
+      while (line_stream >> token) {
+        WordId w = target_dict.Convert(token, true);
+        if (w < 0) {
+          cerr << token << " " << w << endl;
+          assert(!"Unknown word found in test target corpus.");
+        }
+        s.push_back(w);
+      }
+      s.push_back(end_id);
+      num_test_instances += s.size();
+    }
+    test_target_in.close();
+  }
+}
 
 //void reinitialise_model(frozen_model, replace_source_dict, source_corpus, target_corpus, model) {
 //
