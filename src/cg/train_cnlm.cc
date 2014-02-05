@@ -730,7 +730,10 @@ void read_training_sentences(const variables_map& vm, Dict& target_dict,
   source_in.close();
 }
 
-void read_test_sentences(const variables_map& vm, Dict& source_dict, Dict& target_dict, ModelData& config, WordId& end_id, vector<Sentence>& test_source_corpus, vector<Sentence>& test_target_corpus, size_t& num_test_instances) {
+void read_test_sentences(const variables_map& vm, Dict& source_dict,
+		         Dict& target_dict, ModelData& config, WordId& end_id,
+			 vector<Sentence>& test_source_corpus, vector<Sentence>&
+			 test_target_corpus, size_t& num_test_instances) {
   string line, token;
   bool have_test = vm.count("test-source");
   if (have_test) {
