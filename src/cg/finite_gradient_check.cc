@@ -396,12 +396,15 @@ void gradient_check(const variables_map& vm, ModelData& config, const Real epsil
     for (size_t param_index = 0; param_index < model.m_data_size; ++param_index) {
       #pragma omp single
         delta = 0.0;
+#pragma omp single
       model.m_data[param_index] += epsilon; // Parameter + epsilon
       Real f_plus_epsilon = model.gradient(source_corpus, target_corpus,
                              training_instances, l2, l2_source, gradient);
+#pragma omp single
       model.m_data[param_index] -= 2*epsilon; // Parameter - epsilon
       Real f_minus_epsilon = model.gradient(source_corpus, target_corpus,
                                             training_instances, l2, l2_source, gradient);
+#pragma omp single
       model.m_data[param_index] += epsilon; // Put paramater back to normal
       // Real delta = abs(f_plus_epsilon - f_minus_epsilon);
       #pragma omp critical
