@@ -50,6 +50,11 @@ void load_classes(const variables_map& vm, Dict& target_dict, ModelData& config,
 void load_model(const variables_map& vm, ModelData& config, Dict& source_dict, 
 		Dict& target_dict, vector<int>& classes, AdditiveCNLM& model, 
 		bool& frozen_model, bool& replace_source_dict); 
+void read_training_sentences(const variables_map& vm, Dict& target_dict, 
+		             Dict& source_dict, bool& frozen_model, bool& replace_source_dict,
+			     ModelData& config, WordId& end_id, 
+			     vector<Sentence>& target_corpus, vector<Sentence>& source_corpus, 
+			     size_t& num_training_instances);
 
 int main(int argc, char **argv) {
   cout << "Online training for neural translation models: \
@@ -232,54 +237,15 @@ void learn(const variables_map& vm, ModelData& config) {
 
   //////////////////////////////////////////////////////////////////////////////
   // read the training sentences
-  ifstream target_in(vm["target"].as<string>().c_str());
-  string line, token;
-  // read the target
-  while (getline(target_in, line)) {
-    stringstream line_stream(line);
-    target_corpus.push_back(Sentence());
-    Sentence& s = target_corpus.back();
-    while (line_stream >> token) {
-      WordId w = target_dict.Convert(token, frozen_model);
-      if (w < 0) {
-        cerr << token << " " << w << endl;
-        assert(!"Word found in training target corpus, which wasn't \
-                 encountered in originally trained and loaded model.");
-      }
-      s.push_back(w);
-    }
-    s.push_back(end_id);
-    num_training_instances += s.size();
-  }
-  target_in.close();
-
-  // read the source
-  ifstream source_in(vm["source"].as<string>().c_str());
-  while (getline(source_in, line)) {
-    stringstream line_stream(line);
-    source_corpus.push_back(Sentence());
-    Sentence& s = source_corpus.back();
-    while (line_stream >> token) {
-      // Add words if the source dict is not frozen or if replace_source_dict
-      // is set in which case the source_dict is new and hence unfrozen.
-      WordId w = source_dict.Convert(token,
-                                     (frozen_model && !replace_source_dict));
-      if (w < 0) {
-        cerr << token << " " << w << endl;
-        assert(!"Word found in training source corpus, which wasn't \
-                 encountered in originally trained and loaded model.");
-      }
-      s.push_back(w);
-    }
-    if (config.source_eos)
-      s.push_back(end_id);
-  }
-  source_in.close();
+  read_training_sentences(vm, target_dict, source_dict, frozen_model, 
+		          replace_source_dict, config, end_id, target_corpus, 
+			  source_corpus, num_training_instances);
   //////////////////////////////////////////////////////////////////////////////
 
 
   //////////////////////////////////////////////////////////////////////////////
   // read the test sentences
+  string line, token;
   bool have_test = vm.count("test-source");
   if (have_test) {
     ifstream test_source_in(vm["test-source"].as<string>().c_str());
@@ -743,13 +709,55 @@ void load_model(const variables_map& vm, ModelData& config, Dict& source_dict,
   }
 }
 
-//void read_training_sentences(args, target_dict, frozen_model, end_id, target_corpus, num_training_instances) {
-//
-//}
+void read_training_sentences(const variables_map& vm, Dict& target_dict, 
+		             Dict& source_dict, bool& frozen_model, bool& replace_source_dict,
+			     ModelData& config, WordId& end_id, 
+			     vector<Sentence>& target_corpus, vector<Sentence>& source_corpus, 
+			     size_t& num_training_instances) {
+  ifstream target_in(vm["target"].as<string>().c_str());
+  string line, token;
+  // read the target
+  while (getline(target_in, line)) {
+    stringstream line_stream(line);
+    target_corpus.push_back(Sentence());
+    Sentence& s = target_corpus.back();
+    while (line_stream >> token) {
+      WordId w = target_dict.Convert(token, frozen_model);
+      if (w < 0) {
+        cerr << token << " " << w << endl;
+        assert(!"Word found in training target corpus, which wasn't \
+                 encountered in originally trained and loaded model.");
+      }
+      s.push_back(w);
+    }
+    s.push_back(end_id);
+    num_training_instances += s.size();
+  }
+  target_in.close();
 
-//void read_source_sentences(args, source_dict, frozen_model, replace_source_dict, configuration, end_id, source_corpus) {
-//
-//}
+  // read the source
+  ifstream source_in(vm["source"].as<string>().c_str());
+  while (getline(source_in, line)) {
+    stringstream line_stream(line);
+    source_corpus.push_back(Sentence());
+    Sentence& s = source_corpus.back();
+    while (line_stream >> token) {
+      // Add words if the source dict is not frozen or if replace_source_dict
+      // is set in which case the source_dict is new and hence unfrozen.
+      WordId w = source_dict.Convert(token,
+                                     (frozen_model && !replace_source_dict));
+      if (w < 0) {
+        cerr << token << " " << w << endl;
+        assert(!"Word found in training source corpus, which wasn't \
+                 encountered in originally trained and loaded model.");
+      }
+      s.push_back(w);
+    }
+    if (config.source_eos)
+      s.push_back(end_id);
+  }
+  source_in.close();
+}
 
 //void read_test_sentences(args, source_dict, target_dict, configuration, end_id, test_source_corpus, test_target_corpus) {
 //
