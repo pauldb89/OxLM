@@ -45,7 +45,7 @@ void freq_bin_type(const std::string &corpus, int num_classes,
                    Dict& dict, VectorReal& class_bias);
 void classes_from_file(const std::string &class_file, vector<int>& classes,
                        Dict& dict, VectorReal& class_bias);
-
+void load_classes(const variables_map& vm, Dict& target_dict, ModelData& config, vector<int>& classes, VectorReal& class_bias);
 
 int main(int argc, char **argv) {
   cout << "Online training for neural translation models: \
@@ -209,18 +209,9 @@ void learn(const variables_map& vm, ModelData& config) {
   // separate the word types into classes using
   // frequency binning
   vector<int> classes;
-  VectorReal class_bias = VectorReal::Zero(config.classes);
-  if (vm.count("class-file")) {
-    cerr << "--class-file set, ignoring --classes." << endl;
-    classes_from_file(vm["class-file"].as<string>(), classes, target_dict,
-                      class_bias);
-    config.classes = classes.size()-1;
-  }
-  else
-    freq_bin_type(vm["target"].as<string>(), config.classes, classes,
-                  target_dict, class_bias);
+  VectorReal class_bias;
+  load_classes(vm, target_dict, config, classes, class_bias);
   //////////////////////////////////////////////////////////////////////////////
-
 
   //////////////////////////////////////////////////////////////////////////////
   // create and or load the model.
@@ -722,3 +713,41 @@ void classes_from_file(const std::string &class_file, vector<int>& classes,
 
   in.close();
 }
+
+void load_classes(const variables_map& vm, Dict& target_dict, ModelData& config, vector<int>& classes, VectorReal& class_bias) {
+  classes.clear();
+  class_bias = VectorReal::Zero(config.classes);
+  if (vm.count("class-file")) {
+    cerr << "--class-file set, ignoring --classes." << endl;
+    classes_from_file(vm["class-file"].as<string>(), classes, target_dict,
+                      class_bias);
+    config.classes = classes.size()-1;
+  }
+  else
+    freq_bin_type(vm["target"].as<string>(), config.classes, classes,
+                  target_dict, class_bias);
+}
+
+//void load_model(args, config, source_dict, target_dict, classes, model, frozen_model, replace_source_dict) {
+//
+//}
+
+//void read_training_sentences(args, target_dict, frozen_model, end_id, target_corpus, num_training_instances) {
+//
+//}
+
+//void read_source_sentences(args, source_dict, frozen_model, replace_source_dict, configuration, end_id, source_corpus) {
+//
+//}
+
+//void read_test_sentences(args, source_dict, target_dict, configuration, end_id, test_source_corpus, test_target_corpus) {
+//
+//}
+
+//void reinitialise_model(frozen_model, replace_source_dict, source_corpus, target_corpus, model) {
+//
+//}
+
+//void log_likelihood(model, test_source_corpus, test_source) {
+//
+//}
