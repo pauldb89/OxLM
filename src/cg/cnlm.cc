@@ -233,20 +233,53 @@ void CNLMBase::word_log_probs(int c, const std::vector<WordId>& context,
   }
 }
 
-Real CNLMBase::gradient_(
-    const std::vector<Sentence>& target_corpus,
-    const TrainingInstances& training_instances,
-    // std::function<void(TrainingInstance, VectorReal)> source_repr_callback,
-    // std::function<void(TrainingInstance, int, int, VectorReal)>
-    //   source_grad_callback,
-    Real l2, Real source_l2, Real*& ptr) {
-  WordVectorsType g_R(0,0,0), g_Q(0,0,0), g_F(0,0,0);
-  ContextTransformsType g_C;
-  WeightsType g_B(0,0), g_FB(0,0);
-  map_parameters(ptr, g_R, g_Q, g_F, g_C, g_B, g_FB);
-  // map_parameters_(g_W, &g_R, &g_Q, &g_F, &g_C, &g_B, &g_FB);
+void CNLMBase::source_representation(const Sentence& source,
+                                         int target_index,
+                                         VectorReal& result) const {
+  result = VectorReal::Zero(config.word_representation_size);
+  int window = config.source_window_width;
 
+  if (target_index < 0 || window < 0) {
+    for (auto s_i : source)
+      result += S.row(s_i);
+  }
+  else {
+    int source_len = source.size();
+    int centre = min(floor(Real(target_index)*length_ratio + 0.5),
+                     double(source_len-1));
+    int start = max(centre-window, 0);
+    int end = min(source_len, centre+window+1);
+
+    for (int i=start; i < end; ++i)
+      result += window_product(i-centre+window,
+                               S.row(source.at(i))).transpose();
+  }
+}
+
+Real CNLMBase::gradient(std::vector<Sentence>& source_corpus_,
+                            const std::vector<Sentence>& target_corpus,
+                            const TrainingInstances &training_instances,
+                            Real l2, Real source_l2, WeightsType& g_W) {
+  WordVectorsType g_R(0,0,0), g_Q(0,0,0), g_F(0,0,0), g_S(0,0,0);
+  ContextTransformsType g_C, g_T;
+  WeightsType g_B(0,0), g_FB(0,0);
+
+#pragma omp master
+  source_corpus = source_corpus_;
+
+  Real* ptr = g_W.data();
+  if (omp_get_thread_num() == 0)
+    map_parameters(ptr, g_R, g_Q, g_F, g_C, g_B, g_FB, g_S, g_T);
+  else { // TODO: come up with a better fix for this hack
+    int word_width = config.word_representation_size;
+    ptr += (source_types()*word_width)
+           + g_T.size()*word_width*(config.diagonal ? 1 : word_width);
+  }
+#pragma omp barrier
+
+  // Allocates data for parent.
   Real f=0;
+
   WordId start_id = label_set().Convert("<s>");
 
   int word_width = config.word_representation_size;
@@ -448,10 +481,24 @@ Real CNLMBase::gradient_(
       if (config.updates.C)
         for (size_t c=0; c<C.size(); ++c)
           g_C.at(c).array() += (l2*C.at(c).array());
-
     }
   }
+  #pragma omp master
+  {
+    if (source_l2 > 0.0) {
+      // l2 objective contributions
+      f += (0.5*source_l2*S.squaredNorm());
+      for (size_t t=0; t<T.size(); ++t)
+        f += (0.5*source_l2*T.at(t).squaredNorm());
 
+      // l2 gradient contributions
+      if (config.updates.S)
+        g_S.array() += (source_l2*S.array());
+      if (config.updates.T)
+        for (size_t t=0; t<T.size(); ++t)
+          g_T.at(t).array() += (source_l2*T.at(t).array());
+    }
+  }
   return f;
 }
 

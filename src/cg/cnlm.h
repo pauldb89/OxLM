@@ -71,13 +71,10 @@ public:
 
   Real* data() { return m_data; }
 
-  Real gradient_(
-      const std::vector<Sentence>& target_corpus,
-      const TrainingInstances& training_instances,
-      // std::function<void(TrainingInstance, VectorReal)> source_repr_callback,
-      // std::function<void(TrainingInstance, int, int, VectorReal)>
-      //   source_grad_callback,
-      Real l2, Real source_l2, Real*& g_ptr);
+  Real gradient(std::vector<Sentence>& source_corpus,
+                const std::vector<Sentence>& target_corpus,
+                const TrainingInstances &training_instances,
+                Real l2, Real source_l2, WeightsType& g_W);
 
   void source_repr_callback(TrainingInstance t, int t_i,
                             VectorReal& r) = 0;
@@ -94,6 +91,9 @@ public:
                 bool cache=false) const;
   Real log_prob(const WordId w, const std::vector<WordId>& context,
                 const VectorReal& source, bool cache=false) const;
+  Real log_prob(const WordId w, const std::vector<WordId>& context,
+                const Sentence& source, bool cache=false,
+                int target_index=-1) const;
   void class_log_probs(const std::vector<WordId>& context,
                        const VectorReal& source,
                        const VectorReal& prediction_vector, VectorReal& result,
@@ -201,6 +201,8 @@ public:
   WordVectorsType       F;  // class representations
   WeightsType           B;  // output word biases
   WeightsType           FB; // output class biases
+  ContextTransformsType T;  // source window context transforms
+  WordVectorsType       S;  // source word representations
 
   WeightsType           W;  // All the parameters in one vector
   Real length_ratio;
@@ -219,6 +221,7 @@ protected:
 
   std::vector<int> word_to_class; // map from word id to class
   std::vector<int> indexes;       // vocab spans for each class
+  std::vector<Sentence> source_corpus;
 
   mutable std::unordered_map<std::pair<int,Words>, VectorReal>
     m_context_class_cache;
