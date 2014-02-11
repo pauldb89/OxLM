@@ -19,7 +19,6 @@ using namespace std;
 using namespace boost;
 using namespace oxlm;
 
-
 static boost::mt19937 linear_model_rng(static_cast<unsigned> (std::time(0)));
 static uniform_01<> linear_model_uniform_dist;
 
@@ -61,7 +60,8 @@ void CNLMBase::initWordToClass() {
 }
 
 void CNLMBase::init(bool init_weights) {
-  calculateDataSize(true);
+  calculateDataSize(true);  // Calculates space requirements for this class and
+                            //the parent and allocates space accordingly.
 
   new (&W) WeightsType(m_data, m_data_size);
   if (init_weights) {
@@ -74,7 +74,7 @@ void CNLMBase::init(bool init_weights) {
   else W.setZero();
 
   Real* ptr = W.data();
-  map_parameters(ptr, R, Q, F, C, B, FB);
+  map_parameters(ptr, R, Q, F, C, B, FB, S, T);
 }
 
 // Installs a new source dictionary in the model (initialized randomly) and
@@ -174,6 +174,14 @@ Real CNLMBase::log_prob(WordId w, const std::vector<WordId>& context,
   return log_prob(w, context, s, cache);
 }
 
+Real CNLMBase::log_prob(const WordId w, const std::vector<WordId>& context,
+                        const Sentence& source, bool cache,
+                        int target_index) const {
+  VectorReal s;
+  source_representation(source, target_index, s);
+  return log_prob(w, context, s, cache);
+}
+
 Real CNLMBase::log_prob(WordId w, const std::vector<WordId>& context,
                         const VectorReal& source, bool cache) const {
   VectorReal prediction_vector;
@@ -189,6 +197,7 @@ Real CNLMBase::log_prob(WordId w, const std::vector<WordId>& context,
 
   return c_lps(c) + w_lps(w - c_start);
 }
+
 
 void CNLMBase::class_log_probs(const std::vector<WordId>& context,
                                const VectorReal& source,

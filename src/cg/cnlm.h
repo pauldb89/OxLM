@@ -94,6 +94,7 @@ public:
   Real log_prob(const WordId w, const std::vector<WordId>& context,
                 const Sentence& source, bool cache=false,
                 int target_index=-1) const;
+
   void class_log_probs(const std::vector<WordId>& context,
                        const VectorReal& source,
                        const VectorReal& prediction_vector, VectorReal& result,
@@ -186,6 +187,14 @@ public:
     else                return v * C.at(i);
   }
 
+  MatrixReal window_product(int i, const MatrixReal& v,
+                            bool transpose=false) const {
+    if (config.diagonal)
+      return (T.at(i).asDiagonal() * v.transpose()).transpose();
+    else if (transpose) return v * T.at(i).transpose();
+    else                return v * T.at(i);
+  }
+
   void context_gradient_update(ContextTransformType& g_C, const MatrixReal& v,
                                const MatrixReal& w) const {
     if (config.diagonal) g_C += (v.cwiseProduct(w).colwise().sum()).transpose();
@@ -216,6 +225,7 @@ protected:
   virtual int calculateDataSize(bool allocate=false);
 
   Dict m_target_labels;
+  Dict m_source_labels;
   int m_data_size;
   Real* m_data;
 
