@@ -19,20 +19,30 @@ using namespace std;
 using namespace boost;
 using namespace oxlm;
 
-
 static boost::mt19937 linear_model_rng(static_cast<unsigned> (std::time(0)));
 static uniform_01<> linear_model_uniform_dist;
 
 
+CNLMBase::CNLMBase() : CNLMBase(),  {}
 CNLMBase::CNLMBase() : R(0,0,0), Q(0,0,0), F(0,0,0),
-  B(0,0), FB(0,0), W(0,0), m_data(0) {}
+  B(0,0), FB(0,0), W(0,0), S(0,0,0), g_S(0,0,0), m_data(0) {}
 
 CNLMBase::CNLMBase(const ModelData& config,
-                               const Dict& target_labels,
-                               const std::vector<int>& classes)
+                   const Dict& target_labels,
+                   const std::vector<int>& classes)
   : config(config), R(0,0,0), Q(0,0,0), F(0,0,0), B(0,0), FB(0,0),
   W(0,0), length_ratio(1), m_target_labels(target_labels), indexes(classes) {
 
+  }
+
+CNLMBase::CNLMBase(const ModelData& config,
+                   const Dict& source_labels,
+                   const Dict& target_labels,
+                   const std::vector<int>& classes)
+  : CNLMBase(config, target_labels, classes), S(0,0,0), g_S(0,0,0),
+  m_source_labels(source_labels) {
+    init(true);
+    initWordToClass();
   }
 
 void CNLMBase::initWordToClass() {
@@ -50,7 +60,8 @@ void CNLMBase::initWordToClass() {
 }
 
 void CNLMBase::init(bool init_weights) {
-  calculateDataSize(true);
+  calculateDataSize(true);  // Calculates space requirements for this class and
+                            //the parent and allocates space accordingly.
 
   new (&W) WeightsType(m_data, m_data_size);
   if (init_weights) {
@@ -63,15 +74,53 @@ void CNLMBase::init(bool init_weights) {
   else W.setZero();
 
   Real* ptr = W.data();
-  map_parameters(ptr, R, Q, F, C, B, FB);
+  map_parameters(ptr, R, Q, F, C, B, FB, S, T);
+}
+
+// Installs a new source dictionary in the model (initialized randomly) and
+// pushes all other vectors over from existing m_data.
+void CNLMBase::expandSource(const Dict& source_labels) {
+  // Collect sizes and pointers.
+  Real* old_data = m_data;
+  int old_size = calculateDataSize(false);
+  int old_S_size = source_types() * config.word_representation_size;
+  int new_S_size = source_labels.size() * config.word_representation_size;
+
+  // Replace source dictionary and get new data vector with random weights.
+  m_source_labels = source_labels;
+  init(true);
+
+  // Copy over all data from old vector (S is at the beginning, so use an offset
+  // of size old_S_size on old and new_S_size on new vector.
+  for (int i = 0; i < (old_size - old_S_size); ++i)
+    m_data[i + new_S_size] = old_data[i + old_S_size];
+
+  // Delete old data source.
+  delete [] old_data;
+}
+
+void CNLMBase::reinitialize(const ModelData& config_,
+                               const Dict& source_labels,
+                               const Dict& target_labels,
+                               const std::vector<int>& classes) {
+  config = config;
+  indexes = classes;
+  m_target_labels = target_labels;
+  m_source_labels = source_labels;
+  delete [] m_data;
+  init(true);
+  initWordToClass();
 }
 
 
 int CNLMBase::calculateDataSize(bool allocate) {
+
+  int num_source_words = source_types();
   int num_output_words = output_types();
   int num_context_words = context_types();
   int word_width = config.word_representation_size;
   int context_width = config.ngram_order-1;
+  int window_width = max(config.source_window_width, 0);
 
   int R_size = num_output_words * word_width;
   int Q_size = num_context_words * word_width;;
@@ -81,7 +130,11 @@ int CNLMBase::calculateDataSize(bool allocate) {
   int B_size = num_output_words;
   int FB_size = config.classes;
 
-  int data_size = R_size + Q_size + F_size + C_size + B_size + FB_size;
+  int S_size = num_source_words * word_width;;
+  int T_size = (2*window_width + 1)
+               * (config.diagonal ? word_width : word_width*word_width);
+
+  int data_size = R_size + Q_size + F_size + C_size + B_size + FB_size + S_size + T_size;
   if (allocate) {
     m_data_size = data_size;
     m_data = new Real[m_data_size];
@@ -121,6 +174,14 @@ Real CNLMBase::log_prob(WordId w, const std::vector<WordId>& context,
   return log_prob(w, context, s, cache);
 }
 
+Real CNLMBase::log_prob(const WordId w, const std::vector<WordId>& context,
+                        const Sentence& source, bool cache,
+                        int target_index) const {
+  VectorReal s;
+  source_representation(source, target_index, s);
+  return log_prob(w, context, s, cache);
+}
+
 Real CNLMBase::log_prob(WordId w, const std::vector<WordId>& context,
                         const VectorReal& source, bool cache) const {
   VectorReal prediction_vector;
@@ -136,6 +197,7 @@ Real CNLMBase::log_prob(WordId w, const std::vector<WordId>& context,
 
   return c_lps(c) + w_lps(w - c_start);
 }
+
 
 void CNLMBase::class_log_probs(const std::vector<WordId>& context,
                                const VectorReal& source,
@@ -180,20 +242,53 @@ void CNLMBase::word_log_probs(int c, const std::vector<WordId>& context,
   }
 }
 
-Real CNLMBase::gradient_(
-    const std::vector<Sentence>& target_corpus,
-    const TrainingInstances& training_instances,
-    // std::function<void(TrainingInstance, VectorReal)> source_repr_callback,
-    // std::function<void(TrainingInstance, int, int, VectorReal)>
-    //   source_grad_callback,
-    Real l2, Real source_l2, Real*& ptr) {
-  WordVectorsType g_R(0,0,0), g_Q(0,0,0), g_F(0,0,0);
-  ContextTransformsType g_C;
-  WeightsType g_B(0,0), g_FB(0,0);
-  map_parameters(ptr, g_R, g_Q, g_F, g_C, g_B, g_FB);
-  // map_parameters_(g_W, &g_R, &g_Q, &g_F, &g_C, &g_B, &g_FB);
+void CNLMBase::source_representation(const Sentence& source,
+                                         int target_index,
+                                         VectorReal& result) const {
+  result = VectorReal::Zero(config.word_representation_size);
+  int window = config.source_window_width;
 
+  if (target_index < 0 || window < 0) {
+    for (auto s_i : source)
+      result += S.row(s_i);
+  }
+  else {
+    int source_len = source.size();
+    int centre = min(floor(Real(target_index)*length_ratio + 0.5),
+                     double(source_len-1));
+    int start = max(centre-window, 0);
+    int end = min(source_len, centre+window+1);
+
+    for (int i=start; i < end; ++i)
+      result += window_product(i-centre+window,
+                               S.row(source.at(i))).transpose();
+  }
+}
+
+Real CNLMBase::gradient(std::vector<Sentence>& source_corpus_,
+                            const std::vector<Sentence>& target_corpus,
+                            const TrainingInstances &training_instances,
+                            Real l2, Real source_l2, WeightsType& g_W) {
+  WordVectorsType g_R(0,0,0), g_Q(0,0,0), g_F(0,0,0), g_S(0,0,0);
+  ContextTransformsType g_C, g_T;
+  WeightsType g_B(0,0), g_FB(0,0);
+
+#pragma omp master
+  source_corpus = source_corpus_;
+
+  Real* ptr = g_W.data();
+  if (omp_get_thread_num() == 0)
+    map_parameters(ptr, g_R, g_Q, g_F, g_C, g_B, g_FB, g_S, g_T);
+  else { // TODO: come up with a better fix for this hack
+    int word_width = config.word_representation_size;
+    ptr += (source_types()*word_width)
+           + g_T.size()*word_width*(config.diagonal ? 1 : word_width);
+  }
+#pragma omp barrier
+
+  // Allocates data for parent.
   Real f=0;
+
   WordId start_id = label_set().Convert("<s>");
 
   int word_width = config.word_representation_size;
@@ -395,26 +490,95 @@ Real CNLMBase::gradient_(
       if (config.updates.C)
         for (size_t c=0; c<C.size(); ++c)
           g_C.at(c).array() += (l2*C.at(c).array());
-
     }
   }
+  #pragma omp master
+  {
+    if (source_l2 > 0.0) {
+      // l2 objective contributions
+      f += (0.5*source_l2*S.squaredNorm());
+      for (size_t t=0; t<T.size(); ++t)
+        f += (0.5*source_l2*T.at(t).squaredNorm());
 
+      // l2 gradient contributions
+      if (config.updates.S)
+        g_S.array() += (source_l2*S.array());
+      if (config.updates.T)
+        for (size_t t=0; t<T.size(); ++t)
+          g_T.at(t).array() += (source_l2*T.at(t).array());
+    }
+  }
   return f;
 }
 
-void CNLMBase::map_parameters(Real*& ptr, WordVectorsType& r,
+void CNLMBase::source_repr_callback(TrainingInstance t, int t_i,
+                                        VectorReal& r) {
+  source_representation(source_corpus.at(t), t_i, r);
+}
+
+void CNLMBase::source_grad_callback(TrainingInstance t, int t_i,
+                                        int instance_counter,
+                                        const VectorReal& grads) {
+  // Source word representations gradient
+  const Sentence& source_sent = source_corpus.at(t);
+  int source_len = source_sent.size();
+  int window = config.source_window_width;
+  if (window < 0) {
+    #pragma omp critical
+    {
+      for (auto s_i : source_sent)
+        g_S.row(s_i) += grads;
+    }
+  }
+  else {
+    int centre = min(floor(Real(t_i)*length_ratio + 0.5), double(source_len-1));
+    int start = max(centre-window, 0);
+    int end = min(source_len, centre+window+1);
+    #pragma omp critical
+    {
+      for (int i=start; i < end; ++i) {
+        g_S.row(source_sent.at(i))
+          += window_product(i-centre+window, grads.transpose(), true);
+        context_gradient_update(g_T.at(i-centre+window),
+            S.row(source_sent.at(i)), grads.transpose());
+      }
+    }
+  }
+}
+
+void CNLMbase::map_parameters(Real*& ptr, WordVectorsType& r,
                               WordVectorsType& q, WordVectorsType& f,
                               ContextTransformsType& c, WeightsType& b,
-                              WeightsType& fb) const {
+                              WeightsType& fb, WordVectorsType& s,
+                              ContextTransformsType& t) const {
+  int num_source_words = source_types();
   int num_output_words = output_types();
   int num_context_words = context_types();
   int word_width = config.word_representation_size;
+  int window_width = max(config.source_window_width, 0);
   int context_width = config.ngram_order-1;
 
   int R_size = num_output_words * word_width;
   int Q_size = num_context_words * word_width;;
   int F_size = config.classes * word_width;
   int C_size = (config.diagonal ? word_width : word_width*word_width);
+
+
+  int S_size = num_source_words * word_width;
+  // TODO(kmh): T_size probably wrong - take window width into account.
+  int T_size = (config.diagonal ? word_width : word_width*word_width);
+
+  new (&s) WordVectorsType(ptr, num_source_words, word_width);
+  ptr += S_size;
+
+  t.clear();
+  for (int i=0; i<(2*window_width+1); i++) {
+    if (config.diagonal)
+      t.push_back(ContextTransformType(ptr, word_width, 1));
+    else
+      t.push_back(ContextTransformType(ptr, word_width, word_width));
+    ptr += T_size;
+  }
 
   new (&r) WordVectorsType(ptr, num_output_words, word_width);
   ptr += R_size;
