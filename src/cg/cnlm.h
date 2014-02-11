@@ -27,19 +27,16 @@ namespace oxlm {
  * Possibly a link to further reading.
  */
 class CNLMBase {
-public:
+ public:
   typedef Eigen::Map<MatrixReal> ContextTransformType;
   typedef std::vector<ContextTransformType> ContextTransformsType;
   typedef Eigen::Map<MatrixReal> WordVectorsType;
   typedef Eigen::Map<VectorReal> WeightsType;
 
-public:
+ public:
   CNLMBase();
-  CNLMBase(const ModelData& config, const Dict& target_vocab,
-           const std::vector<int>& classes);
-
   CNLMBase(const ModelData& config, const Dict& source_vocab,
-      const Dict& target_vocab, const std::vector<int>& classes);
+           const Dict& target_vocab, const std::vector<int>& classes);
 
   ~CNLMBase() { delete [] m_data; }
   void initWordToClass();
@@ -77,10 +74,7 @@ public:
                 Real l2, Real source_l2, WeightsType& g_W);
 
   void source_repr_callback(TrainingInstance t, int t_i,
-                            VectorReal& r) = 0;
-  void source_grad_callback(TrainingInstance t, int t_i,
-                            int instance_counter,
-                            const VectorReal& grads) = 0;
+                            VectorReal& r);
 
   void source_representation(const Sentence& source, int target_index,
                              VectorReal& result) const;
@@ -142,36 +136,35 @@ public:
     m_context_class_cache.reserve(1000000);
   }
 
-public:
+ public:
   friend class boost::serialization::access;
   template<class Archive>
-  void save(Archive & ar, const unsigned int version) const {
-    ar << config;
-    ar << m_target_labels;
-    ar << m_source_labels;
-    ar << boost::serialization::make_array(m_data, m_data_size);
+    void save(Archive & ar, const unsigned int version) const {
+      ar << config;
+      ar << m_target_labels;
+      ar << m_source_labels;
+      ar << boost::serialization::make_array(m_data, m_data_size);
 
-    ar << word_to_class;
-    ar << indexes;
-    ar << length_ratio;
-  }
+      ar << word_to_class;
+      ar << indexes;
+      ar << length_ratio;
+    }
 
   template<class Archive>
-  void load(Archive & ar, const unsigned int version) {
-    ar >> config;
-    ar >> m_target_labels;
-    ar >> m_source_labels;
-    delete [] m_data;
-    // TODO(kmh): Clean up archiving
-    init(false);
-    ar >> boost::serialization::make_array(m_data, m_data_size);
+    void load(Archive & ar, const unsigned int version) {
+      ar >> config;
+      ar >> m_target_labels;
+      ar >> m_source_labels;
+      delete [] m_data;
+      // TODO(kmh): Clean up archiving
+      init(false);
+      ar >> boost::serialization::make_array(m_data, m_data_size);
 
-    ar >> word_to_class;
-    ar >> indexes;
-    ar >> length_ratio;
-  }
+      ar >> word_to_class;
+      ar >> indexes;
+      ar >> length_ratio;
+    }
   BOOST_SERIALIZATION_SPLIT_MEMBER();
-};
 
   void map_parameters(Real*& ptr, WordVectorsType& r, WordVectorsType& q,
                       WordVectorsType& f, ContextTransformsType& c,
@@ -201,7 +194,7 @@ public:
     else                 g_C += (v.transpose() * w);
   }
 
-public:
+ public:
   ModelData config;
 
   ContextTransformsType C;  // Context position transforms
@@ -220,7 +213,7 @@ public:
   // friend void ::gradient_check(const boost::program_options::variables_map& vm, oxlm::ModelData& cfg, oxlm::Real e);
   //friend void gradient_check(const variables_map& vm, ModelData& config, const Real epsilon);
 
-protected:
+ protected:
   virtual void init(bool init_weights=false);
   virtual int calculateDataSize(bool allocate=false);
 

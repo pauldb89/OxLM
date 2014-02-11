@@ -23,24 +23,16 @@ static boost::mt19937 linear_model_rng(static_cast<unsigned> (std::time(0)));
 static uniform_01<> linear_model_uniform_dist;
 
 
-CNLMBase::CNLMBase() : CNLMBase(),  {}
 CNLMBase::CNLMBase() : R(0,0,0), Q(0,0,0), F(0,0,0),
-  B(0,0), FB(0,0), W(0,0), S(0,0,0), g_S(0,0,0), m_data(0) {}
-
-CNLMBase::CNLMBase(const ModelData& config,
-                   const Dict& target_labels,
-                   const std::vector<int>& classes)
-  : config(config), R(0,0,0), Q(0,0,0), F(0,0,0), B(0,0), FB(0,0),
-  W(0,0), length_ratio(1), m_target_labels(target_labels), indexes(classes) {
-
-  }
+  B(0,0), FB(0,0), W(0,0), S(0,0,0), m_data(0) {}
 
 CNLMBase::CNLMBase(const ModelData& config,
                    const Dict& source_labels,
                    const Dict& target_labels,
                    const std::vector<int>& classes)
-  : CNLMBase(config, target_labels, classes), S(0,0,0), g_S(0,0,0),
-  m_source_labels(source_labels) {
+  : S(0,0,0), config(config), R(0,0,0), Q(0,0,0), F(0,0,0), B(0,0),
+  FB(0,0), W(0,0), length_ratio(1), m_target_labels(target_labels),
+  indexes(classes), m_source_labels(source_labels) {
     init(true);
     initWordToClass();
   }
@@ -421,8 +413,33 @@ Real CNLMBase::gradient(std::vector<Sentence>& source_corpus_,
 
       //////////////////////////////////////////////////////////////////
       // Source word representations gradient
-      source_grad_callback(t, t_i, instance_counter,
-                           weightedRepresentations.row(instance_counter));
+
+      const Sentence& source_sent = source_corpus.at(t);
+      int source_len = source_sent.size();
+      int window = config.source_window_width;
+      const VectorReal& grads = weightedRepresentations.row(instance_counter);
+        if (window < 0) {
+#pragma omp critical
+          {
+            for (auto s_i : source_sent)
+              g_S.row(s_i) += grads;
+          }
+        }
+        else {
+          int centre = min(floor(Real(t_i)*length_ratio + 0.5), double(source_len-1));
+          int start = max(centre-window, 0);
+          int end = min(source_len, centre+window+1);
+
+#pragma omp critical
+          {
+            for (int i=start; i < end; ++i) {
+              g_S.row(source_sent.at(i))
+                += window_product(i-centre+window, grads.transpose(), true);
+              context_gradient_update(g_T.at(i-centre+window),
+                                      S.row(source_sent.at(i)), grads.transpose());
+            }
+          }
+        }
       //////////////////////////////////////////////////////////////////
       /*
        * if (window < 0) {
@@ -516,37 +533,8 @@ void CNLMBase::source_repr_callback(TrainingInstance t, int t_i,
   source_representation(source_corpus.at(t), t_i, r);
 }
 
-void CNLMBase::source_grad_callback(TrainingInstance t, int t_i,
-                                        int instance_counter,
-                                        const VectorReal& grads) {
-  // Source word representations gradient
-  const Sentence& source_sent = source_corpus.at(t);
-  int source_len = source_sent.size();
-  int window = config.source_window_width;
-  if (window < 0) {
-    #pragma omp critical
-    {
-      for (auto s_i : source_sent)
-        g_S.row(s_i) += grads;
-    }
-  }
-  else {
-    int centre = min(floor(Real(t_i)*length_ratio + 0.5), double(source_len-1));
-    int start = max(centre-window, 0);
-    int end = min(source_len, centre+window+1);
-    #pragma omp critical
-    {
-      for (int i=start; i < end; ++i) {
-        g_S.row(source_sent.at(i))
-          += window_product(i-centre+window, grads.transpose(), true);
-        context_gradient_update(g_T.at(i-centre+window),
-            S.row(source_sent.at(i)), grads.transpose());
-      }
-    }
-  }
-}
 
-void CNLMbase::map_parameters(Real*& ptr, WordVectorsType& r,
+void CNLMBase::map_parameters(Real*& ptr, WordVectorsType& r,
                               WordVectorsType& q, WordVectorsType& f,
                               ContextTransformsType& c, WeightsType& b,
                               WeightsType& fb, WordVectorsType& s,

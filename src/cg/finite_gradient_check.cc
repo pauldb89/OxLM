@@ -22,7 +22,7 @@
 
 // Local
 #include "utils/conditional_omp.h"
-#include "cg/additive-cnlm.h"
+#include "cg/cnlm.h"
 #include "corpus/corpus.h"
 #include "corpus/alignment.h"
 
@@ -38,7 +38,7 @@ using namespace Eigen;
 void gradient_check(const variables_map& vm, ModelData& config, const Real epsilon);
 void cache_data(int start, int end, const vector<size_t>& indices,
                 TrainingInstances &result);
-Real log_likelihood(const AdditiveCNLM& model,
+Real log_likelihood(const CNLMBase& model,
                     const vector<Sentence>& test_source_corpus,
                     const vector<Sentence>& test_target_corpus);
 void freq_bin_type(const std::string &corpus, int num_classes,
@@ -229,7 +229,7 @@ void gradient_check(const variables_map& vm, ModelData& config, const Real epsil
   // If we do not load, we need to update some aspects of the model later, for
   // instance push the updated dictionaries. If we do load, we need up modify
   // aspects of the configuration (esp. weight update settings).
-  AdditiveCNLM model(config, source_dict, target_dict, classes);
+  CNLMBase model(config, source_dict, target_dict, classes);
   bool frozen_model = false;
   bool replace_source_dict = false;
   if (vm.count("replace-source-dict")) {
@@ -355,7 +355,7 @@ void gradient_check(const variables_map& vm, ModelData& config, const Real epsil
   #pragma omp parallel shared(global_gradient, pp, av_f)
   {
     Real* gradient_data = new Real[model.num_weights()];
-    AdditiveCNLM::WeightsType gradient(gradient_data, model.num_weights());
+    CNLMBase::WeightsType gradient(gradient_data, model.num_weights());
 
     #pragma omp master
     {
@@ -439,7 +439,7 @@ void cache_data(int start, int end, const vector<size_t>& indices,
 }
 
 
-Real log_likelihood(const AdditiveCNLM& model,
+Real log_likelihood(const CNLMBase& model,
                     const vector<Sentence>& test_source_corpus,
                     const vector<Sentence>& test_target_corpus) {
   Real p=0.0;
