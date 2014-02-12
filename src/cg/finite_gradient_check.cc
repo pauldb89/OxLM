@@ -351,6 +351,7 @@ void gradient_check(const variables_map& vm, ModelData& config, const Real epsil
   Real pp=0;
 
   Real delta=0.0;
+  Real offset=0.0;
 
   #pragma omp parallel shared(global_gradient, pp, av_f)
   {
@@ -417,9 +418,11 @@ void gradient_check(const variables_map& vm, ModelData& config, const Real epsil
         delta = delta / (2.0 * epsilon);
         cout << "Delta at " << param_index << ": " << delta << " vs. grad " <<
           global_gradient[param_index] << endl;
+        offset += abs(delta - global_gradient[param_index]);
       }
     }
   }
+  cout << "Sum of errors: " << offset << endl;
 }
 
 
