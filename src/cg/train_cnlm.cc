@@ -34,6 +34,10 @@ using namespace std;
 using namespace oxlm;
 using namespace Eigen;
 
+void parse_command_line(int argc, char **argv, variables_map& vm,
+		        options_description& config_options,
+			options_description& cmdline_options);
+void build_config(variables_map& vm, ModelData& config);
 void learn(const variables_map& vm, ModelData& config);
 void cache_data(int start, int end, const vector<size_t>& indices,
                 TrainingInstances &result);
@@ -45,7 +49,28 @@ void freq_bin_type(const std::string &corpus, int num_classes,
                    Dict& dict, VectorReal& class_bias);
 void classes_from_file(const std::string &class_file, vector<int>& classes,
                        Dict& dict, VectorReal& class_bias);
-
+void load_classes(const variables_map& vm, Dict& target_dict, ModelData& config,
+	          vector<int>& classes, VectorReal& class_bias);
+void load_model(const variables_map& vm, ModelData& config, Dict& source_dict,
+		Dict& target_dict, vector<int>& classes, AdditiveCNLM& model,
+		bool& frozen_model, bool& replace_source_dict);
+void read_training_sentences(const variables_map& vm, Dict& target_dict,
+                             Dict& source_dict, bool& frozen_model,
+			     bool& replace_source_dict, ModelData& config,
+			     WordId& end_id, vector<Sentence>& target_corpus,
+			     vector<Sentence>& source_corpus,
+			     size_t& num_training_instances);
+void read_test_sentences(const variables_map& vm, Dict& source_dict,
+		         Dict& target_dict, ModelData& config, WordId& end_id,
+			 vector<Sentence>& test_source_corpus,
+			 vector<Sentence>& test_target_corpus,
+			 size_t& num_test_instances);
+void reinitialise_model(ModelData& config, bool& frozen_model,
+		        bool& replace_source_dict, Dict& source_dict,
+			Dict& target_dict, vector<Sentence>& source_corpus,
+			vector<Sentence>& target_corpus, AdditiveCNLM& model,
+			vector<size_t>& training_indices, VectorReal& unigram,
+			vector<int>& classes, VectorReal& class_bias);
 
 int main(int argc, char **argv) {
   cout << "Online training for neural translation models: \
@@ -55,86 +80,8 @@ int main(int argc, char **argv) {
   //////////////////////////////////////////////////////////////////////////////
   // Command line processing
   variables_map vm;
-
-  // Command line processing
-  options_description cmdline_specific("Command line specific options");
-  cmdline_specific.add_options()
-    ("help,h", "print help message")
-    ("config,c", value<string>(),
-        "config file specifying additional command line options")
-    ;
-  options_description generic("Allowed options");
-  generic.add_options()
-    ("source,s", value<string>(),
-        "corpus of sentences, one per line")
-    ("target,t", value<string>(),
-        "corpus of sentences, one per line")
-    ("alignment,a", value<string>(),
-        "Moses style alignment of source and target")
-    ("test-source", value<string>(),
-        "corpus of test sentences to be evaluated at each iteration")
-    ("test-target", value<string>(),
-        "corpus of test sentences to be evaluated at each iteration")
-    ("iterations", value<int>()->default_value(10),
-        "number of passes through the data")
-    ("minibatch-size", value<int>()->default_value(100),
-        "number of sentences per minibatch")
-    ("instances", value<int>()->default_value(std::numeric_limits<int>::max()),
-        "training instances per iteration")
-    ("order,n", value<int>()->default_value(3),
-        "ngram order")
-    ("model-in,m", value<string>(),
-        "initial model")
-    ("model-out,o", value<string>()->default_value("model"),
-        "base filename of model output files")
-    ("l2,r", value<float>()->default_value(0.0),
-        "l2 regularisation strength parameter")
-    ("l1", value<float>()->default_value(0.0),
-        "l1 regularisation strength parameter")
-    ("source-l2", value<float>(),
-        "source regularisation strength parameter")
-    ("dump-frequency", value<int>()->default_value(0),
-        "dump model every n minibatches.")
-    ("word-width", value<int>()->default_value(100),
-        "Width of word representation vectors.")
-    ("threads", value<int>()->default_value(1),
-        "number of worker threads.")
-    ("step-size", value<float>()->default_value(1.0),
-        "SGD batch stepsize, it is normalised by the number of minibatches.")
-    ("classes", value<int>()->default_value(100),
-        "number of classes for factored output.")
-    ("class-file", value<string>(),
-        "file containing word to class mappings in the format: \
-         <class> <word> <frequence>.")
-    ("window", value<int>()->default_value(-1),
-        "Width of window of source words conditioned on.")
-    ("no-source-eos", "do not add end of sentence tag to source \
-                       representations.")
-    ("replace-source-dict", "replace the source dictionary of a loaded model \
-                             with a new one.")
-    ("verbose,v", "print perplexity for each sentence (1) or input token (2) ")
-    ("randomise", "visit the training tokens in random order.")
-    ("diagonal-contexts", "Use diagonal context matrices (usually faster).")
-    ("non-linear", "use a non-linear hidden layer.")
-    ("updateT", value<bool>()->default_value(true), "update T weights?")
-    ("updateS", value<bool>()->default_value(true), "update S weights?")
-    ("updateC", value<bool>()->default_value(true), "update C weights?")
-    ("updateR", value<bool>()->default_value(true), "update R weights?")
-    ("updateQ", value<bool>()->default_value(true), "update Q weights?")
-    ("updateF", value<bool>()->default_value(true), "update F weights?")
-    ("updateFB", value<bool>()->default_value(true), "update FB weights?")
-    ("updateB", value<bool>()->default_value(true), "update B weights?")
-    ;
   options_description config_options, cmdline_options;
-  config_options.add(generic);
-  cmdline_options.add(generic).add(cmdline_specific);
-
-  store(parse_command_line(argc, argv, cmdline_options), vm);
-  if (vm.count("config") > 0) {
-    ifstream config(vm["config"].as<string>().c_str());
-    store(parse_config_file(config, cmdline_options), vm);
-  }
-  notify(vm);
+  parse_command_line(argc, argv, vm, config_options, cmdline_options);
   //////////////////////////////////////////////////////////////////////////////
 
   if (vm.count("help") || !vm.count("source") || !vm.count("target")) {
@@ -142,33 +89,11 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  //////////////////////////////////////////////////////////////////////////////
+  // Build config
   ModelData config;
-  config.l1_parameter = vm["l1"].as<float>();
-  config.l2_parameter = vm["l2"].as<float>();
-  if (vm.count("source-l2"))
-    config.source_l2_parameter = vm["source-l2"].as<float>();
-  else
-    config.source_l2_parameter = config.l2_parameter;
-  config.word_representation_size = vm["word-width"].as<int>();
-  config.threads = vm["threads"].as<int>();
-  config.ngram_order = vm["order"].as<int>();
-  config.verbose = vm.count("verbose");
-  config.classes = vm["classes"].as<int>();
-  config.diagonal = vm.count("diagonal-contexts");
-  config.nonlinear= vm.count("non-linear");
-  config.source_window_width = vm["window"].as<int>();
-  config.source_eos = !vm.count("no-source-eos");
-
-  Bools updates;
-  updates.T = vm["updateT"].as<bool>();
-  updates.S = vm["updateS"].as<bool>();
-  updates.C = vm["updateC"].as<bool>();
-  updates.R = vm["updateR"].as<bool>();
-  updates.Q = vm["updateQ"].as<bool>();
-  updates.F = vm["updateF"].as<bool>();
-  updates.FB = vm["updateFB"].as<bool>();
-  updates.B = vm["updateB"].as<bool>();
-  config.updates = updates;
+  build_config(vm, config);
+  //////////////////////////////////////////////////////////////////////////////
 
   cerr << "################################" << endl;
   cerr << "# Config Summary" << endl;
@@ -198,29 +123,23 @@ int main(int argc, char **argv) {
 
 
 void learn(const variables_map& vm, ModelData& config) {
+  //////////////////////////////////////////////////////////////////////////////
+  // Initialise variables used during learning.
   vector<Sentence> target_corpus, source_corpus;
   vector<Sentence> test_target_corpus, test_source_corpus;
   Dict target_dict, source_dict;
   WordId end_id = target_dict.Convert("</s>");
   size_t num_training_instances=0, num_test_instances=0;
+  //////////////////////////////////////////////////////////////////////////////
 
 
   //////////////////////////////////////////////////////////////////////////////
   // separate the word types into classes using
   // frequency binning
   vector<int> classes;
-  VectorReal class_bias = VectorReal::Zero(config.classes);
-  if (vm.count("class-file")) {
-    cerr << "--class-file set, ignoring --classes." << endl;
-    classes_from_file(vm["class-file"].as<string>(), classes, target_dict,
-                      class_bias);
-    config.classes = classes.size()-1;
-  }
-  else
-    freq_bin_type(vm["target"].as<string>(), config.classes, classes,
-                  target_dict, class_bias);
+  VectorReal class_bias;
+  load_classes(vm, target_dict, config, classes, class_bias);
   //////////////////////////////////////////////////////////////////////////////
-
 
   //////////////////////////////////////////////////////////////////////////////
   // create and or load the model.
@@ -228,119 +147,26 @@ void learn(const variables_map& vm, ModelData& config) {
   // instance push the updated dictionaries. If we do load, we need up modify
   // aspects of the configuration (esp. weight update settings).
   AdditiveCNLM model(config, source_dict, target_dict, classes);
-  bool frozen_model = false;
-  bool replace_source_dict = false;
-  if (vm.count("replace-source-dict")) {
-    assert(vm.count("model-in"));
-    replace_source_dict = true;
-  }
-
-  if (vm.count("model-in")) {
-    std::ifstream f(vm["model-in"].as<string>().c_str());
-    boost::archive::text_iarchive ar(f);
-    ar >> model;
-    target_dict = model.label_set();
-    if(!replace_source_dict)
-      source_dict = model.source_label_set();
-    // Set dictionary update to false and freeze model parameters in general.
-    frozen_model = true;
-    // Adjust config.update parameter, as this is dependent on the specific
-    // training run and not on the model per se.
-    model.config.updates = config.updates;
-  }
+  bool frozen_model;
+  bool replace_source_dict;
+  load_model(vm, config, source_dict, target_dict, classes, model, frozen_model,
+             replace_source_dict);
   //////////////////////////////////////////////////////////////////////////////
 
 
   //////////////////////////////////////////////////////////////////////////////
   // read the training sentences
-  ifstream target_in(vm["target"].as<string>().c_str());
-  string line, token;
-  // read the target
-  while (getline(target_in, line)) {
-    stringstream line_stream(line);
-    target_corpus.push_back(Sentence());
-    Sentence& s = target_corpus.back();
-    while (line_stream >> token) {
-      WordId w = target_dict.Convert(token, frozen_model);
-      if (w < 0) {
-        cerr << token << " " << w << endl;
-        assert(!"Word found in training target corpus, which wasn't \
-                 encountered in originally trained and loaded model.");
-      }
-      s.push_back(w);
-    }
-    s.push_back(end_id);
-    num_training_instances += s.size();
-  }
-  target_in.close();
-
-  // read the source
-  ifstream source_in(vm["source"].as<string>().c_str());
-  while (getline(source_in, line)) {
-    stringstream line_stream(line);
-    source_corpus.push_back(Sentence());
-    Sentence& s = source_corpus.back();
-    while (line_stream >> token) {
-      // Add words if the source dict is not frozen or if replace_source_dict
-      // is set in which case the source_dict is new and hence unfrozen.
-      WordId w = source_dict.Convert(token,
-                                     (frozen_model && !replace_source_dict));
-      if (w < 0) {
-        cerr << token << " " << w << endl;
-        assert(!"Word found in training source corpus, which wasn't \
-                 encountered in originally trained and loaded model.");
-      }
-      s.push_back(w);
-    }
-    if (config.source_eos)
-      s.push_back(end_id);
-  }
-  source_in.close();
+  read_training_sentences(vm, target_dict, source_dict, frozen_model,
+		          replace_source_dict, config, end_id, target_corpus,
+			  source_corpus, num_training_instances);
   //////////////////////////////////////////////////////////////////////////////
 
 
   //////////////////////////////////////////////////////////////////////////////
   // read the test sentences
-  bool have_test = vm.count("test-source");
-  if (have_test) {
-    ifstream test_source_in(vm["test-source"].as<string>().c_str());
-    while (getline(test_source_in, line)) {
-      stringstream line_stream(line);
-      Sentence tokens;
-      test_source_corpus.push_back(Sentence());
-      Sentence& s = test_source_corpus.back();
-      while (line_stream >> token) {
-        WordId w = source_dict.Convert(token, true);
-        if (w < 0) {
-          cerr << token << " " << w << endl;
-          assert(!"Unknown word found in test source corpus.");
-        }
-        s.push_back(w);
-      }
-      if (config.source_eos)
-        s.push_back(end_id);
-    }
-    test_source_in.close();
-
-    ifstream test_target_in(vm["test-target"].as<string>().c_str());
-    while (getline(test_target_in, line)) {
-      stringstream line_stream(line);
-      Sentence tokens;
-      test_target_corpus.push_back(Sentence());
-      Sentence& s = test_target_corpus.back();
-      while (line_stream >> token) {
-        WordId w = target_dict.Convert(token, true);
-        if (w < 0) {
-          cerr << token << " " << w << endl;
-          assert(!"Unknown word found in test target corpus.");
-        }
-        s.push_back(w);
-      }
-      s.push_back(end_id);
-      num_test_instances += s.size();
-    }
-    test_target_in.close();
-  }
+  read_test_sentences(vm, source_dict, target_dict, config, end_id,
+		      test_source_corpus, test_target_corpus,
+		      num_test_instances);
   //////////////////////////////////////////////////////////////////////////////
 
   assert (source_corpus.size() == target_corpus.size());
@@ -353,37 +179,17 @@ void learn(const variables_map& vm, ModelData& config) {
     ifstream alignment_in(vm["alignment"].as<string>().c_str());
     read_alignment(alignment_in, alignment);
   }
-
+  //////////////////////////////////////////////////////////////////////////////
 
   //////////////////////////////////////////////////////////////////////////////
   // Non-frozen model means we just learned a (new) dictionary. This requires
   // re-initializing the model using those dictionaries.
-  if(!frozen_model) {
-    model.reinitialize(config, source_dict, target_dict, classes);
-    cerr << "(Re)initializing model based on training data." << endl;
-  }
-  else if(replace_source_dict) {
-    model.expandSource(source_dict);
-    cerr << "Replacing source dictionary based on training data." << endl;
-  }
-
-  if(!frozen_model)
-    model.FB = class_bias;
-
-  for (size_t s = 0; s < source_corpus.size(); ++s)
-    model.length_ratio += (Real(source_corpus.at(s).size())
-                           / Real(target_corpus.at(s).size()));
-  model.length_ratio /= Real(source_corpus.size());
-
-  vector<size_t> training_indices(target_corpus.size());
-  VectorReal unigram = VectorReal::Zero(model.labels());
-  for (size_t i = 0; i < training_indices.size(); i++) {
-    for (size_t j = 0; j < target_corpus.at(i).size(); j++)
-      unigram(target_corpus.at(i).at(j)) += 1;
-    training_indices[i] = i;
-  }
-  if(!frozen_model)
-    model.B = ((unigram.array()+1.0)/(unigram.sum()+unigram.size())).log();
+  vector<size_t> training_indices;
+  VectorReal unigram;
+  reinitialise_model(config, frozen_model, replace_source_dict, source_dict,
+		     target_dict, source_corpus, target_corpus, model,
+		     training_indices, unigram, classes, class_bias);
+  //////////////////////////////////////////////////////////////////////////////
 
 
   //////////////////////////////////////////////////////////////////////////////
@@ -501,14 +307,14 @@ void learn(const variables_map& vm, ModelData& config) {
           model.W -= global_gradient;
 
           if (minibatch_counter % 100 == 0) { cerr << "."; cout.flush(); }
-        
+
           if ((dump_freq > 0) && (minibatch_counter % dump_freq) == 0 ) {
-            string partial_model_path = vm["model-out"].as<string>() + ".partial/" 
-                                                                     + "it" + std::to_string(iteration) 
-                                                                     + ".mb" + std::to_string(minibatch_counter) 
+            string partial_model_path = vm["model-out"].as<string>() + ".partial/"
+                                                                     + "it" + std::to_string(iteration)
+                                                                     + ".mb" + std::to_string(minibatch_counter)
                                                                      + ".model";
-            cout << "Saving trained model from iteration " << iteration 
-                                                            << ", minibatch " << minibatch_counter 
+            cout << "Saving trained model from iteration " << iteration
+                                                            << ", minibatch " << minibatch_counter
                                                             << " to " << partial_model_path << endl;
             cout.flush();
 
@@ -519,7 +325,7 @@ void learn(const variables_map& vm, ModelData& config) {
 
         }
 
-        
+
         start += minibatch_size;
       }
 
@@ -548,7 +354,7 @@ void learn(const variables_map& vm, ModelData& config) {
         //  cerr << " " << t.norm();
         //cerr << endl;
 
-        
+
 
       }
     }
@@ -681,6 +487,116 @@ void freq_bin_type(const std::string &corpus, int num_classes,
   in.close();
 }
 
+void parse_command_line(int argc, char **argv, variables_map& vm,
+		        options_description& config_options,
+			options_description& cmdline_options) {
+  options_description cmdline_specific("Command line specific options");
+  cmdline_specific.add_options()
+    ("help,h", "print help message")
+    ("config,c", value<string>(),
+        "config file specifying additional command line options")
+    ;
+  options_description generic("Allowed options");
+  generic.add_options()
+    ("source,s", value<string>(),
+        "corpus of sentences, one per line")
+    ("target,t", value<string>(),
+        "corpus of sentences, one per line")
+    ("alignment,a", value<string>(),
+        "Moses style alignment of source and target")
+    ("test-source", value<string>(),
+        "corpus of test sentences to be evaluated at each iteration")
+    ("test-target", value<string>(),
+        "corpus of test sentences to be evaluated at each iteration")
+    ("iterations", value<int>()->default_value(10),
+        "number of passes through the data")
+    ("minibatch-size", value<int>()->default_value(100),
+        "number of sentences per minibatch")
+    ("instances", value<int>()->default_value(std::numeric_limits<int>::max()),
+        "training instances per iteration")
+    ("order,n", value<int>()->default_value(3),
+        "ngram order")
+    ("model-in,m", value<string>(),
+        "initial model")
+    ("model-out,o", value<string>()->default_value("model"),
+        "base filename of model output files")
+    ("l2,r", value<float>()->default_value(0.0),
+        "l2 regularisation strength parameter")
+    ("l1", value<float>()->default_value(0.0),
+        "l1 regularisation strength parameter")
+    ("source-l2", value<float>(),
+        "source regularisation strength parameter")
+    ("dump-frequency", value<int>()->default_value(0),
+        "dump model every n minibatches.")
+    ("word-width", value<int>()->default_value(100),
+        "Width of word representation vectors.")
+    ("threads", value<int>()->default_value(1),
+        "number of worker threads.")
+    ("step-size", value<float>()->default_value(1.0),
+        "SGD batch stepsize, it is normalised by the number of minibatches.")
+    ("classes", value<int>()->default_value(100),
+        "number of classes for factored output.")
+    ("class-file", value<string>(),
+        "file containing word to class mappings in the format: \
+         <class> <word> <frequence>.")
+    ("window", value<int>()->default_value(-1),
+        "Width of window of source words conditioned on.")
+    ("no-source-eos", "do not add end of sentence tag to source \
+                       representations.")
+    ("replace-source-dict", "replace the source dictionary of a loaded model \
+                             with a new one.")
+    ("verbose,v", "print perplexity for each sentence (1) or input token (2) ")
+    ("randomise", "visit the training tokens in random order.")
+    ("diagonal-contexts", "Use diagonal context matrices (usually faster).")
+    ("non-linear", "use a non-linear hidden layer.")
+    ("updateT", value<bool>()->default_value(true), "update T weights?")
+    ("updateS", value<bool>()->default_value(true), "update S weights?")
+    ("updateC", value<bool>()->default_value(true), "update C weights?")
+    ("updateR", value<bool>()->default_value(true), "update R weights?")
+    ("updateQ", value<bool>()->default_value(true), "update Q weights?")
+    ("updateF", value<bool>()->default_value(true), "update F weights?")
+    ("updateFB", value<bool>()->default_value(true), "update FB weights?")
+    ("updateB", value<bool>()->default_value(true), "update B weights?")
+    ;
+  config_options.add(generic);
+  cmdline_options.add(generic).add(cmdline_specific);
+
+  store(parse_command_line(argc, argv, cmdline_options), vm);
+  if (vm.count("config") > 0) {
+    ifstream config(vm["config"].as<string>().c_str());
+    store(parse_config_file(config, cmdline_options), vm);
+  }
+  notify(vm);
+}
+
+void build_config(variables_map& vm, ModelData& config) {
+  config.l1_parameter = vm["l1"].as<float>();
+  config.l2_parameter = vm["l2"].as<float>();
+  if (vm.count("source-l2"))
+    config.source_l2_parameter = vm["source-l2"].as<float>();
+  else
+    config.source_l2_parameter = config.l2_parameter;
+  config.word_representation_size = vm["word-width"].as<int>();
+  config.threads = vm["threads"].as<int>();
+  config.ngram_order = vm["order"].as<int>();
+  config.verbose = vm.count("verbose");
+  config.classes = vm["classes"].as<int>();
+  config.diagonal = vm.count("diagonal-contexts");
+  config.nonlinear= vm.count("non-linear");
+  config.source_window_width = vm["window"].as<int>();
+  config.source_eos = !vm.count("no-source-eos");
+
+  Bools updates;
+  updates.T = vm["updateT"].as<bool>();
+  updates.S = vm["updateS"].as<bool>();
+  updates.C = vm["updateC"].as<bool>();
+  updates.R = vm["updateR"].as<bool>();
+  updates.Q = vm["updateQ"].as<bool>();
+  updates.F = vm["updateF"].as<bool>();
+  updates.FB = vm["updateFB"].as<bool>();
+  updates.B = vm["updateB"].as<bool>();
+  config.updates = updates;
+}
 
 void classes_from_file(const std::string &class_file, vector<int>& classes,
                        Dict& dict, VectorReal& class_bias) {
@@ -722,3 +638,181 @@ void classes_from_file(const std::string &class_file, vector<int>& classes,
 
   in.close();
 }
+
+void load_classes(const variables_map& vm, Dict& target_dict, ModelData& config,
+		  vector<int>& classes, VectorReal& class_bias) {
+  classes.clear();
+  class_bias = VectorReal::Zero(config.classes);
+  if (vm.count("class-file")) {
+    cerr << "--class-file set, ignoring --classes." << endl;
+    classes_from_file(vm["class-file"].as<string>(), classes, target_dict,
+                      class_bias);
+    config.classes = classes.size()-1;
+  }
+  else
+    freq_bin_type(vm["target"].as<string>(), config.classes, classes,
+                  target_dict, class_bias);
+}
+
+void load_model(const variables_map& vm, ModelData& config, Dict& source_dict,
+		Dict& target_dict, vector<int>& classes, AdditiveCNLM& model,
+		bool& frozen_model, bool& replace_source_dict) {
+
+  frozen_model = false;
+  replace_source_dict = false;
+  if (vm.count("replace-source-dict")) {
+    assert(vm.count("model-in"));
+    replace_source_dict = true;
+  }
+
+  if (vm.count("model-in")) {
+    std::ifstream f(vm["model-in"].as<string>().c_str());
+    boost::archive::text_iarchive ar(f);
+    ar >> model;
+    target_dict = model.label_set();
+    if(!replace_source_dict)
+      source_dict = model.source_label_set();
+    // Set dictionary update to false and freeze model parameters in general.
+    frozen_model = true;
+    // Adjust config.update parameter, as this is dependent on the specific
+    // training run and not on the model per se.
+    model.config.updates = config.updates;
+  }
+}
+
+void read_training_sentences(const variables_map& vm, Dict& target_dict,
+		             Dict& source_dict, bool& frozen_model, bool& replace_source_dict,
+			     ModelData& config, WordId& end_id,
+			     vector<Sentence>& target_corpus, vector<Sentence>& source_corpus,
+			     size_t& num_training_instances) {
+  ifstream target_in(vm["target"].as<string>().c_str());
+  string line, token;
+  // read the target
+  while (getline(target_in, line)) {
+    stringstream line_stream(line);
+    target_corpus.push_back(Sentence());
+    Sentence& s = target_corpus.back();
+    while (line_stream >> token) {
+      WordId w = target_dict.Convert(token, frozen_model);
+      if (w < 0) {
+        cerr << token << " " << w << endl;
+        assert(!"Word found in training target corpus, which wasn't \
+                 encountered in originally trained and loaded model.");
+      }
+      s.push_back(w);
+    }
+    s.push_back(end_id);
+    num_training_instances += s.size();
+  }
+  target_in.close();
+
+  // read the source
+  ifstream source_in(vm["source"].as<string>().c_str());
+  while (getline(source_in, line)) {
+    stringstream line_stream(line);
+    source_corpus.push_back(Sentence());
+    Sentence& s = source_corpus.back();
+    while (line_stream >> token) {
+      // Add words if the source dict is not frozen or if replace_source_dict
+      // is set in which case the source_dict is new and hence unfrozen.
+      WordId w = source_dict.Convert(token,
+                                     (frozen_model && !replace_source_dict));
+      if (w < 0) {
+        cerr << token << " " << w << endl;
+        assert(!"Word found in training source corpus, which wasn't \
+                 encountered in originally trained and loaded model.");
+      }
+      s.push_back(w);
+    }
+    if (config.source_eos)
+      s.push_back(end_id);
+  }
+  source_in.close();
+}
+
+void read_test_sentences(const variables_map& vm, Dict& source_dict,
+		         Dict& target_dict, ModelData& config, WordId& end_id,
+			 vector<Sentence>& test_source_corpus, vector<Sentence>&
+			 test_target_corpus, size_t& num_test_instances) {
+  string line, token;
+  bool have_test = vm.count("test-source");
+  if (have_test) {
+    ifstream test_source_in(vm["test-source"].as<string>().c_str());
+    while (getline(test_source_in, line)) {
+      stringstream line_stream(line);
+      Sentence tokens;
+      test_source_corpus.push_back(Sentence());
+      Sentence& s = test_source_corpus.back();
+      while (line_stream >> token) {
+        WordId w = source_dict.Convert(token, true);
+        if (w < 0) {
+          cerr << token << " " << w << endl;
+          assert(!"Unknown word found in test source corpus.");
+        }
+        s.push_back(w);
+      }
+      if (config.source_eos)
+        s.push_back(end_id);
+    }
+    test_source_in.close();
+
+    ifstream test_target_in(vm["test-target"].as<string>().c_str());
+    while (getline(test_target_in, line)) {
+      stringstream line_stream(line);
+      Sentence tokens;
+      test_target_corpus.push_back(Sentence());
+      Sentence& s = test_target_corpus.back();
+      while (line_stream >> token) {
+        WordId w = target_dict.Convert(token, true);
+        if (w < 0) {
+          cerr << token << " " << w << endl;
+          assert(!"Unknown word found in test target corpus.");
+        }
+        s.push_back(w);
+      }
+      s.push_back(end_id);
+      num_test_instances += s.size();
+    }
+    test_target_in.close();
+  }
+}
+
+void reinitialise_model(ModelData& config, bool& frozen_model,
+		        bool& replace_source_dict, Dict& source_dict,
+			Dict& target_dict, vector<Sentence>& source_corpus,
+			vector<Sentence>& target_corpus, AdditiveCNLM& model,
+			vector<size_t>& training_indices, VectorReal& unigram,
+			vector<int>& classes, VectorReal& class_bias) {
+
+  if(!frozen_model) {
+    model.reinitialize(config, source_dict, target_dict, classes);
+    cerr << "(Re)initializing model based on training data." << endl;
+  }
+  else if(replace_source_dict) {
+    model.expandSource(source_dict);
+    cerr << "Replacing source dictionary based on training data." << endl;
+  }
+
+  if(!frozen_model)
+    model.FB = class_bias;
+
+  for (size_t s = 0; s < source_corpus.size(); ++s)
+    model.length_ratio += (Real(source_corpus.at(s).size())
+                           / Real(target_corpus.at(s).size()));
+
+  model.length_ratio /= Real(source_corpus.size());
+
+  training_indices.assign(target_corpus.size(), size_t());
+  unigram = VectorReal::Zero(model.labels());
+  for (size_t i = 0; i < training_indices.size(); i++) {
+    for (size_t j = 0; j < target_corpus.at(i).size(); j++)
+      unigram(target_corpus.at(i).at(j)) += 1;
+    training_indices[i] = i;
+  }
+  if(!frozen_model)
+    model.B = ((unigram.array()+1.0)/(unigram.sum()+unigram.size())).log();
+}
+
+//void log_likelihood(model, test_source_corpus, test_source) {
+//
+//}
