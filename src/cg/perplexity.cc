@@ -19,7 +19,7 @@
 
 // Local
 #include "utils/conditional_omp.h"
-#include "cg/additive-cnlm.h"
+#include "cg/cnlm.h"
 #include "corpus/corpus.h"
 
 static const char *REVISION = "$Rev: 248 $";
@@ -84,7 +84,7 @@ int main(int argc, char **argv) {
 
   omp_set_num_threads(vm["threads"].as<int>());
 
-  AdditiveCNLM model;
+  CNLMBase model;
   std::ifstream f(vm["model-in"].as<string>().c_str());
   boost::archive::text_iarchive ar(f);
   ar >> model;

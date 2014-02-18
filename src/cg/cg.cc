@@ -19,7 +19,7 @@
 
 // Local
 #include "utils/conditional_omp.h"
-#include "cg/additive-cnlm.h"
+#include "cg/cnlm.h"
 #include "corpus/corpus.h"
 
 static const char *REVISION = "$Rev: 247 $";
@@ -54,7 +54,7 @@ typedef map<Context, HypothesisPtr> Hypotheses;
 typedef vector<HypothesisPtr> Beam;
 
 
-void beam_search(const AdditiveCNLM& model, const Sentence& source, int beam_width, double word_penalty, const Sentence& target) {
+void beam_search(const CNLMBase& model, const Sentence& source, int beam_width, double word_penalty, const Sentence& target) {
   WordId start_id = model.label_set().Lookup("<s>");
   WordId end_id = model.label_set().Lookup("</s>");
 
@@ -144,7 +144,7 @@ void beam_search(const AdditiveCNLM& model, const Sentence& source, int beam_wid
 }
 
 
-void sample_search(const AdditiveCNLM& model, const Sentence& source,
+void sample_search(const CNLMBase& model, const Sentence& source,
                    int num_samples, int k_best, int source_counter, double word_penalty) {
   WordId start_id = model.label_set().Lookup("<s>");
   WordId end_id = model.label_set().Lookup("</s>");
@@ -287,7 +287,7 @@ int main(int argc, char **argv) {
 
   omp_set_num_threads(vm["threads"].as<int>());
 
-  AdditiveCNLM model;
+  CNLMBase model;
   std::ifstream f(vm["model-in"].as<string>().c_str());
   boost::archive::text_iarchive ar(f);
   ar >> model;

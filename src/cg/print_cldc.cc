@@ -20,7 +20,7 @@
 
 // Local
 #include "utils/conditional_omp.h"
-#include "cg/additive-cnlm.h"
+#include "cg/cnlm.h"
 #include "corpus/corpus.h"
 
 static const char *REVISION = "$Rev: 1 $";
@@ -68,7 +68,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  AdditiveCNLM model;
+  CNLMBase model;
   std::ifstream f(vm["model-in"].as<string>().c_str());
   boost::archive::text_iarchive ar(f);
   ar >> model;

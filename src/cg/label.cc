@@ -20,7 +20,7 @@
 
 // Local
 #include "utils/conditional_omp.h"
-#include "cg/additive-cnlm.h"
+#include "cg/cnlm.h"
 #include "corpus/corpus.h"
 
 static const char *REVISION = "$Rev: 1 $";
@@ -38,7 +38,7 @@ typedef std::pair<std::string, Real> LabelLogProb;
 typedef std::vector<LabelLogProb> LabelLogProbs;
 typedef Sentence Label;
 
-Real getSentenceProb(Sentence& s, Label& l, AdditiveCNLM& model);
+Real getSentenceProb(Sentence& s, Label& l, CNLMBase& model);
 
 int main(int argc, char **argv) {
 
@@ -80,7 +80,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  AdditiveCNLM model;
+  CNLMBase model;
   std::ifstream f(vm["model-in"].as<string>().c_str());
   boost::archive::text_iarchive ar(f);
   ar >> model;
@@ -181,7 +181,7 @@ int main(int argc, char **argv) {
 
 }
 
-Real getSentenceProb(Sentence& s, Label& l, AdditiveCNLM& model) {
+Real getSentenceProb(Sentence& s, Label& l, CNLMBase& model) {
 
   WordId start_id = model.label_set().Lookup("<s>");
   int context_width = model.config.ngram_order-1;

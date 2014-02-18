@@ -21,6 +21,7 @@
 
 // Local
 #include "utils/conditional_omp.h"
+#include "cg/cnlm.h"
 #include "corpus/corpus.h"
 #include "corpus/alignment.h"
 

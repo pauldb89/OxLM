@@ -12,7 +12,7 @@
 #include <Eigen/Core>
 
 // Local
-#include "cg/additive-cnlm.h"
+#include "cg/cnlm.h"
 #include "corpus/corpus.h"
 #include "cg/utils.h"
 
@@ -76,7 +76,7 @@ int main(int argc, char **argv) {
 
   cerr << "Loading model." << endl;
 
-  AdditiveCNLM model;
+  CNLMBase model;
   std::ifstream f(vm["model-in"].as<string>().c_str());
   boost::archive::text_iarchive ar(f);
   ar >> model;
