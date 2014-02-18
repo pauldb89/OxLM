@@ -21,7 +21,6 @@
 
 // Local
 #include "utils/conditional_omp.h"
-#include "cg/additive-cnlm.h"
 #include "corpus/corpus.h"
 #include "corpus/alignment.h"
 
@@ -41,7 +40,7 @@ void build_config(variables_map& vm, ModelData& config);
 void learn(const variables_map& vm, ModelData& config);
 void cache_data(int start, int end, const vector<size_t>& indices,
                 TrainingInstances &result);
-Real log_likelihood(const AdditiveCNLM& model,
+Real log_likelihood(const CNLMBase& model,
                     const vector<Sentence>& test_source_corpus,
                     const vector<Sentence>& test_target_corpus);
 void freq_bin_type(const std::string &corpus, int num_classes,
@@ -52,7 +51,7 @@ void classes_from_file(const std::string &class_file, vector<int>& classes,
 void load_classes(const variables_map& vm, Dict& target_dict, ModelData& config,
 	          vector<int>& classes, VectorReal& class_bias);
 void load_model(const variables_map& vm, ModelData& config, Dict& source_dict,
-		Dict& target_dict, vector<int>& classes, AdditiveCNLM& model,
+		Dict& target_dict, vector<int>& classes, CNLMBase& model,
 		bool& frozen_model, bool& replace_source_dict);
 void read_training_sentences(const variables_map& vm, Dict& target_dict,
                              Dict& source_dict, bool& frozen_model,
@@ -68,7 +67,7 @@ void read_test_sentences(const variables_map& vm, Dict& source_dict,
 void reinitialise_model(ModelData& config, bool& frozen_model,
 		        bool& replace_source_dict, Dict& source_dict,
 			Dict& target_dict, vector<Sentence>& source_corpus,
-			vector<Sentence>& target_corpus, AdditiveCNLM& model,
+			vector<Sentence>& target_corpus, CNLMBase& model,
 			vector<size_t>& training_indices, VectorReal& unigram,
 			vector<int>& classes, VectorReal& class_bias);
 
@@ -146,7 +145,7 @@ void learn(const variables_map& vm, ModelData& config) {
   // If we do not load, we need to update some aspects of the model later, for
   // instance push the updated dictionaries. If we do load, we need up modify
   // aspects of the configuration (esp. weight update settings).
-  AdditiveCNLM model(config, source_dict, target_dict, classes);
+  CNLMBase model(config, source_dict, target_dict, classes);
   bool frozen_model;
   bool replace_source_dict;
   load_model(vm, config, source_dict, target_dict, classes, model, frozen_model,
@@ -209,7 +208,7 @@ void learn(const variables_map& vm, ModelData& config) {
   #pragma omp parallel shared(global_gradient, pp, av_f)
   {
     Real* gradient_data = new Real[model.num_weights()];
-    AdditiveCNLM::WeightsType gradient(gradient_data, model.num_weights());
+    CNLMBase::WeightsType gradient(gradient_data, model.num_weights());
 
     size_t minibatch_size = vm["minibatch-size"].as<int>();
 
@@ -385,7 +384,7 @@ void cache_data(int start, int end, const vector<size_t>& indices,
 }
 
 
-Real log_likelihood(const AdditiveCNLM& model,
+Real log_likelihood(const CNLMBase& model,
                     const vector<Sentence>& test_source_corpus,
                     const vector<Sentence>& test_target_corpus) {
   Real p=0.0;
@@ -655,7 +654,7 @@ void load_classes(const variables_map& vm, Dict& target_dict, ModelData& config,
 }
 
 void load_model(const variables_map& vm, ModelData& config, Dict& source_dict,
-		Dict& target_dict, vector<int>& classes, AdditiveCNLM& model,
+		Dict& target_dict, vector<int>& classes, CNLMBase& model,
 		bool& frozen_model, bool& replace_source_dict) {
 
   frozen_model = false;
@@ -780,7 +779,7 @@ void read_test_sentences(const variables_map& vm, Dict& source_dict,
 void reinitialise_model(ModelData& config, bool& frozen_model,
 		        bool& replace_source_dict, Dict& source_dict,
 			Dict& target_dict, vector<Sentence>& source_corpus,
-			vector<Sentence>& target_corpus, AdditiveCNLM& model,
+			vector<Sentence>& target_corpus, CNLMBase& model,
 			vector<size_t>& training_indices, VectorReal& unigram,
 			vector<int>& classes, VectorReal& class_bias) {
 
