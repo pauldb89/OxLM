@@ -12,8 +12,7 @@
 #include <cstring>
 
 #include "utils/conditional_omp.h"
-#include "cg/cnlm.h"
-#include "cg/utils.h"
+#include "hvlm/hvlm.h"
 
 using namespace std;
 using namespace boost;
@@ -71,15 +70,16 @@ void HiddenVariableLM::init(bool init_weights) {
 
 // Installs a new hidden variable dictionary in the model (initialized randomly) and
 // pushes all other vectors over from existing m_data.
+// TODO: Clean to match new hidden variable system.
 void HiddenVariableLM::expandSource(const Dict& hidden_labels) {
   // Collect sizes and pointers.
   Real* old_data = m_data;
   int old_size = calculateDataSize(false);
   int old_S_size = source_types() * config.word_representation_size;
-  int new_S_size = source_labels.size() * config.word_representation_size;
+  int new_S_size = hidden_labels.size() * config.word_representation_size;
 
   // Replace source dictionary and get new data vector with random weights.
-  m_hidden_labels = source_labels;
+  m_hidden_labels = hidden_labels;
   init(true);
 
   // Copy over all data from old vector (S is at the beginning, so use an offset
@@ -91,6 +91,7 @@ void HiddenVariableLM::expandSource(const Dict& hidden_labels) {
   delete [] old_data;
 }
 
+// TODO: Clean to match new hidden variable system.
 void HiddenVariableLM::reinitialize(const ModelData& config_,
                                const Dict& source_labels,
                                const Dict& target_labels,
@@ -104,7 +105,7 @@ void HiddenVariableLM::reinitialize(const ModelData& config_,
   initWordToClass();
 }
 
-
+// TODO: Clean to match new hidden variable system.
 int HiddenVariableLM::calculateDataSize(bool allocate) {
 
   int num_source_words = source_types();
@@ -134,7 +135,7 @@ int HiddenVariableLM::calculateDataSize(bool allocate) {
   return data_size;
 }
 
-
+// TODO: Clean to match new hidden variable system.
 void HiddenVariableLM::hidden_layer(const std::vector<WordId>& context,
                             const VectorReal& source,
                             VectorReal& result) const {
@@ -160,12 +161,14 @@ void HiddenVariableLM::hidden_layer(const std::vector<WordId>& context,
     result = (1.0 + (-result).array().exp()).inverse(); // sigmoid
 }
 
+// TODO: Clean to match new hidden variable system.
 Real HiddenVariableLM::log_prob(WordId w, const std::vector<WordId>& context,
                         bool cache) const {
   const VectorReal s = VectorReal::Zero(config.word_representation_size);
   return log_prob(w, context, s, cache);
 }
 
+// TODO: Clean to match new hidden variable system.
 Real HiddenVariableLM::log_prob(const WordId w, const std::vector<WordId>& context,
                         const Sentence& source, bool cache,
                         int target_index) const {
@@ -174,6 +177,7 @@ Real HiddenVariableLM::log_prob(const WordId w, const std::vector<WordId>& conte
   return log_prob(w, context, s, cache);
 }
 
+// TODO: Clean to match new hidden variable system.
 Real HiddenVariableLM::log_prob(WordId w, const std::vector<WordId>& context,
                         const VectorReal& source, bool cache) const {
   VectorReal prediction_vector;
@@ -190,7 +194,7 @@ Real HiddenVariableLM::log_prob(WordId w, const std::vector<WordId>& context,
   return c_lps(c) + w_lps(w - c_start);
 }
 
-
+// TODO: Clean to match new hidden variable system.
 void HiddenVariableLM::class_log_probs(const std::vector<WordId>& context,
                                const VectorReal& source,
                                const VectorReal& prediction_vector,
@@ -214,6 +218,7 @@ void HiddenVariableLM::class_log_probs(const std::vector<WordId>& context,
   }
 }
 
+// TODO: Clean to match new hidden variable system.
 void HiddenVariableLM::word_log_probs(int c, const std::vector<WordId>& context,
                               const VectorReal& source,
                               const VectorReal& prediction_vector,
@@ -234,6 +239,7 @@ void HiddenVariableLM::word_log_probs(int c, const std::vector<WordId>& context,
   }
 }
 
+// TODO: This should be removed, after calls to it have been refactored.
 void HiddenVariableLM::source_representation(const Sentence& source,
                                          int target_index,
                                          VectorReal& result) const {
@@ -257,6 +263,7 @@ void HiddenVariableLM::source_representation(const Sentence& source,
   }
 }
 
+// TODO: Clean to match new hidden variable system.
 Real HiddenVariableLM::gradient(HiddenVariables& hidden_variables_,
                             const std::vector<Sentence>& target_corpus,
                             const TrainingInstances &training_instances,
@@ -326,7 +333,7 @@ Real HiddenVariableLM::gradient(HiddenVariables& hidden_variables_,
     const Sentence& target_sent = target_corpus.at(t);
     for (int t_i=0; t_i < int(target_sent.size()); ++t_i, ++instance_counter) {
       VectorReal s_vec = VectorReal::Zero(word_width);
-      source_repr_callback(t, t_i, s_vec);
+      s_vec = S.row(hidden_variables.at(t));
       prediction_vectors.row(instance_counter) += s_vec;
     }
   }
@@ -417,10 +424,8 @@ Real HiddenVariableLM::gradient(HiddenVariables& hidden_variables_,
       const WordId& hidden_var = hidden_variables.at(t);
       const VectorReal& grads = weightedRepresentations.row(instance_counter);
       #pragma omp critical
-      {
-	for (auto s_i : source_sent)
-	g_S.row(s_i) += grads;
-      }
+        g_S.row(hidden_var) += grads;
+  }
   }
 
   MatrixReal context_gradients = MatrixReal::Zero(word_width, tokens);
@@ -486,12 +491,7 @@ Real HiddenVariableLM::gradient(HiddenVariables& hidden_variables_,
   return f;
 }
 
-void HiddenVariableLM::source_repr_callback(TrainingInstance t, int t_i,
-                                        VectorReal& r) {
-  source_representation(source_corpus.at(t), t_i, r);
-}
-
-
+// TODO: Still needs cleaning...
 void HiddenVariableLM::map_parameters(Real*& ptr, WordVectorsType& r,
                               WordVectorsType& q, WordVectorsType& f,
                               ContextTransformsType& c, WeightsType& b,
@@ -510,20 +510,19 @@ void HiddenVariableLM::map_parameters(Real*& ptr, WordVectorsType& r,
 
 
   int S_size = num_source_words * word_width;
-  // TODO(kmh): T_size probably wrong - take window width into account.
   int T_size = (config.diagonal ? word_width : word_width*word_width);
 
   new (&s) WordVectorsType(ptr, num_source_words, word_width);
   ptr += S_size;
 
   t.clear();
-  for (int i=0; i<(2*window_width+1); i++) {
-    if (config.diagonal)
-      t.push_back(ContextTransformType(ptr, word_width, 1));
-    else
-      t.push_back(ContextTransformType(ptr, word_width, word_width));
-    ptr += T_size;
-  }
+
+  if (config.diagonal)
+    t.push_back(ContextTransformType(ptr, word_width, 1));
+  else
+    t.push_back(ContextTransformType(ptr, word_width, word_width));
+  ptr += T_size;
+
 
   new (&r) WordVectorsType(ptr, num_output_words, word_width);
   ptr += R_size;

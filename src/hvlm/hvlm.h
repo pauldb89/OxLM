@@ -70,13 +70,10 @@ class HiddenVariableLM {
 
   Real* data() { return m_data; }
 
-  Real gradient(HiddenVariables hidden_variables,
+  Real gradient(HiddenVariables& hidden_variables,
                 const std::vector<Sentence>& target_corpus,
                 const TrainingInstances &training_instances,
                 Real l2, Real source_l2, WeightsType& g_W);
-
-  void source_repr_callback(TrainingInstance t, int t_i,
-                            VectorReal& r);
 
   void source_representation(const Sentence& source, int target_index,
                              VectorReal& result) const;
