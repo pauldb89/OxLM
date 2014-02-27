@@ -269,13 +269,7 @@ Real CNLMBase::gradient(std::vector<Sentence>& source_corpus_,
   source_corpus = source_corpus_;
 
   Real* ptr = g_W.data();
-  if (omp_get_thread_num() == 0)
     map_parameters(ptr, g_R, g_Q, g_F, g_C, g_B, g_FB, g_S, g_T);
-  else { // TODO: come up with a better fix for this hack
-    int word_width = config.word_representation_size;
-    ptr += (source_types()*word_width)
-           + g_T.size()*word_width*(config.diagonal ? 1 : word_width);
-  }
 #pragma omp barrier
 
   // Allocates data for parent.
@@ -418,28 +412,22 @@ Real CNLMBase::gradient(std::vector<Sentence>& source_corpus_,
       int source_len = source_sent.size();
       int window = config.source_window_width;
       const VectorReal& grads = weightedRepresentations.row(instance_counter);
-        if (window < 0) {
-#pragma omp critical
-          {
-            for (auto s_i : source_sent)
-              g_S.row(s_i) += grads;
-          }
-        }
-        else {
-          int centre = min(floor(Real(t_i)*length_ratio + 0.5), double(source_len-1));
-          int start = max(centre-window, 0);
-          int end = min(source_len, centre+window+1);
+      if (window < 0) {
+        for (auto s_i : source_sent)
+          g_S.row(s_i) += grads;
+      }
+      else {
+        int centre = min(floor(Real(t_i)*length_ratio + 0.5), double(source_len-1));
+        int start = max(centre-window, 0);
+        int end = min(source_len, centre+window+1);
 
-#pragma omp critical
-          {
-            for (int i=start; i < end; ++i) {
-              g_S.row(source_sent.at(i))
-                += window_product(i-centre+window, grads.transpose(), true);
-              context_gradient_update(g_T.at(i-centre+window),
-                                      S.row(source_sent.at(i)), grads.transpose());
-            }
-          }
+        for (int i=start; i < end; ++i) {
+          g_S.row(source_sent.at(i))
+            += window_product(i-centre+window, grads.transpose(), true);
+          context_gradient_update(g_T.at(i-centre+window),
+                                  S.row(source_sent.at(i)), grads.transpose());
         }
+      }
       //////////////////////////////////////////////////////////////////
       /*
        * if (window < 0) {

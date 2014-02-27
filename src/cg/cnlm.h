@@ -22,7 +22,7 @@ void gradient_check(const boost::program_options::variables_map& vm, oxlm::Model
 namespace oxlm {
 
 /*
- * This class implemented a conditional neural language model.
+ * This class implements a conditional neural language model.
  * Bla bla bla about what it actually does.
  * Possibly a link to further reading.
  */
