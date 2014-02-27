@@ -372,13 +372,13 @@ def _classes_from_file(class_file, classes, d):
         for line in f:
             class_str, token_str, freq_str = line.strip().split()
             w_id = d.Convert(token_str)
+            if len(prev_class_str) > 0 and class_str != prev_class_str:
+                class_freqs.append(math.log(mass))
+                classes.append(w_id)#     classes.push_back(w_id);
+                mass = 0
             freq = int(freq_str)
             mass += freq
             total_mass += freq
-            if len(prev_class_str) > 0 and class_str != prev_class_str:
-                class_freqs.append(math.log(mass))
-                classes.append(w_id+1)#     classes.push_back(w_id+1);
-                mass = 0
             prev_class_str = class_str
 
         class_freqs.append(math.log(mass))

@@ -612,15 +612,16 @@ void classes_from_file(const std::string &class_file, vector<int>& classes,
   while (in >> class_str >> token_str >> freq_str) {
     int w_id = dict.Convert(token_str);
 
+    if (!prev_class_str.empty() && class_str != prev_class_str) {
+      class_freqs.push_back(log(mass));
+      classes.push_back(w_id);
+      mass=0;
+    }
+
     int freq = lexical_cast<int>(freq_str);
     mass += freq;
     total_mass += freq;
 
-    if (!prev_class_str.empty() && class_str != prev_class_str) {
-      class_freqs.push_back(log(mass));
-      classes.push_back(w_id+1);
-      mass=0;
-    }
     prev_class_str=class_str;
   }
 
