@@ -276,13 +276,8 @@ Real HiddenVariableLM::gradient(HiddenVariables& hidden_variables_,
     hidden_variables = hidden_variables_;
 
     Real* ptr = g_W.data();
-    if (omp_get_thread_num() == 0)
-        map_parameters(ptr, g_R, g_Q, g_F, g_C, g_B, g_FB, g_S, g_T);
-    else { // TODO: come up with a better fix for this hack
-        int word_width = config.word_representation_size;
-        ptr += (source_types()*word_width)
-               + g_T.size()*word_width*(config.diagonal ? 1 : word_width);
-    }
+    map_parameters(ptr, g_R, g_Q, g_F, g_C, g_B, g_FB, g_S, g_T);
+
     #pragma omp barrier
 
     // Allocates data for parent.
@@ -423,7 +418,6 @@ Real HiddenVariableLM::gradient(HiddenVariables& hidden_variables_,
 
             const WordId& hidden_var = hidden_variables.at(t);
             const VectorReal& grads = weightedRepresentations.row(instance_counter);
-            #pragma omp critical
             g_S.row(hidden_var) += grads;
         }
     }
