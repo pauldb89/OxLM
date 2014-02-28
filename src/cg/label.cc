@@ -42,21 +42,21 @@ Real getSentenceProb(Sentence& s, Label& l, CNLMBase& model);
 
 int main(int argc, char **argv) {
 
-  cerr << "Assign labels with trained neural monolingual translation models: Copyright 2013 Ed Grefenstette, "
-    << REVISION << '\n' << endl;
+    cerr << "Assign labels with trained neural monolingual translation models: Copyright 2013 Ed Grefenstette, "
+         << REVISION << '\n' << endl;
 
 
-  ///////////////////////////////////////////////////////////////////////////////////////
-  // Command line processing
-  variables_map vm;
+    ///////////////////////////////////////////////////////////////////////////////////////
+    // Command line processing
+    variables_map vm;
 
-  // Command line processing
-  options_description cmdline_specific("Command line specific options");
-  cmdline_specific.add_options()
+    // Command line processing
+    options_description cmdline_specific("Command line specific options");
+    cmdline_specific.add_options()
     ("help,h", "print help message")
     ;
-  options_description generic("Allowed options");
-  generic.add_options()
+    options_description generic("Allowed options");
+    generic.add_options()
     ("labels,l", value<string>(),
      "list of labels and their probability, one per line")
     ("sentences,s", value<string>(),
@@ -67,150 +67,150 @@ int main(int argc, char **argv) {
     ("no-sentence-predictions", "do not print sentence predictions for individual sentences")
     ("raw-scores", "print only raw scores")
     ;
-  options_description config_options, cmdline_options;
-  config_options.add(generic);
-  cmdline_options.add(generic).add(cmdline_specific);
+    options_description config_options, cmdline_options;
+    config_options.add(generic);
+    cmdline_options.add(generic).add(cmdline_specific);
 
-  store(parse_command_line(argc, argv, cmdline_options), vm);
-  notify(vm);
-  ///////////////////////////////////////////////////////////////////////////////////////
+    store(parse_command_line(argc, argv, cmdline_options), vm);
+    notify(vm);
+    ///////////////////////////////////////////////////////////////////////////////////////
 
-  if (vm.count("help") || !vm.count("labels") || !vm.count("model-in") || !vm.count("sentences")) {
-    cerr << cmdline_options << "\n";
-    return 1;
-  }
-
-  CNLMBase model;
-  std::ifstream f(vm["model-in"].as<string>().c_str());
-  boost::archive::text_iarchive ar(f);
-  ar >> model;
-
-  WordId end_id = model.label_set().Lookup("</s>");
-
-
-  // Read in label probabilities
-  ifstream labels_in(vm["labels"].as<string>().c_str());
-  LabelLogProbs labelLogProbs;
-
-  string label, line, token;
-  Real probability;
-
-  while (labels_in >> label >> probability) {
-    LabelLogProb labelInfo = make_pair(label, probability);
-    labelLogProbs.push_back(labelInfo);
-  }
-  labels_in.close();
-
-
-  vector<string> predictedLabels;
-
-  // read in sentences and assign labels
-  ifstream sentences_in(vm["sentences"].as<string>().c_str());
-  while(getline(sentences_in, line)) {
-    // get a sentence
-    Sentence s;
-    s.clear();
-    stringstream sentence_stream(line);
-    while (sentence_stream >> token)
-      s.push_back(model.label_set().Convert(token, true));
-    s.push_back(end_id);
-
-    // calculate probability of labels given
-    vector<Real> labelCondProbs;
-    for(size_t l_i = 0; l_i < labelLogProbs.size(); ++l_i) {
-
-      // unpack label and probability
-      LabelLogProb llpInfo = labelLogProbs.at(l_i);
-      string labelText = llpInfo.first;
-      Real labelLogProb = llpInfo.second;
-
-      // set up label for model query
-      Label l;
-      l.push_back(model.source_label_set().Convert(labelText));
-      if (model.config.source_eos) l.push_back(end_id);
-
-      Real condSentenceProb = getSentenceProb(s, l, model);
-
-      Real condLabelProb = condSentenceProb + labelLogProb;
-
-      labelCondProbs.push_back(condLabelProb);
+    if (vm.count("help") || !vm.count("labels") || !vm.count("model-in") || !vm.count("sentences")) {
+        cerr << cmdline_options << "\n";
+        return 1;
     }
 
-    // get index of max label and return max label
-    Real maxVal = labelCondProbs.at(0);
-    size_t maxIndex = 0;
-    for(size_t l_i = 1; l_i < labelCondProbs.size(); ++l_i)
-    {
-      if (labelCondProbs.at(l_i) > maxVal) {
-        maxIndex = l_i;
-        maxVal = labelCondProbs.at(l_i);
-      }
+    CNLMBase model;
+    std::ifstream f(vm["model-in"].as<string>().c_str());
+    boost::archive::text_iarchive ar(f);
+    ar >> model;
+
+    WordId end_id = model.label_set().Lookup("</s>");
+
+
+    // Read in label probabilities
+    ifstream labels_in(vm["labels"].as<string>().c_str());
+    LabelLogProbs labelLogProbs;
+
+    string label, line, token;
+    Real probability;
+
+    while (labels_in >> label >> probability) {
+        LabelLogProb labelInfo = make_pair(label, probability);
+        labelLogProbs.push_back(labelInfo);
     }
-    string maxLabel = labelLogProbs.at(maxIndex).first;
-    predictedLabels.push_back(maxLabel);
+    labels_in.close();
 
-    if(!vm.count("no-sentence-predictions") && !vm.count("raw-scores")) cout << line << " ||| " << maxLabel << endl;
-    if(vm.count("raw-scores")) cout << maxLabel << endl;
-  }
-  sentences_in.close();
 
-  // Load reference labels, if provided, and get accuracy
-  if (vm.count("reference")) {
-    ifstream reflabels_in(vm["reference"].as<string>().c_str());
+    vector<string> predictedLabels;
 
-    vector<string> referenceLabels;
-    string referenceLabel;
-    while (reflabels_in >> referenceLabel) referenceLabels.push_back(referenceLabel);
-    assert(referenceLabels.size()==predictedLabels.size() && "Label list size mismatch!");
+    // read in sentences and assign labels
+    ifstream sentences_in(vm["sentences"].as<string>().c_str());
+    while(getline(sentences_in, line)) {
+        // get a sentence
+        Sentence s;
+        s.clear();
+        stringstream sentence_stream(line);
+        while (sentence_stream >> token)
+            s.push_back(model.label_set().Convert(token, true));
+        s.push_back(end_id);
 
-    size_t correct = 0;
-    size_t total = 0;
+        // calculate probability of labels given
+        vector<Real> labelCondProbs;
+        for(size_t l_i = 0; l_i < labelLogProbs.size(); ++l_i) {
 
-    for(size_t i=0; i<referenceLabels.size(); i++) {
-      if (referenceLabels.at(i) == predictedLabels.at(i)) correct++;
-      total++;
+            // unpack label and probability
+            LabelLogProb llpInfo = labelLogProbs.at(l_i);
+            string labelText = llpInfo.first;
+            Real labelLogProb = llpInfo.second;
+
+            // set up label for model query
+            Label l;
+            l.push_back(model.source_label_set().Convert(labelText));
+            if (model.config.source_eos) l.push_back(end_id);
+
+            Real condSentenceProb = getSentenceProb(s, l, model);
+
+            Real condLabelProb = condSentenceProb + labelLogProb;
+
+            labelCondProbs.push_back(condLabelProb);
+        }
+
+        // get index of max label and return max label
+        Real maxVal = labelCondProbs.at(0);
+        size_t maxIndex = 0;
+        for(size_t l_i = 1; l_i < labelCondProbs.size(); ++l_i)
+        {
+            if (labelCondProbs.at(l_i) > maxVal) {
+                maxIndex = l_i;
+                maxVal = labelCondProbs.at(l_i);
+            }
+        }
+        string maxLabel = labelLogProbs.at(maxIndex).first;
+        predictedLabels.push_back(maxLabel);
+
+        if(!vm.count("no-sentence-predictions") && !vm.count("raw-scores")) cout << line << " ||| " << maxLabel << endl;
+        if(vm.count("raw-scores")) cout << maxLabel << endl;
     }
-    Real accuracy = static_cast<Real>(correct)/static_cast<Real>(total);
+    sentences_in.close();
 
-    cout << "#######################" << endl << "# Accuracy = " << accuracy << endl << "#######################" << endl;
+    // Load reference labels, if provided, and get accuracy
+    if (vm.count("reference")) {
+        ifstream reflabels_in(vm["reference"].as<string>().c_str());
 
-    reflabels_in.close();
-  }
+        vector<string> referenceLabels;
+        string referenceLabel;
+        while (reflabels_in >> referenceLabel) referenceLabels.push_back(referenceLabel);
+        assert(referenceLabels.size()==predictedLabels.size() && "Label list size mismatch!");
 
-  return 0;
+        size_t correct = 0;
+        size_t total = 0;
+
+        for(size_t i=0; i<referenceLabels.size(); i++) {
+            if (referenceLabels.at(i) == predictedLabels.at(i)) correct++;
+            total++;
+        }
+        Real accuracy = static_cast<Real>(correct)/static_cast<Real>(total);
+
+        cout << "#######################" << endl << "# Accuracy = " << accuracy << endl << "#######################" << endl;
+
+        reflabels_in.close();
+    }
+
+    return 0;
 
 }
 
 Real getSentenceProb(Sentence& s, Label& l, CNLMBase& model) {
 
-  WordId start_id = model.label_set().Lookup("<s>");
-  int context_width = model.config.ngram_order-1;
-  std::vector<WordId> context(context_width);
+    WordId start_id = model.label_set().Lookup("<s>");
+    int context_width = model.config.ngram_order-1;
+    std::vector<WordId> context(context_width);
 
-  Real sentence_p=0.0;
-  for (size_t s_i=0; s_i < s.size(); ++s_i) {
-    WordId w = s.at(s_i);
-    if(model.label_set().valid(w)) {
-      int context_start = s_i - context_width;
-      bool sentence_start = (s_i==0);
+    Real sentence_p=0.0;
+    for (size_t s_i=0; s_i < s.size(); ++s_i) {
+        WordId w = s.at(s_i);
+        if(model.label_set().valid(w)) {
+            int context_start = s_i - context_width;
+            bool sentence_start = (s_i==0);
 
-      for (int i=context_width-1; i>=0; --i) {
-        int j=context_start+i;
-        sentence_start = (sentence_start || j<0);
-        int v_i = (sentence_start ? start_id : s.at(j));
+            for (int i=context_width-1; i>=0; --i) {
+                int j=context_start+i;
+                sentence_start = (sentence_start || j<0);
+                int v_i = (sentence_start ? start_id : s.at(j));
 
-        context.at(i) = v_i;
-      }
+                context.at(i) = v_i;
+            }
 
-      Real log_prob = model.log_prob(w, context, l, false, s_i);
-      sentence_p += log_prob;
+            Real log_prob = model.log_prob(w, context, l, false, s_i);
+            sentence_p += log_prob;
+        }
+        else {
+            //        cerr << "Ignoring word for s_i=" << s_i << endl;
+        }
+
     }
-    else {
-      //        cerr << "Ignoring word for s_i=" << s_i << endl;
-    }
 
-  }
-
-  return sentence_p;
+    return sentence_p;
 
 }

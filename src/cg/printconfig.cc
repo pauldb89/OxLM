@@ -37,12 +37,12 @@ int main(int argc, char **argv) {
     // Command line processing
     options_description cmdline_specific("Command line specific options");
     cmdline_specific.add_options()
-      ("help,h", "print help message");
+    ("help,h", "print help message");
     options_description generic("Allowed options");
     generic.add_options()
-      ("model,m", value<string>(),
-          "model to generate from")
-      ;
+    ("model,m", value<string>(),
+     "model to generate from")
+    ;
     options_description config_options, cmdline_options;
     config_options.add(generic);
     cmdline_options.add(generic).add(cmdline_specific);
@@ -51,8 +51,8 @@ int main(int argc, char **argv) {
     notify(vm);
 
     if (vm.count("help") || !vm.count("model")) {
-      cerr << cmdline_options << "\n";
-      return 1;
+        cerr << cmdline_options << "\n";
+        return 1;
     }
 
     CNLMBase model;
