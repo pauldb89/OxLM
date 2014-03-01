@@ -27,22 +27,24 @@ typedef std::vector<TrainingInstance> TrainingInstances;
 
 
 inline VectorReal softMax(const VectorReal& v) {
-  Real max = v.maxCoeff();
-  return (v.array() - (log((v.array() - max).exp().sum()) + max)).exp();
+    Real max = v.maxCoeff();
+    return (v.array() - (log((v.array() - max).exp().sum()) + max)).exp();
 }
 
 inline VectorReal logSoftMax(const VectorReal& v, Real* lz=0) {
-  Real max = v.maxCoeff();
-  Real log_z = log((v.array() - max).exp().sum()) + max;
-  if (lz!=0) *lz = log_z;
-  return v.array() - log_z;
+    Real max = v.maxCoeff();
+    Real log_z = log((v.array() - max).exp().sum()) + max;
+    if (lz!=0) *lz = log_z;
+    return v.array() - log_z;
 }
 
 
 template <typename T>
 struct Log
 {
-    static T zero() { return -std::numeric_limits<T>::infinity(); }
+    static T zero() {
+        return -std::numeric_limits<T>::infinity();
+    }
 
     static T add(T l1, T l2)
     {
@@ -62,31 +64,33 @@ struct Log
 
 
 struct UnigramDistribution {
-  std::map<double, std::string> prob_to_token;
-  std::map<std::string, double> token_to_prob;
+    std::map<double, std::string> prob_to_token;
+    std::map<std::string, double> token_to_prob;
 
-  void read(const std::string& filename) {
-    std::ifstream file(filename.c_str());
-    std::cerr << "Reading unigram distribution from "
-      << filename.c_str() << "." << std::endl;
+    void read(const std::string& filename) {
+        std::ifstream file(filename.c_str());
+        std::cerr << "Reading unigram distribution from "
+                  << filename.c_str() << "." << std::endl;
 
-    double sum=0;
-    std::string key, value;
-    while (file >> value >> key) {
-      double v = boost::lexical_cast<double>(value);
-      sum += v;
-      prob_to_token.insert(std::make_pair(sum, key));
-      token_to_prob.insert(std::make_pair(key, v));
+        double sum=0;
+        std::string key, value;
+        while (file >> value >> key) {
+            double v = boost::lexical_cast<double>(value);
+            sum += v;
+            prob_to_token.insert(std::make_pair(sum, key));
+            token_to_prob.insert(std::make_pair(key, v));
+        }
     }
-  }
 
-  double prob(const std::string& s) const {
-    std::map<std::string, double>::const_iterator it
-      = token_to_prob.find(s);
-    return it != token_to_prob.end() ? it->second : 0.0;
-  }
+    double prob(const std::string& s) const {
+        std::map<std::string, double>::const_iterator it
+            = token_to_prob.find(s);
+        return it != token_to_prob.end() ? it->second : 0.0;
+    }
 
-  bool empty() const { return prob_to_token.empty(); }
+    bool empty() const {
+        return prob_to_token.empty();
+    }
 };
 
 

@@ -10,21 +10,31 @@
 template <typename Type>
 struct modvars
 {
-  Type T;
-  Type S;
-  Type C;
-  Type R;
-  Type Q;
-  Type F;
-  Type FB;
-  Type B;
+    Type T;
+    Type S;
+    Type C;
+    Type R;
+    Type Q;
+    Type F;
+    Type FB;
+    Type B;
 
-  modvars() { init(); }
-  void init() {};
+    modvars() {
+        init();
+    }
+    void init() {};
 };
 
-template<> inline void modvars<bool>::init() { T = true; S = true; C = true;
-  R = true; Q = true; F = true; FB = true; B = true; }
+template<> inline void modvars<bool>::init() {
+    T = true;
+    S = true;
+    C = true;
+    R = true;
+    Q = true;
+    F = true;
+    FB = true;
+    B = true;
+}
 
 typedef modvars<double> Lambdas;
 typedef modvars<bool>  Bools;
