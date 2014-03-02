@@ -1,5 +1,5 @@
 LOCAL_LIBS=${HOME}/packages
-CXXFLAGS = -g -std=c++0x -fPIC -shared -O3 -fopenmp -Wall -I.. -I${LOCAL_LIBS}/include -m64 -I/usr/include/eigen3
+CXXFLAGS = -g -std=c++0x -fPIC -shared -O3 -fopenmp -Wall -I.. -I${LOCAL_LIBS}/include -m64 -I${HOME}/mylibs/eigen-3.2.0
 LDFLAGS = -g -std=c++0x -O3 -fopenmp -L${LOCAL_LIBS}/lib64 -L${LOCAL_LIBS}/lib -lboost_program_options -lboost_serialization -lgfortran
 FFLAGS = -Wall -g -O3  
 CXX=g++
@@ -7,9 +7,9 @@ FC=gfortran
 
 CXXFLAGS += -DEIGEN_DONT_PARALLELIZE
 
-local_objs = log_bilinear_model.o nlm.o #lbfgs.o # lbfgs_wrapper.o
+local_objs = log_bilinear_model.o nlm.o feature.o feature_generator.o feature_store.o #lbfgs.o # lbfgs_wrapper.o
 
-all: train_sgd train_factored_sgd libcdec_ff_lbl.so
+all: train_sgd train_factored_sgd train_melbl libcdec_ff_lbl.so
 
 -include makefile.depend
 
@@ -21,6 +21,9 @@ train_sgd: train_sgd.o $(local_objs)
 	$(CXX) -o $@ $^ $(LDFLAGS)
 
 train_factored_sgd: train_factored_sgd.o $(local_objs)
+	$(CXX) -o $@ $^ $(LDFLAGS)
+
+train_melbl: train_melbl.o $(local_objs)
 	$(CXX) -o $@ $^ $(LDFLAGS)
 
 train_clbl: train_clbl.o $(local_objs)

@@ -11,6 +11,7 @@
 
 #include "corpus/corpus.h"
 #include "lbl/config.h"
+#include "lbl/feature_store.h"
 //#include "lbl/EigenMatrixSerialize.h"
 
 namespace oxlm {
@@ -34,6 +35,10 @@ inline VectorReal logSoftMax(const VectorReal& v, Real* lz=0) {
   Real log_z = log((v.array() - max).exp().sum()) + max;
   if (lz!=0) *lz = log_z;
   return v.array() - log_z;
+}
+
+inline VectorReal sigmoid(const VectorReal& v) {
+  return (1.0 + (-v).array().exp()).inverse();
 }
 
 class NLMApproximateZ {
@@ -274,7 +279,7 @@ public:
 
     // a simple non-linearity
     if (non_linear)
-      prediction_vector = (1.0 + (-prediction_vector).array().exp()).inverse(); // sigmoid
+      prediction_vector = sigmoid(prediction_vector);
 
     // log p(c | context) 
     Real class_log_prob = 0;
@@ -378,9 +383,22 @@ public:
   MatrixReal F;
   VectorReal FB;
 
-private:
+protected:
   mutable std::unordered_map<std::pair<int,Words>, Real> m_context_class_cache;
   mutable std::unordered_map<Words, Real, container_hash<Words> > m_context_cache;
+};
+
+class FactoredMENLM : public FactoredOutputNLM {
+ public:
+  FactoredMENLM(const ModelData& config, const Dict& labels, bool diagonal, 
+                const std::vector<int>& classes);
+
+  virtual Real log_prob(
+      WordId w, const std::vector<WordId>& context,
+      bool nonlinear, bool cache) const;
+
+  UnconstrainedFeatureStore U;
+  vector<UnconstrainedFeatureStore> V;
 };
 
 }
