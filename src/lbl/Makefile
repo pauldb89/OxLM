@@ -9,7 +9,7 @@ CXXFLAGS += -DEIGEN_DONT_PARALLELIZE
 
 local_objs = log_bilinear_model.o nlm.o #lbfgs.o # lbfgs_wrapper.o
 
-all: train_sgd train_factored_sgd
+all: train_sgd train_factored_sgd libcdec_ff_lbl.so
 
 -include makefile.depend
 
@@ -41,13 +41,13 @@ train_z: train_z.o $(local_objs)
 # %.o: %.f
 #	$(FC) $(FFLAGS) -c $< -o $@
 #
-CDEC = ../../cdec
+CDEC = ../../../cdec
 BOOST_INCLUDE=$(LOCAL_LIBS)/include
 cdec_ff_lbl.o: cdec_ff_lbl.cc
 	$(CXX) -shared -fPIC $(CXXFLAGS) -I$(CDEC)/utils -I$(CDEC)/mteval -I$(CDEC)/decoder $< -c
 
 libcdec_ff_lbl.so: cdec_ff_lbl.o nlm.o
-	$(CXX) -shared -L../../cdec/decoder -lcdec -Wl,-soname,$@ -o $@ $^ $(LDFLAGS)
+	$(CXX) -shared -L${CDEC}/decoder -lcdec -Wl,-soname,$@ -o $@ $^ $(LDFLAGS)
 
 .PHONY: depend echo
 depend:

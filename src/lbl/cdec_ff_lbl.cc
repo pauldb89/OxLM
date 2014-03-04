@@ -111,7 +111,7 @@ class FF_LBLLM : public FeatureFunction {
     FeatureFunction::SetStateSize(OrderToStateSize(kORDER));
     kSTART = dict.Convert("<s>");
     kSTOP = dict.Convert("</s>");
-    kUNKNOWN = dict.Convert("_UNK_");
+    kUNKNOWN = dict.Convert("<unk>");
     kNONE = -1;
     kSTAR = dict.Convert("<{STAR}>");
     last_id = 0;
@@ -272,8 +272,9 @@ class FF_LBLLM : public FeatureFunction {
     buffer_[len] = kNONE;
     const int* astate = reinterpret_cast<const WordID*>(state);
     int i = len - 1;
-    for (int j = 0; j < len; ++j,--i)
+    for (int j = 0; j < len; ++j,--i) {
       buffer_[i] = astate[j];
+    }
     return ProbNoRemnant(len - 1, len);
   }
 
