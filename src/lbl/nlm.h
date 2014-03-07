@@ -1,8 +1,6 @@
 #ifndef _NLM_H_
 #define _NLM_H_
 
-#include <boost/shared_ptr.hpp>
-#include <boost/archive/text_oarchive.hpp>
 #include <iostream>
 #include <fstream>
 #include <memory>
@@ -12,34 +10,9 @@
 #include "corpus/corpus.h"
 #include "lbl/config.h"
 #include "lbl/feature_store.h"
-//#include "lbl/EigenMatrixSerialize.h"
+#include "lbl/utils.h"
 
 namespace oxlm {
-
-typedef float Real;
-typedef std::vector<Real> Reals;
-typedef Eigen::Matrix<Real, Eigen::Dynamic, Eigen::Dynamic> MatrixReal;
-typedef Eigen::Matrix<Real, Eigen::Dynamic, 1>              VectorReal;
-typedef Eigen::Array<Real, Eigen::Dynamic, 1>               ArrayReal;
-typedef boost::shared_ptr<MatrixReal>                       MatrixRealPtr;
-typedef boost::shared_ptr<VectorReal>                       VectorRealPtr;
-
-
-inline VectorReal softMax(const VectorReal& v) {
-  Real max = v.maxCoeff();
-  return (v.array() - (log((v.array() - max).exp().sum()) + max)).exp();
-}
-
-inline VectorReal logSoftMax(const VectorReal& v, Real* lz=0) {
-  Real max = v.maxCoeff();
-  Real log_z = log((v.array() - max).exp().sum()) + max;
-  if (lz!=0) *lz = log_z;
-  return v.array() - log_z;
-}
-
-inline VectorReal sigmoid(const VectorReal& v) {
-  return (1.0 + (-v).array().exp()).inverse();
-}
 
 class NLMApproximateZ {
 public:
@@ -218,9 +191,6 @@ protected:
   Real* m_data;
   bool m_diagonal;
 };
-
-typedef std::shared_ptr<NLM> NLMPtr;
-
 
 
 class FactoredOutputNLM: public NLM {

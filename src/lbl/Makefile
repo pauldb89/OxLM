@@ -49,7 +49,7 @@ BOOST_INCLUDE=$(LOCAL_LIBS)/include
 cdec_ff_lbl.o: cdec_ff_lbl.cc
 	$(CXX) -shared -fPIC $(CXXFLAGS) -I$(CDEC)/utils -I$(CDEC)/mteval -I$(CDEC)/decoder $< -c
 
-libcdec_ff_lbl.so: cdec_ff_lbl.o nlm.o
+libcdec_ff_lbl.so: cdec_ff_lbl.o ${local_objs}
 	$(CXX) -shared -L${CDEC}/decoder -lcdec -Wl,-soname,$@ -o $@ $^ $(LDFLAGS)
 
 .PHONY: depend echo
