@@ -2,6 +2,8 @@
 
 namespace oxlm {
 
+UnconstrainedFeatureStore::UnconstrainedFeatureStore() {}
+
 UnconstrainedFeatureStore::UnconstrainedFeatureStore(int vector_size) :
     vector_size(vector_size) {}
 

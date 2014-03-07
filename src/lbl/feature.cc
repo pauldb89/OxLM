@@ -2,6 +2,8 @@
 
 namespace oxlm {
 
+Feature::Feature() {}
+
 Feature::Feature(char feature_type, const vector<int>& data) :
     feature_type(feature_type), data(data) {}
 

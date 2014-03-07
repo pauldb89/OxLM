@@ -17,6 +17,8 @@ typedef Eigen::Array<Real, Eigen::Dynamic, 1> ArrayReal;
 
 class UnconstrainedFeatureStore {
  public:
+  UnconstrainedFeatureStore();
+
   UnconstrainedFeatureStore(int vector_size);
 
   VectorReal get(const vector<Feature>& features) const;
@@ -37,6 +39,40 @@ class UnconstrainedFeatureStore {
   void clear();
 
   size_t size() const;
+
+  friend class boost::serialization::access;
+
+  template<class Archive>
+  void save(Archive& ar, const unsigned int version) const {
+    ar << vector_size;
+
+    size_t num_entries = feature_weights.size();
+    ar << num_entries;
+    for (const auto& entry: feature_weights) {
+      ar << entry.first;
+      const VectorReal weights = entry.second;
+      ar << boost::serialization::make_array(weights.data(), weights.rows());
+    }
+  }
+
+  template<class Archive>
+  void load(Archive& ar, const unsigned int version) {
+    ar >> vector_size;
+
+    int num_entries;
+    ar >> num_entries;
+    for (int i = 0; i < num_entries; ++i) {
+      Feature feature;
+      ar >> feature;
+
+      VectorReal weights;
+      ar >> boost::serialization::make_array(weights.data(), vector_size);
+
+      feature_weights.insert(make_pair(feature, weights));
+    }
+  }
+
+  BOOST_SERIALIZATION_SPLIT_MEMBER();
 
  private:
   void update(const Feature& feature, const VectorReal& values);

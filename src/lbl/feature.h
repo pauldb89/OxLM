@@ -3,15 +3,27 @@
 #include <vector>
 
 #include <boost/functional/hash.hpp>
+#include <boost/serialization/serialization.hpp>
+#include <boost/serialization/vector.hpp>
 
 using namespace std;
 
 namespace oxlm {
 
 struct Feature {
+  Feature();
+
   Feature(char feature_type, const vector<int>& data);
 
   bool operator==(const Feature& feature) const;
+
+  friend class boost::serialization::access;
+
+  template<class Archive>
+  void serialize(Archive& ar, const unsigned int version) {
+    ar & feature_type;
+    ar & data;
+  }
 
   char feature_type;
   vector<int> data;
