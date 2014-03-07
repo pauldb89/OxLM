@@ -103,13 +103,15 @@ int main(int argc, char **argv) {
         "number of sentences per minibatch")
     ("instances", value<int>()->default_value(std::numeric_limits<int>::max()), 
         "training instances per iteration")
-    ("order,n", value<int>()->default_value(3), 
+    ("order,n", value<int>()->default_value(5), 
         "ngram order")
+    ("feature-context-size", value<unsigned int>()->default_value(5),
+        "size of the window for maximum entropy features")
     ("model-in,m", value<string>(), 
         "initial model")
     ("model-out,o", value<string>()->default_value("model"), 
         "base filename of model output files")
-    ("lambda,r", value<float>()->default_value(0.0), 
+    ("lambda,r", value<float>()->default_value(7.0), 
         "regularisation strength parameter")
     ("dump-frequency", value<int>()->default_value(0), 
         "dump model every n minibatches.")
@@ -119,7 +121,7 @@ int main(int argc, char **argv) {
         "number of worker threads.")
     ("test-tokens", value<int>()->default_value(10000), 
         "number of evenly spaced test points tokens evaluate.")
-    ("step-size", value<float>()->default_value(1.0), 
+    ("step-size", value<float>()->default_value(0.05), 
         "SGD batch stepsize, it is normalised by the number of minibatches.")
     ("classes", value<int>()->default_value(100), 
         "number of classes for factored output.")
@@ -506,8 +508,7 @@ Real sgd_gradient(FactoredMENLM& model,
 
   // calculate the function and gradient for each ngram
 //  clock_t iteration_start = clock();
-  // TODO(paul): The whole point is training these values.
-  FeatureGenerator feature_generator;
+  FeatureGenerator feature_generator(model.config.feature_context_size);
   for (int instance=0; instance < instances; instance++) {
     int w_i = training_instances.at(instance);
     WordId w = training_corpus.at(w_i);

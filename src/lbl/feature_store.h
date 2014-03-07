@@ -23,6 +23,8 @@ class UnconstrainedFeatureStore {
 
   void update(const vector<Feature>& features, const VectorReal& values);
 
+  Real updateRegularizer(Real lambda);
+
   void update(const UnconstrainedFeatureStore& store);
 
   void updateSquared(const UnconstrainedFeatureStore& store);

@@ -94,17 +94,17 @@ int main(int argc, char **argv) {
         "corpus of test sentences to be evaluated at each iteration")
     ("iterations", value<int>()->default_value(10), 
         "number of passes through the data")
-    ("minibatch-size", value<int>()->default_value(100), 
+    ("minibatch-size", value<int>()->default_value(10000), 
         "number of sentences per minibatch")
     ("instances", value<int>()->default_value(std::numeric_limits<int>::max()), 
         "training instances per iteration")
-    ("order,n", value<int>()->default_value(3), 
+    ("order,n", value<int>()->default_value(4), 
         "ngram order")
     ("model-in,m", value<string>(), 
         "initial model")
     ("model-out,o", value<string>()->default_value("model"), 
         "base filename of model output files")
-    ("lambda,r", value<float>()->default_value(0.0), 
+    ("lambda,r", value<float>()->default_value(7.0), 
         "regularisation strength parameter")
     ("dump-frequency", value<int>()->default_value(0), 
         "dump model every n minibatches.")
@@ -114,7 +114,7 @@ int main(int argc, char **argv) {
         "number of worker threads.")
     ("test-tokens", value<int>()->default_value(10000), 
         "number of evenly spaced test points tokens evaluate.")
-    ("step-size", value<float>()->default_value(1.0), 
+    ("step-size", value<float>()->default_value(0.05), 
         "SGD batch stepsize, it is normalised by the number of minibatches.")
     ("classes", value<int>()->default_value(100), 
         "number of classes for factored output.")
@@ -159,6 +159,7 @@ int main(int argc, char **argv) {
   cerr << "# input = " << vm["input"].as<string>() << endl;
   cerr << "# minibatch-size = " << vm["minibatch-size"].as<int>() << endl;
   cerr << "# lambda = " << vm["lambda"].as<float>() << endl;
+  cerr << "# step size = " << vm["step-size"].as<float>() << endl; 
   cerr << "# iterations = " << vm["iterations"].as<int>() << endl;
   cerr << "# threads = " << vm["threads"].as<int>() << endl;
   cerr << "# classes = " << config.classes << endl;

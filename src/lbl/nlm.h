@@ -397,6 +397,15 @@ class FactoredMENLM : public FactoredOutputNLM {
       WordId w, const std::vector<WordId>& context,
       bool nonlinear, bool cache) const;
 
+  virtual Real l2_gradient_update(Real lambda) {
+    Real result = FactoredOutputNLM::l2_gradient_update(lambda); 
+    result += U.updateRegularizer(lambda);
+    for (auto& store: V) {
+      result += store.updateRegularizer(lambda);
+    }
+    return result; 
+  }
+
   UnconstrainedFeatureStore U;
   vector<UnconstrainedFeatureStore> V;
 };

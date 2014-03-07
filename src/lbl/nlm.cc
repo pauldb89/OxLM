@@ -373,7 +373,7 @@ Real FactoredMENLM::log_prob(
     else            prediction_vector += Q.row(context.at(i-gap)) * C.at(i);
 
   int c = get_class(w);
-  FeatureGenerator generator;
+  FeatureGenerator generator(config.feature_context_size);
   vector<Feature> features = generator.generate(context);
   VectorReal class_feature_scores = U.get(features);
   VectorReal word_feature_scores = V[c].get(features);

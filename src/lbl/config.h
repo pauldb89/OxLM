@@ -41,8 +41,9 @@ struct ModelData {
   ModelData() : ztype(Sampled), step_size(0.1), eta_t0(1), l2_parameter(0.0), 
                 time_series_parameter(1.0), label_sample_size(100), 
                 feature_type("explicit"), hash_bits(16), threads(1), 
-                iteration_size(1), verbose(false), ngram_order(3), 
-                word_representation_size(100), uniform(false), classes(-1)//, 
+                iteration_size(1), verbose(false), ngram_order(3),
+                feature_context_size(ngram_order), word_representation_size(100),
+                uniform(false), classes(-1)//, 
 //                nonlinear(false)
   {}
 
@@ -58,6 +59,7 @@ struct ModelData {
   int         iteration_size;
   bool        verbose;
   int         ngram_order;
+  unsigned    feature_context_size; 
   int         word_representation_size;
   bool        uniform;
   int         classes;
@@ -78,6 +80,7 @@ struct ModelData {
     ar & iteration_size;
     ar & verbose;
     ar & ngram_order;
+    ar & feature_context_size;
     ar & word_representation_size;
     ar & uniform;
     ar & classes;

@@ -25,6 +25,15 @@ void UnconstrainedFeatureStore::update(
   }
 }
 
+Real UnconstrainedFeatureStore::updateRegularizer(Real lambda) {
+  Real result = 0;
+  for (auto& entry: feature_weights) {
+    entry.second -= lambda * entry.second;
+    result += entry.second.array().square().sum();
+  }
+  return result;
+}
+
 void UnconstrainedFeatureStore::update(const UnconstrainedFeatureStore& store) {
   for (const auto& entry: store.feature_weights) {
     update(entry.first, entry.second);
