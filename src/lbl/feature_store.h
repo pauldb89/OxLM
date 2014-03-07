@@ -2,18 +2,12 @@
 
 #include <unordered_map>
 
-#include <Eigen/Sparse>
-
-#include "feature.h"
+#include "lbl/feature.h"
+#include "lbl/utils.h"
 
 using namespace std;
 
 namespace oxlm {
-
-// TODO(paul): Seriously, we should avoid redefining the same things everywhere.
-typedef float Real;
-typedef Eigen::Matrix<Real, Eigen::Dynamic, 1> VectorReal;
-typedef Eigen::Array<Real, Eigen::Dynamic, 1> ArrayReal;
 
 class UnconstrainedFeatureStore {
  public:
