@@ -38,6 +38,9 @@ include_directories(${EIGEN3_INCLUDE_DIR})
 # OpenMP
 find_package(OpenMP QUIET)
 
+# Cdec
+find_package(Cdec QUIET)
+
 #############################################
 # Hackery courtesy of Karl Moritz
 #############################################
