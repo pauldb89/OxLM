@@ -49,15 +49,15 @@ void learn(const variables_map& vm, ModelData& config);
 
 typedef int TrainingInstance;
 typedef vector<TrainingInstance> TrainingInstances;
-void cache_data(int start, int end, 
-                const Corpus& training_corpus, 
+void cache_data(int start, int end,
+                const Corpus& training_corpus,
                 const vector<size_t>& indices,
                 TrainingInstances &result);
 
 Real sgd_gradient(FactoredOutputNLM& model,
-                const Corpus& training_corpus, 
+                const Corpus& training_corpus,
                 const TrainingInstances &indexes,
-                Real lambda, 
+                Real lambda,
                 NLM::WordVectorsType& g_R,
                 NLM::WordVectorsType& g_Q,
                 NLM::ContextTransformsType& g_C,
@@ -72,53 +72,53 @@ void classes_from_file(const std::string &class_file, vector<int>& classes, Dict
 
 
 int main(int argc, char **argv) {
-  cout << "Online noise contrastive estimation for log-bilinear models: Copyright 2013 Phil Blunsom, " 
+  cout << "Online noise contrastive estimation for log-bilinear models: Copyright 2013 Phil Blunsom, "
        << REVISION << '\n' << endl;
 
   ///////////////////////////////////////////////////////////////////////////////////////
   // Command line processing
-  variables_map vm; 
+  variables_map vm;
 
   // Command line processing
   options_description cmdline_specific("Command line specific options");
   cmdline_specific.add_options()
     ("help,h", "print help message")
-    ("config,c", value<string>(), 
+    ("config,c", value<string>(),
         "config file specifying additional command line options")
     ;
   options_description generic("Allowed options");
   generic.add_options()
-    ("input,i", value<string>()->default_value("data.txt"), 
+    ("input,i", value<string>()->default_value("data.txt"),
         "corpus of sentences, one per line")
-    ("test-set", value<string>(), 
+    ("test-set", value<string>(),
         "corpus of test sentences to be evaluated at each iteration")
-    ("iterations", value<int>()->default_value(10), 
+    ("iterations", value<int>()->default_value(10),
         "number of passes through the data")
-    ("minibatch-size", value<int>()->default_value(10000), 
+    ("minibatch-size", value<int>()->default_value(10000),
         "number of sentences per minibatch")
-    ("instances", value<int>()->default_value(std::numeric_limits<int>::max()), 
+    ("instances", value<int>()->default_value(std::numeric_limits<int>::max()),
         "training instances per iteration")
-    ("order,n", value<int>()->default_value(4), 
+    ("order,n", value<int>()->default_value(4),
         "ngram order")
-    ("model-in,m", value<string>(), 
+    ("model-in,m", value<string>(),
         "initial model")
-    ("model-out,o", value<string>()->default_value("model"), 
+    ("model-out,o", value<string>()->default_value("model"),
         "base filename of model output files")
-    ("lambda,r", value<float>()->default_value(7.0), 
+    ("lambda,r", value<float>()->default_value(7.0),
         "regularisation strength parameter")
-    ("dump-frequency", value<int>()->default_value(0), 
+    ("dump-frequency", value<int>()->default_value(0),
         "dump model every n minibatches.")
-    ("word-width", value<int>()->default_value(100), 
+    ("word-width", value<int>()->default_value(100),
         "Width of word representation vectors.")
-    ("threads", value<int>()->default_value(1), 
+    ("threads", value<int>()->default_value(1),
         "number of worker threads.")
-    ("test-tokens", value<int>()->default_value(10000), 
+    ("test-tokens", value<int>()->default_value(10000),
         "number of evenly spaced test points tokens evaluate.")
-    ("step-size", value<float>()->default_value(0.05), 
+    ("step-size", value<float>()->default_value(0.05),
         "SGD batch stepsize, it is normalised by the number of minibatches.")
-    ("classes", value<int>()->default_value(100), 
+    ("classes", value<int>()->default_value(100),
         "number of classes for factored output.")
-    ("class-file", value<string>(), 
+    ("class-file", value<string>(),
         "file containing word to class mappings in the format <class> <word> <frequence>.")
     ("verbose,v", "print perplexity for each sentence (1) or input token (2) ")
     ("randomise", "visit the training tokens in random order")
@@ -129,17 +129,17 @@ int main(int argc, char **argv) {
   config_options.add(generic);
   cmdline_options.add(generic).add(cmdline_specific);
 
-  store(parse_command_line(argc, argv, cmdline_options), vm); 
+  store(parse_command_line(argc, argv, cmdline_options), vm);
   if (vm.count("config") > 0) {
     ifstream config(vm["config"].as<string>().c_str());
-    store(parse_config_file(config, cmdline_options), vm); 
+    store(parse_config_file(config, cmdline_options), vm);
   }
   notify(vm);
   ///////////////////////////////////////////////////////////////////////////////////////
 
-  if (vm.count("help")) { 
-    cout << cmdline_options << "\n"; 
-    return 1; 
+  if (vm.count("help")) {
+    cout << cmdline_options << "\n";
+    return 1;
   }
 
   ModelData config;
@@ -159,7 +159,7 @@ int main(int argc, char **argv) {
   cerr << "# input = " << vm["input"].as<string>() << endl;
   cerr << "# minibatch-size = " << vm["minibatch-size"].as<int>() << endl;
   cerr << "# lambda = " << vm["lambda"].as<float>() << endl;
-  cerr << "# step size = " << vm["step-size"].as<float>() << endl; 
+  cerr << "# step size = " << vm["step-size"].as<float>() << endl;
   cerr << "# iterations = " << vm["iterations"].as<int>() << endl;
   cerr << "# threads = " << vm["threads"].as<int>() << endl;
   cerr << "# classes = " << config.classes << endl;
@@ -201,13 +201,13 @@ void learn(const variables_map& vm, ModelData& config) {
 
   while (getline(in, line)) {
     stringstream line_stream(line);
-    while (line_stream >> token) 
+    while (line_stream >> token)
       training_corpus.push_back(dict.Convert(token));
     training_corpus.push_back(end_id);
   }
   in.close();
   //////////////////////////////////////////////
-  
+
   //////////////////////////////////////////////
   // read the test sentences
   bool have_test = vm.count("test-set");
@@ -327,20 +327,20 @@ void learn(const variables_map& vm, ModelData& config) {
         gradient.setZero();
         g_F.setZero();
         g_FB.setZero();
-        Real lambda = config.l2_parameter*(end-start)/static_cast<Real>(training_corpus.size()); 
+        Real lambda = config.l2_parameter*(end-start)/static_cast<Real>(training_corpus.size());
 
         #pragma omp barrier
         cache_data(start, end, training_corpus, training_indices, training_instances);
         Real f = sgd_gradient(model, training_corpus, training_instances, lambda, g_R, g_Q, g_C, g_B, g_F, g_FB);
 
-        #pragma omp critical 
+        #pragma omp critical
         {
           global_gradient += gradient;
           global_gradientF += g_F;
           global_gradientFB += g_FB;
           av_f += f;
         }
-        #pragma omp barrier 
+        #pragma omp barrier
         #pragma omp master
         {
           adaGrad.array() += global_gradient.array().square();
@@ -371,7 +371,7 @@ void learn(const variables_map& vm, ModelData& config) {
       if (vm.count("test-set")) {
         Real local_pp = perplexity(model, test_corpus, 1);
 
-        #pragma omp critical 
+        #pragma omp critical
         { pp += local_pp; }
         #pragma omp barrier
       }
@@ -381,7 +381,7 @@ void learn(const variables_map& vm, ModelData& config) {
         pp = exp(-pp/test_corpus.size());
         cerr << " | Time: " << iteration_time << " seconds, Average f = " << av_f/training_corpus.size();
         if (vm.count("test-set")) {
-          cerr << ", Test Perplexity = " << pp; 
+          cerr << ", Test Perplexity = " << pp;
         }
         cerr << " |" << endl << endl;
 
@@ -423,7 +423,7 @@ void cache_data(int start, int end, const Corpus& training_corpus, const vector<
 Real sgd_gradient(FactoredOutputNLM& model,
                 const Corpus& training_corpus,
                 const TrainingInstances &training_instances,
-                Real lambda, 
+                Real lambda,
                 NLM::WordVectorsType& g_R,
                 NLM::WordVectorsType& g_Q,
                 NLM::ContextTransformsType& g_C,
@@ -440,7 +440,7 @@ Real sgd_gradient(FactoredOutputNLM& model,
   // form matrices of the ngram histories
 //  clock_t cache_start = clock();
   int instances=training_instances.size();
-  vector<MatrixReal> context_vectors(context_width, MatrixReal::Zero(instances, word_width)); 
+  vector<MatrixReal> context_vectors(context_width, MatrixReal::Zero(instances, word_width));
   for (int instance=0; instance < instances; ++instance) {
     const TrainingInstance& t = training_instances.at(instance);
     int context_start = t - context_width;
@@ -496,19 +496,19 @@ Real sgd_gradient(FactoredOutputNLM& model,
     f -= (class_conditional_log_probs(c) + word_conditional_log_probs(w-c_start));
 
     // do the gradient updates:
-    //   data contributions: 
+    //   data contributions:
     g_F.row(c) -= prediction_vectors.row(instance).transpose();
     g_R.row(w) -= prediction_vectors.row(instance).transpose();
     g_FB(c)    -= 1.0;
     g_B(w)     -= 1.0;
-    //   model contributions: 
+    //   model contributions:
     g_R.block(c_start, 0, c_end-c_start, g_R.cols()) += word_conditional_probs * prediction_vectors.row(instance);
     g_F += class_conditional_probs * prediction_vectors.row(instance);
     g_FB += class_conditional_probs;
     g_B.segment(c_start, c_end-c_start) += word_conditional_probs;
 
     // a simple sigmoid non-linearity
-    weightedRepresentations.row(instance).array() *= 
+    weightedRepresentations.row(instance).array() *=
       prediction_vectors.row(instance).array() * (1.0 - prediction_vectors.row(instance).array()); // sigmoid
     //for (int x=0; x<word_width; ++x)
     //  weightedRepresentations.row(instance)(x) *= (prediction_vectors.row(instance)(x) > 0 ? 1 : 0.01); // rectifier
@@ -526,7 +526,7 @@ Real sgd_gradient(FactoredOutputNLM& model,
 
       bool sentence_start = (j<0);
       for (int k=j; !sentence_start && k < w_i; k++)
-        if (training_corpus.at(k) == end_id) 
+        if (training_corpus.at(k) == end_id)
           sentence_start=true;
       int v_i = (sentence_start ? start_id : training_corpus.at(j));
 
@@ -546,7 +546,7 @@ Real perplexity(const FactoredOutputNLM& model, const Corpus& test_corpus, int s
   int word_width = model.config.word_representation_size;
   int context_width = model.config.ngram_order-1;
 
-  // cache the products of Q with the contexts 
+  // cache the products of Q with the contexts
   std::vector<MatrixReal> q_context_products(context_width);
   for (int i=0; i<context_width; i++)
     q_context_products.at(i) = model.context_product(i, model.Q);
@@ -584,7 +584,7 @@ Real perplexity(const FactoredOutputNLM& model, const Corpus& test_corpus, int s
       int c_start = model.indexes.at(c);
       VectorReal class_probs = logSoftMax(model.F * prediction_vector + model.FB);
       VectorReal word_probs = logSoftMax(model.class_R(c) * prediction_vector + model.class_B(c));
-//      cerr << model.label_str(w) << ": class=" << c << " log_prob=" << class_probs(c) 
+//      cerr << model.label_str(w) << ": class=" << c << " log_prob=" << class_probs(c)
 //           << "+" << word_probs(w-c_start) << " sum=" << word_probs.array().exp().sum() << endl;
 
       p += class_probs(c) + word_probs(w-c_start);
@@ -662,10 +662,10 @@ void freq_bin_type(const std::string &corpus, int num_classes, vector<int>& clas
       else                            counts[w_id].second += 1;
       sum++;
     }
-    eos_sum++; 
+    eos_sum++;
   }
 
-  sort(counts.begin(), counts.end(), 
+  sort(counts.begin(), counts.end(),
        [](const pair<string,int>& a, const pair<string,int>& b) -> bool { return a.second > b.second; });
 
   classes.clear();
@@ -687,7 +687,7 @@ void freq_bin_type(const std::string &corpus, int num_classes, vector<int>& clas
       bin_size = (sum -= mass) / (num_classes - classes.size());
       class_bias(classes.size()-1) = log(mass);
 
-      
+
 //      class_bias(classes.size()-1) = 1;
 
       classes.push_back(id+1);
@@ -702,8 +702,8 @@ void freq_bin_type(const std::string &corpus, int num_classes, vector<int>& clas
 //  cerr << " " << classes.size() << ": " << classes.back() << " " << mass << endl;
   class_bias.array() -= log(eos_sum+sum);
 
-  cerr << "Binned " << dict.size() << " types in " << classes.size()-1 << " classes with an average of " 
-       << float(dict.size()) / float(classes.size()-1) << " types per bin." << endl; 
+  cerr << "Binned " << dict.size() << " types in " << classes.size()-1 << " classes with an average of "
+       << float(dict.size()) / float(classes.size()-1) << " types per bin." << endl;
   in.close();
 }
 
@@ -731,7 +731,7 @@ void classes_from_file(const std::string &class_file, vector<int>& classes, Dict
     mass += freq;
     total_mass += freq;
 
-    prev_class_str=class_str; 
+    prev_class_str=class_str;
   }
 
   class_freqs.push_back(log(mass));
@@ -742,8 +742,8 @@ void classes_from_file(const std::string &class_file, vector<int>& classes, Dict
   for (size_t i=0; i<class_freqs.size(); ++i)
     class_bias(i) = class_freqs.at(i) - log(total_mass);
 
-  cerr << "Read " << dict.size() << " types in " << classes.size()-1 << " classes with an average of " 
-       << float(dict.size()) / float(classes.size()-1) << " types per bin." << endl; 
+  cerr << "Read " << dict.size() << " types in " << classes.size()-1 << " classes with an average of "
+       << float(dict.size()) / float(classes.size()-1) << " types per bin." << endl;
 
   in.close();
 }

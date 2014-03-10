@@ -217,7 +217,7 @@ class FF_LBLLM : public FeatureFunction {
 //      cerr << dict.Convert(xx[j]) << " ";
 //    cerr << " | " << dict.Convert(word);
 
-    double s = lm.log_prob(word, xx, true, false);
+    double s = lm.log_prob(word, xx, true, true);
 
 //    cerr << "), s = " << s << endl;
 
