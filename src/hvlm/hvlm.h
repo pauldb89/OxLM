@@ -24,7 +24,7 @@ namespace oxlm {
 typedef std::vector<WordId> HiddenVariables;
 
 /*
- * This class implemented a conditional neural language model.
+ * This class implements a conditional neural language model.
  * Bla bla bla about what it actually does.
  * Possibly a link to further reading.
  */
