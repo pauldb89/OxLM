@@ -2,7 +2,8 @@
 # Libraries
 #############################################
 
-add_library(lbl SHARED nlm.cc feature.cc feature_generator.cc feature_store.cc)
+add_library(lbl SHARED nlm.cc feature.cc feature_generator.cc feature_store.cc
+                       utils.cc)
 if(CDEC_FOUND)
   include_directories(cdec_ff_lbl PRIVATE ${CDEC_INCLUDE_DIRS})
   add_library(cdec_ff_lbl SHARED cdec_ff_lbl.cc nlm.cc)

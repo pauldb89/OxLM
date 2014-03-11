@@ -1,6 +1,11 @@
 #pragma once
 
+#include <chrono>
+
 #include <Eigen/Dense>
+
+using namespace std;
+using namespace chrono;
 
 namespace oxlm {
 
@@ -8,6 +13,8 @@ typedef float Real;
 typedef Eigen::Matrix<Real, Eigen::Dynamic, Eigen::Dynamic> MatrixReal;
 typedef Eigen::Matrix<Real, Eigen::Dynamic, 1>              VectorReal;
 typedef Eigen::Array<Real, Eigen::Dynamic, 1>               ArrayReal;
+typedef high_resolution_clock                               Clock;
+typedef Clock::time_point                   Time;
 
 inline VectorReal softMax(const VectorReal& v) {
   Real max = v.maxCoeff();
@@ -24,5 +31,9 @@ inline VectorReal logSoftMax(const VectorReal& v, Real* lz = NULL) {
 inline VectorReal sigmoid(const VectorReal& v) {
   return (1.0 + (-v).array().exp()).inverse();
 }
+
+Time GetTime();
+
+double GetDuration(const Time& start_time, const Time& stop_time);
 
 } // namespace oxlm

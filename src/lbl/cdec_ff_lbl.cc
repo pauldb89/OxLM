@@ -5,7 +5,6 @@
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
 
-// pyp stuff
 #include "corpus/corpus.h"
 #include "lbl/nlm.h"
 
@@ -19,6 +18,7 @@
 #define kORDER 5
 
 using namespace std;
+using namespace oxlm;
 
 namespace {
 
@@ -79,6 +79,7 @@ class FF_LBLLM : public FeatureFunction {
     //: lm(ModelData(), oxlm::Dict(), true, std::vector<int>()), fid(FD::Convert(feat)), fid_oov(FD::Convert(feat+"_OOV"))
   {
     {
+      Time start_time = GetTime();
       cerr << "Reading LM from " << lm_file << " ...\n";
       //ifstream ifile(lm_file.c_str(), ios::in | ios::binary);
       ifstream ifile(lm_file.c_str(), ios::in);
@@ -89,6 +90,9 @@ class FF_LBLLM : public FeatureFunction {
       boost::archive::text_iarchive ia(ifile);
       ia >> lm;
       dict = lm.label_set();
+      Time stop_time = GetTime();
+      cerr << "Reading language model took " << GetDuration(start_time, stop_time)
+           << " seconds..." << endl;
     }
     /*
     {
