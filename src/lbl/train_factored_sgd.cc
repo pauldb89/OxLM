@@ -104,7 +104,7 @@ int main(int argc, char **argv) {
         "initial model")
     ("model-out,o", value<string>()->default_value("model"),
         "base filename of model output files")
-    ("log-period", value<unsigned int>()->default_value(1),
+    ("log-period", value<unsigned int>()->default_value(0),
         "Log model every X iterations")
     ("lambda,r", value<float>()->default_value(7.0),
         "regularisation strength parameter")
