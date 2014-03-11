@@ -297,7 +297,6 @@ public:
   void save(Archive & ar, const unsigned int version) const {
     NLM::save(ar, version);
 
-    // FactoredOutputNLM
     ar << word_to_class;
     ar << indexes;
 
@@ -314,7 +313,6 @@ public:
   void load(Archive & ar, const unsigned int version) {
     NLM::load(ar, version);
 
-    // FactoredOutputNLM
     ar >> word_to_class;
     ar >> indexes;
 

@@ -104,6 +104,8 @@ int main(int argc, char **argv) {
         "initial model")
     ("model-out,o", value<string>()->default_value("model"),
         "base filename of model output files")
+    ("log-period", value<unsigned int>()->default_value(1),
+        "Log model every X iterations")
     ("lambda,r", value<float>()->default_value(7.0),
         "regularisation strength parameter")
     ("dump-frequency", value<int>()->default_value(0),
@@ -392,14 +394,18 @@ void learn(const variables_map& vm, ModelData& config) {
           adaGrad = VectorReal::Zero(model.num_weights());
         }
       }
-    }
-  }
 
-  if (vm.count("model-out")) {
-    cout << "Writing trained model to " << vm["model-out"].as<string>() << endl;
-    std::ofstream f(vm["model-out"].as<string>().c_str());
-    boost::archive::text_oarchive ar(f);
-    ar << model;
+      if (vm.count("model-out") && vm.count("log-period")) {
+        unsigned int log_period = vm["log-period"].as<unsigned int>();
+        if (log_period > 0 && iteration % log_period == 0) {
+          string file = vm["model-out"].as<string>() + ".i" + to_string(iteration);
+          cout << "Writing trained model to " << file << endl;
+          std::ofstream f(file);
+          boost::archive::text_oarchive ar(f);
+          ar << model;
+        }
+      }
+    }
   }
 }
 
