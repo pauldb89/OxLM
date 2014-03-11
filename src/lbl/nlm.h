@@ -181,7 +181,7 @@ public:
   VectorReal            unigram;
 
 protected:
-//  NLM() : R(0,0,0), Q(0,0,0), B(0,0), W(0,0), M(0,0) {}
+  NLM();
 
   virtual void init(const ModelData& config, const Dict& labels, bool init_weights=false);
   virtual void allocate_data(const ModelData& config);
@@ -195,6 +195,8 @@ protected:
 
 class FactoredOutputNLM: public NLM {
 public:
+  FactoredOutputNLM();
+
   FactoredOutputNLM(const ModelData& config, const Dict& labels, bool diagonal)
     : NLM(config, labels, diagonal) {}
 
@@ -312,7 +314,6 @@ public:
   template<class Archive>
   void load(Archive & ar, const unsigned int version) {
     NLM::load(ar, version);
-
     ar >> word_to_class;
     ar >> indexes;
 
@@ -341,7 +342,7 @@ protected:
 
 class FactoredMaxentNLM : public FactoredOutputNLM {
  public:
-  FactoredMaxentNLM(const ModelData& config, const Dict& labels, bool diagonal);
+  FactoredMaxentNLM();
 
   FactoredMaxentNLM(const ModelData& config, const Dict& labels, bool diagonal, 
                     const std::vector<int>& classes);

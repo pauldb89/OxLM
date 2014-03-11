@@ -21,16 +21,15 @@ using namespace oxlm;
 static boost::mt19937 linear_model_rng(static_cast<unsigned> (std::time(0)));
 static uniform_01<> linear_model_uniform_dist;
 
-//NLM::NLM(const NLM& model) 
-//  : config(model.config), R(0,0,0), Q(0,0,0), B(0,0), W(0,0), m_labels(model.label_set()) {
-//    init(config, m_labels, false);
-//    addModel(model);
-//}
+NLM::NLM()
+    : R(0,0,0), Q(0,0,0), B(0,0), W(0,0), M(0,0),
+      m_diagonal(false), m_data_size(0), m_data(NULL) {}
 
 NLM::NLM(const ModelData& config, const Dict& labels, bool diagonal)
-  : config(config), R(0,0,0), Q(0,0,0), B(0,0), W(0,0), M(0,0), m_labels(labels), m_diagonal(diagonal) {
-    init(config, m_labels, true);
-  }
+    : config(config), R(0,0,0), Q(0,0,0), B(0,0), W(0,0), M(0,0),
+      m_labels(labels), m_diagonal(diagonal) {
+  init(config, m_labels, true);
+}
 
 void NLM::init(const ModelData& config, const Dict& labels, bool init_weights) {
   // the prediction vector ranges over classes for a class based LM, or the vocab otherwise
@@ -258,6 +257,7 @@ void NLMApproximateZ::train_lbfgs(const MatrixReal& contexts, const VectorReal& 
   delete gradient_data;
 }
 
+FactoredOutputNLM::FactoredOutputNLM() {}
 
 FactoredOutputNLM::FactoredOutputNLM(const ModelData& config, 
                                      const Dict& labels, 
@@ -349,9 +349,7 @@ void FactoredOutputNLM::reclass(vector<WordId>& train, vector<WordId>& test) {
   m_labels = new_dict;
 }
 
-FactoredMaxentNLM::FactoredMaxentNLM(
-    const ModelData& config, const Dict& labels, bool diagonal) :
-    FactoredOutputNLM(config, labels, diagonal) {}
+FactoredMaxentNLM::FactoredMaxentNLM() {}
 
 FactoredMaxentNLM::FactoredMaxentNLM(
     const ModelData& config, const Dict& labels,

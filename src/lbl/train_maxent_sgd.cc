@@ -156,12 +156,14 @@ int main(int argc, char **argv) {
   config.word_representation_size = vm["word-width"].as<int>();
   config.threads = vm["threads"].as<int>();
   config.ngram_order = vm["order"].as<int>();
+  config.feature_context_size = vm["feature-context-size"].as<unsigned int>();
   config.verbose = vm.count("verbose");
   config.classes = vm["classes"].as<int>();
 
   cerr << "################################" << endl;
   cerr << "# Config Summary" << endl;
   cerr << "# order = " << vm["order"].as<int>() << endl;
+  cerr << "# feature context size = " << config.feature_context_size << endl;
   if (vm.count("model-in"))
     cerr << "# model-in = " << vm["model-in"].as<string>() << endl;
   cerr << "# model-out = " << vm["model-out"].as<string>() << endl;
