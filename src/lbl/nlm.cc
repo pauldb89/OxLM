@@ -349,7 +349,11 @@ void FactoredOutputNLM::reclass(vector<WordId>& train, vector<WordId>& test) {
   m_labels = new_dict;
 }
 
-FactoredMENLM::FactoredMENLM(
+FactoredMaxentNLM::FactoredMaxentNLM(
+    const ModelData& config, const Dict& labels, bool diagonal) :
+    FactoredOutputNLM(config, labels, diagonal) {}
+
+FactoredMaxentNLM::FactoredMaxentNLM(
     const ModelData& config, const Dict& labels,
     bool diagonal, const std::vector<int>& classes) :
     FactoredOutputNLM(config, labels, diagonal, classes),
@@ -360,7 +364,7 @@ FactoredMENLM::FactoredMENLM(
 }
 
 
-Real FactoredMENLM::log_prob(
+Real FactoredMaxentNLM::log_prob(
     const WordId w, const std::vector<WordId>& context,
     bool non_linear=false, bool cache=false) const {
   VectorReal prediction_vector = VectorReal::Zero(config.word_representation_size);
@@ -373,6 +377,7 @@ Real FactoredMENLM::log_prob(
     else            prediction_vector += Q.row(context.at(i-gap)) * C.at(i);
 
   int c = get_class(w);
+  int c_start = indexes.at(c);
   FeatureGenerator generator(config.feature_context_size);
   vector<Feature> features = generator.generate(context);
   VectorReal class_feature_scores = U.get(features);
@@ -389,28 +394,30 @@ Real FactoredMENLM::log_prob(
   if (cache && !context_cache_result.second) {
     assert (context_cache_result.first->second != 0);
     class_log_prob = F.row(c)*prediction_vector + FB(c) + class_feature_scores(c) - context_cache_result.first->second;
-  }
-  else {
+  } else {
     Real c_log_z=0;
     VectorReal class_probs = logSoftMax(F*prediction_vector + FB + class_feature_scores, &c_log_z);
     assert(c_log_z != 0);
     class_log_prob = class_probs(c);
-    if (cache) context_cache_result.first->second = c_log_z;
+    if (cache) {
+      context_cache_result.first->second = c_log_z;
+    }
   }
 
   // log p(w | c, context) 
   Real word_log_prob = 0;
   std::pair<std::unordered_map<std::pair<int,Words>, Real>::iterator, bool> class_context_cache_result;
   if (cache) class_context_cache_result = m_context_class_cache.insert(make_pair(make_pair(c,context),0));
+
   if (cache && !class_context_cache_result.second) {
-    word_log_prob  = R.row(w)*prediction_vector + B(w) + word_feature_scores(w) - class_context_cache_result.first->second;
-  }
-  else {
-    int c_start = indexes.at(c);
-    Real w_log_z=0;
-    VectorReal word_probs = logSoftMax(class_R(c)*prediction_vector + class_B(c) + word_feature_scores, &w_log_z);
-    word_log_prob = word_probs(w-c_start);
-    if (cache) class_context_cache_result.first->second = w_log_z;
+    word_log_prob  = R.row(w)*prediction_vector + B(w) + word_feature_scores(w - c_start) - class_context_cache_result.first->second;
+  } else {
+    Real w_log_z = 0;
+    VectorReal word_probs = logSoftMax(class_R(c) * prediction_vector + class_B(c) + word_feature_scores, &w_log_z);
+    word_log_prob = word_probs(w - c_start);
+    if (cache) {
+      class_context_cache_result.first->second = w_log_z;
+    }
   }
 
   return class_log_prob + word_log_prob;

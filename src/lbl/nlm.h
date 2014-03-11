@@ -339,10 +339,12 @@ protected:
   mutable std::unordered_map<Words, Real, container_hash<Words> > m_context_cache;
 };
 
-class FactoredMENLM : public FactoredOutputNLM {
+class FactoredMaxentNLM : public FactoredOutputNLM {
  public:
-  FactoredMENLM(const ModelData& config, const Dict& labels, bool diagonal, 
-                const std::vector<int>& classes);
+  FactoredMaxentNLM(const ModelData& config, const Dict& labels, bool diagonal);
+
+  FactoredMaxentNLM(const ModelData& config, const Dict& labels, bool diagonal, 
+                    const std::vector<int>& classes);
 
   virtual Real log_prob(
       WordId w, const std::vector<WordId>& context,

@@ -57,21 +57,21 @@ void cache_data(int start, int end,
                 const vector<size_t>& indices,
                 TrainingInstances &result);
 
-Real sgd_gradient(FactoredMENLM& model,
-                const Corpus& training_corpus, 
-                const TrainingInstances &indexes,
-                Real lambda, 
-                NLM::WordVectorsType& g_R,
-                NLM::WordVectorsType& g_Q,
-                NLM::ContextTransformsType& g_C,
-                NLM::WeightsType& g_B,
-                MatrixReal & g_F,
-                VectorReal & g_FB,
-                UnconstrainedFeatureStore& g_U,
-                vector<UnconstrainedFeatureStore>& g_V);
+Real sgd_gradient(FactoredMaxentNLM& model,
+                  const Corpus& training_corpus, 
+                  const TrainingInstances &indexes,
+                  Real lambda, 
+                  NLM::WordVectorsType& g_R,
+                  NLM::WordVectorsType& g_Q,
+                  NLM::ContextTransformsType& g_C,
+                  NLM::WeightsType& g_B,
+                  MatrixReal & g_F,
+                  VectorReal & g_FB,
+                  UnconstrainedFeatureStore& g_U,
+                  vector<UnconstrainedFeatureStore>& g_V);
 
 
-Real perplexity(const FactoredMENLM& model, const Corpus& test_corpus);
+Real perplexity(const FactoredMaxentNLM& model, const Corpus& test_corpus);
 void freq_bin_type(const std::string &corpus, int num_classes, std::vector<int>& classes, Dict& dict, VectorReal& class_bias);
 void classes_from_file(const std::string &class_file, vector<int>& classes, Dict& dict, VectorReal& class_bias);
 
@@ -111,6 +111,8 @@ int main(int argc, char **argv) {
         "initial model")
     ("model-out,o", value<string>()->default_value("model"), 
         "base filename of model output files")
+    ("log-period", value<unsigned int>()->default_value(1),
+        "Log model every X iterations")
     ("lambda,r", value<float>()->default_value(7.0), 
         "regularisation strength parameter")
     ("dump-frequency", value<int>()->default_value(0), 
@@ -236,7 +238,7 @@ void learn(const variables_map& vm, ModelData& config) {
   }
   //////////////////////////////////////////////
 
-  FactoredMENLM model(config, dict, vm.count("diagonal-contexts"), classes);
+  FactoredMaxentNLM model(config, dict, vm.count("diagonal-contexts"), classes);
   model.FB = class_bias;
 
   if (vm.count("model-in")) {
@@ -431,15 +433,25 @@ void learn(const variables_map& vm, ModelData& config) {
           adaGrad = VectorReal::Zero(model.num_weights());
         }
       }
+
+      if (vm.count("model-out") && vm.count("log-period")) {
+        unsigned int log_period = vm["log-period"].as<unsigned int>();
+        if (log_period > 0 && iteration % log_period == 0) {
+          string file = vm["model-out"].as<string>() + ".i" + to_string(iteration);
+          cout << "Writing trained model to " << file << endl;
+          std::ofstream f(file);
+          boost::archive::text_oarchive ar(f);
+          ar << model;
+        }
+      }
     }
   }
 
-  if (vm.count("model-out")) {
-    cout << "Writing trained model to " << vm["model-out"].as<string>() << endl;
-    std::ofstream f(vm["model-out"].as<string>().c_str());
-    boost::archive::text_oarchive ar(f);
-    ar << model;
-  }
+  string file = vm["model-out"].as<string>();
+  cout << "Writing final trained model to " << file << endl;
+  std::ofstream f(file);
+  boost::archive::text_oarchive ar(f);
+  ar << model;
 }
 
 
@@ -459,7 +471,7 @@ void cache_data(int start, int end, const Corpus& training_corpus, const vector<
 }
 
 
-Real sgd_gradient(FactoredMENLM& model,
+Real sgd_gradient(FactoredMaxentNLM& model,
                 const Corpus& training_corpus,
                 const TrainingInstances &training_instances,
                 Real lambda, 
@@ -587,7 +599,7 @@ Real sgd_gradient(FactoredMENLM& model,
   return f;
 }
 
-Real perplexity(const FactoredMENLM& model, const Corpus& test_corpus) {
+Real perplexity(const FactoredMaxentNLM& model, const Corpus& test_corpus) {
   Real p=0.0;
 
   int context_width = model.config.ngram_order-1;

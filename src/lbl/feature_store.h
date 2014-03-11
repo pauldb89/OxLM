@@ -53,13 +53,13 @@ class UnconstrainedFeatureStore {
   void load(Archive& ar, const unsigned int version) {
     ar >> vector_size;
 
-    int num_entries;
+    size_t num_entries;
     ar >> num_entries;
-    for (int i = 0; i < num_entries; ++i) {
+    for (size_t i = 0; i < num_entries; ++i) {
       Feature feature;
       ar >> feature;
 
-      VectorReal weights;
+      VectorReal weights = VectorReal::Zero(vector_size);
       ar >> boost::serialization::make_array(weights.data(), vector_size);
 
       feature_weights.insert(make_pair(feature, weights));
