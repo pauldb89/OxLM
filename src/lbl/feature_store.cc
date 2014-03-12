@@ -1,4 +1,5 @@
-#include "feature_store.h"
+#include "lbl/feature_store.h"
+#include "utils/constants.h"
 
 namespace oxlm {
 
@@ -83,6 +84,27 @@ void UnconstrainedFeatureStore::update(
   } else {
     feature_weights.insert(make_pair(feature, values));
   }
+}
+
+bool UnconstrainedFeatureStore::operator==(
+    const UnconstrainedFeatureStore& store) const {
+  if (vector_size != store.vector_size ||
+      feature_weights.size() != store.feature_weights.size()) {
+    return false;
+  }
+
+  for (const auto& entry: feature_weights) {
+    auto it = store.feature_weights.find(entry.first);
+    if (it == store.feature_weights.end()) {
+      return false;
+    }
+
+    if ((entry.second - it->second).cwiseAbs().maxCoeff() > EPS) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 } // namespace oxlm

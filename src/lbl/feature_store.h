@@ -34,6 +34,8 @@ class UnconstrainedFeatureStore {
 
   size_t size() const;
 
+  bool operator==(const UnconstrainedFeatureStore& store) const;
+
   friend class boost::serialization::access;
 
   template<class Archive>

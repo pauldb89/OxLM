@@ -1,6 +1,7 @@
 #include "gtest/gtest.h"
 
 #include "lbl/utils.h"
+#include "utils/constants.h"
 #include "utils/testing.h"
 
 namespace oxlm {
@@ -11,7 +12,7 @@ TEST(UtilsTest, TestSoftMax) {
   VectorReal w = softMax(v);
   VectorReal expected_w(3);
   expected_w << 0.09003, 0.244728, 0.665240;
-  EXPECT_MATRIX_NEAR(expected_w, w, 1e-5);
+  EXPECT_MATRIX_NEAR(expected_w, w, EPS);
 }
 
 TEST(UtilsTest, TestLogSoftMax) {
@@ -20,7 +21,7 @@ TEST(UtilsTest, TestLogSoftMax) {
   VectorReal w = logSoftMax(v);
   VectorReal expected_w(3);
   expected_w << -2.407605, -1.407605, -0.407605;
-  EXPECT_MATRIX_NEAR(expected_w, w, 1e-5);
+  EXPECT_MATRIX_NEAR(expected_w, w, EPS);
 }
 
 TEST(UtilsTest, TestSigmoid) {
@@ -29,7 +30,7 @@ TEST(UtilsTest, TestSigmoid) {
   VectorReal w = sigmoid(v);
   VectorReal expected_w(3);
   expected_w << 0.268941, 0.5, 0.731058;
-  EXPECT_MATRIX_NEAR(expected_w, w, 1e-5);
+  EXPECT_MATRIX_NEAR(expected_w, w, EPS);
 }
 
 } // namespace oxlm
