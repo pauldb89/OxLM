@@ -28,7 +28,7 @@
 #include <Eigen/Core>
 
 // Local
-#include "lbl/nlm.h"
+#include "lbl/factored_nlm.h"
 #include "lbl/log_add.h"
 #include "corpus/corpus.h"
 
@@ -54,19 +54,19 @@ void cache_data(int start, int end,
                 const vector<size_t>& indices,
                 TrainingInstances &result);
 
-Real sgd_gradient(FactoredOutputNLM& model,
-                const Corpus& training_corpus,
-                const TrainingInstances &indexes,
-                Real lambda,
-                NLM::WordVectorsType& g_R,
-                NLM::WordVectorsType& g_Q,
-                NLM::ContextTransformsType& g_C,
-                NLM::WeightsType& g_B,
-                MatrixReal & g_F,
-                VectorReal & g_FB);
+Real sgd_gradient(FactoredNLM& model,
+                  const Corpus& training_corpus,
+                  const TrainingInstances &indexes,
+                  Real lambda,
+                  WordVectorsType& g_R,
+                  WordVectorsType& g_Q,
+                  ContextTransformsType& g_C,
+                  WeightsType& g_B,
+                  MatrixReal & g_F,
+                  VectorReal & g_FB);
 
 
-Real perplexity(const FactoredOutputNLM& model, const Corpus& test_corpus, int stride=1);
+Real perplexity(const FactoredNLM& model, const Corpus& test_corpus, int stride=1);
 void freq_bin_type(const std::string &corpus, int num_classes, std::vector<int>& classes, Dict& dict, VectorReal& class_bias);
 void classes_from_file(const std::string &class_file, vector<int>& classes, Dict& dict, VectorReal& class_bias);
 
@@ -232,7 +232,7 @@ void learn(const variables_map& vm, ModelData& config) {
   }
   //////////////////////////////////////////////
 
-  FactoredOutputNLM model(config, dict, vm.count("diagonal-contexts"), classes);
+  FactoredNLM model(config, dict, vm.count("diagonal-contexts"), classes);
   model.FB = class_bias;
 
   if (vm.count("model-in")) {
@@ -278,23 +278,23 @@ void learn(const variables_map& vm, ModelData& config) {
     assert((R_size+Q_size+context_width*C_size+B_size+M_size) == model.num_weights());
 
     Real* gradient_data = new Real[model.num_weights()];
-    NLM::WeightsType gradient(gradient_data, model.num_weights());
+    WeightsType gradient(gradient_data, model.num_weights());
 
-    NLM::WordVectorsType g_R(gradient_data, num_words, word_width);
-    NLM::WordVectorsType g_Q(gradient_data+R_size, num_words, word_width);
+    WordVectorsType g_R(gradient_data, num_words, word_width);
+    WordVectorsType g_Q(gradient_data+R_size, num_words, word_width);
 
-    NLM::ContextTransformsType g_C;
+    ContextTransformsType g_C;
     Real* ptr = gradient_data+2*R_size;
     for (int i=0; i<context_width; i++) {
       if (vm.count("diagonal-contexts"))
-          g_C.push_back(NLM::ContextTransformType(ptr, word_width, 1));
+          g_C.push_back(ContextTransformType(ptr, word_width, 1));
       else
-          g_C.push_back(NLM::ContextTransformType(ptr, word_width, word_width));
+          g_C.push_back(ContextTransformType(ptr, word_width, word_width));
       ptr += C_size;
     }
 
-    NLM::WeightsType g_B(ptr, B_size);
-    NLM::WeightsType g_M(ptr+B_size, M_size);
+    WeightsType g_B(ptr, B_size);
+    WeightsType g_M(ptr+B_size, M_size);
     MatrixReal g_F(num_classes, word_width);
     VectorReal g_FB(num_classes);
     //////////////////////////////////////////////
@@ -426,14 +426,14 @@ void cache_data(int start, int end, const Corpus& training_corpus, const vector<
 }
 
 
-Real sgd_gradient(FactoredOutputNLM& model,
+Real sgd_gradient(FactoredNLM& model,
                 const Corpus& training_corpus,
                 const TrainingInstances &training_instances,
                 Real lambda,
-                NLM::WordVectorsType& g_R,
-                NLM::WordVectorsType& g_Q,
-                NLM::ContextTransformsType& g_C,
-                NLM::WeightsType& g_B,
+                WordVectorsType& g_R,
+                WordVectorsType& g_Q,
+                ContextTransformsType& g_C,
+                WeightsType& g_B,
                 MatrixReal& g_F,
                 VectorReal& g_FB) {
   Real f=0;
@@ -546,7 +546,7 @@ Real sgd_gradient(FactoredOutputNLM& model,
 }
 
 /*
-Real perplexity(const FactoredOutputNLM& model, const Corpus& test_corpus, int stride) {
+Real perplexity(const FactoredNLM& model, const Corpus& test_corpus, int stride) {
   Real p=0.0;
 
   int word_width = model.config.word_representation_size;
@@ -607,7 +607,7 @@ Real perplexity(const FactoredOutputNLM& model, const Corpus& test_corpus, int s
   return p;
 }
 */
-Real perplexity(const FactoredOutputNLM& model, const Corpus& test_corpus, int stride) {
+Real perplexity(const FactoredNLM& model, const Corpus& test_corpus, int stride) {
   Real p=0.0;
 
   int context_width = model.config.ngram_order-1;

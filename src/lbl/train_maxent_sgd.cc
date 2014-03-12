@@ -31,7 +31,7 @@
 #include "lbl/feature.h"
 #include "lbl/feature_generator.h"
 #include "lbl/feature_store.h"
-#include "lbl/nlm.h"
+#include "lbl/factored_maxent_nlm.h"
 #include "lbl/log_add.h"
 #include "corpus/corpus.h"
 
@@ -61,10 +61,10 @@ Real sgd_gradient(FactoredMaxentNLM& model,
                   const Corpus& training_corpus,
                   const TrainingInstances &indexes,
                   Real lambda,
-                  NLM::WordVectorsType& g_R,
-                  NLM::WordVectorsType& g_Q,
-                  NLM::ContextTransformsType& g_C,
-                  NLM::WeightsType& g_B,
+                  WordVectorsType& g_R,
+                  WordVectorsType& g_Q,
+                  ContextTransformsType& g_C,
+                  WeightsType& g_B,
                   MatrixReal & g_F,
                   VectorReal & g_FB,
                   UnconstrainedFeatureStore& g_U,
@@ -295,23 +295,23 @@ void learn(const variables_map& vm, ModelData& config) {
     assert((R_size+Q_size+context_width*C_size+B_size+M_size) == model.num_weights());
 
     Real* gradient_data = new Real[model.num_weights()];
-    NLM::WeightsType gradient(gradient_data, model.num_weights());
+    WeightsType gradient(gradient_data, model.num_weights());
 
-    NLM::WordVectorsType g_R(gradient_data, num_words, word_width);
-    NLM::WordVectorsType g_Q(gradient_data+R_size, num_words, word_width);
+    WordVectorsType g_R(gradient_data, num_words, word_width);
+    WordVectorsType g_Q(gradient_data+R_size, num_words, word_width);
 
-    NLM::ContextTransformsType g_C;
+    ContextTransformsType g_C;
     Real* ptr = gradient_data+2*R_size;
     for (int i=0; i<context_width; i++) {
       if (vm.count("diagonal-contexts"))
-          g_C.push_back(NLM::ContextTransformType(ptr, word_width, 1));
+          g_C.push_back(ContextTransformType(ptr, word_width, 1));
       else
-          g_C.push_back(NLM::ContextTransformType(ptr, word_width, word_width));
+          g_C.push_back(ContextTransformType(ptr, word_width, word_width));
       ptr += C_size;
     }
 
-    NLM::WeightsType g_B(ptr, B_size);
-    NLM::WeightsType g_M(ptr+B_size, M_size);
+    WeightsType g_B(ptr, B_size);
+    WeightsType g_M(ptr+B_size, M_size);
     MatrixReal g_F(num_classes, word_width);
     VectorReal g_FB(num_classes);
     //////////////////////////////////////////////
@@ -477,10 +477,10 @@ Real sgd_gradient(FactoredMaxentNLM& model,
                 const Corpus& training_corpus,
                 const TrainingInstances &training_instances,
                 Real lambda,
-                NLM::WordVectorsType& g_R,
-                NLM::WordVectorsType& g_Q,
-                NLM::ContextTransformsType& g_C,
-                NLM::WeightsType& g_B,
+                WordVectorsType& g_R,
+                WordVectorsType& g_Q,
+                ContextTransformsType& g_C,
+                WeightsType& g_B,
                 MatrixReal& g_F,
                 VectorReal& g_FB,
                 UnconstrainedFeatureStore& g_U,

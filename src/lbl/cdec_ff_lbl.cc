@@ -7,7 +7,8 @@
 #include <boost/serialization/vector.hpp>
 
 #include "corpus/corpus.h"
-#include "lbl/nlm.h"
+#include "lbl/factored_nlm.h"
+#include "lbl/factored_maxent_nlm.h"
 
 // cdec headers
 #include "ff.h"
@@ -342,7 +343,7 @@ extern "C" FeatureFunction* create_ff(const string& str) {
   if (maxent_model) {
     return new FF_LBLLM<FactoredMaxentNLM>(filename, feature_name);
   } else {
-    return new FF_LBLLM<FactoredOutputNLM>(filename, feature_name);
+    return new FF_LBLLM<FactoredNLM>(filename, feature_name);
   }
 }
 
