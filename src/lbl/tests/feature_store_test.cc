@@ -1,5 +1,8 @@
 #include "gtest/gtest.h"
 
+#include <sstream>
+#include <vector>
+
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 
@@ -7,6 +10,7 @@
 #include "utils/constants.h"
 #include "utils/testing.h"
 
+using namespace std;
 namespace ar = boost::archive;
 
 namespace oxlm {
