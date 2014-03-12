@@ -83,12 +83,12 @@ void NLM::init(const ModelData& config, const Dict& labels, bool init_weights) {
   //Q.setIdentity();
   //Q.setZero();
   //B.setOnes();
-  //    R << 0,0,0,1 , 0,0,1,0 , 0,1,0,0 , 1,0,0,0; 
-  //    R << 0,0 , 0,0 , 0,1 , 1,0; 
-  //    Q << 0,0,0,1 , 0,0,1,0 , 0,1,0,0 , 1,0,0,0; 
-  //    Q << 1,1 , 1,1 , 1,1 , 1,1; 
+  //    R << 0,0,0,1 , 0,0,1,0 , 0,1,0,0 , 1,0,0,0;
+  //    R << 0,0 , 0,0 , 0,1 , 1,0;
+  //    Q << 0,0,0,1 , 0,0,1,0 , 0,1,0,0 , 1,0,0,0;
+  //    Q << 1,1 , 1,1 , 1,1 , 1,1;
 
-  //  assert(ptr+num_output_words == m_data+m_data_size); 
+  //  assert(ptr+num_output_words == m_data+m_data_size);
 
 #pragma omp master
   if (true) {
@@ -121,7 +121,7 @@ void NLM::allocate_data(const ModelData& config) {
 }
 
 
-void NLMApproximateZ::train(const MatrixReal& contexts, const VectorReal& zs, 
+void NLMApproximateZ::train(const MatrixReal& contexts, const VectorReal& zs,
                             Real step_size, int iterations, int approx_vectors) {
   int word_width = contexts.cols();
   m_z_approx = MatrixReal(word_width, approx_vectors); // W x Z
@@ -181,7 +181,7 @@ void NLMApproximateZ::train(const MatrixReal& contexts, const VectorReal& zs,
 }
 
 
-void NLMApproximateZ::train_lbfgs(const MatrixReal& contexts, const VectorReal& zs, 
+void NLMApproximateZ::train_lbfgs(const MatrixReal& contexts, const VectorReal& zs,
                                   Real step_size, int iterations, int approx_vectors) {
   int word_width = contexts.cols();
   m_z_approx = MatrixReal(word_width, approx_vectors); // W x Z
@@ -202,8 +202,8 @@ void NLMApproximateZ::train_lbfgs(const MatrixReal& contexts, const VectorReal& 
 
   int z_weights = m_z_approx.rows()*m_z_approx.cols();
   int b_weights = m_b_approx.rows();
-  Real *weights_data = new Real[z_weights+b_weights]; 
-  Real *gradient_data = new Real[z_weights+b_weights]; 
+  Real *weights_data = new Real[z_weights+b_weights];
+  Real *gradient_data = new Real[z_weights+b_weights];
   memcpy(weights_data, m_z_approx.data(), sizeof(Real)*z_weights);
   memcpy(weights_data+z_weights, m_b_approx.data(), sizeof(Real)*b_weights);
 
@@ -235,8 +235,8 @@ void NLMApproximateZ::train_lbfgs(const MatrixReal& contexts, const VectorReal& 
     //if (iteration == 0 || (!calc_g_and_f ))
     cerr << "  (" << iteration+1 << "." << function_evaluations << ":" << "f=" << f / train_zs.rows() << ")\n";
 
-    try { 
-      calc_g_and_f = minimiser->run(weights_data, f, gradient_data); 
+    try {
+      calc_g_and_f = minimiser->run(weights_data, f, gradient_data);
       memcpy(m_z_approx.data(), weights_data, sizeof(Real)*z_weights);
       memcpy(m_b_approx.data(), weights_data+z_weights, sizeof(Real)*b_weights);
     }
@@ -259,11 +259,11 @@ void NLMApproximateZ::train_lbfgs(const MatrixReal& contexts, const VectorReal& 
 
 FactoredOutputNLM::FactoredOutputNLM() {}
 
-FactoredOutputNLM::FactoredOutputNLM(const ModelData& config, 
-                                     const Dict& labels, 
-                                     bool diagonal, 
-                                     const std::vector<int>& classes) 
-: NLM(config, labels, diagonal), indexes(classes), 
+FactoredOutputNLM::FactoredOutputNLM(const ModelData& config,
+                                     const Dict& labels,
+                                     bool diagonal,
+                                     const std::vector<int>& classes)
+: NLM(config, labels, diagonal), indexes(classes),
   F(MatrixReal::Zero(config.classes, config.word_representation_size)),
   FB(VectorReal::Zero(config.classes)) {
     assert (!classes.empty());
@@ -385,7 +385,7 @@ Real FactoredMaxentNLM::log_prob(
   if (non_linear)
     prediction_vector = sigmoid(prediction_vector);
 
-  // log p(c | context) 
+  // log p(c | context)
   Real class_log_prob = 0;
   std::pair<std::unordered_map<Words, Real, container_hash<Words> >::iterator, bool> context_cache_result;
   if (cache) context_cache_result = m_context_cache.insert(make_pair(context,0));
@@ -402,7 +402,7 @@ Real FactoredMaxentNLM::log_prob(
     }
   }
 
-  // log p(w | c, context) 
+  // log p(w | c, context)
   Real word_log_prob = 0;
   std::pair<std::unordered_map<std::pair<int,Words>, Real>::iterator, bool> class_context_cache_result;
   if (cache) class_context_cache_result = m_context_class_cache.insert(make_pair(make_pair(c,context),0));
@@ -419,4 +419,13 @@ Real FactoredMaxentNLM::log_prob(
   }
 
   return class_log_prob + word_log_prob;
+}
+
+Real FactoredMaxentNLM::l2_gradient_update(Real lambda) {
+  Real result = FactoredOutputNLM::l2_gradient_update(lambda);
+  result += U.updateRegularizer(lambda);
+  for (auto& store: V) {
+    result += store.updateRegularizer(lambda);
+  }
+  return result;
 }
