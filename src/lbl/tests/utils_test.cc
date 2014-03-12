@@ -5,7 +5,7 @@
 
 namespace oxlm {
 
-TEST(TestSoftMax, BasicTest) {
+TEST(UtilsTest, TestSoftMax) {
   VectorReal v(3);
   v << 1, 2, 3;
   VectorReal w = softMax(v);
@@ -14,7 +14,7 @@ TEST(TestSoftMax, BasicTest) {
   EXPECT_MATRIX_NEAR(expected_w, w, 1e-5);
 }
 
-TEST(TestLogSoftMax, BasicTest) {
+TEST(UtilsTest, TestLogSoftMax) {
   VectorReal v(3);
   v << 1, 2, 3;
   VectorReal w = logSoftMax(v);
@@ -23,7 +23,7 @@ TEST(TestLogSoftMax, BasicTest) {
   EXPECT_MATRIX_NEAR(expected_w, w, 1e-5);
 }
 
-TEST(TestSigmoid, BasicTest) {
+TEST(UtilsTest, TestSigmoid) {
   VectorReal v(3);
   v << -1, 0, 1;
   VectorReal w = sigmoid(v);
