@@ -3,14 +3,13 @@
 #include <unordered_map>
 
 #include "lbl/feature_context.h"
-#include "lbl/feature_store.h"
 #include "lbl/utils.h"
 
 using namespace std;
 
 namespace oxlm {
 
-class UnconstrainedFeatureStore : public FeatureStore {
+class UnconstrainedFeatureStore {
  public:
   UnconstrainedFeatureStore();
 
