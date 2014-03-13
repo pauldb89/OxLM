@@ -65,6 +65,8 @@ int main(int argc, char **argv) {
     ("randomise", "visit the training tokens in random order")
     ("reclass", "reallocate word classes after the first epoch.")
     ("diagonal-contexts", "Use diagonal context matrices (usually faster).")
+    ("sparse-features", value<bool>()->default_value(true),
+        "Only define maximum entropy feature functions for observed contexts")
     ("random-weights", value<bool>()->default_value(true),
         "Initialize the weights randomly.");
   options_description config_options, cmdline_options;
@@ -110,6 +112,7 @@ int main(int argc, char **argv) {
   config.randomise = vm.count("randomise");
   config.reclass = vm.count("reclass");
   config.diagonal_contexts = vm.count("diagonal-contexts");
+  config.sparse_features = vm["sparse-features"].as<bool>();
   config.random_weights = vm["random-weights"].as<bool>();
 
   cerr << "################################" << endl;

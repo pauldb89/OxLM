@@ -10,13 +10,13 @@ TEST(FeatureGeneratorTest, TestLongerHistory) {
   vector<FeatureContext> feature_contexts = generator.generate(history);
 
   EXPECT_EQ(3, feature_contexts.size());
-  vector<int> expected_feature_data = {5};
+  vector<int> expected_feature_data = {1};
   EXPECT_EQ(expected_feature_data, feature_contexts[0].data);
   EXPECT_EQ(0, feature_contexts[0].feature_type);
-  expected_feature_data = {5, 4};
+  expected_feature_data = {1, 2};
   EXPECT_EQ(expected_feature_data, feature_contexts[1].data);
   EXPECT_EQ(1, feature_contexts[1].feature_type);
-  expected_feature_data = {5, 4, 3};
+  expected_feature_data = {1, 2, 3};
   EXPECT_EQ(expected_feature_data, feature_contexts[2].data);
   EXPECT_EQ(2, feature_contexts[2].feature_type);
 }
@@ -27,13 +27,13 @@ TEST(FeatureGeneratorTest, TestShorterHistory) {
   vector<FeatureContext> feature_contexts = generator.generate(history);
 
   EXPECT_EQ(3, feature_contexts.size());
-  vector<int> expected_feature_data = {3};
+  vector<int> expected_feature_data = {1};
   EXPECT_EQ(expected_feature_data, feature_contexts[0].data);
   EXPECT_EQ(0, feature_contexts[0].feature_type);
-  expected_feature_data = {3, 2};
+  expected_feature_data = {1, 2};
   EXPECT_EQ(expected_feature_data, feature_contexts[1].data);
   EXPECT_EQ(1, feature_contexts[1].feature_type);
-  expected_feature_data = {3, 2, 1};
+  expected_feature_data = {1, 2, 3};
   EXPECT_EQ(expected_feature_data, feature_contexts[2].data);
   EXPECT_EQ(2, feature_contexts[2].feature_type);
 }

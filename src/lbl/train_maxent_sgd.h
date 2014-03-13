@@ -13,20 +13,25 @@
 #include <set>
 
 // Boost
-#include <boost/random.hpp>
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/make_shared.hpp>
+#include <boost/random.hpp>
+#include <boost/shared_ptr.hpp>
 
 // Eigen
 #include <Eigen/Dense>
 #include <Eigen/Core>
 
 // Local
-#include "lbl/feature.h"
+#include "lbl/context_extractor.h"
+#include "lbl/feature_context.h"
 #include "lbl/feature_generator.h"
+#include "lbl/feature_store.h"
+#include "lbl/feature_store_initializer.h"
 #include "lbl/factored_maxent_nlm.h"
 #include "lbl/log_add.h"
 #include "lbl/unconstrained_feature_store.h"
@@ -52,6 +57,7 @@ void cache_data(int start, int end,
 Real sgd_gradient(FactoredMaxentNLM& model,
                   const Corpus& training_corpus,
                   const TrainingInstances &indexes,
+                  const WordToClassIndex& index,
                   Real lambda,
                   WordVectorsType& g_R,
                   WordVectorsType& g_Q,
@@ -59,8 +65,8 @@ Real sgd_gradient(FactoredMaxentNLM& model,
                   WeightsType& g_B,
                   MatrixReal & g_F,
                   VectorReal & g_FB,
-                  UnconstrainedFeatureStore& g_U,
-                  vector<UnconstrainedFeatureStore>& g_V);
+                  const boost::shared_ptr<FeatureStore>& g_U,
+                  const vector<boost::shared_ptr<FeatureStore>>& g_V);
 
 
 Real perplexity(const FactoredMaxentNLM& model, const Corpus& test_corpus);
@@ -71,7 +77,7 @@ void classes_from_file(const std::string &class_file, vector<int>& classes, Dict
 FactoredMaxentNLM learn(ModelData& config) {
   Corpus training_corpus, test_corpus;
   Dict dict;
-  dict.Convert("<s>");
+  WordId start_id = dict.Convert("<s>");
   WordId end_id = dict.Convert("</s>");
 
   //////////////////////////////////////////////
@@ -123,8 +129,14 @@ FactoredMaxentNLM learn(ModelData& config) {
     test_in.close();
   }
   //////////////////////////////////////////////
-
-  FactoredMaxentNLM model(config, dict, classes);
+  //
+  int context_width = config.ngram_order - 1;
+  WordToClassIndex index(classes);
+  ContextExtractor extractor(training_corpus, context_width, start_id, end_id);
+  FeatureGenerator generator(config.feature_context_size);
+  FeatureMatcher feature_matcher(training_corpus, index, extractor, generator);
+  FeatureStoreInitializer initializer(config, index, feature_matcher);
+  FactoredMaxentNLM model(config, dict, index, initializer);
   model.FB = class_bias;
 
   if (config.model_input_file.size()) {
@@ -152,14 +164,10 @@ FactoredMaxentNLM learn(ModelData& config) {
   MatrixReal adaGradF = MatrixReal::Zero(model.F.rows(), model.F.cols());
   VectorReal adaGradFB = VectorReal::Zero(model.FB.size());
 
-  UnconstrainedFeatureStore global_gradientU(config.classes);
-  UnconstrainedFeatureStore adaGradU(config.classes);
-  vector<UnconstrainedFeatureStore> global_gradientV, adaGradV;
-  for (int i = 0; i < config.classes; ++i) {
-    int num_words_in_class = classes[i + 1] - classes[i];
-    global_gradientV.push_back(UnconstrainedFeatureStore(num_words_in_class));
-    adaGradV.push_back(UnconstrainedFeatureStore(num_words_in_class));
-  }
+  boost::shared_ptr<FeatureStore> global_gradientU, adaGradU;
+  vector<boost::shared_ptr<FeatureStore>> global_gradientV, adaGradV;
+  initializer.initialize(global_gradientU, global_gradientV);
+  initializer.initialize(adaGradU, adaGradV);
 
   omp_set_num_threads(config.threads);
   #pragma omp parallel shared(global_gradient, global_gradientF)
@@ -169,7 +177,6 @@ FactoredMaxentNLM learn(ModelData& config) {
     int num_words = model.labels();
     int num_classes = model.config.classes;
     int word_width = model.config.word_representation_size;
-    int context_width = model.config.ngram_order-1;
 
     int R_size = num_words*word_width;
     int Q_size = R_size;
@@ -200,6 +207,10 @@ FactoredMaxentNLM learn(ModelData& config) {
     WeightsType g_M(ptr+B_size, M_size);
     MatrixReal g_F(num_classes, word_width);
     VectorReal g_FB(num_classes);
+    boost::shared_ptr<FeatureStore> g_U;
+    vector<boost::shared_ptr<FeatureStore>> g_V;
+    initializer.initialize(g_U, g_V);
+
     //////////////////////////////////////////////
 
     size_t minibatch_counter=0;
@@ -227,25 +238,24 @@ FactoredMaxentNLM learn(ModelData& config) {
           global_gradient.setZero();
           global_gradientF.setZero();
           global_gradientFB.setZero();
-          global_gradientU.clear();
+          global_gradientU->clear();
           for (int i = 0; i < num_classes; ++i) {
-            global_gradientV[i].clear();
+            global_gradientV[i]->clear();
           }
         }
 
         gradient.setZero();
         g_F.setZero();
         g_FB.setZero();
-        UnconstrainedFeatureStore g_U(num_classes);
-        vector<UnconstrainedFeatureStore> g_V;
-        for (int i = 0; i < num_classes; ++i) {
-          g_V.push_back(UnconstrainedFeatureStore(classes[i + 1] - classes[i]));
+        g_U->clear();
+        for (auto& store: g_V) {
+          store->clear();
         }
         Real lambda = config.l2_parameter*(end-start)/static_cast<Real>(training_corpus.size());
 
         #pragma omp barrier
         cache_data(start, end, training_corpus, training_indices, training_instances);
-        Real f = sgd_gradient(model, training_corpus, training_instances,
+        Real f = sgd_gradient(model, training_corpus, training_instances, index,
                               lambda, g_R, g_Q, g_C, g_B, g_F, g_FB, g_U, g_V);
 
         #pragma omp critical
@@ -253,9 +263,9 @@ FactoredMaxentNLM learn(ModelData& config) {
           global_gradient += gradient;
           global_gradientF += g_F;
           global_gradientFB += g_FB;
-          global_gradientU.update(g_U);
+          global_gradientU->update(g_U);
           for (int i = 0; i < num_classes; ++i) {
-            global_gradientV[i].update(g_V[i]);
+            global_gradientV[i]->update(g_V[i]);
           }
           av_f += f;
         }
@@ -274,14 +284,14 @@ FactoredMaxentNLM learn(ModelData& config) {
               if (adaGradF(r,c)) model.F(r,c) -= (step_size*global_gradientF(r,c) / sqrt(adaGradF(r,c)));
           }
 
-          adaGradU.updateSquared(global_gradientU);
+          adaGradU->updateSquared(global_gradientU);
           for (int i = 0; i < num_classes; ++i) {
-            adaGradV[i].updateSquared(global_gradientV[i]);
+            adaGradV[i]->updateSquared(global_gradientV[i]);
           }
 
-          model.U.updateAdaGrad(global_gradientU, adaGradU, step_size);
+          model.U->updateAdaGrad(global_gradientU, adaGradU, step_size);
           for (int i = 0; i < num_classes; ++i) {
-            model.V[i].updateAdaGrad(global_gradientV[i], adaGradV[i], step_size);
+            model.V[i]->updateAdaGrad(global_gradientV[i], adaGradV[i], step_size);
           }
 
           // regularisation
@@ -362,40 +372,34 @@ void cache_data(int start, int end, const Corpus& training_corpus, const vector<
 
 
 Real sgd_gradient(FactoredMaxentNLM& model,
-                const Corpus& training_corpus,
-                const TrainingInstances &training_instances,
-                Real lambda,
-                WordVectorsType& g_R,
-                WordVectorsType& g_Q,
-                ContextTransformsType& g_C,
-                WeightsType& g_B,
-                MatrixReal& g_F,
-                VectorReal& g_FB,
-                UnconstrainedFeatureStore& g_U,
-                vector<UnconstrainedFeatureStore>& g_V) {
+                  const Corpus& training_corpus,
+                  const TrainingInstances &training_instances,
+                  const WordToClassIndex& index,
+                  Real lambda,
+                  WordVectorsType& g_R,
+                  WordVectorsType& g_Q,
+                  ContextTransformsType& g_C,
+                  WeightsType& g_B,
+                  MatrixReal& g_F,
+                  VectorReal& g_FB,
+                  const boost::shared_ptr<FeatureStore>& g_U,
+                  const vector<boost::shared_ptr<FeatureStore>>& g_V) {
   Real f=0;
   WordId start_id = model.label_set().Convert("<s>");
   WordId end_id = model.label_set().Convert("</s>");
-
   int word_width = model.config.word_representation_size;
   int context_width = model.config.ngram_order-1;
+  ContextExtractor extractor(training_corpus, context_width, start_id, end_id);
 
   // form matrices of the ngram histories
 //  clock_t cache_start = clock();
   int instances=training_instances.size();
   vector<MatrixReal> context_vectors(context_width, MatrixReal::Zero(instances, word_width));
-  vector<vector<int>> histories(instances, vector<int>(context_width));
-  for (int instance=0; instance < instances; ++instance) {
-    const TrainingInstance& t = training_instances.at(instance);
-    int context_start = t - context_width;
-
-    bool sentence_start = (t==0);
-    for (int i=context_width-1; i>=0; --i) {
-      int j=context_start+i;
-      sentence_start = (sentence_start || j<0 || training_corpus.at(j) == end_id);
-      int v_i = (sentence_start ? start_id : training_corpus.at(j));
-      histories[instance][i] = v_i;
-      context_vectors.at(i).row(instance) = model.Q.row(v_i);
+  vector<vector<int>> contexts(instances);
+  for (int instance = 0; instance < instances; ++instance) {
+    contexts[instance] = extractor.extract(training_instances[instance]);
+    for (int i = 0; i < context_width; ++i) {
+      context_vectors.at(i).row(instance) = model.Q.row(contexts[instance][i]);
     }
   }
 
@@ -415,22 +419,20 @@ Real sgd_gradient(FactoredMaxentNLM& model,
     int w_i = training_instances.at(instance);
     WordId w = training_corpus.at(w_i);
     int c = model.get_class(w);
-    int c_start = model.indexes.at(c), c_end = model.indexes.at(c+1);
+    int c_start = index.getClassMarker(c);
+    int c_size = index.getClassSize(c);
+    int word_index = index.getWordIndexInClass(w);
 
     vector<FeatureContext> feature_contexts =
-        feature_generator.generate(histories[instance]);
-
-    if (!(w >= c_start && w < c_end))
-      cerr << w << " " << c << " " << c_start << " " << c_end << endl;
-    assert(w >= c_start && w < c_end);
+        feature_generator.generate(contexts[instance]);
 
     // a simple sigmoid non-linearity
     prediction_vectors.row(instance) = sigmoid(prediction_vectors.row(instance));
     //for (int x=0; x<word_width; ++x)
     //  prediction_vectors.row(instance)(x) *= (prediction_vectors.row(instance)(x) > 0 ? 1 : 0.01); // rectifier
 
-    VectorReal class_feature_scores = model.U.get(feature_contexts);
-    VectorReal word_feature_scores = model.V[c].get(feature_contexts);
+    VectorReal class_feature_scores = model.U->get(feature_contexts);
+    VectorReal word_feature_scores = model.V[c]->get(feature_contexts);
     VectorReal class_conditional_scores = model.F * prediction_vectors.row(instance).transpose() + model.FB + class_feature_scores;
     VectorReal word_conditional_scores  = model.class_R(c) * prediction_vectors.row(instance).transpose() + model.class_B(c) + word_feature_scores;
 
@@ -444,19 +446,19 @@ Real sgd_gradient(FactoredMaxentNLM& model,
     weightedRepresentations.row(instance) -= (model.R.row(w) - word_conditional_probs.transpose() * model.class_R(c));
 
     assert(isfinite(class_conditional_log_probs(c)));
-    assert(isfinite(word_conditional_log_probs(w-c_start)));
+    assert(isfinite(word_conditional_log_probs(word_index)));
     f -= (class_conditional_log_probs(c) + word_conditional_log_probs(w-c_start));
 
     // do the gradient updates:
     class_conditional_probs(c) -= 1;
-    word_conditional_probs(w-c_start) -= 1;
+    word_conditional_probs(word_index) -= 1;
 
     g_F += class_conditional_probs * prediction_vectors.row(instance);
     g_FB += class_conditional_probs;
-    g_R.block(c_start, 0, c_end-c_start, g_R.cols()) += word_conditional_probs * prediction_vectors.row(instance);
-    g_B.segment(c_start, c_end-c_start) += word_conditional_probs;
-    g_U.update(feature_contexts, class_conditional_probs);
-    g_V[c].update(feature_contexts, word_conditional_probs);
+    g_R.block(c_start, 0, c_size, g_R.cols()) += word_conditional_probs * prediction_vectors.row(instance);
+    g_B.segment(c_start, c_size) += word_conditional_probs;
+    g_U->update(feature_contexts, class_conditional_probs);
+    g_V[c]->update(feature_contexts, word_conditional_probs);
 
     // a simple sigmoid non-linearity derivative
     weightedRepresentations.row(instance).array() *=
@@ -470,19 +472,10 @@ Real sgd_gradient(FactoredMaxentNLM& model,
   MatrixReal context_gradients = MatrixReal::Zero(word_width, instances);
   for (int i=0; i<context_width; ++i) {
     context_gradients = model.context_product(i, weightedRepresentations, true); // weightedRepresentations*C(i)^T
-
-    for (int instance=0; instance < instances; ++instance) {
-      int w_i = training_instances.at(instance);
-      int j = w_i-context_width+i;
-
-      bool sentence_start = (j<0);
-      for (int k=j; !sentence_start && k < w_i; k++)
-        if (training_corpus.at(k) == end_id)
-          sentence_start=true;
-      int v_i = (sentence_start ? start_id : training_corpus.at(j));
-
-      g_Q.row(v_i) += context_gradients.row(instance);
+    for (int instance = 0; instance < instances; ++instance) {
+      g_Q.row(contexts[instance][i]) += context_gradients.row(instance);
     }
+
     model.context_gradient_update(g_C.at(i), context_vectors.at(i), weightedRepresentations);
   }
 //  clock_t context_time = clock() - context_start;
@@ -497,27 +490,16 @@ Real perplexity(const FactoredMaxentNLM& model, const Corpus& test_corpus) {
   int tokens=0;
   WordId start_id = model.label_set().Lookup("<s>");
   WordId end_id = model.label_set().Lookup("</s>");
+  ContextExtractor extractor(test_corpus, context_width, start_id, end_id);
 
   #pragma omp master
   cerr << "Calculating perplexity for " << test_corpus.size() << " tokens";
 
-  std::vector<WordId> context(context_width);
-
   size_t thread_num = omp_get_thread_num();
   size_t num_threads = omp_get_num_threads();
   for (size_t s = thread_num; s < test_corpus.size(); s += num_threads) {
-    WordId w = test_corpus.at(s);
-    int context_start = s - context_width;
-    bool sentence_start = (s==0);
-
-    for (int i=context_width-1; i>=0; --i) {
-      int j=context_start+i;
-      sentence_start = (sentence_start || j<0 || test_corpus.at(j) == end_id);
-      int v_i = (sentence_start ? start_id : test_corpus.at(j));
-
-      context.at(i) = v_i;
-    }
-    Real log_prob = model.log_prob(w, context, true, false);
+    vector<WordId> context = extractor.extract(s);
+    Real log_prob = model.log_prob(test_corpus[s], context, true, false);
     p += log_prob;
 
     #pragma omp master

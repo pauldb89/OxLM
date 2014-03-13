@@ -71,6 +71,7 @@ struct ModelData {
   float       eta;
   float       multinomial_step_size;
   int         log_period;
+  bool        sparse_features;
   bool        random_weights;
 
   friend class boost::serialization::access;
@@ -105,6 +106,7 @@ struct ModelData {
     ar & eta;
     ar & multinomial_step_size;
     ar & log_period;
+    ar & sparse_features;
     ar & random_weights;
   }
 };

@@ -6,8 +6,8 @@ namespace oxlm {
 
 UnconstrainedFeatureStore::UnconstrainedFeatureStore() {}
 
-UnconstrainedFeatureStore::UnconstrainedFeatureStore(int vector_size) :
-    vectorSize(vector_size) {}
+UnconstrainedFeatureStore::UnconstrainedFeatureStore(int vector_size)
+    : vectorSize(vector_size) {}
 
 VectorReal UnconstrainedFeatureStore::get(
     const vector<FeatureContext>& feature_contexts) const {
@@ -18,7 +18,6 @@ VectorReal UnconstrainedFeatureStore::get(
       result += it->second;
     }
   }
-
   return result;
 }
 
@@ -39,30 +38,37 @@ Real UnconstrainedFeatureStore::updateRegularizer(Real lambda) {
   return result;
 }
 
-void UnconstrainedFeatureStore::update(const UnconstrainedFeatureStore& store) {
-  for (const auto& entry: store.featureWeights) {
+void UnconstrainedFeatureStore::update(
+const boost::shared_ptr<FeatureStore>& base_store) {
+  boost::shared_ptr<UnconstrainedFeatureStore> store = cast(base_store);
+  for (const auto& entry: store->featureWeights) {
     update(entry.first, entry.second);
   }
 }
 
 void UnconstrainedFeatureStore::updateSquared(
-    const UnconstrainedFeatureStore& store) {
-  for (const auto& entry: store.featureWeights) {
-    update(entry.first, VectorReal(entry.second.array().square()));
+    const boost::shared_ptr<FeatureStore>& base_store) {
+  boost::shared_ptr<UnconstrainedFeatureStore> store = cast(base_store);
+  for (const auto& entry: store->featureWeights) {
+    update(entry.first, entry.second.array().square());
   }
 }
 
 void UnconstrainedFeatureStore::updateAdaGrad(
-    const UnconstrainedFeatureStore& gradient_store,
-    const UnconstrainedFeatureStore& adagrad_store,
+    const boost::shared_ptr<FeatureStore>& base_gradient_store,
+    const boost::shared_ptr<FeatureStore>& base_adagrad_store,
     Real step_size) {
-  for (const auto& entry: gradient_store.featureWeights) {
+  boost::shared_ptr<UnconstrainedFeatureStore> gradient_store =
+      cast(base_gradient_store);
+  boost::shared_ptr<UnconstrainedFeatureStore> adagrad_store =
+      cast(base_adagrad_store);
+  for (const auto& entry: gradient_store->featureWeights) {
     VectorReal weights = VectorReal::Zero(vectorSize);
     const VectorReal& gradient = entry.second;
-    const VectorReal& adagrad = adagrad_store.featureWeights.at(entry.first);
-    for (int c = 0; c < adagrad.rows(); ++c) {
-      if (adagrad(c)) {
-        weights(c) = -step_size * gradient(c) / sqrt(adagrad(c));
+    const VectorReal& adagrad = adagrad_store->featureWeights.at(entry.first);
+    for (int r = 0; r < adagrad.rows(); ++r) {
+      if (adagrad(r)) {
+        weights(r) = -step_size * gradient(r) / sqrt(adagrad(r));
       }
     }
     update(entry.first, weights);
@@ -75,17 +81,6 @@ void UnconstrainedFeatureStore::clear() {
 
 size_t UnconstrainedFeatureStore::size() const {
   return featureWeights.size();
-}
-
-void UnconstrainedFeatureStore::update(
-    const FeatureContext& feature_context,
-    const VectorReal& values) {
-  auto it = featureWeights.find(feature_context);
-  if (it != featureWeights.end()) {
-    it->second += values;
-  } else {
-    featureWeights.insert(make_pair(feature_context, values));
-  }
 }
 
 bool UnconstrainedFeatureStore::operator==(
@@ -107,6 +102,24 @@ bool UnconstrainedFeatureStore::operator==(
   }
 
   return true;
+}
+
+void UnconstrainedFeatureStore::update(
+    const FeatureContext& feature_context, const VectorReal& values) {
+  auto it = featureWeights.find(feature_context);
+  if (it != featureWeights.end()) {
+    it->second += values;
+  } else {
+    featureWeights.insert(make_pair(feature_context, values));
+  }
+}
+
+boost::shared_ptr<UnconstrainedFeatureStore> UnconstrainedFeatureStore::cast(
+        const boost::shared_ptr<FeatureStore>& base_store) const {
+  boost::shared_ptr<UnconstrainedFeatureStore> store =
+      dynamic_pointer_cast<UnconstrainedFeatureStore>(base_store);
+  assert(store != nullptr);
+  return store;
 }
 
 } // namespace oxlm

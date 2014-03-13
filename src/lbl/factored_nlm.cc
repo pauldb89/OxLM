@@ -9,20 +9,10 @@ FactoredNLM::FactoredNLM(const ModelData& config, const Dict& labels)
 
 FactoredNLM::FactoredNLM(
     const ModelData& config, const Dict& labels,
-    const vector<int>& classes)
-    : NLM(config, labels, config.diagonal_contexts), indexes(classes),
+    const WordToClassIndex& index)
+    : NLM(config, labels, config.diagonal_contexts), index(index),
       F(MatrixReal::Zero(config.classes, config.word_representation_size)),
       FB(VectorReal::Zero(config.classes)) {
-  assert (!classes.empty());
-  word_to_class.reserve(labels.size());
-  for (size_t c = 0; c < classes.size() - 1; ++c) {
-    int c_end = classes.at(c + 1);
-    for (int w = classes.at(c); w < c_end; ++w) {
-      word_to_class.push_back(c);
-    }
-  }
-  assert (labels.size() == word_to_class.size());
-
   if (config.random_weights) {
     random_device rd;
     std::mt19937 gen(rd());
@@ -37,31 +27,25 @@ FactoredNLM::FactoredNLM(
 }
 
 Eigen::Block<WordVectorsType> FactoredNLM::class_R(const int c) {
-  int c_start = indexes.at(c), c_end = indexes.at(c + 1);
-  return R.block(c_start, 0, c_end - c_start, R.cols());
+  return R.block(index.getClassMarker(c), 0, index.getClassSize(c), R.cols());
 }
 
 const Eigen::Block<const WordVectorsType> FactoredNLM::class_R(
     const int c) const {
-  int c_start = indexes.at(c), c_end = indexes.at(c + 1);
-  return R.block(c_start, 0, c_end - c_start, R.cols());
+  return R.block(index.getClassMarker(c), 0, index.getClassSize(c), R.cols());
 }
 
 Eigen::VectorBlock<WeightsType> FactoredNLM::class_B(const int c) {
-  int c_start = indexes.at(c), c_end = indexes.at(c + 1);
-  return B.segment(c_start, c_end - c_start);
+  return B.segment(index.getClassMarker(c), index.getClassSize(c));
 }
 
 const Eigen::VectorBlock<const WeightsType> FactoredNLM::class_B(
     const int c) const {
-  int c_start = indexes.at(c), c_end = indexes.at(c + 1);
-  return B.segment(c_start, c_end - c_start);
+  return B.segment(index.getClassMarker(c), index.getClassSize(c));
 }
 
 int FactoredNLM::get_class(const WordId& w) const {
-  assert(w >= 0 && w < int(word_to_class.size())
-         && "ERROR: Failed to find word in class dictionary.");
-  return word_to_class[w];
+  return index.getClass(w);
 }
 
 Real FactoredNLM::l2_gradient_update(Real sigma) {
@@ -71,6 +55,7 @@ Real FactoredNLM::l2_gradient_update(Real sigma) {
 }
 
 void FactoredNLM::reclass(vector<WordId>& train, vector<WordId>& test) {
+  /*
   cerr << "\n Reallocating classes:" << endl;
   MatrixReal class_dot_products = R * F.transpose();
   VectorReal magnitudes = F.rowwise().norm().transpose();
@@ -129,6 +114,7 @@ void FactoredNLM::reclass(vector<WordId>& train, vector<WordId>& test) {
     w_id = new_dict.Lookup(label_str(w_id));
 
   m_labels = new_dict;
+  */
 }
 
 Real FactoredNLM::log_prob(
@@ -179,10 +165,10 @@ Real FactoredNLM::log_prob(
   if (cache && !class_context_cache_result.second) {
     word_log_prob = R.row(w)*prediction_vector + B(w) - class_context_cache_result.first->second;
   } else {
-    int c_start = indexes.at(c);
+    int word_index = index.getWordIndexInClass(w);
     Real w_log_z=0;
     VectorReal word_probs = logSoftMax(class_R(c)*prediction_vector + class_B(c), &w_log_z);
-    word_log_prob = word_probs(w-c_start);
+    word_log_prob = word_probs(word_index);
     if (cache) {
       class_context_cache_result.first->second = w_log_z;
     }

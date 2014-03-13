@@ -1,6 +1,7 @@
 #pragma once
 
 #include "lbl/nlm.h"
+#include "lbl/word_to_class_index.h"
 
 using namespace std;
 
@@ -13,7 +14,7 @@ class FactoredNLM: public NLM {
   FactoredNLM(const ModelData& config, const Dict& labels);
 
   FactoredNLM(const ModelData& config, const Dict& labels,
-              const vector<int>& classes);
+              const WordToClassIndex& index);
 
   Eigen::Block<WordVectorsType> class_R(const int c);
 
@@ -35,13 +36,13 @@ class FactoredNLM: public NLM {
 
   void clear_cache();
 
+ private:
   friend class boost::serialization::access;
   template<class Archive>
   void save(Archive & ar, const unsigned int version) const {
-    NLM::save(ar, version);
+    ar << boost::serialization::base_object<const NLM>(*this);
 
-    ar << word_to_class;
-    ar << indexes;
+    ar << index;
 
     int F_rows=F.rows(), F_cols=F.cols();
     ar << F_rows << F_cols;
@@ -54,9 +55,9 @@ class FactoredNLM: public NLM {
 
   template<class Archive>
   void load(Archive & ar, const unsigned int version) {
-    NLM::load(ar, version);
-    ar >> word_to_class;
-    ar >> indexes;
+    ar >> boost::serialization::base_object<NLM>(*this);
+
+    ar >> index;
 
     int F_rows=0, F_cols=0;
     ar >> F_rows >> F_cols;
@@ -71,8 +72,7 @@ class FactoredNLM: public NLM {
   BOOST_SERIALIZATION_SPLIT_MEMBER();
 
  public:
-  vector<int> word_to_class;
-  vector<int> indexes;
+  WordToClassIndex index;
   MatrixReal F;
   VectorReal FB;
 

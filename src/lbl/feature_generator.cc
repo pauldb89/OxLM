@@ -10,8 +10,7 @@ vector<FeatureContext> FeatureGenerator::generate(
   vector<FeatureContext> feature_contexts;
   vector<int> context;
   for (size_t i = 0; i < min(feature_context_size, history.size()); ++i) {
-    int word_index = history.size() - i - 1;
-    context.push_back(history[word_index]);
+    context.push_back(history[i]);
     feature_contexts.push_back(FeatureContext(i, context));
   }
   return feature_contexts;

@@ -25,9 +25,11 @@
 #include <Eigen/Core>
 
 // Local
+#include "corpus/corpus.h"
+#include "lbl/context_extractor.h"
 #include "lbl/factored_nlm.h"
 #include "lbl/log_add.h"
-#include "corpus/corpus.h"
+#include "lbl/word_to_class_index.h"
 
 // Namespaces
 using namespace boost;
@@ -49,6 +51,7 @@ void cache_data(int start, int end,
 Real sgd_gradient(FactoredNLM& model,
                   const Corpus& training_corpus,
                   const TrainingInstances &indexes,
+                  const WordToClassIndex& index,
                   Real lambda,
                   WordVectorsType& g_R,
                   WordVectorsType& g_Q,
@@ -119,7 +122,8 @@ FactoredNLM learn(ModelData& config) {
   }
   //////////////////////////////////////////////
 
-  FactoredNLM model(config, dict, classes);
+  WordToClassIndex index(classes);
+  FactoredNLM model(config, dict, index);
   model.FB = class_bias;
 
   if (config.model_input_file.size()) {
@@ -223,8 +227,8 @@ FactoredNLM learn(ModelData& config) {
 
         #pragma omp barrier
         cache_data(start, end, training_corpus, training_indices, training_instances);
-        Real f = sgd_gradient(model, training_corpus, training_instances, lambda,
-                              g_R, g_Q, g_C, g_B, g_F, g_FB);
+        Real f = sgd_gradient(model, training_corpus, training_instances, index,
+                              lambda, g_R, g_Q, g_C, g_B, g_F, g_FB);
 
         #pragma omp critical
         {
@@ -320,6 +324,7 @@ void cache_data(int start, int end, const Corpus& training_corpus, const vector<
 Real sgd_gradient(FactoredNLM& model,
                 const Corpus& training_corpus,
                 const TrainingInstances &training_instances,
+                const WordToClassIndex& index,
                 Real lambda,
                 WordVectorsType& g_R,
                 WordVectorsType& g_Q,
@@ -330,24 +335,19 @@ Real sgd_gradient(FactoredNLM& model,
   Real f=0;
   WordId start_id = model.label_set().Convert("<s>");
   WordId end_id = model.label_set().Convert("</s>");
-
   int word_width = model.config.word_representation_size;
   int context_width = model.config.ngram_order-1;
+  ContextExtractor extractor(training_corpus, context_width, start_id, end_id);
 
   // form matrices of the ngram histories
 //  clock_t cache_start = clock();
   int instances=training_instances.size();
+  vector<vector<WordId>> contexts(instances);
   vector<MatrixReal> context_vectors(context_width, MatrixReal::Zero(instances, word_width));
   for (int instance=0; instance < instances; ++instance) {
-    const TrainingInstance& t = training_instances.at(instance);
-    int context_start = t - context_width;
-
-    bool sentence_start = (t==0);
-    for (int i=context_width-1; i>=0; --i) {
-      int j=context_start+i;
-      sentence_start = (sentence_start || j<0 || training_corpus.at(j) == end_id);
-      int v_i = (sentence_start ? start_id : training_corpus.at(j));
-      context_vectors.at(i).row(instance) = model.Q.row(v_i);
+    contexts[instance] = extractor.extract(training_instances[instance]);
+    for (size_t i = 0; i < context_width; ++i) {
+      context_vectors[i].row(instance) = model.Q.row(contexts[instance][i]);
     }
   }
   MatrixReal prediction_vectors = MatrixReal::Zero(instances, word_width);
@@ -364,12 +364,10 @@ Real sgd_gradient(FactoredNLM& model,
   for (int instance=0; instance < instances; instance++) {
     int w_i = training_instances.at(instance);
     WordId w = training_corpus.at(w_i);
-    int c = model.get_class(w);
-    int c_start = model.indexes.at(c), c_end = model.indexes.at(c+1);
-
-    if (!(w >= c_start && w < c_end))
-      cerr << w << " " << c << " " << c_start << " " << c_end << endl;
-    assert(w >= c_start && w < c_end);
+    int c = index.getClass(w);
+    int c_start = index.getClassMarker(c);
+    int c_size = index.getClassSize(c);
+    int word_index = index.getWordIndexInClass(w);
 
     // a simple sigmoid non-linearity
     prediction_vectors.row(instance) = (1.0 + (-prediction_vectors.row(instance)).array().exp()).inverse(); // sigmoid
@@ -389,7 +387,7 @@ Real sgd_gradient(FactoredNLM& model,
     weightedRepresentations.row(instance) -= (model.R.row(w) - word_conditional_probs.transpose() * model.class_R(c));
 
     assert(isfinite(class_conditional_log_probs(c)));
-    assert(isfinite(word_conditional_log_probs(w-c_start)));
+    assert(isfinite(word_conditional_log_probs(word_index)));
     f -= (class_conditional_log_probs(c) + word_conditional_log_probs(w-c_start));
 
     // do the gradient updates:
@@ -399,10 +397,10 @@ Real sgd_gradient(FactoredNLM& model,
     g_FB(c)    -= 1.0;
     g_B(w)     -= 1.0;
     //   model contributions:
-    g_R.block(c_start, 0, c_end-c_start, g_R.cols()) += word_conditional_probs * prediction_vectors.row(instance);
+    g_R.block(c_start, 0, c_size, g_R.cols()) += word_conditional_probs * prediction_vectors.row(instance);
     g_F += class_conditional_probs * prediction_vectors.row(instance);
     g_FB += class_conditional_probs;
-    g_B.segment(c_start, c_end-c_start) += word_conditional_probs;
+    g_B.segment(c_start, c_size) += word_conditional_probs;
 
     // a simple sigmoid non-linearity
     weightedRepresentations.row(instance).array() *=
@@ -414,20 +412,10 @@ Real sgd_gradient(FactoredNLM& model,
 
 //  clock_t context_start = clock();
   MatrixReal context_gradients = MatrixReal::Zero(word_width, instances);
-  for (int i=0; i<context_width; ++i) {
+  for (int i = 0; i < context_width; ++i) {
     context_gradients = model.context_product(i, weightedRepresentations, true); // weightedRepresentations*C(i)^T
-
-    for (int instance=0; instance < instances; ++instance) {
-      int w_i = training_instances.at(instance);
-      int j = w_i-context_width+i;
-
-      bool sentence_start = (j<0);
-      for (int k=j; !sentence_start && k < w_i; k++)
-        if (training_corpus.at(k) == end_id)
-          sentence_start=true;
-      int v_i = (sentence_start ? start_id : training_corpus.at(j));
-
-      g_Q.row(v_i) += context_gradients.row(instance);
+    for (int instance = 0; instance < instances; ++instance) {
+      g_Q.row(contexts[instance][i]) += context_gradients.row(instance);
     }
     model.context_gradient_update(g_C.at(i), context_vectors.at(i), weightedRepresentations);
   }
@@ -505,27 +493,16 @@ Real perplexity(const FactoredNLM& model, const Corpus& test_corpus, int stride)
   int tokens=0;
   WordId start_id = model.label_set().Lookup("<s>");
   WordId end_id = model.label_set().Lookup("</s>");
+  ContextExtractor extractor(test_corpus, context_width, start_id, end_id);
 
   #pragma omp master
   cerr << "Calculating perplexity for " << test_corpus.size()/stride << " tokens";
 
-  std::vector<WordId> context(context_width);
-
   size_t thread_num = omp_get_thread_num();
   size_t num_threads = omp_get_num_threads();
   for (size_t s = (thread_num*stride); s < test_corpus.size(); s += (num_threads*stride)) {
-    WordId w = test_corpus.at(s);
-    int context_start = s - context_width;
-    bool sentence_start = (s==0);
-
-    for (int i=context_width-1; i>=0; --i) {
-      int j=context_start+i;
-      sentence_start = (sentence_start || j<0 || test_corpus.at(j) == end_id);
-      int v_i = (sentence_start ? start_id : test_corpus.at(j));
-
-      context.at(i) = v_i;
-    }
-    Real log_prob = model.log_prob(w, context, true, false);
+    vector<WordId> context = extractor.extract(s);
+    Real log_prob = model.log_prob(test_corpus[s], context, true, false);
     p += log_prob;
 
     #pragma omp master

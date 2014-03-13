@@ -54,19 +54,24 @@ macro(_eigen3_check_version)
 endmacro(_eigen3_check_version)
 
 if (EIGEN3_INCLUDE_DIR)
-
   # in cache already
   _eigen3_check_version()
   set(EIGEN3_FOUND ${EIGEN3_VERSION_OK})
 
 else (EIGEN3_INCLUDE_DIR)
 
-  find_path(EIGEN3_INCLUDE_DIR NAMES signature_of_eigen3_matrix_library
-      PATHS
-      ${CMAKE_INSTALL_PREFIX}/include
-      ${KDE4_INCLUDE_DIR}
-      PATH_SUFFIXES eigen3 eigen
-    )
+  # Custom change to specify path to newer version of Eigen (needed for sparse
+  # vectors and matrices).
+  if(DEFINED ENV{EIGEN3})
+    find_path(EIGEN3_INCLUDE_DIR
+        NAMES signature_of_eigen3_matrix_library
+        PATHS $ENV{EIGEN3} NO_CMAKE_PATH)
+  else(DEFINED ENV{EIGEN3})
+    find_path(EIGEN3_INCLUDE_DIR
+        NAMES signature_of_eigen3_matrix_library
+        PATHS ${CMAKE_INSTALL_PREFIX}/include ${KDE4_INCLUDE_DIR}
+        PATH_SUFFIXES eigen eigen3)
+  endif(DEFINED ENV{EIGEN3})
 
   if(EIGEN3_INCLUDE_DIR)
     _eigen3_check_version()

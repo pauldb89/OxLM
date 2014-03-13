@@ -1,8 +1,20 @@
+add_test(context_extractor_test)
+target_link_libraries(context_extractor_test lbl)
+
 add_test(feature_context_test)
 target_link_libraries(feature_context_test lbl)
 
 add_test(feature_generator_test)
 target_link_libraries(feature_generator_test lbl)
+
+add_test(feature_matcher_test)
+target_link_libraries(feature_matcher_test lbl)
+
+add_test(feature_store_initializer_test)
+target_link_libraries(feature_store_initializer_test lbl)
+
+add_test(sparse_feature_store_test)
+target_link_libraries(sparse_feature_store_test lbl)
 
 add_test(train_factored_sgd_test)
 target_link_libraries(train_factored_sgd_test lbl)
@@ -14,3 +26,6 @@ add_test(unconstrained_feature_store_test)
 target_link_libraries(unconstrained_feature_store_test lbl)
 
 add_test(utils_test)
+
+add_test(word_to_class_index_test)
+target_link_libraries(word_to_class_index_test lbl)

@@ -9,10 +9,14 @@ add_library(lbl SHARED
   factored_nlm.cc
   feature_context.cc
   feature_generator.cc
-  unconstrained_feature_store.cc
+  feature_matcher.cc
+  feature_store_initializer.cc
   nlm.cc
   nlm_approximate_z.cc
+  sparse_feature_store.cc
+  unconstrained_feature_store.cc
   utils.cc
+  word_to_class_index.cc
 )
 
 if(CDEC_FOUND)

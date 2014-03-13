@@ -48,35 +48,6 @@ class NLM {
 
   Real* data() { return m_data; }
 
-  friend class boost::serialization::access;
-  template<class Archive>
-  void save(Archive & ar, const unsigned int version) const {
-    ar << config;
-    ar << m_labels;
-    ar << m_diagonal;
-    ar << boost::serialization::make_array(m_data, m_data_size);
-
-    int unigram_len=unigram.rows();
-    ar << unigram_len;
-    ar << boost::serialization::make_array(unigram.data(), unigram_len);
-  }
-
-  template<class Archive>
-  void load(Archive & ar, const unsigned int version) {
-    ar >> config;
-    ar >> m_labels;
-    ar >> m_diagonal;
-    delete [] m_data;
-    init(config, false);
-    ar >> boost::serialization::make_array(m_data, m_data_size);
-
-    int unigram_len=0;
-    ar >> unigram_len;
-    unigram = VectorReal(unigram_len);
-    ar >> boost::serialization::make_array(unigram.data(), unigram_len);
-  }
-  BOOST_SERIALIZATION_SPLIT_MEMBER();
-
   virtual Real
   score(const WordId w, const vector<WordId>& context, const NLMApproximateZ& z_approx) const {
     VectorReal prediction_vector = VectorReal::Zero(config.word_representation_size);
@@ -119,6 +90,36 @@ class NLM {
     if (m_diagonal) g_C += (v.cwiseProduct(w).colwise().sum()).transpose();
     else            g_C += (v.transpose() * w);
   }
+
+ private:
+  friend class boost::serialization::access;
+  template<class Archive>
+  void save(Archive & ar, const unsigned int version) const {
+    ar << config;
+    ar << m_labels;
+    ar << m_diagonal;
+    ar << boost::serialization::make_array(m_data, m_data_size);
+
+    int unigram_len=unigram.rows();
+    ar << unigram_len;
+    ar << boost::serialization::make_array(unigram.data(), unigram_len);
+  }
+
+  template<class Archive>
+  void load(Archive & ar, const unsigned int version) {
+    ar >> config;
+    ar >> m_labels;
+    ar >> m_diagonal;
+    delete [] m_data;
+    init(config, false);
+    ar >> boost::serialization::make_array(m_data, m_data_size);
+
+    int unigram_len=0;
+    ar >> unigram_len;
+    unigram = VectorReal(unigram_len);
+    ar >> boost::serialization::make_array(unigram.data(), unigram_len);
+  }
+  BOOST_SERIALIZATION_SPLIT_MEMBER();
 
  public:
   ModelData config;

@@ -3,45 +3,58 @@
 #include <unordered_map>
 
 #include "lbl/feature_context.h"
+#include "lbl/feature_store.h"
 #include "lbl/utils.h"
 
 using namespace std;
 
 namespace oxlm {
 
-class UnconstrainedFeatureStore {
+class UnconstrainedFeatureStore : public FeatureStore {
  public:
   UnconstrainedFeatureStore();
 
   UnconstrainedFeatureStore(int vector_size);
 
-  VectorReal get(const vector<FeatureContext>& feature_contexts) const;
+  virtual VectorReal get(
+      const vector<FeatureContext>& feature_contexts) const;
 
-  void update(
+  virtual void update(
       const vector<FeatureContext>& feature_contexts,
       const VectorReal& values);
 
-  Real updateRegularizer(Real lambda);
+  virtual Real updateRegularizer(Real lambda);
 
-  void update(const UnconstrainedFeatureStore& store);
+  virtual void update(const boost::shared_ptr<FeatureStore>& store);
 
-  void updateSquared(const UnconstrainedFeatureStore& store);
+  virtual void updateSquared(
+      const boost::shared_ptr<FeatureStore>& store);
 
-  void updateAdaGrad(
-      const UnconstrainedFeatureStore& gradient_store,
-      const UnconstrainedFeatureStore& adagrad_store,
+  virtual void updateAdaGrad(
+      const boost::shared_ptr<FeatureStore>& gradient_store,
+      const boost::shared_ptr<FeatureStore>& adagrad_store,
       Real step_size);
 
-  void clear();
+  virtual void clear();
 
-  size_t size() const;
+  virtual size_t size() const;
 
   bool operator==(const UnconstrainedFeatureStore& store) const;
+
+ private:
+  void update(
+      const FeatureContext& feature_context,
+      const VectorReal& values);
+
+  boost::shared_ptr<UnconstrainedFeatureStore> cast(
+      const boost::shared_ptr<FeatureStore>& base_store) const;
 
   friend class boost::serialization::access;
 
   template<class Archive>
   void save(Archive& ar, const unsigned int version) const {
+    ar << boost::serialization::base_object<const FeatureStore>(*this);
+
     ar << vectorSize;
 
     size_t num_entries = featureWeights.size();
@@ -55,6 +68,8 @@ class UnconstrainedFeatureStore {
 
   template<class Archive>
   void load(Archive& ar, const unsigned int version) {
+    ar >> boost::serialization::base_object<FeatureStore>(*this);
+
     ar >> vectorSize;
 
     size_t num_entries;
@@ -72,12 +87,10 @@ class UnconstrainedFeatureStore {
 
   BOOST_SERIALIZATION_SPLIT_MEMBER();
 
- private:
-  void update(const FeatureContext& feature_context, const VectorReal& values);
-
   unordered_map<FeatureContext, VectorReal, hash<FeatureContext>>
       featureWeights;
   int vectorSize;
+
 };
 
 } // namespace oxlm

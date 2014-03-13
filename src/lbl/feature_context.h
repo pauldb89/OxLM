@@ -10,13 +10,15 @@ using namespace std;
 
 namespace oxlm {
 
-struct FeatureContext {
+class FeatureContext {
+ public:
   FeatureContext();
 
   FeatureContext(char feature_type, const vector<int>& data);
 
   bool operator==(const FeatureContext& feature_context) const;
 
+ private:
   friend class boost::serialization::access;
 
   template<class Archive>
@@ -25,9 +27,12 @@ struct FeatureContext {
     ar & data;
   }
 
+ public:
   char feature_type;
   vector<int> data;
 };
+
+typedef vector<pair<vector<FeatureContext>, int>> MatchingContexts;
 
 } // namespace oxlm
 
