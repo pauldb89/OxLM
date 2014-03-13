@@ -1,6 +1,3 @@
-add_test(context_extractor_test)
-target_link_libraries(context_extractor_test lbl)
-
 add_test(feature_context_test)
 target_link_libraries(feature_context_test lbl)
 
