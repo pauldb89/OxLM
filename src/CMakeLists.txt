@@ -66,8 +66,7 @@ endmacro()
 #   (1) add an executable for the source file having the same name,
 #   (2) automatically include the google test headers and link the libraries,
 #   (3) define a custom target for running the test,
-#   (4) add a dependency to the all_tests target which is run by default
-#       with make.
+#   (4) add a dependency to the all_tests target.
 macro(add_test test_target)
   add_executable(${test_target} ${test_target}.cc)
   include_directories(${THIRD_PARTY}/gtest/include)
@@ -78,7 +77,7 @@ macro(add_test test_target)
       WORKING_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
   add_dependencies(all_tests ${test_target}_runtest)
 endmacro()
-add_custom_target(all_tests ALL)
+add_custom_target(all_tests)
 
 #############################################
 # Compiler Settings
