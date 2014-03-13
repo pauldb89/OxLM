@@ -8,9 +8,8 @@ FactoredMaxentNLM::FactoredMaxentNLM() {}
 
 FactoredMaxentNLM::FactoredMaxentNLM(
     const ModelData& config, const Dict& labels,
-    bool diagonal, const vector<int>& classes) :
-    FactoredNLM(config, labels, diagonal, classes),
-    U(config.classes) {
+    const vector<int>& classes)
+    : FactoredNLM(config, labels, classes), U(config.classes) {
   for (int i = 0; i < config.classes; ++i) {
     V.push_back(UnconstrainedFeatureStore(classes[i + 1] - classes[i]));
   }

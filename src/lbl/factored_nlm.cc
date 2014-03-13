@@ -4,13 +4,13 @@ namespace oxlm {
 
 FactoredNLM::FactoredNLM() {}
 
-FactoredNLM::FactoredNLM(const ModelData& config, const Dict& labels, bool diagonal)
-    : NLM(config, labels, diagonal) {}
+FactoredNLM::FactoredNLM(const ModelData& config, const Dict& labels)
+    : NLM(config, labels, config.diagonal_contexts) {}
 
 FactoredNLM::FactoredNLM(
     const ModelData& config, const Dict& labels,
-    bool diagonal, const vector<int>& classes)
-    : NLM(config, labels, diagonal), indexes(classes),
+    const vector<int>& classes)
+    : NLM(config, labels, config.diagonal_contexts), indexes(classes),
       F(MatrixReal::Zero(config.classes, config.word_representation_size)),
       FB(VectorReal::Zero(config.classes)) {
   assert (!classes.empty());

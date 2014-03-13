@@ -1,92 +1,110 @@
-#ifndef _CONFIG_H_
-#define _CONFIG_H_
+#pragma once
 
 #include <iostream>
 #include <fstream>
+#include <map>
 #include <boost/shared_ptr.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/archive/text_oarchive.hpp>
 
-struct UnigramDistribution {
-  std::map<double, std::string> prob_to_token;
-  std::map<std::string, double> token_to_prob;
+using namespace std;
 
-  void read(const std::string& filename) {
-    std::ifstream file(filename.c_str());
-    std::cerr << "Reading unigram distribution from " 
-      << filename.c_str() << "." << std::endl;
+namespace oxlm {
+
+struct UnigramDistribution {
+  map<double, string> prob_to_token;
+  map<string, double> token_to_prob;
+
+  void read(const string& filename) {
+    ifstream file(filename.c_str());
+    cerr << "Reading unigram distribution from "
+      << filename.c_str() << "." << endl;
 
     double sum=0;
-    std::string key, value;
+    string key, value;
     while (file >> value >> key) {
       double v = boost::lexical_cast<double>(value);
       sum += v;
-      prob_to_token.insert(std::make_pair(sum, key));   
-      token_to_prob.insert(std::make_pair(key, v));   
+      prob_to_token.insert(make_pair(sum, key));
+      token_to_prob.insert(make_pair(key, v));
     }
   }
 
-  double prob(const std::string& s) const {
-   std::map<std::string, double>::const_iterator it
+  double prob(const string& s) const {
+   map<string, double>::const_iterator it
      = token_to_prob.find(s);
-   return it != token_to_prob.end() ? it->second : 0.0; 
+   return it != token_to_prob.end() ? it->second : 0.0;
  }
 
   bool empty() const { return prob_to_token.empty(); }
 };
 
 struct ModelData {
-  enum ZType { Sampled, Exact };
+  ModelData();
 
-  ModelData() : ztype(Sampled), step_size(0.1), eta_t0(1), l2_parameter(0.0), 
-                time_series_parameter(1.0), label_sample_size(100), 
-                feature_type("explicit"), hash_bits(16), threads(1), 
-                iteration_size(1), verbose(false), ngram_order(3),
-                feature_context_size(ngram_order), word_representation_size(100),
-                uniform(false), classes(-1)//, 
-//                nonlinear(false)
-  {}
-
-  ZType       ztype;
-  float       step_size;
-  float       eta_t0;
-  float       l2_parameter;
-  float       time_series_parameter;
-  int         label_sample_size;
-  std::string feature_type;
-  int         hash_bits;
-  int         threads;
-  int         iteration_size;
-  bool        verbose;
+  string      training_file;
+  string      test_file;
+  int         iterations;
+  int         minibatch_size;
+  int         instances;
   int         ngram_order;
-  unsigned    feature_context_size; 
+  int         feature_context_size;
+  string      model_input_file;
+  string      model_output_file;
+  float       l2_parameter;
   int         word_representation_size;
-  bool        uniform;
+  int         threads;
+  float       step_size;
   int         classes;
-//  bool        nonlinear;
+  string      class_file;
+  bool        randomise;
+  bool        reclass;
+  bool        diagonal_contexts;
+  int         label_sample_size;
+  bool        uniform;
+  bool        pseudo_likelihood_cne;
+  bool        mixture;
+  bool        lbfgs;
+  int         lbfgs_vectors;
+  int         test_tokens;
+  float       gnorm_threshold;
+  float       eta;
+  float       multinomial_step_size;
+  int         log_period;
 
   friend class boost::serialization::access;
   template<class Archive>
   void serialize(Archive & ar, const unsigned int version) {
-    ar & ztype;
-    ar & step_size;
-    ar & eta_t0;
-    ar & l2_parameter;
-    ar & time_series_parameter;
-    ar & label_sample_size;
-    ar & feature_type;
-    ar & hash_bits;
-    ar & threads;
-    ar & iteration_size;
-    ar & verbose;
+    ar & training_file;
+    ar & test_file;
+    ar & iterations;
+    ar & minibatch_size;
+    ar & instances;
     ar & ngram_order;
     ar & feature_context_size;
+    ar & model_input_file;
+    ar & model_output_file;
+    ar & l2_parameter;
     ar & word_representation_size;
-    ar & uniform;
+    ar & threads;
+    ar & step_size;
     ar & classes;
-//    ar & nonlinear;
+    ar & class_file;
+    ar & randomise;
+    ar & reclass;
+    ar & diagonal_contexts;
+    ar & label_sample_size;
+    ar & uniform;
+    ar & pseudo_likelihood_cne;
+    ar & mixture;
+    ar & lbfgs;
+    ar & lbfgs_vectors;
+    ar & test_tokens;
+    ar & gnorm_threshold;
+    ar & eta;
+    ar & multinomial_step_size;
+    ar & log_period;
   }
 };
-typedef boost::shared_ptr<ModelData> ModelDataPtr;
 
-#endif // _CONFIG_H_
+} // namespace oxlm

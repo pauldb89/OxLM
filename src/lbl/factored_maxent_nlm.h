@@ -9,7 +9,7 @@ class FactoredMaxentNLM : public FactoredNLM {
  public:
   FactoredMaxentNLM();
 
-  FactoredMaxentNLM(const ModelData& config, const Dict& labels, bool diagonal,
+  FactoredMaxentNLM(const ModelData& config, const Dict& labels,
                     const vector<int>& classes);
 
   virtual Real log_prob(

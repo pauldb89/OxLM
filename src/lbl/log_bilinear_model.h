@@ -89,8 +89,7 @@ public:
   typedef Eigen::Map<VectorReal> WeightsType;
 
 public:
-  LogBiLinearModel(const ModelData& config, const Dict& labels, bool diagonal=false);
-//  LogBiLinearModel(const LogBiLinearModel& model);
+  LogBiLinearModel(const ModelData& config, const Dict& labels);
 
   virtual ~LogBiLinearModel() { delete [] m_data; }
 

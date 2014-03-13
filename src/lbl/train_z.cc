@@ -49,59 +49,55 @@ Real extract_p(const LogBiLinearModel& model, const Corpus& test_corpus, MatrixR
 
 
 int main(int argc, char **argv) {
-  cout << "Appoximating the partition function of a log-bilinear models: Copyright 2013 Phil Blunsom, " 
+  cout << "Appoximating the partition function of a log-bilinear models: Copyright 2013 Phil Blunsom, "
        << REVISION << '\n' << endl;
 
   ///////////////////////////////////////////////////////////////////////////////////////
   // Command line processing
-  variables_map vm; 
+  variables_map vm;
 
   // Command line processing
   options_description cmdline_specific("Command line specific options");
   cmdline_specific.add_options()
     ("help,h", "print help message")
-    ("config,c", value<string>(), 
+    ("config,c", value<string>(),
         "config file specifying additional command line options")
     ;
   options_description generic("Allowed options");
   generic.add_options()
-    ("test-set", value<string>(), 
+    ("test-set", value<string>(),
         "corpus of test sentences to be evaluated at each iteration")
-    ("iterations", value<int>()->default_value(10), 
+    ("iterations", value<int>()->default_value(10),
         "number of passes through the data")
-    ("minibatch-size", value<int>()->default_value(100), 
+    ("minibatch-size", value<int>()->default_value(100),
         "number of sentences per minibatch")
-    ("model-in,m", value<string>(), 
+    ("model-in,m", value<string>(),
         "initial model")
-    ("model-out,m", value<string>(), 
+    ("model-out,m", value<string>(),
         "file to serialise the approximation model to")
-    ("threads", value<int>()->default_value(1), 
+    ("threads", value<int>()->default_value(1),
         "number of worker threads.")
-    ("approx-vectors", value<int>()->default_value(1), 
+    ("approx-vectors", value<int>()->default_value(1),
         "number of approximation terms (n) in \\sum_i b_i^n exp(p.z_i).")
-    ("step-size", value<float>()->default_value(1.0), 
+    ("step-size", value<float>()->default_value(1.0),
         "SGD batch stepsize, it is normalised by the number of minibatches.")
-    ("verbose,v", "print perplexity for each sentence (1) or input token (2) ")
     ("randomise", "visit the training tokens in random order")
-    ("uniform", "sample noise distribution from a uniform (default unigram) distribution.")
-    ("diagonal-contexts", "Use diagonal context matrices (usually faster).")
-    ("mixture", "Train a mixture of bigram LBL models, one per context position.")
-    ;
+    ("diagonal-contexts", "Use diagonal context matrices (usually faster).");
   options_description config_options, cmdline_options;
   config_options.add(generic);
   cmdline_options.add(generic).add(cmdline_specific);
 
-  store(parse_command_line(argc, argv, cmdline_options), vm); 
+  store(parse_command_line(argc, argv, cmdline_options), vm);
   if (vm.count("config") > 0) {
     ifstream config(vm["config"].as<string>().c_str());
-    store(parse_config_file(config, cmdline_options), vm); 
+    store(parse_config_file(config, cmdline_options), vm);
   }
   notify(vm);
   ///////////////////////////////////////////////////////////////////////////////////////
 
-  if (vm.count("help")) { 
-    cout << cmdline_options << "\n"; 
-    return 1; 
+  if (vm.count("help")) {
+    cout << cmdline_options << "\n";
+    return 1;
   }
 
   omp_set_num_threads(vm["threads"].as<int>());
@@ -117,7 +113,7 @@ int main(int argc, char **argv) {
   f.close();
 
   dict = model.label_set();
-  
+
   //////////////////////////////////////////////
   // read the test sentences
   Corpus corpus;
@@ -142,7 +138,7 @@ int main(int argc, char **argv) {
   //////////////////////////////////////////////
   Corpus train_corpus(corpus.begin(), corpus.begin()+(int)(corpus.size()*0.8));
   Corpus test_corpus(corpus.begin()+train_corpus.size(), corpus.end());
-  
+
   int word_width = model.config.word_representation_size;
 
   VectorReal train_zs(train_corpus.size());
@@ -154,8 +150,8 @@ int main(int argc, char **argv) {
   Real train_pp = extract_p(model, train_corpus, train_ps, train_zs);
   Real test_pp = extract_p(model, test_corpus, test_ps, test_zs);
 
-  cerr << "  Train Perplexity = " << exp(-train_pp/train_corpus.size()) << "(" << train_zs.rows() << " tokens )" << endl; 
-  cerr << "  Test Perplexity = " << exp(-test_pp/test_corpus.size()) << "(" << test_zs.rows() << " tokens )" << endl; 
+  cerr << "  Train Perplexity = " << exp(-train_pp/train_corpus.size()) << "(" << train_zs.rows() << " tokens )" << endl;
+  cerr << "  Test Perplexity = " << exp(-test_pp/test_corpus.size()) << "(" << test_zs.rows() << " tokens )" << endl;
 
   Real log_z_av=train_zs.mean();
   Real log_z_var = (train_zs.array() - log_z_av).matrix().squaredNorm() / train_zs.rows();
@@ -223,7 +219,7 @@ int main(int argc, char **argv) {
   }
 */
   LogBiLinearModelApproximateZ approximation;
-  approximation.train(train_ps, train_zs, vm["step-size"].as<float>(), 
+  approximation.train(train_ps, train_zs, vm["step-size"].as<float>(),
                             vm["iterations"].as<int>(),vm["approx-vectors"].as<int>());
 
   if (vm.count("model-out")) {
@@ -249,7 +245,7 @@ Real extract_p(const LogBiLinearModel& model, const Corpus& test_corpus, MatrixR
   zs = VectorReal(test_corpus.size());
   ps = MatrixReal(test_corpus.size(), word_width);
 
-  // cache the products of Q with the contexts 
+  // cache the products of Q with the contexts
   std::vector<MatrixReal> q_context_products(context_width);
   for (int i=0; i<context_width; i++)
     q_context_products.at(i) = model.context_product(i, model.Q);
@@ -259,7 +255,7 @@ Real extract_p(const LogBiLinearModel& model, const Corpus& test_corpus, MatrixR
   WordId end_id = model.label_set().Lookup("</s>");
   #pragma omp parallel \
       shared(test_corpus,model,stride,q_context_products,word_width) \
-      reduction(+:p,log_z_sum,tokens) 
+      reduction(+:p,log_z_sum,tokens)
   {
     VectorReal prediction_vector(word_width);
     size_t thread_num = omp_get_thread_num();

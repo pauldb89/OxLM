@@ -10,9 +10,9 @@ class FactoredNLM: public NLM {
  public:
   FactoredNLM();
 
-  FactoredNLM(const ModelData& config, const Dict& labels, bool diagonal);
+  FactoredNLM(const ModelData& config, const Dict& labels);
 
-  FactoredNLM(const ModelData& config, const Dict& labels, bool diagonal,
+  FactoredNLM(const ModelData& config, const Dict& labels,
               const vector<int>& classes);
 
   Eigen::Block<WordVectorsType> class_R(const int c);

@@ -20,15 +20,10 @@ using namespace oxlm;
 static boost::mt19937 linear_model_rng(static_cast<unsigned> (std::time(0)));
 static uniform_01<> linear_model_uniform_dist;
 
-//LogBiLinearModel::LogBiLinearModel(const LogBiLinearModel& model) 
-//  : config(model.config), R(0,0,0), Q(0,0,0), B(0,0), W(0,0), m_labels(model.label_set()) {
-//    init(config, m_labels, false);
-//    addModel(model);
-//}
-
-LogBiLinearModel::LogBiLinearModel(const ModelData& config, const Dict& labels, bool diagonal)
-  : config(config), R(0,0,0), Q(0,0,0), B(0,0), W(0,0), M(0,0), m_labels(labels), m_diagonal(diagonal) {
-    init(config, m_labels, true);
+LogBiLinearModel::LogBiLinearModel(const ModelData& config, const Dict& labels)
+  : config(config), R(0,0,0), Q(0,0,0), B(0,0), W(0,0), M(0,0),
+    m_labels(labels), m_diagonal(config.diagonal_contexts) {
+  init(config, m_labels, true);
 }
 
 void LogBiLinearModel::init(const ModelData& config, const Dict& labels, bool init_weights) {

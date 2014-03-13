@@ -44,10 +44,10 @@ using namespace oxlm;
 typedef vector<WordId> Sentence;
 typedef vector<WordId> Corpus;
 
-void learn(const variables_map& vm, const ModelData& config);
+void learn(const ModelData& config);
 
 Real function_and_gradient(LogBiLinearModel& model, const Corpus& training_corpus,
-                           Real lambda, LogBiLinearModel::WeightsType& gradient, 
+                           Real lambda, LogBiLinearModel::WeightsType& gradient,
                            Real* gradient_data, Real& wnorm, Real& gnorm);
 
 Real perplexity(const LogBiLinearModel& model, const Corpus& test_corpus, int stride=1);
@@ -55,109 +55,123 @@ Real perplexity(const LogBiLinearModel& model, const Corpus& test_corpus, int st
 
 
 int main(int argc, char **argv) {
-  cout << "LBFGS optimisation for a mixture of log-bilinear models: Copyright 2013 Phil Blunsom, " 
+  cout << "LBFGS optimisation for a mixture of log-bilinear models: Copyright 2013 Phil Blunsom, "
        << REVISION << '\n' << endl;
 
   ///////////////////////////////////////////////////////////////////////////////////////
   // Command line processing
-  variables_map vm; 
+  variables_map vm;
 
   // Command line processing
   options_description cmdline_specific("Command line specific options");
   cmdline_specific.add_options()
     ("help,h", "print help message")
-    ("config,c", value<string>(), 
+    ("config,c", value<string>(),
         "config file specifying additional command line options")
     ;
   options_description generic("Allowed options");
   generic.add_options()
-    ("input,i", value<string>(), 
+    ("input,i", value<string>(),
         "corpus of sentences, one per line")
-    ("test-set", value<string>(), 
+    ("test-set", value<string>(),
         "corpus of test sentences to be evaluated at each iteration")
-    ("iterations", value<int>()->default_value(10), 
+    ("iterations", value<int>()->default_value(10),
         "number of passes through the data")
-    ("order,n", value<int>()->default_value(3), 
+    ("order,n", value<int>()->default_value(3),
         "ngram order")
-    ("model-in,m", value<string>(), 
+    ("model-in,m", value<string>(),
         "initial model")
-    ("model-out,o", value<string>()->default_value("model"), 
+    ("model-out,o", value<string>()->default_value("model"),
         "base filename of model output files")
-    ("lambda,r", value<float>()->default_value(0.0), 
+    ("lambda,r", value<float>()->default_value(0.0),
         "regularisation strength parameter")
-    ("dump-frequency", value<int>()->default_value(0), 
-        "dump model every n iterations.")
-    ("word-width", value<int>()->default_value(100), 
+    ("word-width", value<int>()->default_value(100),
         "Width of word representation vectors.")
-    ("threads", value<int>()->default_value(1), 
+    ("threads", value<int>()->default_value(1),
         "number of worker threads.")
     ("lbfgs", "optimise with lbfgs")
-    ("lbfgs-vectors", value<int>()->default_value(10), 
+    ("lbfgs-vectors", value<int>()->default_value(10),
         "number of gradient history vectors for lbfgs.")
-    ("test-tokens", value<int>()->default_value(10000), 
+    ("test-tokens", value<int>()->default_value(10000),
         "number of evenly space test points tokens evaluate.")
-    ("gnorm-threshold", value<float>()->default_value(1.0), 
+    ("gnorm-threshold", value<float>()->default_value(1.0),
         "Terminat LBFGS iterations if the gradient norm falls below this value.")
-    ("eta", value<float>()->default_value(0.00001), 
-        "SGD eta, if used.")
-    ("verbose,v", "print perplexity for each sentence (1) or input token (2) ")
-    ;
+    ("eta", value<float>()->default_value(0.00001),
+        "SGD eta, if used.");
   options_description config_options, cmdline_options;
   config_options.add(generic);
   cmdline_options.add(generic).add(cmdline_specific);
 
-  store(parse_command_line(argc, argv, cmdline_options), vm); 
+  store(parse_command_line(argc, argv, cmdline_options), vm);
   if (vm.count("config") > 0) {
     ifstream config(vm["config"].as<string>().c_str());
-    store(parse_config_file(config, cmdline_options), vm); 
+    store(parse_config_file(config, cmdline_options), vm);
   }
   notify(vm);
   ///////////////////////////////////////////////////////////////////////////////////////
 
-  if (vm.count("help")) { 
-    cout << cmdline_options << "\n"; 
-    return 1; 
+  if (vm.count("help")) {
+    cout << cmdline_options << "\n";
+    return 1;
   }
-  if (!vm.count("input")) { 
-    cout << cmdline_options << "\n"; 
-    return 1; 
+  if (!vm.count("input")) {
+    cout << cmdline_options << "\n";
+    return 1;
   }
 
   ModelData config;
+  config.training_file = vm["input"].as<string>();
+  if (vm.count("test-set")) {
+    config.test_file = vm["test-set"].as<string>();
+  }
+  config.ngram_order = vm["order"].as<int>();
+  if (vm.count("model-in")) {
+    config.model_input_file = vm["model-in"].as<string>();
+  }
+  if (vm.count("model-out")) {
+    config.model_output_file = vm["model-out"].as<string>();
+  }
   config.l2_parameter = vm["lambda"].as<float>();
   config.word_representation_size = vm["word-width"].as<int>();
   config.threads = vm["threads"].as<int>();
-  config.ngram_order = vm["order"].as<int>();
-  config.verbose = vm.count("verbose");
-  config.uniform = vm.count("uniform");
+  config.lbfgs = vm.count("lbfgs");
+  if (config.lbfgs) {
+    config.lbfgs_vectors = vm["lbgfs-vectors"].as<int>();
+    config.gnorm_threshold = vm["gnorm-threshold"].as<float>();
+  } else {
+    config.eta = vm["eta"].as<float>();
+  }
 
   cerr << "################################" << endl;
   cerr << "# Config Summary" << endl;
-  cerr << "# order = " << vm["order"].as<int>() << endl;
-  if (vm.count("model-in"))
-    cerr << "# model-in = " << vm["model-in"].as<string>() << endl;
-  cerr << "# model-out = " << vm["model-out"].as<string>() << endl;
-  cerr << "# input = " << vm["input"].as<string>() << endl;
-  cerr << "# lambda = " << vm["lambda"].as<float>() << endl;
-  cerr << "# iterations = " << vm["iterations"].as<int>() << endl;
-  cerr << "# threads = " << vm["threads"].as<int>() << endl;
-  cerr << "# lbfgs history vectors = " << vm["lbfgs-vectors"].as<int>() << endl;
+  cerr << "# order = " << config.ngram_order << endl;
+  if (config.model_input_file.size()) {
+    cerr << "# model-in = " << config.model_input_file << endl;
+  }
+  if (config.model_output_file.size()) {
+    cerr << "# model-out = " << config.model_output_file << endl;
+  }
+  cerr << "# input = " << config.training_file << endl;
+  cerr << "# lambda = " << config.l2_parameter << endl;
+  cerr << "# iterations = " << config.iterations << endl;
+  cerr << "# threads = " << config.threads << endl;
+  cerr << "# lbfgs history vectors = " << config.lbfgs_vectors << endl;
   cerr << "################################" << endl;
 
   omp_set_num_threads(config.threads);
 
-  learn(vm, config);
+  learn(config);
 
   return 0;
 }
 
 
-void learn(const variables_map& vm, const ModelData& config) {
+void learn(const ModelData& config) {
   Corpus training_corpus, test_corpus;
 
   //////////////////////////////////////////////
   // read the training sentences
-  ifstream in(vm["input"].as<string>().c_str());
+  ifstream in(config.training_file);
   string line, token;
 
   Dict dict;
@@ -166,18 +180,17 @@ void learn(const variables_map& vm, const ModelData& config) {
 
   while (getline(in, line)) {
     stringstream line_stream(line);
-    while (line_stream >> token) 
+    while (line_stream >> token)
       training_corpus.push_back(dict.Convert(token));
     training_corpus.push_back(end_id);
   }
   in.close();
   //////////////////////////////////////////////
-  
+
   //////////////////////////////////////////////
   // read the test sentences
-  bool have_test = vm.count("test-set");
-  if (have_test) {
-    ifstream test_in(vm["test-set"].as<string>().c_str());
+  if (config.test_file.size()) {
+    ifstream test_in(config.test_file.size());
     while (getline(test_in, line)) {
       stringstream line_stream(line);
       Sentence tokens;
@@ -191,8 +204,8 @@ void learn(const variables_map& vm, const ModelData& config) {
 
   LogBiLinearModel model(config, dict);
 
-  if (vm.count("model-in")) {
-    std::ifstream f(vm["model-in"].as<string>().c_str());
+  if (config.model_input_file.size()) {
+    std::ifstream f(config.model_input_file);
     boost::archive::text_iarchive ar(f);
     ar >> model;
   }
@@ -200,15 +213,16 @@ void learn(const variables_map& vm, const ModelData& config) {
   VectorReal word_freq = VectorReal::Zero(model.labels());
   for (auto w : training_corpus)
     word_freq(w) += 1;
-  if (!vm.count("model-in"))
+  if (!config.model_input_file.size()) {
     model.B = ((word_freq.array()+1.0)/(word_freq.sum()+word_freq.size())).log();
+  }
 
   int num_weights = model.num_weights();
   Real* gradient_data = new Real[num_weights];
   LogBiLinearModel::WeightsType gradient(gradient_data, num_weights);
 
 //  int thread_id = omp_get_thread_num();
-  Real lambda = config.l2_parameter; 
+  Real lambda = config.l2_parameter;
 
   Real f=0.0, wnorm=0.0, gnorm=numeric_limits<Real>::max();
 
@@ -228,12 +242,12 @@ void learn(const variables_map& vm, const ModelData& config) {
       gradient_time += (clock() - gradient_start);
     }
 
-    cerr << "  (" << opt->niter << "." << opt->nfuns << ":" 
+    cerr << "  (" << opt->niter << "." << opt->nfuns << ":"
       << "f=" << f << ",|w|=" << model.W.norm() << ",|g|=" << gradient.norm();
 
     if (vm.count("test-set") && lbfgs_iteration != opt->niter) {
       lbfgs_iteration = opt->niter;
-      cerr << ", Test Perplexity = " 
+      cerr << ", Test Perplexity = "
         << perplexity(model, test_corpus, test_corpus.size()/vm["test-tokens"].as<int>());
     }
     cerr << ")\n";
@@ -251,10 +265,10 @@ void learn(const variables_map& vm, const ModelData& config) {
     }
     lbfgs_time += (clock() - lbfgs_start);
   }
-*/ 
-  if (vm.count("lbfgs")) {
-    scitbx::lbfgs::minimizer<Real>* minimiser = new scitbx::lbfgs::minimizer<Real>(num_weights, vm["lbfgs-vectors"].as<int>());
-    while (lbfgs_iteration < vm["iterations"].as<int>() && gnorm > vm["gnorm-threshold"].as<float>()) {
+*/
+  if (config.lbfgs) {
+    scitbx::lbfgs::minimizer<Real>* minimiser = new scitbx::lbfgs::minimizer<Real>(num_weights, config.lbfgs_vectors);
+    while (lbfgs_iteration < config.iterations && gnorm > config.gnorm_threshold) {
       if (calc_g_and_f) {
         clock_t gradient_start = clock();
 
@@ -265,12 +279,12 @@ void learn(const variables_map& vm, const ModelData& config) {
       }
 
       if (lbfgs_iteration == 0 || (!calc_g_and_f )) {
-        cout << "  (" << lbfgs_iteration+1 << "." << function_evaluations << ":" 
+        cout << "  (" << lbfgs_iteration+1 << "." << function_evaluations << ":"
           << "f=" << f << ",|w|=" << wnorm << ",|g|=" << gnorm;
       }
-      if (vm.count("test-set") && !calc_g_and_f)
-        cout << ", Test Perplexity = " 
-          << perplexity(model, test_corpus, test_corpus.size()/vm["test-tokens"].as<int>());
+      if (test_corpus.size() && !calc_g_and_f)
+        cout << ", Test Perplexity = "
+          << perplexity(model, test_corpus, test_corpus.size() / config.test_tokens);
       if (lbfgs_iteration == 0 || (!calc_g_and_f ))
         cout << ")\n";
 
@@ -279,7 +293,7 @@ void learn(const variables_map& vm, const ModelData& config) {
       catch (const scitbx::lbfgs::error &e) {
         cerr << "LBFGS terminated with error:\n  " << e.what() << "\nRestarting..." << endl;
         delete minimiser;
-        minimiser = new scitbx::lbfgs::minimizer<Real>(num_weights, vm["lbfgs-vectors"].as<int>());
+        minimiser = new scitbx::lbfgs::minimizer<Real>(num_weights, config.lbfgs_vectors);
         calc_g_and_f = true;
       }
       lbfgs_iteration = minimiser->iter();
@@ -291,19 +305,19 @@ void learn(const variables_map& vm, const ModelData& config) {
 }
   else {
     VectorReal adaGrad = VectorReal::Zero(num_weights);
-    Real eta = vm["eta"].as<float>();
-    for (int lbfgs_iteration=0; lbfgs_iteration < vm["iterations"].as<int>(); ++lbfgs_iteration) {
+    Real eta = config.eta;
+    for (int lbfgs_iteration=0; lbfgs_iteration < config.iterations; ++lbfgs_iteration) {
       gradient.setZero();
-      f = function_and_gradient(model, training_corpus, lambda, 
+      f = function_and_gradient(model, training_corpus, lambda,
           gradient, gradient_data, wnorm, gnorm);
-      for (int g=0; g<num_weights; ++g) 
+      for (int g=0; g<num_weights; ++g)
         adaGrad(g) += pow(gradient(g),2);
 
       function_evaluations++;
-      cout << "  (" << lbfgs_iteration+1 << "." << function_evaluations << ":" 
+      cout << "  (" << lbfgs_iteration+1 << "." << function_evaluations << ":"
         << "f=" << f << ",|w|=" << wnorm << ",|g|=" << gnorm;
-      cout << ", Test Perplexity = " 
-        << perplexity(model, test_corpus, test_corpus.size()/vm["test-tokens"].as<int>())
+      cout << ", Test Perplexity = "
+        << perplexity(model, test_corpus, test_corpus.size() / config.test_tokens)
         << ")\n";
 
       //model.W = model.W - (0.0001*gradient);
@@ -315,14 +329,14 @@ void learn(const variables_map& vm, const ModelData& config) {
     }
   }
 
-  if (vm.count("test-set"))
-    cerr << "  Final Test Perplexity = " 
-      << perplexity(model, test_corpus, test_corpus.size()/vm["test-tokens"].as<int>()) 
+  if (test_corpus.size())
+    cerr << "  Final Test Perplexity = "
+      << perplexity(model, test_corpus, test_corpus.size() / config.test_tokens)
       << endl;
 
-  if (vm.count("model-out")) {
-    cout << "Writing trained model to " << vm["model-out"].as<string>() << endl;
-    std::ofstream f(vm["model-out"].as<string>().c_str());
+  if (config.model_output_file.size()) {
+    cout << "Writing trained model to " << config.model_output_file << endl;
+    std::ofstream f(config.model_output_file);
     boost::archive::text_oarchive ar(f);
     ar << model;
   }
@@ -348,7 +362,7 @@ Real function_and_gradient(LogBiLinearModel& model, const Corpus& training_corpu
   // cache the mixture weights
   VectorReal pM = softMax(model.M);
 
-  // cache the products of Q with the contexts 
+  // cache the products of Q with the contexts
   cerr << "  - caching " << num_words << " Q products" << endl;
 
   std::vector<MatrixReal> q_context_products(context_width);
@@ -359,21 +373,21 @@ Real function_and_gradient(LogBiLinearModel& model, const Corpus& training_corpu
   boost::progress_display show_progress(context_width*num_words, std::cerr, "\n  ", "  ", "  ");
 
   // cache the partition functions
-  #pragma omp parallel 
-  { 
+  #pragma omp parallel
+  {
 
     boost::timer timer;
-    #pragma omp for 
+    #pragma omp for
     for (int q=0; q < num_words; ++q) { // O(|v|^2)
       for (int i=0; i < context_width; i++) { // O(context_width * |v|^2)
-        VectorReal logProbs = model.R * q_context_products[i].row(q).transpose() + model.B; 
+        VectorReal logProbs = model.R * q_context_products[i].row(q).transpose() + model.B;
         Real max_logProb = logProbs.maxCoeff();
         Real logProbs_z = log((logProbs.array() - max_logProb).exp().sum()) + max_logProb;
 
         assert(isfinite(logProbs_z));
         log_partition_functions[i](q) = logProbs_z;
 
-        //if (tid==0) 
+        //if (tid==0)
         #pragma omp critical
         ++show_progress;
       }
@@ -407,7 +421,7 @@ Real function_and_gradient(LogBiLinearModel& model, const Corpus& training_corpu
     LogBiLinearModel::WeightsType g_M(ptr+num_words, context_width);
 
     // data update component
-    #pragma omp master 
+    #pragma omp master
     {
       cerr << "  - data update";
       show_progress.restart(training_corpus.size()*context_width);
@@ -472,10 +486,10 @@ Real function_and_gradient(LogBiLinearModel& model, const Corpus& training_corpu
 
     timer.restart();
 
-    #pragma omp for 
+    #pragma omp for
     for (int q=0; q < num_words; ++q) { // O(context_width * |v|^2)
       for (int i=0; i < context_width; i++) { // O(context_width)
-//        VectorReal logProbs = model.R * q_context_products[i].row(q).transpose() + model.B; 
+//        VectorReal logProbs = model.R * q_context_products[i].row(q).transpose() + model.B;
 //        VectorReal probs = (logProbs.array() - log_partition_functions[i](q)).exp();
 
         VectorReal probs = ((model.R*q_context_products[i].row(q).transpose()+model.B).array() - log_partition_functions[i](q)).exp();
@@ -509,7 +523,7 @@ Real function_and_gradient(LogBiLinearModel& model, const Corpus& training_corpu
     //    cerr << C << endl;
 
     // synchronise the gradients
-    #pragma omp critical 
+    #pragma omp critical
     {
       f += local_f;
       for (int i=0; i<model.num_weights(); ++i)
@@ -539,7 +553,7 @@ Real perplexity(const LogBiLinearModel& model, const Corpus& test_corpus, int st
 
   int context_width = model.config.ngram_order-1;
 
-  // cache the products of Q with the contexts 
+  // cache the products of Q with the contexts
   std::vector<MatrixReal> q_context_products(context_width);
   for (int i=0; i<context_width; i++)
     q_context_products.at(i) = model.Q * model.C.at(i);
@@ -551,7 +565,7 @@ Real perplexity(const LogBiLinearModel& model, const Corpus& test_corpus, int st
   WordId start_id = model.label_set().Lookup("<s>");
   #pragma omp parallel \
       shared(test_corpus,model,stride,q_context_products) \
-      reduction(+:p,tokens) 
+      reduction(+:p,tokens)
   {
     size_t thread_num = omp_get_thread_num();
     size_t num_threads = omp_get_num_threads();
@@ -567,7 +581,7 @@ Real perplexity(const LogBiLinearModel& model, const Corpus& test_corpus, int st
         ArrayReal score_vector = model.R * q_context_products[i].row(v_i).transpose() + model.B;
         p_sum += (pM(i) * softMax(score_vector)(w));
       }
-      
+
       p += log(p_sum);
       tokens++;
     }

@@ -44,22 +44,22 @@ using namespace Eigen;
 typedef vector<WordId> Sentence;
 typedef vector<WordId> Corpus;
 
-void learn(const variables_map& vm, const ModelData& config);
+void learn(const ModelData& config);
 
 struct TrainingInstance {
-  vector<WordId> noise_words; 
+  vector<WordId> noise_words;
   Real            data_prob;
   int             data_index;
   vector<Real>    noise_probs;
 };
 typedef vector<TrainingInstance> TrainingInstances;
 void cache_data(const LogBiLinearModel& model,
-                int start, int end, 
+                int start, int end,
                 const Corpus& training_corpus, const vector<size_t>& indices, const VectorReal& unigram,
                 int k, TrainingInstances &result);
 
 Real sgd_gradient(LogBiLinearModel& model,
-                const Corpus& training_corpus, 
+                const Corpus& training_corpus,
                 const TrainingInstances &result,
                 Real lambda, bool pseudo,
                 LogBiLinearModel::WordVectorsType& g_R,
@@ -68,9 +68,9 @@ Real sgd_gradient(LogBiLinearModel& model,
                 LogBiLinearModel::WeightsType& g_B);
 
 Real mixture_sgd_gradient(LogBiLinearModel& model,
-                          const Corpus& training_corpus, 
+                          const Corpus& training_corpus,
                           const TrainingInstances &result,
-                          Real lambda, 
+                          Real lambda,
                           LogBiLinearModel::WordVectorsType& g_R,
                           LogBiLinearModel::WordVectorsType& g_Q,
                           LogBiLinearModel::ContextTransformsType& g_C,
@@ -82,115 +82,125 @@ Real mixture_perplexity(const LogBiLinearModel& model, const Corpus& test_corpus
 
 
 int main(int argc, char **argv) {
-  cout << "Online noise contrastive estimation for log-bilinear models: Copyright 2013 Phil Blunsom, " 
+  cout << "Online noise contrastive estimation for log-bilinear models: Copyright 2013 Phil Blunsom, "
        << REVISION << '\n' << endl;
 
   ///////////////////////////////////////////////////////////////////////////////////////
   // Command line processing
-  variables_map vm; 
+  variables_map vm;
 
   // Command line processing
   options_description cmdline_specific("Command line specific options");
   cmdline_specific.add_options()
     ("help,h", "print help message")
-    ("config,c", value<string>(), 
+    ("config,c", value<string>(),
         "config file specifying additional command line options")
     ;
   options_description generic("Allowed options");
   generic.add_options()
-    ("input,i", value<string>()->default_value("data.txt"), 
+    ("input,i", value<string>()->default_value("data.txt"),
         "corpus of sentences, one per line")
-    ("test-set", value<string>(), 
+    ("test-set", value<string>(),
         "corpus of test sentences to be evaluated at each iteration")
-    ("iterations", value<int>()->default_value(10), 
+    ("iterations", value<int>()->default_value(10),
         "number of passes through the data")
-    ("minibatch-size", value<int>()->default_value(100), 
+    ("minibatch-size", value<int>()->default_value(100),
         "number of sentences per minibatch")
-    ("instances", value<int>()->default_value(std::numeric_limits<int>::max()), 
+    ("instances", value<int>()->default_value(std::numeric_limits<int>::max()),
         "training instances per iteration")
-    ("order,n", value<int>()->default_value(3), 
+    ("order,n", value<int>()->default_value(3),
         "ngram order")
-    ("model-in,m", value<string>(), 
+    ("model-in,m", value<string>(),
         "initial model")
-    ("model-out,o", value<string>()->default_value("model"), 
+    ("model-out,o", value<string>()->default_value("model"),
         "base filename of model output files")
-    ("lambda,r", value<float>()->default_value(0.0), 
+    ("lambda,r", value<float>()->default_value(0.0),
         "regularisation strength parameter")
-    ("dump-frequency", value<int>()->default_value(0), 
-        "dump model every n minibatches.")
-    ("label-sample-size,s", value<int>()->default_value(100), 
-        "number of previous labels to cache for sampling the partition function.")
-    ("word-width", value<int>()->default_value(100), 
+    ("word-width", value<int>()->default_value(100),
         "Width of word representation vectors.")
-    ("threads", value<int>()->default_value(1), 
+    ("threads", value<int>()->default_value(1),
         "number of worker threads.")
-    ("test-tokens", value<int>()->default_value(10000), 
-        "number of evenly spaced test points tokens evaluate.")
-    ("step-size", value<float>()->default_value(1.0), 
+    ("step-size", value<float>()->default_value(1.0),
         "SGD batch stepsize, it is normalised by the number of minibatches.")
-    ("verbose,v", "print perplexity for each sentence (1) or input token (2) ")
     ("randomise", "visit the training tokens in random order")
     ("uniform", "sample noise distribution from a uniform (default unigram) distribution.")
     ("diagonal-contexts", "Use diagonal context matrices (usually faster).")
     ("pseudo", "Use a pseudo-likelihood CNE objective.")
-    ("mixture", "Train a mixture of bigram LBL models, one per context position.")
-    ;
+    ("mixture", "Train a mixture of bigram LBL models, one per context position.");
   options_description config_options, cmdline_options;
   config_options.add(generic);
   cmdline_options.add(generic).add(cmdline_specific);
 
-  store(parse_command_line(argc, argv, cmdline_options), vm); 
+  store(parse_command_line(argc, argv, cmdline_options), vm);
   if (vm.count("config") > 0) {
     ifstream config(vm["config"].as<string>().c_str());
-    store(parse_config_file(config, cmdline_options), vm); 
+    store(parse_config_file(config, cmdline_options), vm);
   }
   notify(vm);
   ///////////////////////////////////////////////////////////////////////////////////////
 
-  if (vm.count("help")) { 
-    cout << cmdline_options << "\n"; 
-    return 1; 
+  if (vm.count("help")) {
+    cout << cmdline_options << "\n";
+    return 1;
   }
 
   ModelData config;
-  config.label_sample_size = vm["label-sample-size"].as<int>();
+  config.training_file = vm["input"].as<string>();
+  if (vm.count("test-set")) {
+    config.test_file = vm["test-set"].as<string>();
+  }
+  config.iterations = vm["iterations"].as<int>();
+  config.minibatch_size = vm["minibatch-size"].as<int>();
+  config.instances = vm["instances"].as<int>();
+  config.ngram_order = vm["order"].as<int>();
+  if (vm.count("model-in")) {
+    config.model_input_file = vm["model-in"].as<string>();
+  }
+  if (vm.count("model-out")) {
+    config.model_output_file = vm["model-out"].as<string>();
+  }
   config.l2_parameter = vm["lambda"].as<float>();
   config.word_representation_size = vm["word-width"].as<int>();
   config.threads = vm["threads"].as<int>();
-  config.ngram_order = vm["order"].as<int>();
-  config.verbose = vm.count("verbose");
+  config.step_size = vm["step-size"].as<float>();
+  config.randomise = vm.count("randomise");
   config.uniform = vm.count("uniform");
+  config.diagonal_contexts = vm.count("diagonal-contexts");
+  config.pseudo_likelihood_cne = vm.count("pseudo");
+  config.mixture = vm.count("mixture");
 
   cerr << "################################" << endl;
   cerr << "# Config Summary" << endl;
-  cerr << "# order = " << vm["order"].as<int>() << endl;
-  if (vm.count("model-in"))
-    cerr << "# model-in = " << vm["model-in"].as<string>() << endl;
-  cerr << "# model-out = " << vm["model-out"].as<string>() << endl;
-  cerr << "# input = " << vm["input"].as<string>() << endl;
-  cerr << "# minibatch-size = " << vm["minibatch-size"].as<int>() << endl;
-  cerr << "# lambda = " << vm["lambda"].as<float>() << endl;
-  cerr << "# label-sample-size = " << vm["label-sample-size"].as<int>() << endl;
-  cerr << "# iterations = " << vm["iterations"].as<int>() << endl;
-  cerr << "# threads = " << vm["threads"].as<int>() << endl;
-  cerr << "# mixture = " << vm.count("mixture") << endl;
-  cerr << "# pseudo = " << vm.count("pseudo") << endl;
+  cerr << "# order = " << config.ngram_order << endl;
+  if (config.model_input_file.size()) {
+    cerr << "# model-in = " << config.model_input_file << endl;
+  }
+  if (config.model_output_file.size()) {
+    cerr << "# model-out = " << config.model_output_file << endl;
+  }
+  cerr << "# input = " << config.training_file << endl;
+  cerr << "# minibatch-size = " << config.minibatch_size << endl;
+  cerr << "# lambda = " << config.l2_parameter << endl;
+  cerr << "# iterations = " << config.iterations << endl;
+  cerr << "# threads = " << config.threads << endl;
+  cerr << "# mixture = " << config.threads << endl;
+  cerr << "# pseudo = " << config.pseudo << endl;
   cerr << "################################" << endl;
 
   omp_set_num_threads(config.threads);
 
-  learn(vm, config);
+  learn(config);
 
   return 0;
 }
 
 
-void learn(const variables_map& vm, const ModelData& config) {
+void learn(const ModelData& config) {
   Corpus training_corpus, test_corpus;
 
   //////////////////////////////////////////////
   // read the training sentences
-  ifstream in(vm["input"].as<string>().c_str());
+  ifstream in(config.training_file);
   string line, token;
 
   Dict dict;
@@ -199,18 +209,17 @@ void learn(const variables_map& vm, const ModelData& config) {
 
   while (getline(in, line)) {
     stringstream line_stream(line);
-    while (line_stream >> token) 
+    while (line_stream >> token)
       training_corpus.push_back(dict.Convert(token));
     training_corpus.push_back(end_id);
   }
   in.close();
   //////////////////////////////////////////////
-  
+
   //////////////////////////////////////////////
   // read the test sentences
-  bool have_test = vm.count("test-set");
-  if (have_test) {
-    ifstream test_in(vm["test-set"].as<string>().c_str());
+  if (config.test_file.size()) {
+    ifstream test_in(config.test_file);
     while (getline(test_in, line)) {
       stringstream line_stream(line);
       Sentence tokens;
@@ -228,10 +237,10 @@ void learn(const variables_map& vm, const ModelData& config) {
   }
   //////////////////////////////////////////////
 
-  LogBiLinearModel model(config, dict, vm.count("diagonal-contexts"));
+  LogBiLinearModel model(config, dict);
 
-  if (vm.count("model-in")) {
-    std::ifstream f(vm["model-in"].as<string>().c_str());
+  if (config.model_input_file.size()) {
+    std::ifstream f(config.model_input_file);
     boost::archive::text_iarchive ar(f);
     ar >> model;
   }
@@ -261,7 +270,7 @@ void learn(const variables_map& vm, const ModelData& config) {
 
     int R_size = num_words*word_width;
     int Q_size = R_size;
-    int C_size = (vm.count("diagonal-contexts") ? word_width : word_width*word_width);
+    int C_size = config.diagonal_contexts ? word_width : word_width*word_width;
     int B_size = num_words;
     int M_size = context_width;
 
@@ -276,10 +285,11 @@ void learn(const variables_map& vm, const ModelData& config) {
     LogBiLinearModel::ContextTransformsType g_C;
     Real* ptr = gradient_data+2*R_size;
     for (int i=0; i<context_width; i++) {
-      if (vm.count("diagonal-contexts"))
-          g_C.push_back(LogBiLinearModel::ContextTransformType(ptr, word_width, 1));
-      else
-          g_C.push_back(LogBiLinearModel::ContextTransformType(ptr, word_width, word_width));
+      if (config.diagonal_contexts) {
+        g_C.push_back(LogBiLinearModel::ContextTransformType(ptr, word_width, 1));
+      } else {
+        g_C.push_back(LogBiLinearModel::ContextTransformType(ptr, word_width, word_width));
+      }
       ptr += C_size;
     }
 
@@ -288,8 +298,8 @@ void learn(const variables_map& vm, const ModelData& config) {
     //////////////////////////////////////////////
 
     size_t minibatch_counter=0;
-    size_t minibatch_size = vm["minibatch-size"].as<int>();
-    for (int iteration=0; iteration < vm["iterations"].as<int>(); ++iteration) {
+    size_t minibatch_size = config.minibatch_size;
+    for (int iteration=0; iteration < config.iterations; ++iteration) {
       clock_t iteration_start=clock();
       #pragma omp master
       {
@@ -297,42 +307,42 @@ void learn(const variables_map& vm, const ModelData& config) {
         pp=0.0;
         cout << "Iteration " << iteration << ": "; cout.flush();
 
-        if (vm.count("randomise"))
+        if (config.randomise)
           std::random_shuffle(training_indices.begin(), training_indices.end());
       }
 
       TrainingInstances training_instances;
 //      int thread_id = omp_get_thread_num();
-      Real step_size = vm["step-size"].as<float>(); //* minibatch_size / training_corpus.size();
+      Real step_size = config.step_size;
 
       //for (size_t start=thread_id*minibatch_size; start < training_corpus.size(); ++minibatch_counter) {
-      for (size_t start=0; start < training_corpus.size() && (int)start < vm["instances"].as<int>(); ++minibatch_counter) {
+      for (size_t start=0; start < training_corpus.size() && (int)start < config.instances; ++minibatch_counter) {
         size_t end = min(training_corpus.size(), start + minibatch_size);
 
         #pragma omp master
         global_gradient.setZero();
 
         gradient.setZero();
-        Real lambda = config.l2_parameter*(end-start)/static_cast<Real>(training_corpus.size()); 
+        Real lambda = config.l2_parameter*(end-start)/static_cast<Real>(training_corpus.size());
 
         #pragma omp barrier
         cache_data(model, start, end, training_corpus, training_indices, model.unigram,
                    config.label_sample_size, training_instances);
 
         Real f=0.0;
-        if (vm.count("mixture"))
-          f = mixture_sgd_gradient(model, training_corpus, training_instances, lambda, 
+        if (config.mixture)
+          f = mixture_sgd_gradient(model, training_corpus, training_instances, lambda,
                                    g_R, g_Q, g_C, g_B, g_M);
         else
-          f = sgd_gradient(model, training_corpus, training_instances, lambda, vm.count("pseudo"), 
-                           g_R, g_Q, g_C, g_B);
+          f = sgd_gradient(model, training_corpus, training_instances, lambda,
+                           config.pseudo_likelihood_cne, g_R, g_Q, g_C, g_B);
 
-        #pragma omp critical 
+        #pragma omp critical
         {
           global_gradient += gradient;
           av_f += f;
         }
-        #pragma omp barrier 
+        #pragma omp barrier
         #pragma omp master
         {
           adaGrad.array() += global_gradient.array().square();
@@ -359,17 +369,16 @@ void learn(const variables_map& vm, const ModelData& config) {
       cerr << endl;
 
       Real iteration_time = (clock()-iteration_start) / (Real)CLOCKS_PER_SEC;
-//      test_tokens = min((int)test_corpus.size(), vm["test-tokens"].as<int>());
-      if (vm.count("test-set")) {
+      if (test_corpus.size()) {
         Real local_pp=0;
-        if (vm.count("mixture")) 
+        if (config.mixture)
           local_pp = mixture_perplexity(model, test_corpus, 1);
           //local_pp = mixture_perplexity(model, test_corpus, max(1,(int)test_corpus.size()/test_tokens));
         else
           local_pp = perplexity(model, test_corpus, 1);
           //local_pp = perplexity(model, test_corpus, max(1,(int)test_corpus.size()/test_tokens));
 
-        #pragma omp critical 
+        #pragma omp critical
         { pp += local_pp; }
         #pragma omp barrier
       }
@@ -378,19 +387,19 @@ void learn(const variables_map& vm, const ModelData& config) {
       {
         pp = exp(-pp/test_corpus.size());
         cerr << " | Time: " << iteration_time << " seconds, Average f = " << av_f/training_corpus.size();
-        if (vm.count("test-set")) {
-          cerr << ", Test Perplexity = " << pp; 
+        if (test_corpus.size()) {
+          cerr << ", Test Perplexity = " << pp;
         }
-        if (vm.count("mixture"))
+        if (config.mixture)
           cerr << ", Mixture weights = " << softMax(model.M).transpose();
         cerr << " |" << endl << endl;
       }
     }
   }
 
-  if (vm.count("model-out")) {
-    cout << "Writing trained model to " << vm["model-out"].as<string>() << endl;
-    std::ofstream f(vm["model-out"].as<string>().c_str());
+  if (config.model_output_file.size()) {
+    cout << "Writing trained model to " << config.model_output_file << endl;
+    std::ofstream f(config.model_output_file);
     boost::archive::text_oarchive ar(f);
     ar << model;
   }
@@ -398,7 +407,7 @@ void learn(const variables_map& vm, const ModelData& config) {
 
 
 void cache_data(const LogBiLinearModel& model,
-                int start, int end, const Corpus& training_corpus, const vector<size_t>& indices, 
+                int start, int end, const Corpus& training_corpus, const vector<size_t>& indices,
                 const VectorReal& unigram, int k, TrainingInstances &result) {
   assert (start>=0 && start < end && end <= static_cast<int>(training_corpus.size()));
   assert (training_corpus.size() == indices.size());
@@ -459,7 +468,7 @@ Real sgd_gradient(LogBiLinearModel& model,
   // form matrices of the ngram histories
 //  clock_t cache_start = clock();
   int instances=training_instances.size();
-  vector<MatrixReal> context_vectors(context_width, MatrixReal::Zero(instances, word_width)); 
+  vector<MatrixReal> context_vectors(context_width, MatrixReal::Zero(instances, word_width));
   for (int instance=0; instance < instances; ++instance) {
     const TrainingInstance& t = training_instances.at(instance);
     int context_start = t.data_index - context_width;
@@ -477,10 +486,10 @@ Real sgd_gradient(LogBiLinearModel& model,
     prediction_vectors += model.context_product(i, context_vectors.at(i));
 
 
-  vector<MatrixReal> rev_context_vectors; 
+  vector<MatrixReal> rev_context_vectors;
   MatrixReal rev_prediction_vectors;
   if (pseudo) {
-    rev_context_vectors.resize(context_width, MatrixReal::Zero(instances, word_width)); 
+    rev_context_vectors.resize(context_width, MatrixReal::Zero(instances, word_width));
     for (int instance=0; instance < instances; ++instance) {
       const TrainingInstance& t = training_instances.at(instance);
       int context_end = t.data_index + context_width;
@@ -509,12 +518,12 @@ Real sgd_gradient(LogBiLinearModel& model,
     for (int i=0; i<drop_out.rows(); ++i)
       for (int j=0; j<drop_out.cols(); ++j)
         drop_out(i,j) = (rand()%2==0 ? 1.0 : 0.0);
-  
+
   //ArrayReal drop_out = (MatrixReal::Random(instances, word_width) > 0.0f).cast<Real>();
   prediction_vectors.array() = prediction_vectors.array()*drop_out.array();
   */
-  
-      
+
+
 
 //  clock_t cache_time = clock() - cache_start;
 
@@ -528,9 +537,9 @@ Real sgd_gradient(LogBiLinearModel& model,
 
 //  clock_t iteration_start = clock();
   vector<Real> pos_probs(instances);
-  vector<Real> neg_probs; 
+  vector<Real> neg_probs;
   neg_probs.reserve(instances*(training_instances.empty() ? 0 : training_instances.front().noise_words.size()));
-  
+
   for (int instance=0; instance < instances; instance++) {
     const TrainingInstance& t = training_instances.at(instance);
     WordId w = training_corpus.at(t.data_index);
@@ -615,7 +624,7 @@ Real sgd_gradient(LogBiLinearModel& model,
 
       bool sentence_start = (j<0);
       for (int k=j; !sentence_start && k < t.data_index; k++)
-        if (training_corpus.at(k) == end_id) 
+        if (training_corpus.at(k) == end_id)
           sentence_start=true;
       int v_i = (sentence_start ? start_id : training_corpus.at(j));
 
@@ -630,7 +639,7 @@ Real sgd_gradient(LogBiLinearModel& model,
         }
       }
     }
-    //model.C.at(i) -= step_size * context_vectors.at(i).transpose() * weightedRepresentations; 
+    //model.C.at(i) -= step_size * context_vectors.at(i).transpose() * weightedRepresentations;
     model.context_gradient_update(g_C.at(i), context_vectors.at(i), weightedRepresentations);
     if (pseudo)
       model.context_gradient_update(g_C.at(i), rev_weightedRepresentations, rev_context_vectors.at(i));
@@ -659,7 +668,7 @@ Real mixture_sgd_gradient(LogBiLinearModel& model,
 
   // form matrices of the ngram histories
   int instances=training_instances.size();
-  vector<MatrixReal> context_vectors(context_width, MatrixReal::Zero(instances, word_width)); 
+  vector<MatrixReal> context_vectors(context_width, MatrixReal::Zero(instances, word_width));
 
   for (int instance=0; instance < instances; ++instance) {
     const TrainingInstance& t = training_instances.at(instance);
@@ -694,7 +703,7 @@ Real mixture_sgd_gradient(LogBiLinearModel& model,
 
     // calculate the log-probabilities
     VectorReal logProbs(context_width);
-    for (int i=0; i<context_width; i++) 
+    for (int i=0; i<context_width; i++)
       logProbs(i) = model.R.row(w) * prediction_vectors.at(i).row(instance).transpose() + model.B(w);
 
     // calculate the mixture contributions
@@ -729,7 +738,7 @@ Real mixture_sgd_gradient(LogBiLinearModel& model,
     for (size_t nl_i=0; nl_i < t.noise_words.size(); ++nl_i) {
       WordId v_noise = t.noise_words.at(nl_i);
 
-      for (int i=0; i<context_width; i++) 
+      for (int i=0; i<context_width; i++)
         logProbs(i) = model.R.row(v_noise) * prediction_vectors.at(i).row(instance).transpose() + model.B(v_noise);
 
       // calculate the mixture contributions
@@ -761,7 +770,7 @@ Real mixture_sgd_gradient(LogBiLinearModel& model,
     for (int i=0; i<context_width; ++i) {
     int j=t.data_index-context_width+i;
     int v_i = (j<0 ? start_id : training_corpus.at(j));
-    g_Q.row(v_i) += model.context_product(i, weightedRepresentations.at(i).row(instance), true); 
+    g_Q.row(v_i) += model.context_product(i, weightedRepresentations.at(i).row(instance), true);
 
     model.context_gradient_update(g_C.at(i), context_vectors.at(i).row(instance), weightedRepresentations.at(i).row(instance));
     }
@@ -777,7 +786,7 @@ Real mixture_sgd_gradient(LogBiLinearModel& model,
 
       bool sentence_start = (j<0);
       for (int k=j; !sentence_start && k < t.data_index; k++)
-        if (training_corpus.at(k) == end_id) 
+        if (training_corpus.at(k) == end_id)
           sentence_start=true;
       int v_i = (sentence_start ? start_id : training_corpus.at(j));
 
@@ -797,7 +806,7 @@ Real perplexity(const LogBiLinearModel& model, const Corpus& test_corpus, int st
   int word_width = model.config.word_representation_size;
   int context_width = model.config.ngram_order-1;
 
-  // cache the products of Q with the contexts 
+  // cache the products of Q with the contexts
   std::vector<MatrixReal> q_context_products(context_width);
   for (int i=0; i<context_width; i++)
     q_context_products.at(i) = model.context_product(i, model.Q);
@@ -809,7 +818,7 @@ Real perplexity(const LogBiLinearModel& model, const Corpus& test_corpus, int st
 /*
   #pragma omp parallel \
       shared(test_corpus,model,stride,q_context_products,word_width) \
-      reduction(+:p,log_z_sum,tokens) 
+      reduction(+:p,log_z_sum,tokens)
 */
   {
     #pragma omp master
@@ -857,7 +866,7 @@ Real mixture_perplexity(const LogBiLinearModel& model, const Corpus& test_corpus
 
   int context_width = model.config.ngram_order-1;
 
-  // cache the products of Q with the contexts 
+  // cache the products of Q with the contexts
   std::vector<MatrixReal> q_context_products(context_width);
   for (int i=0; i<context_width; i++)
     q_context_products.at(i) = model.context_product(i, model.Q);
@@ -868,7 +877,7 @@ Real mixture_perplexity(const LogBiLinearModel& model, const Corpus& test_corpus
   int tokens=0;
   WordId start_id = model.label_set().Lookup("<s>");
   WordId end_id = model.label_set().Lookup("</s>");
-  
+
   size_t thread_num = omp_get_thread_num();
   size_t num_threads = omp_get_num_threads();
 

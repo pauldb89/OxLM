@@ -45,7 +45,7 @@ using namespace Eigen;
 typedef vector<WordId> Sentence;
 typedef vector<WordId> Corpus;
 
-void learn(const variables_map& vm, ModelData& config);
+void learn(ModelData& config);
 
 typedef int TrainingInstance;
 typedef vector<TrainingInstance> TrainingInstances;
@@ -64,7 +64,6 @@ Real sgd_gradient(FactoredNLM& model,
                   WeightsType& g_B,
                   MatrixReal & g_F,
                   VectorReal & g_FB);
-
 
 Real perplexity(const FactoredNLM& model, const Corpus& test_corpus, int stride=1);
 void freq_bin_type(const std::string &corpus, int num_classes, std::vector<int>& classes, Dict& dict, VectorReal& class_bias);
@@ -102,31 +101,25 @@ int main(int argc, char **argv) {
         "ngram order")
     ("model-in,m", value<string>(),
         "initial model")
-    ("model-out,o", value<string>()->default_value("model"),
+    ("model-out,o", value<string>(),
         "base filename of model output files")
-    ("log-period", value<unsigned int>()->default_value(0),
+    ("log-period", value<int>()->default_value(0),
         "Log model every X iterations")
     ("lambda,r", value<float>()->default_value(7.0),
         "regularisation strength parameter")
-    ("dump-frequency", value<int>()->default_value(0),
-        "dump model every n minibatches.")
     ("word-width", value<int>()->default_value(100),
         "Width of word representation vectors.")
     ("threads", value<int>()->default_value(1),
         "number of worker threads.")
-    ("test-tokens", value<int>()->default_value(10000),
-        "number of evenly spaced test points tokens evaluate.")
     ("step-size", value<float>()->default_value(0.05),
         "SGD batch stepsize, it is normalised by the number of minibatches.")
     ("classes", value<int>()->default_value(100),
         "number of classes for factored output.")
     ("class-file", value<string>(),
         "file containing word to class mappings in the format <class> <word> <frequence>.")
-    ("verbose,v", "print perplexity for each sentence (1) or input token (2) ")
     ("randomise", "visit the training tokens in random order")
     ("reclass", "reallocate word classes after the first epoch.")
-    ("diagonal-contexts", "Use diagonal context matrices (usually faster).")
-    ;
+    ("diagonal-contexts", "Use diagonal context matrices (usually faster).");
   options_description config_options, cmdline_options;
   config_options.add(generic);
   cmdline_options.add(generic).add(cmdline_specific);
@@ -145,37 +138,58 @@ int main(int argc, char **argv) {
   }
 
   ModelData config;
+  config.training_file = vm["input"].as<string>();
+  if (vm.count("test-set")) {
+    config.test_file = vm["test-set"].as<string>();
+  }
+  config.iterations = vm["iterations"].as<int>();
+  config.minibatch_size = vm["minibatch-size"].as<int>();
+  config.instances = vm["instances"].as<int>();
+  config.ngram_order = vm["order"].as<int>();
+  if (vm.count("model-in")) {
+    config.model_input_file = vm["model-in"].as<string>();
+  }
+  if (vm.count("model-out")) {
+    config.model_output_file = vm["model-out"].as<string>();
+  }
+  config.log_period = vm["log-period"].as<int>();
   config.l2_parameter = vm["lambda"].as<float>();
   config.word_representation_size = vm["word-width"].as<int>();
   config.threads = vm["threads"].as<int>();
-  config.ngram_order = vm["order"].as<int>();
-  config.verbose = vm.count("verbose");
+  config.step_size = vm["step-size"].as<float>();
   config.classes = vm["classes"].as<int>();
+  config.class_file = vm["class-file"].as<string>();
+  config.randomise = vm.count("randomise");
+  config.reclass = vm.count("reclass");
+  config.diagonal_contexts = vm.count("diagonal-contexts");
 
   cerr << "################################" << endl;
   cerr << "# Config Summary" << endl;
-  cerr << "# order = " << vm["order"].as<int>() << endl;
-  if (vm.count("model-in"))
-    cerr << "# model-in = " << vm["model-in"].as<string>() << endl;
-  cerr << "# model-out = " << vm["model-out"].as<string>() << endl;
-  cerr << "# input = " << vm["input"].as<string>() << endl;
-  cerr << "# minibatch-size = " << vm["minibatch-size"].as<int>() << endl;
-  cerr << "# lambda = " << vm["lambda"].as<float>() << endl;
-  cerr << "# step size = " << vm["step-size"].as<float>() << endl;
-  cerr << "# iterations = " << vm["iterations"].as<int>() << endl;
-  cerr << "# threads = " << vm["threads"].as<int>() << endl;
+  cerr << "# order = " << config.ngram_order << endl;
+  if (config.model_input_file.size()) {
+    cerr << "# model-in = " << config.model_input_file << endl;
+  }
+  if (config.model_output_file.size()) {
+    cerr << "# model-out = " << config.model_output_file << endl;
+  }
+  cerr << "# input = " << config.training_file << endl;
+  cerr << "# minibatch-size = " << config.minibatch_size << endl;
+  cerr << "# lambda = " << config.l2_parameter << endl;
+  cerr << "# step size = " << config.step_size << endl;
+  cerr << "# iterations = " << config.iterations << endl;
+  cerr << "# threads = " << config.threads << endl;
   cerr << "# classes = " << config.classes << endl;
   cerr << "################################" << endl;
 
   omp_set_num_threads(config.threads);
 
-  learn(vm, config);
+  learn(config);
 
   return 0;
 }
 
 
-void learn(const variables_map& vm, ModelData& config) {
+void learn(ModelData& config) {
   Corpus training_corpus, test_corpus;
   Dict dict;
   dict.Convert("<s>");
@@ -185,20 +199,21 @@ void learn(const variables_map& vm, ModelData& config) {
   // separate the word types into classes using
   // frequency binning
   vector<int> classes;
-  VectorReal class_bias = VectorReal::Zero(vm["classes"].as<int>());
-  if (vm.count("class-file")) {
+  VectorReal class_bias = VectorReal::Zero(config.classes);
+  if (config.class_file.size()) {
     cerr << "--class-file set, ignoring --classes." << endl;
-    classes_from_file(vm["class-file"].as<string>(), classes, dict, class_bias);
-    config.classes = classes.size()-1;
+    classes_from_file(config.class_file, classes, dict, class_bias);
+    config.classes = classes.size() - 1;
+  } else {
+    freq_bin_type(config.training_file, config.classes, classes,
+                  dict, class_bias);
   }
-  else
-    freq_bin_type(vm["input"].as<string>(), vm["classes"].as<int>(), classes, dict, class_bias);
   //////////////////////////////////////////////
 
 
   //////////////////////////////////////////////
   // read the training sentences
-  ifstream in(vm["input"].as<string>().c_str());
+  ifstream in(config.training_file);
   string line, token;
 
   while (getline(in, line)) {
@@ -212,9 +227,8 @@ void learn(const variables_map& vm, ModelData& config) {
 
   //////////////////////////////////////////////
   // read the test sentences
-  bool have_test = vm.count("test-set");
-  if (have_test) {
-    ifstream test_in(vm["test-set"].as<string>().c_str());
+  if (config.test_file.size()) {
+    ifstream test_in(config.test_file);
     while (getline(test_in, line)) {
       stringstream line_stream(line);
       Sentence tokens;
@@ -232,11 +246,11 @@ void learn(const variables_map& vm, ModelData& config) {
   }
   //////////////////////////////////////////////
 
-  FactoredNLM model(config, dict, vm.count("diagonal-contexts"), classes);
+  FactoredNLM model(config, dict, classes);
   model.FB = class_bias;
 
-  if (vm.count("model-in")) {
-    std::ifstream f(vm["model-in"].as<string>().c_str());
+  if (config.model_input_file.size()) {
+    std::ifstream f(config.model_input_file);
     boost::archive::text_iarchive ar(f);
     ar >> model;
   }
@@ -271,7 +285,7 @@ void learn(const variables_map& vm, ModelData& config) {
 
     int R_size = num_words*word_width;
     int Q_size = R_size;
-    int C_size = (vm.count("diagonal-contexts") ? word_width : word_width*word_width);
+    int C_size = config.diagonal_contexts ? word_width : word_width*word_width;
     int B_size = num_words;
     int M_size = context_width;
 
@@ -286,10 +300,11 @@ void learn(const variables_map& vm, ModelData& config) {
     ContextTransformsType g_C;
     Real* ptr = gradient_data+2*R_size;
     for (int i=0; i<context_width; i++) {
-      if (vm.count("diagonal-contexts"))
-          g_C.push_back(ContextTransformType(ptr, word_width, 1));
-      else
-          g_C.push_back(ContextTransformType(ptr, word_width, word_width));
+      if (config.diagonal_contexts) {
+        g_C.push_back(ContextTransformType(ptr, word_width, 1));
+      } else {
+        g_C.push_back(ContextTransformType(ptr, word_width, word_width));
+      }
       ptr += C_size;
     }
 
@@ -300,8 +315,8 @@ void learn(const variables_map& vm, ModelData& config) {
     //////////////////////////////////////////////
 
     size_t minibatch_counter=0;
-    size_t minibatch_size = vm["minibatch-size"].as<int>();
-    for (int iteration=0; iteration < vm["iterations"].as<int>(); ++iteration) {
+    size_t minibatch_size = config.minibatch_size;
+    for (int iteration=0; iteration < config.iterations; ++iteration) {
       clock_t iteration_start=clock();
       #pragma omp master
       {
@@ -309,14 +324,15 @@ void learn(const variables_map& vm, ModelData& config) {
         pp=0.0;
         cout << "Iteration " << iteration << ": "; cout.flush();
 
-        if (vm.count("randomise"))
+        if (config.randomise) {
           std::random_shuffle(training_indices.begin(), training_indices.end());
+        }
       }
 
       TrainingInstances training_instances;
-      Real step_size = vm["step-size"].as<float>(); //* minibatch_size / training_corpus.size();
+      Real step_size = config.step_size;
 
-      for (size_t start=0; start < training_corpus.size() && (int)start < vm["instances"].as<int>(); ++minibatch_counter) {
+      for (size_t start=0; start < training_corpus.size() && (int)start < config.instances; ++minibatch_counter) {
         size_t end = min(training_corpus.size(), start + minibatch_size);
 
         #pragma omp master
@@ -370,7 +386,7 @@ void learn(const variables_map& vm, ModelData& config) {
       cerr << endl;
 
       Real iteration_time = (clock()-iteration_start) / (Real)CLOCKS_PER_SEC;
-      if (vm.count("test-set")) {
+      if (test_corpus.size()) {
         Real local_pp = perplexity(model, test_corpus, 1);
 
         #pragma omp critical
@@ -382,12 +398,12 @@ void learn(const variables_map& vm, ModelData& config) {
       {
         pp = exp(-pp/test_corpus.size());
         cerr << " | Time: " << iteration_time << " seconds, Average f = " << av_f/training_corpus.size();
-        if (vm.count("test-set")) {
+        if (test_corpus.size()) {
           cerr << ", Test Perplexity = " << pp;
         }
         cerr << " |" << endl << endl;
 
-        if (iteration >= 1 && vm.count("reclass")) {
+        if (iteration >= 1 && config.reclass) {
           model.reclass(training_corpus, test_corpus);
           adaGradF = MatrixReal::Zero(model.F.rows(), model.F.cols());
           adaGradFB = VectorReal::Zero(model.FB.size());
@@ -395,10 +411,9 @@ void learn(const variables_map& vm, ModelData& config) {
         }
       }
 
-      if (vm.count("model-out") && vm.count("log-period")) {
-        unsigned int log_period = vm["log-period"].as<unsigned int>();
-        if (log_period > 0 && iteration % log_period == 0) {
-          string file = vm["model-out"].as<string>() + ".i" + to_string(iteration);
+      if (config.model_output_file.size() && config.log_period) {
+        if (iteration % config.log_period == 0) {
+          string file = config.model_output_file + ".i" + to_string(iteration);
           cout << "Writing trained model to " << file << endl;
           std::ofstream f(file);
           boost::archive::text_oarchive ar(f);
