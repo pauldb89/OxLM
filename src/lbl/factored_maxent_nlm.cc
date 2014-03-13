@@ -31,9 +31,9 @@ Real FactoredMaxentNLM::log_prob(
   int c = get_class(w);
   int c_start = indexes.at(c);
   FeatureGenerator generator(config.feature_context_size);
-  vector<Feature> features = generator.generate(context);
-  VectorReal class_feature_scores = U.get(features);
-  VectorReal word_feature_scores = V[c].get(features);
+  vector<FeatureContext> feature_contexts = generator.generate(context);
+  VectorReal class_feature_scores = U.get(feature_contexts);
+  VectorReal word_feature_scores = V[c].get(feature_contexts);
 
   // a simple non-linearity
   if (non_linear)

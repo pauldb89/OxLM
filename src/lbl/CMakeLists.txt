@@ -4,14 +4,16 @@
 
 add_library(lbl SHARED
   config.cc
+  context_extractor.cc
   factored_maxent_nlm.cc
   factored_nlm.cc
-  feature.cc
+  feature_context.cc
   feature_generator.cc
-  feature_store.cc
+  unconstrained_feature_store.cc
   nlm.cc
   nlm_approximate_z.cc
-  utils.cc)
+  utils.cc
+)
 
 if(CDEC_FOUND)
   include_directories(cdec_ff_lbl PRIVATE ${CDEC_INCLUDE_DIRS})

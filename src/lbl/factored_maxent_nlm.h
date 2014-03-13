@@ -1,7 +1,7 @@
 #pragma once
 
 #include "lbl/factored_nlm.h"
-#include "lbl/feature_store.h"
+#include "lbl/unconstrained_feature_store.h"
 
 namespace oxlm {
 

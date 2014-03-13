@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include "feature.h"
+#include "feature_context.h"
 
 using namespace std;
 
@@ -12,7 +12,7 @@ class FeatureGenerator {
  public:
   FeatureGenerator(size_t feature_context_size);
 
-  vector<Feature> generate(const vector<int>& history) const;
+  vector<FeatureContext> generate(const vector<int>& history) const;
 
  private:
   size_t feature_context_size;
