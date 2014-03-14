@@ -27,9 +27,9 @@
 // Local
 #include "lbl/feature.h"
 #include "lbl/feature_generator.h"
-#include "lbl/feature_store.h"
 #include "lbl/factored_maxent_nlm.h"
 #include "lbl/log_add.h"
+#include "lbl/unconstrained_feature_store.h"
 #include "corpus/corpus.h"
 
 // Namespaces
@@ -417,7 +417,8 @@ Real sgd_gradient(FactoredMaxentNLM& model,
     int c = model.get_class(w);
     int c_start = model.indexes.at(c), c_end = model.indexes.at(c+1);
 
-    vector<Feature> features = feature_generator.generate(histories[instance]);
+    vector<FeatureContext> feature_contexts =
+        feature_generator.generate(histories[instance]);
 
     if (!(w >= c_start && w < c_end))
       cerr << w << " " << c << " " << c_start << " " << c_end << endl;
@@ -428,8 +429,8 @@ Real sgd_gradient(FactoredMaxentNLM& model,
     //for (int x=0; x<word_width; ++x)
     //  prediction_vectors.row(instance)(x) *= (prediction_vectors.row(instance)(x) > 0 ? 1 : 0.01); // rectifier
 
-    VectorReal class_feature_scores = model.U.get(features);
-    VectorReal word_feature_scores = model.V[c].get(features);
+    VectorReal class_feature_scores = model.U.get(feature_contexts);
+    VectorReal word_feature_scores = model.V[c].get(feature_contexts);
     VectorReal class_conditional_scores = model.F * prediction_vectors.row(instance).transpose() + model.FB + class_feature_scores;
     VectorReal word_conditional_scores  = model.class_R(c) * prediction_vectors.row(instance).transpose() + model.class_B(c) + word_feature_scores;
 
@@ -454,8 +455,8 @@ Real sgd_gradient(FactoredMaxentNLM& model,
     g_FB += class_conditional_probs;
     g_R.block(c_start, 0, c_end-c_start, g_R.cols()) += word_conditional_probs * prediction_vectors.row(instance);
     g_B.segment(c_start, c_end-c_start) += word_conditional_probs;
-    g_U.update(features, class_conditional_probs);
-    g_V[c].update(features, word_conditional_probs);
+    g_U.update(feature_contexts, class_conditional_probs);
+    g_V[c].update(feature_contexts, word_conditional_probs);
 
     // a simple sigmoid non-linearity derivative
     weightedRepresentations.row(instance).array() *=
