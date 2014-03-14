@@ -5,12 +5,7 @@
 
 static const char *REVISION = "$Rev: 247 $";
 
-using namespace boost;
 using namespace boost::program_options;
-using namespace std;
-using namespace oxlm;
-using namespace Eigen;
-
 
 int main(int argc, char **argv) {
   cout << "Online noise contrastive estimation for log-bilinear models: Copyright 2013 Phil Blunsom, "
@@ -61,7 +56,9 @@ int main(int argc, char **argv) {
         "file containing word to class mappings in the format <class> <word> <frequence>.")
     ("randomise", "visit the training tokens in random order")
     ("reclass", "reallocate word classes after the first epoch.")
-    ("diagonal-contexts", "Use diagonal context matrices (usually faster).");
+    ("diagonal-contexts", "Use diagonal context matrices (usually faster).")
+    ("random-weights", value<bool>()->default_value(true),
+        "Initialize the weights randomly");
   options_description config_options, cmdline_options;
   config_options.add(generic);
   cmdline_options.add(generic).add(cmdline_specific);
@@ -104,6 +101,7 @@ int main(int argc, char **argv) {
   config.randomise = vm.count("randomise");
   config.reclass = vm.count("reclass");
   config.diagonal_contexts = vm.count("diagonal-contexts");
+  config.random_weights = vm["random-weights"].as<bool>();
 
   cerr << "################################" << endl;
   cerr << "# Config Summary" << endl;
@@ -122,8 +120,6 @@ int main(int argc, char **argv) {
   cerr << "# threads = " << config.threads << endl;
   cerr << "# classes = " << config.classes << endl;
   cerr << "################################" << endl;
-
-  omp_set_num_threads(config.threads);
 
   learn(config);
 

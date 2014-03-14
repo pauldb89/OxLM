@@ -10,9 +10,15 @@ using namespace chrono;
 namespace oxlm {
 
 typedef float Real;
+
+typedef int            WordId;
+typedef vector<WordId> Sentence;
+typedef vector<WordId> Corpus;
+
 typedef Eigen::Matrix<Real, Eigen::Dynamic, Eigen::Dynamic> MatrixReal;
 typedef Eigen::Matrix<Real, Eigen::Dynamic, 1>              VectorReal;
 typedef Eigen::Array<Real, Eigen::Dynamic, 1>               ArrayReal;
+
 typedef high_resolution_clock                               Clock;
 typedef Clock::time_point                   Time;
 

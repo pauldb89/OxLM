@@ -23,13 +23,16 @@ FactoredNLM::FactoredNLM(
   }
   assert (labels.size() == word_to_class.size());
 
-  random_device rd;
-  std::mt19937 gen(rd());
-  std::normal_distribution<Real> gaussian(0,0.1);
-  for (int i = 0; i < F.rows(); i++) {
-    FB(i) = gaussian(gen);
-    for (int j = 0; j < F.cols(); j++)
-      F(i, j) = gaussian(gen);
+  if (config.random_weights) {
+    random_device rd;
+    std::mt19937 gen(rd());
+    std::normal_distribution<Real> gaussian(0,0.1);
+    for (int i = 0; i < F.rows(); i++) {
+      FB(i) = gaussian(gen);
+      for (int j = 0; j < F.cols(); j++) {
+        F(i, j) = gaussian(gen);
+      }
+    }
   }
 }
 

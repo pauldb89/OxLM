@@ -34,14 +34,9 @@
 
 // Namespaces
 using namespace boost;
-using namespace boost::program_options;
 using namespace std;
 using namespace oxlm;
 using namespace Eigen;
-
-
-typedef vector<WordId> Sentence;
-typedef vector<WordId> Corpus;
 
 // TODO: Major refactoring needed, these methods belong to the model.
 
@@ -166,6 +161,7 @@ FactoredMaxentNLM learn(ModelData& config) {
     adaGradV.push_back(UnconstrainedFeatureStore(num_words_in_class));
   }
 
+  omp_set_num_threads(config.threads);
   #pragma omp parallel shared(global_gradient, global_gradientF)
   {
     //////////////////////////////////////////////
@@ -345,6 +341,8 @@ FactoredMaxentNLM learn(ModelData& config) {
     boost::archive::text_oarchive ar(f);
     ar << model;
   }
+
+  return model;
 }
 
 void cache_data(int start, int end, const Corpus& training_corpus, const vector<size_t>& indices, TrainingInstances &result) {

@@ -20,6 +20,8 @@ class NLM {
  public:
   NLM(const ModelData& config, const Dict& labels, bool diagonal=false);
 
+  NLM(const NLM& model);
+
   virtual ~NLM() { delete [] m_data; }
 
   int output_types() const { return m_labels.size(); }
@@ -65,7 +67,7 @@ class NLM {
     ar >> m_labels;
     ar >> m_diagonal;
     delete [] m_data;
-    init(config, m_labels, false);
+    init(config, false);
     ar >> boost::serialization::make_array(m_data, m_data_size);
 
     int unigram_len=0;
@@ -132,7 +134,8 @@ class NLM {
  protected:
   NLM();
 
-  virtual void init(const ModelData& config, const Dict& labels, bool init_weights=false);
+  virtual void init(const ModelData& config, bool random_weights);
+  virtual void initWeights(const ModelData& config, bool random_weights);
   virtual void allocate_data(const ModelData& config);
 
   Dict m_labels;

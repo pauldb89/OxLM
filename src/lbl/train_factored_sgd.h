@@ -31,13 +31,9 @@
 
 // Namespaces
 using namespace boost;
-using namespace boost::program_options;
 using namespace std;
 using namespace oxlm;
 using namespace Eigen;
-
-typedef vector<WordId> Sentence;
-typedef vector<WordId> Corpus;
 
 // TODO: Major refactoring needed, these methods belong to the model.
 
@@ -151,6 +147,7 @@ FactoredNLM learn(ModelData& config) {
   MatrixReal adaGradF = MatrixReal::Zero(model.F.rows(), model.F.cols());
   VectorReal adaGradFB = VectorReal::Zero(model.FB.size());
 
+  omp_set_num_threads(config.threads);
   #pragma omp parallel shared(global_gradient, global_gradientF)
   {
     //////////////////////////////////////////////
@@ -226,7 +223,8 @@ FactoredNLM learn(ModelData& config) {
 
         #pragma omp barrier
         cache_data(start, end, training_corpus, training_indices, training_instances);
-        Real f = sgd_gradient(model, training_corpus, training_instances, lambda, g_R, g_Q, g_C, g_B, g_F, g_FB);
+        Real f = sgd_gradient(model, training_corpus, training_instances, lambda,
+                              g_R, g_Q, g_C, g_B, g_F, g_FB);
 
         #pragma omp critical
         {
@@ -299,7 +297,6 @@ FactoredNLM learn(ModelData& config) {
       }
     }
   }
-
   return model;
 }
 
@@ -532,7 +529,9 @@ Real perplexity(const FactoredNLM& model, const Corpus& test_corpus, int stride)
     p += log_prob;
 
     #pragma omp master
-    if (tokens % 1000 == 0) { cerr << "."; cerr.flush(); }
+    if (tokens % 1000 == 0) {
+      cerr << "."; cerr.flush();
+    }
 
     tokens++;
   }

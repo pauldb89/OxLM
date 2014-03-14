@@ -24,13 +24,28 @@ NLM::NLM()
     : R(0,0,0), Q(0,0,0), B(0,0), W(0,0), M(0,0),
       m_diagonal(false), m_data_size(0), m_data(NULL) {}
 
+NLM::NLM(const NLM& model)
+    : config(model.config), R(0, 0, 0), Q(0, 0, 0), B(0, 0), W(0, 0), M(0, 0),
+      m_labels(model.m_labels), m_diagonal(model.m_diagonal),
+      unigram(model.unigram), m_data_size(m_data_size) {
+  cerr << "copiem cu spor" << endl;
+  m_data = new Real[m_data_size];
+  copy(model.m_data, model.m_data + m_data_size, m_data);
+  initWeights(config, false);
+}
+
 NLM::NLM(const ModelData& config, const Dict& labels, bool diagonal)
     : config(config), R(0,0,0), Q(0,0,0), B(0,0), W(0,0), M(0,0),
       m_labels(labels), m_diagonal(diagonal) {
-  init(config, m_labels, true);
+  init(config, config.random_weights);
 }
 
-void NLM::init(const ModelData& config, const Dict& labels, bool init_weights) {
+void NLM::init(const ModelData& config, bool random_weights) {
+  allocate_data(config);
+  initWeights(config, random_weights);
+}
+
+void NLM::initWeights(const ModelData& config, bool random_weights) {
   // the prediction vector ranges over classes for a class based LM, or the vocab otherwise
   int num_output_words = output_types();
   int num_context_words = context_types();
@@ -44,18 +59,18 @@ void NLM::init(const ModelData& config, const Dict& labels, bool init_weights) {
   //if (m_diagonal) C_size = word_width;
   //else            C_size = word_width*word_width;
 
-  allocate_data(config);
-
   new (&W) WeightsType(m_data, m_data_size);
-  if (init_weights) {
+  if (random_weights) {
     //    W.setRandom() /= 10;
     random_device rd;
     std::mt19937 gen(rd());
     std::normal_distribution<Real> gaussian(0,0.1);
-    for (int i=0; i<m_data_size; i++)
+    for (int i = 0; i < m_data_size; i++) {
       W(i) = gaussian(gen);
+    }
+  } else {
+    W.setZero();
   }
-  else W.setZero();
 
   new (&R) WordVectorsType(m_data, num_output_words, word_width);
   new (&Q) WordVectorsType(m_data+R_size, num_context_words, word_width);

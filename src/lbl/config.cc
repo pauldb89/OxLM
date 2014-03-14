@@ -9,6 +9,6 @@ ModelData::ModelData()
       diagonal_contexts(false), label_sample_size(0), uniform(false),
       pseudo_likelihood_cne(false), mixture(false), lbfgs(false),
       lbfgs_vectors(0), test_tokens(0), gnorm_threshold(0), eta(0),
-      multinomial_step_size(0), log_period(0) {}
+      multinomial_step_size(0), log_period(0), random_weights(false) {}
 
 } // namespace oxlm
