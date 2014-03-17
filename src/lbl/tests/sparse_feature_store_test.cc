@@ -144,6 +144,20 @@ TEST_F(SparseFeatureStoreTest, TestUpdateAdaGrad) {
 
 }
 
+TEST_F(SparseFeatureStoreTest, TestClear) {
+  store.clear();
+  EXPECT_EQ(3, store.size());
+
+  EXPECT_MATRIX_NEAR(VectorReal::Zero(5), store.get(contexts1), EPS);
+
+  VectorReal values(5);
+  values << 1, 2, 3, 4, 5;
+  store.update(contexts1, values);
+  VectorReal expected_values(5);
+  expected_values << 0, 2, 0, 0, 5;
+  EXPECT_MATRIX_NEAR(expected_values, store.get(contexts1), EPS);
+}
+
 TEST_F(SparseFeatureStoreTest, TestSerialization) {
   stringstream stream(ios_base::binary | ios_base::out | ios_base::in);
   ar::binary_oarchive output_stream(stream);

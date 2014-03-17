@@ -20,7 +20,8 @@ class FeatureStoreInitializer {
 
   void initialize(
       boost::shared_ptr<FeatureStore>& U,
-      vector<boost::shared_ptr<FeatureStore>>& V) const;
+      vector<boost::shared_ptr<FeatureStore>>& V,
+      bool random_weights = false) const;
 
  private:
   const ModelData& config;

@@ -15,14 +15,15 @@ FeatureStoreInitializer::FeatureStoreInitializer(
 
 void FeatureStoreInitializer::initialize(
     boost::shared_ptr<FeatureStore>& U,
-    vector<boost::shared_ptr<FeatureStore>>& V) const {
+    vector<boost::shared_ptr<FeatureStore>>& V,
+    bool random_weights) const {
   if (config.sparse_features) {
     U = boost::make_shared<SparseFeatureStore>(
-        config.classes, matcher.getClassFeatures());
+        config.classes, matcher.getClassFeatures(), random_weights);
     V.resize(config.classes);
     for (int i = 0; i < config.classes; ++i) {
       V[i] = boost::make_shared<SparseFeatureStore>(
-          index.getClassSize(i), matcher.getWordFeatures(i));
+          index.getClassSize(i), matcher.getWordFeatures(i), random_weights);
     }
   } else {
     U = boost::make_shared<UnconstrainedFeatureStore>(config.classes);

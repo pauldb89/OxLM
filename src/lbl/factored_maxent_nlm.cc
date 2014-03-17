@@ -36,8 +36,9 @@ Real FactoredMaxentNLM::log_prob(
   VectorReal word_feature_scores = V[c]->get(feature_contexts);
 
   // a simple non-linearity
-  if (non_linear)
+  if (non_linear) {
     prediction_vector = sigmoid(prediction_vector);
+  }
 
   // log p(c | context)
   Real class_log_prob = 0;

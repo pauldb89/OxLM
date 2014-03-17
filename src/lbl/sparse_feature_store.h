@@ -1,6 +1,7 @@
 #pragma once
 
 #include <unordered_map>
+#include <unordered_set>
 
 #include "lbl/feature_context.h"
 #include "lbl/feature_store.h"
@@ -17,7 +18,9 @@ class SparseFeatureStore : public FeatureStore {
   SparseFeatureStore(int vector_max_size);
 
   SparseFeatureStore(
-      int vector_max_size, const MatchingContexts& matching_contexts);
+      int vector_max_size,
+      const MatchingContexts& matching_contexts,
+      bool random_weights);
 
   virtual VectorReal get(
       const vector<FeatureContext>& feature_contexts) const;
@@ -44,7 +47,7 @@ class SparseFeatureStore : public FeatureStore {
 
   void hintFeatureIndex(
       const vector<FeatureContext>& feature_context,
-      int feature_index);
+      int feature_index, Real value = 0);
 
   bool operator==(const SparseFeatureStore& store) const;
 
@@ -94,21 +97,26 @@ class SparseFeatureStore : public FeatureStore {
 
   BOOST_SERIALIZATION_SPLIT_MEMBER();
 
+  unordered_set<FeatureContext> observedContexts;
   unordered_map<FeatureContext, SparseVectorReal, hash<FeatureContext>>
       featureWeights;
   int vectorMaxSize;
 };
 
 template<class Scalar>
-struct CwiseIdentityOp {
+struct CwiseSetValueOp {
+  CwiseSetValueOp(const Scalar& value) : value(value) {}
+
   const Scalar operator()(const Scalar& x) const {
-    return 1.0;
+    return value;
   }
+
+  Scalar value;
 };
 
 template<class Scalar>
-struct CwiseNumeratorOp {
-  CwiseNumeratorOp(Scalar eps) : eps(eps) {}
+struct CwiseDenominatorOp {
+  CwiseDenominatorOp(Scalar eps) : eps(eps) {}
 
   const Scalar operator()(const Scalar& x) const {
     return fabs(x) < eps ? 1.0 : 1.0 / x;

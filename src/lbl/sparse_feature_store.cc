@@ -1,5 +1,7 @@
 #include "lbl/sparse_feature_store.h"
 
+#include <random>
+
 #include "lbl/feature_generator.h"
 #include "utils/constants.h"
 
@@ -12,10 +14,15 @@ SparseFeatureStore::SparseFeatureStore(int vector_max_size)
 
 SparseFeatureStore::SparseFeatureStore(
     int vector_max_size,
-    const MatchingContexts& matching_contexts)
+    const MatchingContexts& matching_contexts,
+    bool random_weights)
     : vectorMaxSize(vector_max_size) {
+  random_device rd;
+  std::mt19937 gen(rd());
+  std::normal_distribution<Real> gaussian(0, 0.1);
   for (const auto& matching_context: matching_contexts) {
-    hintFeatureIndex(matching_context.first, matching_context.second);
+    Real value = random_weights ? gaussian(gen) : 0;
+    hintFeatureIndex(matching_context.first, matching_context.second, value);
   }
 }
 
@@ -35,15 +42,17 @@ void SparseFeatureStore::update(
     const vector<FeatureContext>& feature_contexts,
     const VectorReal& values) {
   for (const FeatureContext& feature_context: feature_contexts) {
+    observedContexts.insert(feature_context);
     update(feature_context, values);
   }
 }
 
 Real SparseFeatureStore::updateRegularizer(Real lambda) {
   Real result = 0;
-  for (auto& entry: featureWeights) {
-    entry.second -= lambda * entry.second;
-    result += entry.second.cwiseAbs2().sum();
+  for (const FeatureContext& feature_context: observedContexts) {
+    SparseVectorReal& weights = featureWeights.at(feature_context);
+    weights -= lambda * weights;
+    result += weights.cwiseAbs2().sum();
   }
   return result;
 }
@@ -51,17 +60,20 @@ Real SparseFeatureStore::updateRegularizer(Real lambda) {
 void SparseFeatureStore::update(
     const boost::shared_ptr<FeatureStore>& base_store) {
   boost::shared_ptr<SparseFeatureStore> store = cast(base_store);
-  for (const auto& entry: store->featureWeights) {
-    update(entry.first, entry.second);
+  for (const FeatureContext& feature_context: store->observedContexts) {
+    observedContexts.insert(feature_context);
+    update(feature_context, store->featureWeights.at(feature_context));
   }
 }
 
 void SparseFeatureStore::updateSquared(
     const boost::shared_ptr<FeatureStore>& base_store) {
   boost::shared_ptr<SparseFeatureStore> store = cast(base_store);
-  for (const auto& entry: store->featureWeights) {
-    SparseVectorReal squaredValues = entry.second.cwiseAbs2();
-    update(entry.first, squaredValues);
+  for (const FeatureContext& feature_context: store->observedContexts) {
+    observedContexts.insert(feature_context);
+    SparseVectorReal values = store->featureWeights.at(feature_context);
+    values = values.cwiseAbs2();
+    update(feature_context, values);
   }
 }
 
@@ -73,20 +85,25 @@ void SparseFeatureStore::updateAdaGrad(
       cast(base_gradient_store);
   boost::shared_ptr<SparseFeatureStore> adagrad_store =
       cast(base_adagrad_store);
-  for (const auto& entry: adagrad_store->featureWeights) {
-    SparseVectorReal& weights = featureWeights.at(entry.first);
+  for (const FeatureContext& feature_context: gradient_store->observedContexts) {
+    observedContexts.insert(feature_context);
+    SparseVectorReal& weights = featureWeights.at(feature_context);
     const SparseVectorReal& gradient =
-        gradient_store->featureWeights.at(entry.first);
-    const SparseVectorReal& adagrad = entry.second
-        .cwiseSqrt().unaryExpr(CwiseNumeratorOp<Real>(EPS));
-    weights -= step_size * gradient.cwiseProduct(adagrad);
+        gradient_store->featureWeights.at(feature_context);
+    const SparseVectorReal& adagrad =
+        adagrad_store->featureWeights.at(feature_context);
+    const SparseVectorReal& denominator =
+        adagrad.cwiseSqrt().unaryExpr(CwiseDenominatorOp<Real>(EPS));
+    weights -= step_size * gradient.cwiseProduct(denominator);
   }
 }
 
 void SparseFeatureStore::clear() {
-  for (auto& entry: featureWeights) {
-    entry.second.setZero();
+  for (const FeatureContext& feature_context: observedContexts) {
+    SparseVectorReal& weights = featureWeights.at(feature_context);
+    weights = weights.unaryExpr(CwiseSetValueOp<Real>(0));
   }
+  observedContexts.clear();
 }
 
 size_t SparseFeatureStore::size() const {
@@ -95,14 +112,14 @@ size_t SparseFeatureStore::size() const {
 
 void SparseFeatureStore::hintFeatureIndex(
     const vector<FeatureContext>& feature_contexts,
-    int feature_index) {
+    int feature_index, Real value) {
   for (const FeatureContext& feature_context: feature_contexts) {
     auto it = featureWeights.find(feature_context);
     if (it != featureWeights.end()) {
-      it->second.coeffRef(feature_index) = 0;
+      it->second.coeffRef(feature_index) = value;
     } else {
       SparseVectorReal weights(vectorMaxSize);
-      weights.coeffRef(feature_index) = 0;
+      weights.coeffRef(feature_index) = value;
       featureWeights.insert(make_pair(feature_context, weights));
     }
   }
@@ -131,11 +148,10 @@ bool SparseFeatureStore::operator==(const SparseFeatureStore& store) const {
 
 void SparseFeatureStore::update(
     const FeatureContext& feature_context, const VectorReal& values) {
-  SparseVectorReal weights = featureWeights.at(feature_context);
-  VectorReal pattern = weights.unaryExpr(CwiseIdentityOp<Real>());
+  SparseVectorReal& weights = featureWeights.at(feature_context);
+  VectorReal pattern = weights.unaryExpr(CwiseSetValueOp<Real>(1));
   VectorReal product = (values.array() * pattern.array()).matrix();
-  //TODO(paul): Should we normalize by summing only the defined features?
-  featureWeights[feature_context] = weights + product.sparseView();
+  weights += product.sparseView();
 }
 
 void SparseFeatureStore::update(

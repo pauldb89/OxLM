@@ -73,7 +73,6 @@ Real perplexity(const FactoredMaxentNLM& model, const Corpus& test_corpus);
 void freq_bin_type(const std::string &corpus, int num_classes, std::vector<int>& classes, Dict& dict, VectorReal& class_bias);
 void classes_from_file(const std::string &class_file, vector<int>& classes, Dict& dict, VectorReal& class_bias);
 
-
 FactoredMaxentNLM learn(ModelData& config) {
   Corpus training_corpus, test_corpus;
   Dict dict;
@@ -137,7 +136,7 @@ FactoredMaxentNLM learn(ModelData& config) {
   FeatureMatcher feature_matcher(training_corpus, index, extractor, generator);
   FeatureStoreInitializer initializer(config, index, feature_matcher);
   FactoredMaxentNLM model(config, dict, index, initializer);
-  model.FB = class_bias;
+  // model.FB = class_bias;
 
   if (config.model_input_file.size()) {
     std::ifstream f(config.model_input_file);
@@ -295,15 +294,20 @@ FactoredMaxentNLM learn(ModelData& config) {
           }
 
           // regularisation
-          if (lambda > 0) av_f += (0.5*lambda*model.l2_gradient_update(step_size*lambda));
+          if (lambda > 0) {
+            av_f += (0.5*lambda*model.l2_gradient_update(step_size*lambda));
+          }
 
-          if (minibatch_counter % 100 == 0) { cerr << "."; cout.flush(); }
+          if (minibatch_counter % 100 == 0) {
+            cout << ".";
+            cout.flush();
+          }
         }
 
         //start += (minibatch_size*omp_get_num_threads());
         start += minibatch_size;
       }
-      #pragma omp master
+      pp = 0.0;
       cerr << endl;
 
       Real iteration_time = (clock()-iteration_start) / (Real)CLOCKS_PER_SEC;
@@ -330,15 +334,15 @@ FactoredMaxentNLM learn(ModelData& config) {
           adaGradFB = VectorReal::Zero(model.FB.size());
           adaGrad = VectorReal::Zero(model.num_weights());
         }
-      }
 
-      if (config.model_output_file.size() && config.log_period) {
-        if (iteration % config.log_period == 0) {
-          string file = config.model_output_file + ".i" + to_string(iteration);
-          cout << "Writing trained model to " << file << endl;
-          std::ofstream f(file);
-          boost::archive::text_oarchive ar(f);
-          ar << model;
+        if (config.model_output_file.size() && config.log_period) {
+          if (iteration % config.log_period == 0) {
+            string file = config.model_output_file + ".i" + to_string(iteration);
+            cout << "Writing trained model to " << file << endl;
+            std::ofstream f(file);
+            boost::archive::text_oarchive ar(f);
+            ar << model;
+          }
         }
       }
     }
@@ -391,8 +395,7 @@ Real sgd_gradient(FactoredMaxentNLM& model,
   int context_width = model.config.ngram_order-1;
   ContextExtractor extractor(training_corpus, context_width, start_id, end_id);
 
-  // form matrices of the ngram histories
-//  clock_t cache_start = clock();
+  // Form matrices of the ngram histories.
   int instances=training_instances.size();
   vector<MatrixReal> context_vectors(context_width, MatrixReal::Zero(instances, word_width));
   vector<vector<int>> contexts(instances);
@@ -407,13 +410,10 @@ Real sgd_gradient(FactoredMaxentNLM& model,
   for (int i=0; i<context_width; ++i)
     prediction_vectors += model.context_product(i, context_vectors.at(i));
 
-//  clock_t cache_time = clock() - cache_start;
-
-  // the weighted sum of word representations
+  // The weighted sum of word representations.
   MatrixReal weightedRepresentations = MatrixReal::Zero(instances, word_width);
 
-  // calculate the function and gradient for each ngram
-//  clock_t iteration_start = clock();
+  // Calculate the function and gradient for each ngram.
   FeatureGenerator feature_generator(model.config.feature_context_size);
   for (int instance=0; instance < instances; instance++) {
     int w_i = training_instances.at(instance);
@@ -447,7 +447,7 @@ Real sgd_gradient(FactoredMaxentNLM& model,
 
     assert(isfinite(class_conditional_log_probs(c)));
     assert(isfinite(word_conditional_log_probs(word_index)));
-    f -= (class_conditional_log_probs(c) + word_conditional_log_probs(w-c_start));
+    f -= (class_conditional_log_probs(c) + word_conditional_log_probs(word_index));
 
     // do the gradient updates:
     class_conditional_probs(c) -= 1;
@@ -466,9 +466,7 @@ Real sgd_gradient(FactoredMaxentNLM& model,
     //for (int x=0; x<word_width; ++x)
     //  weightedRepresentations.row(instance)(x) *= (prediction_vectors.row(instance)(x) > 0 ? 1 : 0.01); // rectifier
   }
-//  clock_t iteration_time = clock() - iteration_start;
 
-//  clock_t context_start = clock();
   MatrixReal context_gradients = MatrixReal::Zero(word_width, instances);
   for (int i=0; i<context_width; ++i) {
     context_gradients = model.context_product(i, weightedRepresentations, true); // weightedRepresentations*C(i)^T
@@ -478,7 +476,6 @@ Real sgd_gradient(FactoredMaxentNLM& model,
 
     model.context_gradient_update(g_C.at(i), context_vectors.at(i), weightedRepresentations);
   }
-//  clock_t context_time = clock() - context_start;
 
   return f;
 }

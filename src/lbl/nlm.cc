@@ -28,7 +28,6 @@ NLM::NLM(const NLM& model)
     : config(model.config), R(0, 0, 0), Q(0, 0, 0), B(0, 0), W(0, 0), M(0, 0),
       m_labels(model.m_labels), m_diagonal(model.m_diagonal),
       unigram(model.unigram), m_data_size(m_data_size) {
-  cerr << "copiem cu spor" << endl;
   m_data = new Real[m_data_size];
   copy(model.m_data, model.m_data + m_data_size, m_data);
   initWeights(config, false);
