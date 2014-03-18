@@ -136,7 +136,7 @@ FactoredMaxentNLM learn(ModelData& config) {
   FeatureMatcher feature_matcher(training_corpus, index, extractor, generator);
   FeatureStoreInitializer initializer(config, index, feature_matcher);
   FactoredMaxentNLM model(config, dict, index, initializer);
-  // model.FB = class_bias;
+  model.FB = class_bias;
 
   if (config.model_input_file.size()) {
     std::ifstream f(config.model_input_file);
