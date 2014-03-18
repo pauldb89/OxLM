@@ -26,26 +26,25 @@ class UnconstrainedFeatureStoreTest : public ::testing::Test {
 
     VectorReal values(3);
 
-    vector<int> feature_data = {1};
-    contexts1 = {FeatureContext(0, feature_data)};
+    feature_context_ids1 = {1};
     values << 1, 2, 3;
-    store.update(contexts1, values);
+    store.update(feature_context_ids1, values);
 
-    feature_data = {2};
-    contexts2 = {FeatureContext(0, feature_data)};
+    feature_context_ids2 = {2};
     values << 6, 5, 4;
-    store.update(contexts2, values);
+    store.update(feature_context_ids2, values);
 
     values << 1.5, 1.25, 1;
-    gradient_store->update(contexts2, values);
+    gradient_store->update(feature_context_ids2, values);
 
-    feature_data = {3};
-    contexts3 = {FeatureContext(0, feature_data)};
+    feature_context_ids3 = {3};
     values << 0.5, 0.75, 1;
-    gradient_store->update(contexts3, values);
+    gradient_store->update(feature_context_ids3, values);
   }
 
-  vector<FeatureContext> contexts1, contexts2, contexts3;
+  vector<FeatureContextId> feature_context_ids1;
+  vector<FeatureContextId> feature_context_ids2;
+  vector<FeatureContextId> feature_context_ids3;
   UnconstrainedFeatureStore store;
   boost::shared_ptr<FeatureStore> gradient_store;
 };
@@ -53,15 +52,16 @@ class UnconstrainedFeatureStoreTest : public ::testing::Test {
 TEST_F(UnconstrainedFeatureStoreTest, TestBasic) {
   UnconstrainedFeatureStore feature_store(3);
 
-  EXPECT_MATRIX_NEAR(VectorReal::Zero(3), feature_store.get(contexts1), EPS);
+  EXPECT_MATRIX_NEAR(
+      VectorReal::Zero(3), feature_store.get(feature_context_ids1), EPS);
 
   VectorReal values(3);
   values << 1, 2, 3;
-  feature_store.update(contexts1, values);
-  EXPECT_MATRIX_NEAR(values, feature_store.get(contexts1), EPS);
+  feature_store.update(feature_context_ids1, values);
+  EXPECT_MATRIX_NEAR(values, feature_store.get(feature_context_ids1), EPS);
 
-  feature_store.update(contexts1, values);
-  EXPECT_MATRIX_NEAR(2 * values, feature_store.get(contexts1), EPS);
+  feature_store.update(feature_context_ids1, values);
+  EXPECT_MATRIX_NEAR(2 * values, feature_store.get(feature_context_ids1), EPS);
 
   EXPECT_EQ(1, feature_store.size());
   feature_store.clear();
@@ -69,12 +69,11 @@ TEST_F(UnconstrainedFeatureStoreTest, TestBasic) {
 }
 
 TEST_F(UnconstrainedFeatureStoreTest, TestCombined) {
-  vector<FeatureContext> contexts = contexts1;
-  contexts.insert(contexts.end(), contexts2.begin(), contexts2.end());
+  vector<FeatureContextId> feature_context_ids = {1, 2};
 
   VectorReal expected_values(3);
   expected_values << 7, 7, 7;
-  EXPECT_MATRIX_NEAR(expected_values, store.get(contexts), EPS);
+  EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids), EPS);
 }
 
 TEST_F(UnconstrainedFeatureStoreTest, TestUpdateRegularizer) {
@@ -82,10 +81,10 @@ TEST_F(UnconstrainedFeatureStoreTest, TestUpdateRegularizer) {
 
   VectorReal expected_values(3);
   expected_values << 0.5, 1, 1.5;
-  EXPECT_MATRIX_NEAR(expected_values, store.get(contexts1), EPS);
+  EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids1), EPS);
 
   expected_values << 3, 2.5, 2;
-  EXPECT_MATRIX_NEAR(expected_values, store.get(contexts2), EPS);
+  EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids2), EPS);
 }
 
 TEST_F(UnconstrainedFeatureStoreTest, TestUpdateStore) {
@@ -94,11 +93,11 @@ TEST_F(UnconstrainedFeatureStoreTest, TestUpdateStore) {
   EXPECT_EQ(3, store.size());
   VectorReal expected_values(3);
   expected_values << 1, 2, 3;
-  EXPECT_MATRIX_NEAR(expected_values, store.get(contexts1), EPS);
+  EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids1), EPS);
   expected_values << 7.5, 6.25, 5;
-  EXPECT_MATRIX_NEAR(expected_values, store.get(contexts2), EPS);
+  EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids2), EPS);
   expected_values << 0.5, 0.75, 1;
-  EXPECT_MATRIX_NEAR(expected_values, store.get(contexts3), EPS);
+  EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids3), EPS);
 }
 
 TEST_F(UnconstrainedFeatureStoreTest, TestUpdateSquared) {
@@ -107,11 +106,11 @@ TEST_F(UnconstrainedFeatureStoreTest, TestUpdateSquared) {
   EXPECT_EQ(3, store.size());
   VectorReal expected_values(3);
   expected_values << 1, 2, 3;
-  EXPECT_MATRIX_NEAR(expected_values, store.get(contexts1), EPS);
+  EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids1), EPS);
   expected_values << 8.25, 6.5625, 5;
-  EXPECT_MATRIX_NEAR(expected_values, store.get(contexts2), EPS);
+  EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids2), EPS);
   expected_values << 0.25, 0.5625, 1;
-  EXPECT_MATRIX_NEAR(expected_values, store.get(contexts3), EPS);
+  EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids3), EPS);
 }
 
 TEST_F(UnconstrainedFeatureStoreTest, TestUpdateAdaGrad) {
@@ -120,11 +119,11 @@ TEST_F(UnconstrainedFeatureStoreTest, TestUpdateAdaGrad) {
   EXPECT_EQ(3, store.size());
   VectorReal expected_values(3);
   expected_values << 1, 2, 3;
-  EXPECT_MATRIX_NEAR(expected_values, store.get(contexts1), EPS);
+  EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids1), EPS);
   expected_values << 4.775255, 3.881966, 3;
-  EXPECT_MATRIX_NEAR(expected_values, store.get(contexts2), EPS);
+  EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids2), EPS);
   expected_values << -0.707106, -0.866025, -1;
-  EXPECT_MATRIX_NEAR(expected_values, store.get(contexts3), EPS);
+  EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids3), EPS);
 }
 
 TEST_F(UnconstrainedFeatureStoreTest, TestSerialization) {

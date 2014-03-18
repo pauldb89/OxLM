@@ -10,10 +10,10 @@ UnconstrainedFeatureStore::UnconstrainedFeatureStore(int vector_size)
     : vectorSize(vector_size) {}
 
 VectorReal UnconstrainedFeatureStore::get(
-    const vector<FeatureContext>& feature_contexts) const {
+    const vector<FeatureContextId>& feature_context_ids) const {
   VectorReal result = VectorReal::Zero(vectorSize);
-  for (const FeatureContext& feature_context: feature_contexts) {
-    auto it = featureWeights.find(feature_context);
+  for (const FeatureContextId& feature_context_id: feature_context_ids) {
+    auto it = featureWeights.find(feature_context_id);
     if (it != featureWeights.end()) {
       result += it->second;
     }
@@ -22,10 +22,10 @@ VectorReal UnconstrainedFeatureStore::get(
 }
 
 void UnconstrainedFeatureStore::update(
-    const vector<FeatureContext>& feature_contexts,
+    const vector<FeatureContextId>& feature_context_ids,
     const VectorReal& values) {
-  for (const FeatureContext& feature_context: feature_contexts) {
-    update(feature_context, values);
+  for (const FeatureContextId& feature_context_id: feature_context_ids) {
+    update(feature_context_id, values);
   }
 }
 
@@ -105,12 +105,12 @@ bool UnconstrainedFeatureStore::operator==(
 }
 
 void UnconstrainedFeatureStore::update(
-    const FeatureContext& feature_context, const VectorReal& values) {
-  auto it = featureWeights.find(feature_context);
+    const FeatureContextId& feature_context_id, const VectorReal& values) {
+  auto it = featureWeights.find(feature_context_id);
   if (it != featureWeights.end()) {
     it->second += values;
   } else {
-    featureWeights.insert(make_pair(feature_context, values));
+    featureWeights.insert(make_pair(feature_context_id, values));
   }
 }
 

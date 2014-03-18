@@ -58,6 +58,7 @@ Real sgd_gradient(FactoredMaxentNLM& model,
                   const Corpus& training_corpus,
                   const TrainingInstances &indexes,
                   const WordToClassIndex& index,
+                  const boost::shared_ptr<FeatureGenerator>& generator,
                   Real lambda,
                   WordVectorsType& g_R,
                   WordVectorsType& g_Q,
@@ -132,10 +133,12 @@ FactoredMaxentNLM learn(ModelData& config) {
   int context_width = config.ngram_order - 1;
   WordToClassIndex index(classes);
   ContextExtractor extractor(training_corpus, context_width, start_id, end_id);
-  FeatureGenerator generator(config.feature_context_size);
+  boost::shared_ptr<FeatureGenerator> generator =
+      boost::make_shared<FeatureGenerator>(
+          training_corpus, extractor, config.feature_context_size);
   FeatureMatcher feature_matcher(training_corpus, index, extractor, generator);
   FeatureStoreInitializer initializer(config, index, feature_matcher);
-  FactoredMaxentNLM model(config, dict, index, initializer);
+  FactoredMaxentNLM model(config, dict, index, generator, initializer);
   model.FB = class_bias;
 
   if (config.model_input_file.size()) {
@@ -254,8 +257,9 @@ FactoredMaxentNLM learn(ModelData& config) {
 
         #pragma omp barrier
         cache_data(start, end, training_corpus, training_indices, training_instances);
-        Real f = sgd_gradient(model, training_corpus, training_instances, index,
-                              lambda, g_R, g_Q, g_C, g_B, g_F, g_FB, g_U, g_V);
+        Real f = sgd_gradient(
+            model, training_corpus, training_instances, index, generator,
+            lambda, g_R, g_Q, g_C, g_B, g_F, g_FB, g_U, g_V);
 
         #pragma omp critical
         {
@@ -379,6 +383,7 @@ Real sgd_gradient(FactoredMaxentNLM& model,
                   const Corpus& training_corpus,
                   const TrainingInstances &training_instances,
                   const WordToClassIndex& index,
+                  const boost::shared_ptr<FeatureGenerator>& generator,
                   Real lambda,
                   WordVectorsType& g_R,
                   WordVectorsType& g_Q,
@@ -414,7 +419,6 @@ Real sgd_gradient(FactoredMaxentNLM& model,
   MatrixReal weightedRepresentations = MatrixReal::Zero(instances, word_width);
 
   // Calculate the function and gradient for each ngram.
-  FeatureGenerator feature_generator(model.config.feature_context_size);
   for (int instance=0; instance < instances; instance++) {
     int w_i = training_instances.at(instance);
     WordId w = training_corpus.at(w_i);
@@ -423,16 +427,16 @@ Real sgd_gradient(FactoredMaxentNLM& model,
     int c_size = index.getClassSize(c);
     int word_index = index.getWordIndexInClass(w);
 
-    vector<FeatureContext> feature_contexts =
-        feature_generator.generate(contexts[instance]);
+    vector<FeatureContextId> feature_context_ids =
+        generator->getFeatureContextIds(contexts[instance]);
 
     // a simple sigmoid non-linearity
     prediction_vectors.row(instance) = sigmoid(prediction_vectors.row(instance));
     //for (int x=0; x<word_width; ++x)
     //  prediction_vectors.row(instance)(x) *= (prediction_vectors.row(instance)(x) > 0 ? 1 : 0.01); // rectifier
 
-    VectorReal class_feature_scores = model.U->get(feature_contexts);
-    VectorReal word_feature_scores = model.V[c]->get(feature_contexts);
+    VectorReal class_feature_scores = model.U->get(feature_context_ids);
+    VectorReal word_feature_scores = model.V[c]->get(feature_context_ids);
     VectorReal class_conditional_scores = model.F * prediction_vectors.row(instance).transpose() + model.FB + class_feature_scores;
     VectorReal word_conditional_scores  = model.class_R(c) * prediction_vectors.row(instance).transpose() + model.class_B(c) + word_feature_scores;
 
@@ -457,8 +461,8 @@ Real sgd_gradient(FactoredMaxentNLM& model,
     g_FB += class_conditional_probs;
     g_R.block(c_start, 0, c_size, g_R.cols()) += word_conditional_probs * prediction_vectors.row(instance);
     g_B.segment(c_start, c_size) += word_conditional_probs;
-    g_U->update(feature_contexts, class_conditional_probs);
-    g_V[c]->update(feature_contexts, word_conditional_probs);
+    g_U->update(feature_context_ids, class_conditional_probs);
+    g_V[c]->update(feature_context_ids, word_conditional_probs);
 
     // a simple sigmoid non-linearity derivative
     weightedRepresentations.row(instance).array() *=

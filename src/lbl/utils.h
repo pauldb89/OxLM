@@ -16,6 +16,8 @@ typedef int            WordId;
 typedef vector<WordId> Sentence;
 typedef vector<WordId> Corpus;
 
+typedef int            FeatureContextId;
+
 typedef Eigen::Matrix<Real, Eigen::Dynamic, Eigen::Dynamic> MatrixReal;
 typedef Eigen::Matrix<Real, Eigen::Dynamic, 1>              VectorReal;
 typedef Eigen::Array<Real, Eigen::Dynamic, 1>               ArrayReal;

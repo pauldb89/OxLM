@@ -18,11 +18,11 @@ namespace oxlm {
 
 class FactoredMaxentNLM : public FactoredNLM {
  public:
-  FactoredMaxentNLM();
-
   FactoredMaxentNLM(
       const ModelData& config, const Dict& labels,
-      const WordToClassIndex& index, const FeatureStoreInitializer& initializer);
+      const WordToClassIndex& index,
+      const boost::shared_ptr<FeatureGenerator>& generator,
+      const FeatureStoreInitializer& initializer);
 
   virtual Real log_prob(
       WordId w, const vector<WordId>& context,
@@ -36,7 +36,7 @@ class FactoredMaxentNLM : public FactoredNLM {
   template<class Archive>
   void save(Archive& ar, const unsigned int version) const {
     ar << boost::serialization::base_object<const FactoredNLM>(*this);
-    ar << U << V;
+    ar << *generator << U << V;
   }
 
   template<class Archive>
@@ -44,12 +44,13 @@ class FactoredMaxentNLM : public FactoredNLM {
     ar >> boost::serialization::base_object<FactoredNLM>(*this);
     ar.register_type(static_cast<UnconstrainedFeatureStore*>(NULL));
     ar.register_type(static_cast<SparseFeatureStore*>(NULL));
-    ar >> U >> V;
+    ar >> *generator >> U >> V;
   }
 
   BOOST_SERIALIZATION_SPLIT_MEMBER();
 
  public:
+  boost::shared_ptr<FeatureGenerator> generator;
   boost::shared_ptr<FeatureStore> U;
   vector<boost::shared_ptr<FeatureStore>> V;
 };

@@ -25,73 +25,73 @@ class SparseFeatureStoreTest : public ::testing::Test {
 
     VectorReal values(5);
 
-    vector<int> feature_data = {1};
-    contexts1 = {FeatureContext(0, feature_data)};
-    store.hintFeatureIndex(contexts1, 1);
-    g_store.hintFeatureIndex(contexts1, 1);
-    store.hintFeatureIndex(contexts1, 4);
-    g_store.hintFeatureIndex(contexts1, 4);
+    feature_context_ids1 = {1};
+    store.hintFeatureIndex(feature_context_ids1, 1);
+    g_store.hintFeatureIndex(feature_context_ids1, 1);
+    store.hintFeatureIndex(feature_context_ids1, 4);
+    g_store.hintFeatureIndex(feature_context_ids1, 4);
     values << 0, 2, 0, 0, 4;
-    store.update(contexts1, values);
+    store.update(feature_context_ids1, values);
 
-    feature_data = {2};
-    contexts2 = {FeatureContext(0, feature_data)};
+    feature_context_ids2 = {2};
     values = SparseVectorReal(5);
     values << 1, 0, 0, 0, 3;
-    store.hintFeatureIndex(contexts2, 0);
-    store.hintFeatureIndex(contexts2, 1);
-    store.hintFeatureIndex(contexts2, 4);
-    store.update(contexts2, values);
+    store.hintFeatureIndex(feature_context_ids2, 0);
+    store.hintFeatureIndex(feature_context_ids2, 1);
+    store.hintFeatureIndex(feature_context_ids2, 4);
+    store.update(feature_context_ids2, values);
 
     values = SparseVectorReal(5);
     values << 5, 3, 0, 0, 0;
-    g_store.hintFeatureIndex(contexts2, 0);
-    g_store.hintFeatureIndex(contexts2, 1);
-    g_store.hintFeatureIndex(contexts2, 4);
-    g_store.update(contexts2, values);
+    g_store.hintFeatureIndex(feature_context_ids2, 0);
+    g_store.hintFeatureIndex(feature_context_ids2, 1);
+    g_store.hintFeatureIndex(feature_context_ids2, 4);
+    g_store.update(feature_context_ids2, values);
 
-    feature_data = {1};
-    contexts3 = {FeatureContext(1, feature_data)};
+    feature_context_ids3 = {3};
     values = SparseVectorReal(5);
     values << 0, 0, 2, 1, 0;
-    store.hintFeatureIndex(contexts3, 2);
-    g_store.hintFeatureIndex(contexts3, 2);
-    store.hintFeatureIndex(contexts3, 3);
-    g_store.hintFeatureIndex(contexts3, 3);
-    g_store.update(contexts3, values);
+    store.hintFeatureIndex(feature_context_ids3, 2);
+    g_store.hintFeatureIndex(feature_context_ids3, 2);
+    store.hintFeatureIndex(feature_context_ids3, 3);
+    g_store.hintFeatureIndex(feature_context_ids3, 3);
+    g_store.update(feature_context_ids3, values);
 
     gradient_store = boost::make_shared<SparseFeatureStore>(g_store);
   }
 
   SparseFeatureStore store;
   boost::shared_ptr<FeatureStore> gradient_store;
-  vector<FeatureContext> contexts1, contexts2, contexts3;
+  vector<FeatureContextId> feature_context_ids1;
+  vector<FeatureContextId> feature_context_ids2;
+  vector<FeatureContextId> feature_context_ids3;
 };
 
 TEST_F(SparseFeatureStoreTest, TestBasic) {
   SparseFeatureStore feature_store(5);
-  EXPECT_MATRIX_NEAR(VectorReal::Zero(5), feature_store.get(contexts1), EPS);
+  EXPECT_MATRIX_NEAR(
+      VectorReal::Zero(5), feature_store.get(feature_context_ids1), EPS);
 
-  feature_store.hintFeatureIndex(contexts1, 1);
-  feature_store.hintFeatureIndex(contexts1, 3);
-  feature_store.hintFeatureIndex(contexts1, 4);
+  feature_store.hintFeatureIndex(feature_context_ids1, 1);
+  feature_store.hintFeatureIndex(feature_context_ids1, 3);
+  feature_store.hintFeatureIndex(feature_context_ids1, 4);
   VectorReal values(5), expected_values(5);
   values << 10, 1, 20, 3, 4;
   expected_values << 0, 1, 0, 3, 4;
-  feature_store.update(contexts1, values);
-  EXPECT_MATRIX_NEAR(expected_values, feature_store.get(contexts1), EPS);
-  feature_store.update(contexts1, values);
+  feature_store.update(feature_context_ids1, values);
+  EXPECT_MATRIX_NEAR(
+      expected_values, feature_store.get(feature_context_ids1), EPS);
+  feature_store.update(feature_context_ids1, values);
   expected_values *= 2;
-  EXPECT_MATRIX_NEAR(expected_values, feature_store.get(contexts1), EPS);
+  EXPECT_MATRIX_NEAR(
+      expected_values, feature_store.get(feature_context_ids1), EPS);
 }
 
 TEST_F(SparseFeatureStoreTest, TestCombined) {
-  vector<FeatureContext> contexts = contexts1;
-  contexts.insert(contexts.end(), contexts2.begin(), contexts2.end());
-
+  vector<FeatureContextId> feature_context_ids = {1, 2};
   VectorReal expected_values(5);
   expected_values << 1, 2, 0, 0, 7;
-  EXPECT_MATRIX_NEAR(expected_values, store.get(contexts), EPS);
+  EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids), EPS);
 }
 
 TEST_F(SparseFeatureStoreTest, TestUpdateRegularizer) {
@@ -99,9 +99,9 @@ TEST_F(SparseFeatureStoreTest, TestUpdateRegularizer) {
 
   VectorReal expected_values(5);
   expected_values << 0, 1, 0, 0, 2;
-  EXPECT_MATRIX_NEAR(expected_values, store.get(contexts1), EPS);
+  EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids1), EPS);
   expected_values << 0.5, 0, 0, 0, 1.5;
-  EXPECT_MATRIX_NEAR(expected_values, store.get(contexts2), EPS);
+  EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids2), EPS);
 }
 
 TEST_F(SparseFeatureStoreTest, TestUpdateStore) {
@@ -110,11 +110,11 @@ TEST_F(SparseFeatureStoreTest, TestUpdateStore) {
   EXPECT_EQ(3, store.size());
   VectorReal expected_values(5);
   expected_values << 0, 2, 0, 0, 4;
-  EXPECT_MATRIX_NEAR(expected_values, store.get(contexts1), EPS);
+  EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids1), EPS);
   expected_values << 6, 3, 0, 0, 3;
-  EXPECT_MATRIX_NEAR(expected_values, store.get(contexts2), EPS);
+  EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids2), EPS);
   expected_values << 0, 0, 2, 1, 0;
-  EXPECT_MATRIX_NEAR(expected_values, store.get(contexts3), EPS);
+  EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids3), EPS);
 }
 
 TEST_F(SparseFeatureStoreTest, TestUpdateSquared) {
@@ -123,11 +123,11 @@ TEST_F(SparseFeatureStoreTest, TestUpdateSquared) {
   EXPECT_EQ(3, store.size());
   VectorReal expected_values(5);
   expected_values << 0, 2, 0, 0, 4;
-  EXPECT_MATRIX_NEAR(expected_values, store.get(contexts1), EPS);
+  EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids1), EPS);
   expected_values << 26, 9, 0, 0, 3;
-  EXPECT_MATRIX_NEAR(expected_values, store.get(contexts2), EPS);
+  EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids2), EPS);
   expected_values << 0, 0, 4, 1, 0;
-  EXPECT_MATRIX_NEAR(expected_values, store.get(contexts3), EPS);
+  EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids3), EPS);
 }
 
 TEST_F(SparseFeatureStoreTest, TestUpdateAdaGrad) {
@@ -136,11 +136,11 @@ TEST_F(SparseFeatureStoreTest, TestUpdateAdaGrad) {
   EXPECT_EQ(3, store.size());
   VectorReal expected_values(5);
   expected_values << 0, 2, 0, 0, 4;
-  EXPECT_MATRIX_NEAR(expected_values, store.get(contexts1), EPS);
+  EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids1), EPS);
   expected_values << -1.236067, -1.732050, 0, 0, 3;
-  EXPECT_MATRIX_NEAR(expected_values, store.get(contexts2), EPS);
+  EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids2), EPS);
   expected_values << 0, 0, -1.41421, -1, 0;
-  EXPECT_MATRIX_NEAR(expected_values, store.get(contexts3), EPS);
+  EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids3), EPS);
 
 }
 
@@ -148,14 +148,14 @@ TEST_F(SparseFeatureStoreTest, TestClear) {
   store.clear();
   EXPECT_EQ(3, store.size());
 
-  EXPECT_MATRIX_NEAR(VectorReal::Zero(5), store.get(contexts1), EPS);
+  EXPECT_MATRIX_NEAR(VectorReal::Zero(5), store.get(feature_context_ids1), EPS);
 
   VectorReal values(5);
   values << 1, 2, 3, 4, 5;
-  store.update(contexts1, values);
+  store.update(feature_context_ids1, values);
   VectorReal expected_values(5);
   expected_values << 0, 2, 0, 0, 5;
-  EXPECT_MATRIX_NEAR(expected_values, store.get(contexts1), EPS);
+  EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids1), EPS);
 }
 
 TEST_F(SparseFeatureStoreTest, TestSerialization) {

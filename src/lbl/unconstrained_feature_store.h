@@ -17,10 +17,10 @@ class UnconstrainedFeatureStore : public FeatureStore {
   UnconstrainedFeatureStore(int vector_size);
 
   virtual VectorReal get(
-      const vector<FeatureContext>& feature_contexts) const;
+      const vector<FeatureContextId>& feature_context_ids) const;
 
   virtual void update(
-      const vector<FeatureContext>& feature_contexts,
+      const vector<FeatureContextId>& feature_context_ids,
       const VectorReal& values);
 
   virtual Real updateRegularizer(Real lambda);
@@ -43,7 +43,7 @@ class UnconstrainedFeatureStore : public FeatureStore {
 
  private:
   void update(
-      const FeatureContext& feature_context,
+      const FeatureContextId& feature_context_id,
       const VectorReal& values);
 
   boost::shared_ptr<UnconstrainedFeatureStore> cast(
@@ -75,20 +75,19 @@ class UnconstrainedFeatureStore : public FeatureStore {
     size_t num_entries;
     ar >> num_entries;
     for (size_t i = 0; i < num_entries; ++i) {
-      FeatureContext feature_context;
-      ar >> feature_context;
+      FeatureContextId feature_context_id;
+      ar >> feature_context_id;
 
       VectorReal weights = VectorReal::Zero(vectorSize);
       ar >> boost::serialization::make_array(weights.data(), vectorSize);
 
-      featureWeights.insert(make_pair(feature_context, weights));
+      featureWeights.insert(make_pair(feature_context_id, weights));
     }
   }
 
   BOOST_SERIALIZATION_SPLIT_MEMBER();
 
-  unordered_map<FeatureContext, VectorReal, hash<FeatureContext>>
-      featureWeights;
+  unordered_map<FeatureContextId, VectorReal> featureWeights;
   int vectorSize;
 
 };

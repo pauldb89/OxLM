@@ -15,10 +15,10 @@ namespace oxlm {
 class FeatureStore {
  public:
   virtual VectorReal get(
-      const vector<FeatureContext>& feature_contexts) const = 0;
+      const vector<FeatureContextId>& feature_context_ids) const = 0;
 
   virtual void update(
-      const vector<FeatureContext>& feature_contexts,
+      const vector<FeatureContextId>& feature_context_ids,
       const VectorReal& values) = 0;
 
   virtual Real updateRegularizer(Real lambda) = 0;

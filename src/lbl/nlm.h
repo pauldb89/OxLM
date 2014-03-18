@@ -2,7 +2,6 @@
 
 #include <iostream>
 #include <fstream>
-#include <memory>
 
 #include "corpus/corpus.h"
 #include "lbl/config.h"

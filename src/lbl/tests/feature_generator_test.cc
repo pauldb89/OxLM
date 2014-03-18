@@ -5,37 +5,32 @@
 namespace oxlm {
 
 TEST(FeatureGeneratorTest, TestLongerHistory) {
-  FeatureGenerator generator(3);
-  vector<int> history = {1, 2, 3, 4, 5};
-  vector<FeatureContext> feature_contexts = generator.generate(history);
+  vector<int> corpus = {2, 3, 4, 5, 6, 1};
+  ContextExtractor extractor(corpus, 5, 0, 1);
+  FeatureGenerator generator(corpus, extractor, 3);
 
-  EXPECT_EQ(3, feature_contexts.size());
-  vector<int> expected_feature_data = {1};
-  EXPECT_EQ(expected_feature_data, feature_contexts[0].data);
-  EXPECT_EQ(0, feature_contexts[0].feature_type);
-  expected_feature_data = {1, 2};
-  EXPECT_EQ(expected_feature_data, feature_contexts[1].data);
-  EXPECT_EQ(1, feature_contexts[1].feature_type);
-  expected_feature_data = {1, 2, 3};
-  EXPECT_EQ(expected_feature_data, feature_contexts[2].data);
-  EXPECT_EQ(2, feature_contexts[2].feature_type);
+  vector<int> history = {6, 5, 4, 3, 2};
+  vector<FeatureContextId> feature_context_ids =
+      generator.getFeatureContextIds(history);
+  EXPECT_EQ(3, feature_context_ids.size());
+  EXPECT_EQ(15, feature_context_ids[0]);
+  EXPECT_EQ(16, feature_context_ids[1]);
+  EXPECT_EQ(17, feature_context_ids[2]);
 }
 
 TEST(FeatureGeneratorTest, TestShorterHistory) {
-  FeatureGenerator generator(5);
-  vector<int> history = {1, 2, 3};
-  vector<FeatureContext> feature_contexts = generator.generate(history);
+  vector<int> corpus = {2, 3, 4, 5, 6, 1};
+  ContextExtractor extractor(corpus, 3, 0, 1);
+  FeatureGenerator generator(corpus, extractor, 5);
 
-  EXPECT_EQ(3, feature_contexts.size());
-  vector<int> expected_feature_data = {1};
-  EXPECT_EQ(expected_feature_data, feature_contexts[0].data);
-  EXPECT_EQ(0, feature_contexts[0].feature_type);
-  expected_feature_data = {1, 2};
-  EXPECT_EQ(expected_feature_data, feature_contexts[1].data);
-  EXPECT_EQ(1, feature_contexts[1].feature_type);
-  expected_feature_data = {1, 2, 3};
-  EXPECT_EQ(expected_feature_data, feature_contexts[2].data);
-  EXPECT_EQ(2, feature_contexts[2].feature_type);
+  vector<int> history = {6, 5, 4};
+  vector<FeatureContextId> feature_context_ids =
+      generator.getFeatureContextIds(history);
+
+  EXPECT_EQ(3, feature_context_ids.size());
+  EXPECT_EQ(15, feature_context_ids[0]);
+  EXPECT_EQ(16, feature_context_ids[1]);
+  EXPECT_EQ(17, feature_context_ids[2]);
 }
 
 } // namespace oxlm

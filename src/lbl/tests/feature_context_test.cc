@@ -15,7 +15,7 @@ namespace oxlm {
 
 TEST(FeatureContextTest, TestSerialization) {
   vector<int> data = {1, 2, 3};
-  FeatureContext feature_context(2, data);
+  FeatureContext feature_context(data);
 
   stringstream stream(ios_base::binary | ios_base::out | ios_base::in);
   ar::binary_oarchive output_stream(stream, ar::no_header);

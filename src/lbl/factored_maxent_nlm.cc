@@ -6,12 +6,12 @@
 
 namespace oxlm {
 
-FactoredMaxentNLM::FactoredMaxentNLM() {}
-
 FactoredMaxentNLM::FactoredMaxentNLM(
     const ModelData& config, const Dict& labels,
-    const WordToClassIndex& index, const FeatureStoreInitializer& initializer)
-    : FactoredNLM(config, labels, index) {
+    const WordToClassIndex& index,
+    const boost::shared_ptr<FeatureGenerator>& generator,
+    const FeatureStoreInitializer& initializer)
+    : FactoredNLM(config, labels, index), generator(generator) {
   initializer.initialize(U, V);
 }
 
@@ -30,10 +30,10 @@ Real FactoredMaxentNLM::log_prob(
 
   int c = get_class(w);
   int word_index = index.getWordIndexInClass(w);
-  FeatureGenerator generator(config.feature_context_size);
-  vector<FeatureContext> feature_contexts = generator.generate(context);
-  VectorReal class_feature_scores = U->get(feature_contexts);
-  VectorReal word_feature_scores = V[c]->get(feature_contexts);
+  vector<FeatureContextId> feature_context_ids =
+      generator->getFeatureContextIds(context);
+  VectorReal class_feature_scores = U->get(feature_context_ids);
+  VectorReal word_feature_scores = V[c]->get(feature_context_ids);
 
   // a simple non-linearity
   if (non_linear) {

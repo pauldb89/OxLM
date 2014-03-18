@@ -6,6 +6,7 @@
 #include "lbl/feature_context.h"
 #include "lbl/feature_store.h"
 #include "lbl/utils.h"
+#include "utils/serialization_helpers.h"
 
 using namespace std;
 
@@ -23,10 +24,10 @@ class SparseFeatureStore : public FeatureStore {
       bool random_weights);
 
   virtual VectorReal get(
-      const vector<FeatureContext>& feature_contexts) const;
+      const vector<FeatureContextId>& feature_context_ids) const;
 
   virtual void update(
-      const vector<FeatureContext>& feature_contexts,
+      const vector<FeatureContextId>& feature_context_ids,
       const VectorReal& values);
 
   virtual Real updateRegularizer(Real lambda);
@@ -46,18 +47,18 @@ class SparseFeatureStore : public FeatureStore {
   virtual size_t size() const;
 
   void hintFeatureIndex(
-      const vector<FeatureContext>& feature_context,
+      const vector<FeatureContextId>& feature_context_id,
       int feature_index, Real value = 0);
 
   bool operator==(const SparseFeatureStore& store) const;
 
  private:
   void update(
-      const FeatureContext& feature_context,
+      const FeatureContextId& feature_context_id,
       const VectorReal& values);
 
   void update(
-      const FeatureContext& feature_context,
+      const FeatureContextId& feature_context_id,
       const SparseVectorReal& values);
 
   boost::shared_ptr<SparseFeatureStore> cast(
@@ -87,19 +88,18 @@ class SparseFeatureStore : public FeatureStore {
     size_t num_entries;
     ar >> num_entries;
     for (size_t i = 0; i < num_entries; ++i) {
-      FeatureContext feature_context;
-      ar >> feature_context;
+      FeatureContextId feature_context_id;
+      ar >> feature_context_id;
       SparseVectorReal weights;
       ar >> weights;
-      featureWeights.insert(make_pair(feature_context, weights));
+      featureWeights.insert(make_pair(feature_context_id, weights));
     }
   }
 
   BOOST_SERIALIZATION_SPLIT_MEMBER();
 
-  unordered_set<FeatureContext> observedContexts;
-  unordered_map<FeatureContext, SparseVectorReal, hash<FeatureContext>>
-      featureWeights;
+  unordered_set<FeatureContextId> observedContexts;
+  unordered_map<FeatureContextId, SparseVectorReal> featureWeights;
   int vectorMaxSize;
 };
 
@@ -126,42 +126,3 @@ struct CwiseDenominatorOp {
 };
 
 } // namespace oxlm
-
-namespace boost {
-namespace serialization {
-
-template<class Archive, class Scalar>
-inline void save(
-    Archive& ar, const Eigen::SparseVector<Scalar>& v,
-    const unsigned int version) {
-  int max_size = v.size();
-  ar << max_size;
-  int actual_size = v.nonZeros();
-  ar << actual_size;
-  ar << boost::serialization::make_array(&v._data().index(0), actual_size);
-  ar << boost::serialization::make_array(&v._data().value(0), actual_size);
-}
-
-template<class Archive, class Scalar>
-inline void load(
-    Archive& ar, Eigen::SparseVector<Scalar>& v, const unsigned int version) {
-  int max_size;
-  ar >> max_size;
-  v.resize(max_size);
-  int actual_size;
-  ar >> actual_size;
-  v.resizeNonZeros(actual_size);
-  ar >> boost::serialization::make_array(&v._data().index(0), actual_size);
-  ar >> boost::serialization::make_array(&v._data().value(0), actual_size);
-}
-
-template<class Archive, class Scalar>
-inline void serialize(
-    Archive& ar, Eigen::SparseVector<Scalar>& v, const unsigned int version) {
-  boost::serialization::split_free(ar, v, version);
-}
-
-} // namespace serialization
-} // namespace boost
-
-

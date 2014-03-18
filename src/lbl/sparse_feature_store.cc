@@ -27,10 +27,10 @@ SparseFeatureStore::SparseFeatureStore(
 }
 
 VectorReal SparseFeatureStore::get(
-    const vector<FeatureContext>& feature_contexts) const {
+    const vector<FeatureContextId>& feature_context_ids) const {
   VectorReal result = VectorReal::Zero(vectorMaxSize);
-  for (const FeatureContext& feature_context: feature_contexts) {
-    auto it = featureWeights.find(feature_context);
+  for (const FeatureContextId& feature_context_id: feature_context_ids) {
+    auto it = featureWeights.find(feature_context_id);
     if (it != featureWeights.end()) {
       result += it->second;
     }
@@ -39,18 +39,18 @@ VectorReal SparseFeatureStore::get(
 }
 
 void SparseFeatureStore::update(
-    const vector<FeatureContext>& feature_contexts,
+    const vector<FeatureContextId>& feature_context_ids,
     const VectorReal& values) {
-  for (const FeatureContext& feature_context: feature_contexts) {
-    observedContexts.insert(feature_context);
-    update(feature_context, values);
+  for (const FeatureContextId& feature_context_id: feature_context_ids) {
+    observedContexts.insert(feature_context_id);
+    update(feature_context_id, values);
   }
 }
 
 Real SparseFeatureStore::updateRegularizer(Real lambda) {
   Real result = 0;
-  for (const FeatureContext& feature_context: observedContexts) {
-    SparseVectorReal& weights = featureWeights.at(feature_context);
+  for (const FeatureContextId& feature_context_id: observedContexts) {
+    SparseVectorReal& weights = featureWeights.at(feature_context_id);
     weights -= lambda * weights;
     result += weights.cwiseAbs2().sum();
   }
@@ -60,20 +60,20 @@ Real SparseFeatureStore::updateRegularizer(Real lambda) {
 void SparseFeatureStore::update(
     const boost::shared_ptr<FeatureStore>& base_store) {
   boost::shared_ptr<SparseFeatureStore> store = cast(base_store);
-  for (const FeatureContext& feature_context: store->observedContexts) {
-    observedContexts.insert(feature_context);
-    update(feature_context, store->featureWeights.at(feature_context));
+  for (const FeatureContextId& feature_context_id: store->observedContexts) {
+    observedContexts.insert(feature_context_id);
+    update(feature_context_id, store->featureWeights.at(feature_context_id));
   }
 }
 
 void SparseFeatureStore::updateSquared(
     const boost::shared_ptr<FeatureStore>& base_store) {
   boost::shared_ptr<SparseFeatureStore> store = cast(base_store);
-  for (const FeatureContext& feature_context: store->observedContexts) {
-    observedContexts.insert(feature_context);
-    SparseVectorReal values = store->featureWeights.at(feature_context);
+  for (const FeatureContextId& feature_context_id: store->observedContexts) {
+    observedContexts.insert(feature_context_id);
+    SparseVectorReal values = store->featureWeights.at(feature_context_id);
     values = values.cwiseAbs2();
-    update(feature_context, values);
+    update(feature_context_id, values);
   }
 }
 
@@ -85,13 +85,13 @@ void SparseFeatureStore::updateAdaGrad(
       cast(base_gradient_store);
   boost::shared_ptr<SparseFeatureStore> adagrad_store =
       cast(base_adagrad_store);
-  for (const FeatureContext& feature_context: gradient_store->observedContexts) {
-    observedContexts.insert(feature_context);
-    SparseVectorReal& weights = featureWeights.at(feature_context);
+  for (const FeatureContextId& feature_context_id: gradient_store->observedContexts) {
+    observedContexts.insert(feature_context_id);
+    SparseVectorReal& weights = featureWeights.at(feature_context_id);
     const SparseVectorReal& gradient =
-        gradient_store->featureWeights.at(feature_context);
+        gradient_store->featureWeights.at(feature_context_id);
     const SparseVectorReal& adagrad =
-        adagrad_store->featureWeights.at(feature_context);
+        adagrad_store->featureWeights.at(feature_context_id);
     const SparseVectorReal& denominator =
         adagrad.cwiseSqrt().unaryExpr(CwiseDenominatorOp<Real>(EPS));
     weights -= step_size * gradient.cwiseProduct(denominator);
@@ -99,8 +99,8 @@ void SparseFeatureStore::updateAdaGrad(
 }
 
 void SparseFeatureStore::clear() {
-  for (const FeatureContext& feature_context: observedContexts) {
-    SparseVectorReal& weights = featureWeights.at(feature_context);
+  for (const FeatureContextId& feature_context_id: observedContexts) {
+    SparseVectorReal& weights = featureWeights.at(feature_context_id);
     weights = weights.unaryExpr(CwiseSetValueOp<Real>(0));
   }
   observedContexts.clear();
@@ -111,16 +111,16 @@ size_t SparseFeatureStore::size() const {
 }
 
 void SparseFeatureStore::hintFeatureIndex(
-    const vector<FeatureContext>& feature_contexts,
+    const vector<FeatureContextId>& feature_context_ids,
     int feature_index, Real value) {
-  for (const FeatureContext& feature_context: feature_contexts) {
-    auto it = featureWeights.find(feature_context);
+  for (const FeatureContextId& feature_context_id: feature_context_ids) {
+    auto it = featureWeights.find(feature_context_id);
     if (it != featureWeights.end()) {
       it->second.coeffRef(feature_index) = value;
     } else {
       SparseVectorReal weights(vectorMaxSize);
       weights.coeffRef(feature_index) = value;
-      featureWeights.insert(make_pair(feature_context, weights));
+      featureWeights.insert(make_pair(feature_context_id, weights));
     }
   }
 }
@@ -147,16 +147,17 @@ bool SparseFeatureStore::operator==(const SparseFeatureStore& store) const {
 }
 
 void SparseFeatureStore::update(
-    const FeatureContext& feature_context, const VectorReal& values) {
-  SparseVectorReal& weights = featureWeights.at(feature_context);
+    const FeatureContextId& feature_context_id, const VectorReal& values) {
+  SparseVectorReal& weights = featureWeights.at(feature_context_id);
   VectorReal pattern = weights.unaryExpr(CwiseSetValueOp<Real>(1));
   VectorReal product = (values.array() * pattern.array()).matrix();
   weights += product.sparseView();
 }
 
 void SparseFeatureStore::update(
-    const FeatureContext& feature_context, const SparseVectorReal& values) {
-  auto it = featureWeights.find(feature_context);
+    const FeatureContextId& feature_context_id,
+    const SparseVectorReal& values) {
+  auto it = featureWeights.find(feature_context_id);
   // All features involved in gradient updates must be defined since the
   // construction of the sparse feature store.
   assert(it != featureWeights.end());

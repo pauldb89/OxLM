@@ -4,15 +4,17 @@ namespace oxlm {
 
 FeatureMatcher::FeatureMatcher(
     const Corpus& corpus, const WordToClassIndex& index,
-    const ContextExtractor& extractor, const FeatureGenerator& generator)
+    const ContextExtractor& extractor,
+    const boost::shared_ptr<FeatureGenerator>& generator)
     : word_features(index.getNumClasses()) {
   for (size_t i = 0; i < corpus.size(); ++i) {
     int class_id = index.getClass(corpus[i]);
-    vector<int> context = extractor.extract(i);
-    vector<FeatureContext> feature_contexts = generator.generate(context);
-    class_features.push_back(make_pair(feature_contexts, class_id));
+    vector<WordId> context = extractor.extract(i);
+    vector<FeatureContextId> feature_context_ids =
+        generator->getFeatureContextIds(context);
+    class_features.push_back(make_pair(feature_context_ids, class_id));
     word_features[class_id].push_back(make_pair(
-        feature_contexts, index.getWordIndexInClass(corpus[i])));
+        feature_context_ids, index.getWordIndexInClass(corpus[i])));
   }
 }
 

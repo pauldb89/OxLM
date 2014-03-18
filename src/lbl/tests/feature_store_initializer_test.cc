@@ -1,5 +1,8 @@
 #include "gtest/gtest.h"
 
+#include <boost/make_shared.hpp>
+#include <boost/shared_ptr.hpp>
+
 #include "lbl/feature_store_initializer.h"
 #include "lbl/sparse_feature_store.h"
 #include "lbl/unconstrained_feature_store.h"
@@ -13,7 +16,8 @@ TEST(FeatureStoreInitializerTest, TestBasic) {
   config.classes = 1;
   WordToClassIndex index(classes);
   ContextExtractor extractor(corpus, config.ngram_order, 0, 1);
-  FeatureGenerator generator(config.feature_context_size);
+  boost::shared_ptr<FeatureGenerator> generator =
+      boost::make_shared<FeatureGenerator>(corpus, extractor, 0);
   FeatureMatcher matcher(corpus, index, extractor, generator);
   FeatureStoreInitializer initializer(config, index, matcher);
 
