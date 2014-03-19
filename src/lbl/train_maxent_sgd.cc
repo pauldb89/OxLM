@@ -118,7 +118,7 @@ int main(int argc, char **argv) {
   cerr << "################################" << endl;
   cerr << "# Config Summary" << endl;
   cerr << "# order = " << config.ngram_order << endl;
-  cerr << "# feature-context-size = " << config.feature_context_size;
+  cerr << "# feature-context-size = " << config.feature_context_size << endl;
   if (config.model_input_file.size()) {
     cerr << "# model-in = " << config.model_input_file << endl;
   }
