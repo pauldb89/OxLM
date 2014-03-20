@@ -136,6 +136,7 @@ int main(int argc, char **argv) {
   cerr << "# iterations = " << config.iterations << endl;
   cerr << "# threads = " << config.threads << endl;
   cerr << "# classes = " << config.classes << endl;
+  cerr << "# sparse features = " << config.sparse_features << endl;
   cerr << "################################" << endl;
 
   learn(config);
