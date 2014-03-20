@@ -1,13 +1,13 @@
-#include "lbl/context_extractor.h"
+#include "lbl/context_processor.h"
 
 namespace oxlm {
 
-ContextExtractor::ContextExtractor(
+ContextProcessor::ContextProcessor(
     const Corpus& corpus, int context_size, int start_id, int end_id)
     : corpus(corpus), contextSize(context_size),
       startId(start_id), endId(end_id) {}
 
-vector<WordId> ContextExtractor::extract(int position) const {
+vector<WordId> ContextProcessor::extract(int position) const {
   vector<WordId> context;
 
   // The context is constructed starting from the most recent word:

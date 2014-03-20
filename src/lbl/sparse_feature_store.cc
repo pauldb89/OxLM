@@ -2,7 +2,6 @@
 
 #include <random>
 
-#include "lbl/feature_generator.h"
 #include "utils/constants.h"
 
 namespace oxlm {

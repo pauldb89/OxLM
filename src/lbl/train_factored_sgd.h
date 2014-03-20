@@ -26,7 +26,7 @@
 
 // Local
 #include "corpus/corpus.h"
-#include "lbl/context_extractor.h"
+#include "lbl/context_processor.h"
 #include "lbl/factored_nlm.h"
 #include "lbl/log_add.h"
 #include "lbl/word_to_class_index.h"
@@ -338,7 +338,7 @@ Real sgd_gradient(FactoredNLM& model,
   WordId end_id = model.label_set().Convert("</s>");
   int word_width = model.config.word_representation_size;
   int context_width = model.config.ngram_order-1;
-  ContextExtractor extractor(training_corpus, context_width, start_id, end_id);
+  ContextProcessor processor(training_corpus, context_width, start_id, end_id);
 
   // form matrices of the ngram histories
 //  clock_t cache_start = clock();
@@ -346,7 +346,7 @@ Real sgd_gradient(FactoredNLM& model,
   vector<vector<WordId>> contexts(instances);
   vector<MatrixReal> context_vectors(context_width, MatrixReal::Zero(instances, word_width));
   for (int instance=0; instance < instances; ++instance) {
-    contexts[instance] = extractor.extract(training_instances[instance]);
+    contexts[instance] = processor.extract(training_instances[instance]);
     for (size_t i = 0; i < context_width; ++i) {
       context_vectors[i].row(instance) = model.Q.row(contexts[instance][i]);
     }
@@ -494,7 +494,7 @@ Real perplexity(const FactoredNLM& model, const Corpus& test_corpus, int stride)
   int tokens=0;
   WordId start_id = model.label_set().Lookup("<s>");
   WordId end_id = model.label_set().Lookup("</s>");
-  ContextExtractor extractor(test_corpus, context_width, start_id, end_id);
+  ContextProcessor processor(test_corpus, context_width, start_id, end_id);
 
   #pragma omp master
   cerr << "Calculating perplexity for " << test_corpus.size()/stride << " tokens";
@@ -502,7 +502,7 @@ Real perplexity(const FactoredNLM& model, const Corpus& test_corpus, int stride)
   size_t thread_num = omp_get_thread_num();
   size_t num_threads = omp_get_num_threads();
   for (size_t s = (thread_num*stride); s < test_corpus.size(); s += (num_threads*stride)) {
-    vector<WordId> context = extractor.extract(s);
+    vector<WordId> context = processor.extract(s);
     Real log_prob = model.log_prob(test_corpus[s], context, true, false);
     p += log_prob;
 

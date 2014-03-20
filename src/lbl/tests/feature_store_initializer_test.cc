@@ -15,10 +15,10 @@ TEST(FeatureStoreInitializerTest, TestBasic) {
   ModelData config;
   config.classes = 1;
   WordToClassIndex index(classes);
-  ContextExtractor extractor(corpus, config.ngram_order, 0, 1);
-  boost::shared_ptr<FeatureGenerator> generator =
-      boost::make_shared<FeatureGenerator>(corpus, extractor, 0);
-  FeatureMatcher matcher(corpus, index, extractor, generator);
+  ContextProcessor processor(corpus, config.ngram_order, 0, 1);
+  boost::shared_ptr<FeatureContextExtractor> extractor =
+      boost::make_shared<FeatureContextExtractor>(corpus, processor, 0);
+  FeatureMatcher matcher(corpus, index, processor, extractor);
   FeatureStoreInitializer initializer(config, index, matcher);
 
   boost::shared_ptr<FeatureStore> U;

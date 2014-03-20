@@ -27,9 +27,9 @@
 #include <Eigen/Core>
 
 // Local
-#include "lbl/context_extractor.h"
+#include "lbl/context_processor.h"
 #include "lbl/feature_context.h"
-#include "lbl/feature_generator.h"
+#include "lbl/feature_context_extractor.h"
 #include "lbl/feature_store.h"
 #include "lbl/feature_store_initializer.h"
 #include "lbl/factored_maxent_nlm.h"
@@ -58,7 +58,7 @@ Real sgd_gradient(FactoredMaxentNLM& model,
                   const Corpus& training_corpus,
                   const TrainingInstances &indexes,
                   const WordToClassIndex& index,
-                  const boost::shared_ptr<FeatureGenerator>& generator,
+                  const boost::shared_ptr<FeatureContextExtractor>& extractor,
                   WordVectorsType& g_R,
                   WordVectorsType& g_Q,
                   ContextTransformsType& g_C,
@@ -131,13 +131,13 @@ FactoredMaxentNLM learn(ModelData& config) {
   //
   int context_width = config.ngram_order - 1;
   WordToClassIndex index(classes);
-  ContextExtractor extractor(training_corpus, context_width, start_id, end_id);
-  boost::shared_ptr<FeatureGenerator> generator =
-      boost::make_shared<FeatureGenerator>(
-          training_corpus, extractor, config.feature_context_size);
-  FeatureMatcher feature_matcher(training_corpus, index, extractor, generator);
+  ContextProcessor processor(training_corpus, context_width, start_id, end_id);
+  boost::shared_ptr<FeatureContextExtractor> extractor =
+      boost::make_shared<FeatureContextExtractor>(
+          training_corpus, processor, config.feature_context_size);
+  FeatureMatcher feature_matcher(training_corpus, index, processor, extractor);
   FeatureStoreInitializer initializer(config, index, feature_matcher);
-  FactoredMaxentNLM model(config, dict, index, generator, initializer);
+  FactoredMaxentNLM model(config, dict, index, extractor, initializer);
   model.FB = class_bias;
 
   if (config.model_input_file.size()) {
@@ -255,7 +255,7 @@ FactoredMaxentNLM learn(ModelData& config) {
         #pragma omp barrier
         cache_data(start, end, training_corpus, training_indices, training_instances);
         Real f = sgd_gradient(
-            model, training_corpus, training_instances, index, generator,
+            model, training_corpus, training_instances, index, extractor,
             g_R, g_Q, g_C, g_B, g_F, g_FB, g_U, g_V);
 
         #pragma omp critical
@@ -382,7 +382,7 @@ Real sgd_gradient(FactoredMaxentNLM& model,
                   const Corpus& training_corpus,
                   const TrainingInstances &training_instances,
                   const WordToClassIndex& index,
-                  const boost::shared_ptr<FeatureGenerator>& generator,
+                  const boost::shared_ptr<FeatureContextExtractor>& extractor,
                   WordVectorsType& g_R,
                   WordVectorsType& g_Q,
                   ContextTransformsType& g_C,
@@ -396,14 +396,14 @@ Real sgd_gradient(FactoredMaxentNLM& model,
   WordId end_id = model.label_set().Convert("</s>");
   int word_width = model.config.word_representation_size;
   int context_width = model.config.ngram_order-1;
-  ContextExtractor extractor(training_corpus, context_width, start_id, end_id);
+  ContextProcessor processor(training_corpus, context_width, start_id, end_id);
 
   // Form matrices of the ngram histories.
   int instances=training_instances.size();
   vector<MatrixReal> context_vectors(context_width, MatrixReal::Zero(instances, word_width));
   vector<vector<int>> contexts(instances);
   for (int instance = 0; instance < instances; ++instance) {
-    contexts[instance] = extractor.extract(training_instances[instance]);
+    contexts[instance] = processor.extract(training_instances[instance]);
     for (int i = 0; i < context_width; ++i) {
       context_vectors.at(i).row(instance) = model.Q.row(contexts[instance][i]);
     }
@@ -426,7 +426,7 @@ Real sgd_gradient(FactoredMaxentNLM& model,
     int word_index = index.getWordIndexInClass(w);
 
     vector<FeatureContextId> feature_context_ids =
-        generator->getFeatureContextIds(contexts[instance]);
+        extractor->getFeatureContextIds(contexts[instance]);
 
     // a simple sigmoid non-linearity
     prediction_vectors.row(instance) = sigmoid(prediction_vectors.row(instance));
@@ -489,7 +489,7 @@ Real perplexity(const FactoredMaxentNLM& model, const Corpus& test_corpus) {
   int tokens=0;
   WordId start_id = model.label_set().Lookup("<s>");
   WordId end_id = model.label_set().Lookup("</s>");
-  ContextExtractor extractor(test_corpus, context_width, start_id, end_id);
+  ContextProcessor processor(test_corpus, context_width, start_id, end_id);
 
   #pragma omp master
   cerr << "Calculating perplexity for " << test_corpus.size() << " tokens";
@@ -497,7 +497,7 @@ Real perplexity(const FactoredMaxentNLM& model, const Corpus& test_corpus) {
   size_t thread_num = omp_get_thread_num();
   size_t num_threads = omp_get_num_threads();
   for (size_t s = thread_num; s < test_corpus.size(); s += num_threads) {
-    vector<WordId> context = extractor.extract(s);
+    vector<WordId> context = processor.extract(s);
     Real log_prob = model.log_prob(test_corpus[s], context, true, false);
     p += log_prob;
 

@@ -1,11 +1,11 @@
-add_test(context_extractor_test)
-target_link_libraries(context_extractor_test lbl)
+add_test(context_processor_test)
+target_link_libraries(context_processor_test lbl)
 
 add_test(feature_context_test)
 target_link_libraries(feature_context_test lbl)
 
-add_test(feature_generator_test)
-target_link_libraries(feature_generator_test lbl)
+add_test(feature_context_extractor_test)
+target_link_libraries(feature_context_extractor_test lbl)
 
 add_test(feature_matcher_test)
 target_link_libraries(feature_matcher_test lbl)

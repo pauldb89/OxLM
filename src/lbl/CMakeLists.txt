@@ -4,11 +4,11 @@
 
 add_library(lbl SHARED
   config.cc
-  context_extractor.cc
+  context_processor.cc
   factored_maxent_nlm.cc
   factored_nlm.cc
   feature_context.cc
-  feature_generator.cc
+  feature_context_extractor.cc
   feature_matcher.cc
   feature_store_initializer.cc
   nlm.cc

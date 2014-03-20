@@ -2,16 +2,14 @@
 
 #include <boost/make_shared.hpp>
 
-#include "lbl/feature_generator.h"
-
 namespace oxlm {
 
 FactoredMaxentNLM::FactoredMaxentNLM(
     const ModelData& config, const Dict& labels,
     const WordToClassIndex& index,
-    const boost::shared_ptr<FeatureGenerator>& generator,
+    const boost::shared_ptr<FeatureContextExtractor>& extractor,
     const FeatureStoreInitializer& initializer)
-    : FactoredNLM(config, labels, index), generator(generator) {
+    : FactoredNLM(config, labels, index), extractor(extractor) {
   initializer.initialize(U, V);
 }
 
@@ -31,7 +29,7 @@ Real FactoredMaxentNLM::log_prob(
   int c = get_class(w);
   int word_index = index.getWordIndexInClass(w);
   vector<FeatureContextId> feature_context_ids =
-      generator->getFeatureContextIds(context);
+      extractor->getFeatureContextIds(context);
   VectorReal class_feature_scores = U->get(feature_context_ids);
   VectorReal word_feature_scores = V[c]->get(feature_context_ids);
 

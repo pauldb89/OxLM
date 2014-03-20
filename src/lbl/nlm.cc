@@ -9,9 +9,8 @@
 #include <random>
 #include <cstring>
 
-#include "nlm.h"
-#include "log_add.h"
-#include "lbl/feature_generator.h"
+#include "lbl/nlm.h"
+#include "lbl/log_add.h"
 
 using namespace std;
 using namespace boost;

@@ -4,7 +4,7 @@
 
 #include <boost/serialization/serialization.hpp>
 
-#include "lbl/context_extractor.h"
+#include "lbl/context_processor.h"
 #include "lbl/feature_context.h"
 #include "lbl/utils.h"
 #include "utils/serialization_helpers.h"
@@ -20,11 +20,11 @@ namespace oxlm {
  * Preprocesses the training corpus to populate the hash table with all the
  * possible feature ids to guarantee thread-safe operations later on.
  **/
-class FeatureGenerator {
+class FeatureContextExtractor {
  public:
-  FeatureGenerator(
+  FeatureContextExtractor(
       const Corpus& corpus,
-      const ContextExtractor& extractor,
+      const ContextProcessor& processor,
       size_t feature_context_size);
 
   vector<FeatureContextId> getFeatureContextIds(

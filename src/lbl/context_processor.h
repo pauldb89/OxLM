@@ -8,9 +8,9 @@ using namespace std;
 
 namespace oxlm {
 
-class ContextExtractor {
+class ContextProcessor {
  public:
-  ContextExtractor(
+  ContextProcessor(
       const Corpus& corpus, int context_size,
       int start_id, int end_id);
 
