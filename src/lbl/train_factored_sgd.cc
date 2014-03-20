@@ -43,7 +43,7 @@ int main(int argc, char **argv) {
         "base filename of model output files")
     ("log-period", value<int>()->default_value(0),
         "Log model every X iterations")
-    ("lambda,r", value<float>()->default_value(7.0),
+    ("lambda-lbl,r", value<float>()->default_value(7.0),
         "regularisation strength parameter")
     ("word-width", value<int>()->default_value(100),
         "Width of word representation vectors.")
@@ -93,7 +93,7 @@ int main(int argc, char **argv) {
     config.model_output_file = vm["model-out"].as<string>();
   }
   config.log_period = vm["log-period"].as<int>();
-  config.l2_parameter = vm["lambda"].as<float>();
+  config.l2_lbl = vm["lambda-lbl"].as<float>();
   config.word_representation_size = vm["word-width"].as<int>();
   config.threads = vm["threads"].as<int>();
   config.step_size = vm["step-size"].as<float>();
@@ -115,7 +115,7 @@ int main(int argc, char **argv) {
   }
   cerr << "# input = " << config.training_file << endl;
   cerr << "# minibatch-size = " << config.minibatch_size << endl;
-  cerr << "# lambda = " << config.l2_parameter << endl;
+  cerr << "# lambda = " << config.l2_lbl << endl;
   cerr << "# step size = " << config.step_size << endl;
   cerr << "# iterations = " << config.iterations << endl;
   cerr << "# threads = " << config.threads << endl;

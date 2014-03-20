@@ -21,7 +21,9 @@ class FeatureStore {
       const vector<FeatureContextId>& feature_context_ids,
       const VectorReal& values) = 0;
 
-  virtual Real updateRegularizer(Real lambda) = 0;
+  virtual void l2GradientUpdate(Real lambda) = 0;
+
+  virtual Real l2Objective(Real factor) const = 0;
 
   virtual void update(const boost::shared_ptr<FeatureStore>& store) = 0;
 

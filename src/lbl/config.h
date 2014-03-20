@@ -51,7 +51,8 @@ struct ModelData {
   int         feature_context_size;
   string      model_input_file;
   string      model_output_file;
-  float       l2_parameter;
+  float       l2_lbl;
+  float       l2_maxent;
   int         word_representation_size;
   int         threads;
   float       step_size;
@@ -86,7 +87,8 @@ struct ModelData {
     ar & feature_context_size;
     ar & model_input_file;
     ar & model_output_file;
-    ar & l2_parameter;
+    ar & l2_lbl;
+    ar & l2_maxent;
     ar & word_representation_size;
     ar & threads;
     ar & step_size;

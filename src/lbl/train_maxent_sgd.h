@@ -59,7 +59,6 @@ Real sgd_gradient(FactoredMaxentNLM& model,
                   const TrainingInstances &indexes,
                   const WordToClassIndex& index,
                   const boost::shared_ptr<FeatureGenerator>& generator,
-                  Real lambda,
                   WordVectorsType& g_R,
                   WordVectorsType& g_Q,
                   ContextTransformsType& g_C,
@@ -253,13 +252,11 @@ FactoredMaxentNLM learn(ModelData& config) {
         for (auto& store: g_V) {
           store->clear();
         }
-        Real lambda = config.l2_parameter*(end-start)/static_cast<Real>(training_corpus.size());
-
         #pragma omp barrier
         cache_data(start, end, training_corpus, training_indices, training_instances);
         Real f = sgd_gradient(
             model, training_corpus, training_instances, index, generator,
-            lambda, g_R, g_Q, g_C, g_B, g_F, g_FB, g_U, g_V);
+            g_R, g_Q, g_C, g_B, g_F, g_FB, g_U, g_V);
 
         #pragma omp critical
         {
@@ -298,8 +295,10 @@ FactoredMaxentNLM learn(ModelData& config) {
           }
 
           // regularisation
-          if (lambda > 0) {
-            av_f += (0.5*lambda*model.l2_gradient_update(step_size*lambda));
+          if (config.l2_lbl > 0 || config.l2_maxent > 0) {
+            Real minibatch_factor = static_cast<Real>(end - start) / training_corpus.size();
+            model.l2GradientUpdate(minibatch_factor);
+            av_f += model.l2Objective(minibatch_factor);
           }
 
           if (minibatch_counter % 100 == 0) {
@@ -384,7 +383,6 @@ Real sgd_gradient(FactoredMaxentNLM& model,
                   const TrainingInstances &training_instances,
                   const WordToClassIndex& index,
                   const boost::shared_ptr<FeatureGenerator>& generator,
-                  Real lambda,
                   WordVectorsType& g_R,
                   WordVectorsType& g_Q,
                   ContextTransformsType& g_C,

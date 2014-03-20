@@ -29,13 +29,18 @@ void UnconstrainedFeatureStore::update(
   }
 }
 
-Real UnconstrainedFeatureStore::updateRegularizer(Real lambda) {
-  Real result = 0;
+void UnconstrainedFeatureStore::l2GradientUpdate(Real sigma) {
   for (auto& entry: featureWeights) {
-    entry.second -= lambda * entry.second;
+    entry.second -= sigma * entry.second;
+  }
+}
+
+Real UnconstrainedFeatureStore::l2Objective(Real factor) const {
+  Real result = 0;
+  for (const auto& entry: featureWeights) {
     result += entry.second.array().square().sum();
   }
-  return result;
+  return factor * result;
 }
 
 void UnconstrainedFeatureStore::update(

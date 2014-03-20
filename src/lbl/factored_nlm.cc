@@ -48,10 +48,20 @@ int FactoredNLM::get_class(const WordId& w) const {
   return index.getClass(w);
 }
 
-Real FactoredNLM::l2_gradient_update(Real sigma) {
-  F -= F*sigma;
-  FB -= FB*sigma;
-  return NLM::l2_gradient_update(sigma) + F.array().square().sum() + FB.array().square().sum();
+void FactoredNLM::l2GradientUpdate(Real minibatch_factor) {
+  NLM::l2GradientUpdate(minibatch_factor);
+
+  double sigma = minibatch_factor * config.step_size * config.l2_lbl;
+  F -= F * sigma;
+  FB -= FB * sigma;
+}
+
+Real FactoredNLM::l2Objective(Real minibatch_factor) const {
+  Real result = NLM::l2Objective(minibatch_factor);
+  Real factor = 0.5 * minibatch_factor * config.l2_lbl;
+  result += factor * F.array().square().sum();
+  result += factor * FB.array().square().sum();
+  return result;
 }
 
 void FactoredNLM::reclass(vector<WordId>& train, vector<WordId>& test) {

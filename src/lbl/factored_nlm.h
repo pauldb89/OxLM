@@ -26,7 +26,9 @@ class FactoredNLM: public NLM {
 
   int get_class(const WordId& w) const;
 
-  virtual Real l2_gradient_update(Real sigma);
+  virtual void l2GradientUpdate(Real minibatch_factor);
+
+  virtual Real l2Objective(Real minibatch_factor) const;
 
   void reclass(vector<WordId>& train, vector<WordId>& test);
 

@@ -6,7 +6,9 @@
 namespace oxlm {
 
 TEST_F(TestSGD, TestTrainMaxentSGD) {
+  config.l2_maxent = 2;
   config.feature_context_size = 3;
+
   FactoredMaxentNLM model = learn(config);
   config.test_file = "test.txt";
   Corpus test_corpus = loadTestCorpus(model.label_set());
@@ -15,8 +17,10 @@ TEST_F(TestSGD, TestTrainMaxentSGD) {
 }
 
 TEST_F(TestSGD, TestTrainMaxentSGDSparseFeatures) {
+  config.l2_maxent = 2;
   config.feature_context_size = 3;
   config.sparse_features = true;
+
   FactoredMaxentNLM model = learn(config);
   config.test_file = "test.txt";
   Corpus test_corpus = loadTestCorpus(model.label_set());

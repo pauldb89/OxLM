@@ -132,3 +132,12 @@ void NLM::allocate_data(const ModelData& config) {
   m_data_size = R_size + Q_size + context_width*C_size + B_size + M_size;
   m_data = new Real[m_data_size];
 }
+
+void NLM::l2GradientUpdate(Real minibatch_factor) {
+  Real sigma = minibatch_factor * config.step_size * config.l2_lbl;
+  W -= W * sigma;
+}
+
+Real NLM::l2Objective(Real minibatch_factor) const {
+  return 0.5 * minibatch_factor * config.l2_lbl * W.array().square().sum();
+}

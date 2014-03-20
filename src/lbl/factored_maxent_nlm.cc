@@ -76,11 +76,21 @@ Real FactoredMaxentNLM::log_prob(
   return class_log_prob + word_log_prob;
 }
 
-Real FactoredMaxentNLM::l2_gradient_update(Real lambda) {
-  Real result = FactoredNLM::l2_gradient_update(lambda);
-  result += U->updateRegularizer(lambda);
-  for (auto& store: V) {
-    result += store->updateRegularizer(lambda);
+void FactoredMaxentNLM::l2GradientUpdate(Real minibatch_factor) {
+  FactoredNLM::l2GradientUpdate(minibatch_factor);
+  Real sigma = minibatch_factor * config.step_size * config.l2_maxent;
+  U->l2GradientUpdate(sigma);
+  for (const auto& store: V) {
+    store->l2GradientUpdate(sigma);
+  }
+}
+
+Real FactoredMaxentNLM::l2Objective(Real minibatch_factor) const {
+  Real result = FactoredNLM::l2Objective(minibatch_factor);
+  Real factor = 0.5 * minibatch_factor * config.l2_maxent;
+  result += U->l2Objective(factor);
+  for (const auto& store: V) {
+    result += store->l2Objective(factor);
   }
   return result;
 }

@@ -28,7 +28,9 @@ class FactoredMaxentNLM : public FactoredNLM {
       WordId w, const vector<WordId>& context,
       bool nonlinear, bool cache) const;
 
-  virtual Real l2_gradient_update(Real lambda);
+  virtual void l2GradientUpdate(Real minibatch_factor);
+
+  virtual Real l2Objective(Real minibatch_factor) const;
 
  private:
   friend class boost::serialization::access;

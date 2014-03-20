@@ -30,7 +30,9 @@ class SparseFeatureStore : public FeatureStore {
       const vector<FeatureContextId>& feature_context_ids,
       const VectorReal& values);
 
-  virtual Real updateRegularizer(Real lambda);
+  virtual void l2GradientUpdate(Real sigma);
+
+  virtual Real l2Objective(Real factor) const;
 
   virtual void update(const boost::shared_ptr<FeatureStore>& store);
 

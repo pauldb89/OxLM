@@ -30,10 +30,9 @@ class NLM {
   const Dict& label_set() const { return m_labels; }
   Dict& label_set() { return m_labels; }
 
-  virtual Real l2_gradient_update(Real sigma) {
-    W -= W*sigma;
-    return W.array().square().sum();
-  }
+  virtual void l2GradientUpdate(Real minibatch_factor);
+
+  virtual Real l2Objective(Real minibatch_factor) const;
 
   void addModel(const NLM& model) { W += model.W; };
 

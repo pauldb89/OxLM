@@ -52,7 +52,6 @@ Real sgd_gradient(FactoredNLM& model,
                   const Corpus& training_corpus,
                   const TrainingInstances &indexes,
                   const WordToClassIndex& index,
-                  Real lambda,
                   WordVectorsType& g_R,
                   WordVectorsType& g_Q,
                   ContextTransformsType& g_C,
@@ -223,12 +222,11 @@ FactoredNLM learn(ModelData& config) {
         gradient.setZero();
         g_F.setZero();
         g_FB.setZero();
-        Real lambda = config.l2_parameter*(end-start)/static_cast<Real>(training_corpus.size());
 
         #pragma omp barrier
         cache_data(start, end, training_corpus, training_indices, training_instances);
         Real f = sgd_gradient(model, training_corpus, training_instances, index,
-                              lambda, g_R, g_Q, g_C, g_B, g_F, g_FB);
+                              g_R, g_Q, g_C, g_B, g_F, g_FB);
 
         #pragma omp critical
         {
@@ -253,7 +251,11 @@ FactoredNLM learn(ModelData& config) {
           }
 
           // regularisation
-          if (lambda > 0) av_f += (0.5*lambda*model.l2_gradient_update(step_size*lambda));
+          if (config.l2_lbl > 0) {
+            Real minibatch_factor = static_cast<Real>(end - start) / training_corpus.size();
+            model.l2GradientUpdate(minibatch_factor);
+            av_f += model.l2Objective(minibatch_factor);
+          }
 
           if (minibatch_counter % 100 == 0) { cerr << "."; cout.flush(); }
         }
@@ -325,7 +327,6 @@ Real sgd_gradient(FactoredNLM& model,
                 const Corpus& training_corpus,
                 const TrainingInstances &training_instances,
                 const WordToClassIndex& index,
-                Real lambda,
                 WordVectorsType& g_R,
                 WordVectorsType& g_Q,
                 ContextTransformsType& g_C,

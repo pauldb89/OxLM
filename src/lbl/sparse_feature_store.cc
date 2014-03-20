@@ -47,14 +47,19 @@ void SparseFeatureStore::update(
   }
 }
 
-Real SparseFeatureStore::updateRegularizer(Real lambda) {
-  Real result = 0;
+void SparseFeatureStore::l2GradientUpdate(Real sigma) {
   for (const FeatureContextId& feature_context_id: observedContexts) {
     SparseVectorReal& weights = featureWeights.at(feature_context_id);
-    weights -= lambda * weights;
-    result += weights.cwiseAbs2().sum();
+    weights -= sigma * weights;
   }
-  return result;
+}
+
+Real SparseFeatureStore::l2Objective(Real factor) const {
+  Real result = 0;
+  for (const FeatureContextId& feature_context_id: observedContexts) {
+    result += featureWeights.at(feature_context_id).cwiseAbs2().sum();
+  }
+  return factor * result;
 }
 
 void SparseFeatureStore::update(

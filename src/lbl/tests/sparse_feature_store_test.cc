@@ -95,7 +95,8 @@ TEST_F(SparseFeatureStoreTest, TestCombined) {
 }
 
 TEST_F(SparseFeatureStoreTest, TestUpdateRegularizer) {
-  EXPECT_NEAR(7.5, store.updateRegularizer(0.5), EPS);
+  store.l2GradientUpdate(0.5);
+  EXPECT_NEAR(7.5, store.l2Objective(1), EPS);
 
   VectorReal expected_values(5);
   expected_values << 0, 1, 0, 0, 2;

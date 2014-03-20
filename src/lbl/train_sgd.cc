@@ -61,7 +61,7 @@ void cache_data(const LogBiLinearModel& model,
 Real sgd_gradient(LogBiLinearModel& model,
                 const Corpus& training_corpus,
                 const TrainingInstances &result,
-                Real lambda, bool pseudo,
+                bool pseudo,
                 LogBiLinearModel::WordVectorsType& g_R,
                 LogBiLinearModel::WordVectorsType& g_Q,
                 LogBiLinearModel::ContextTransformsType& g_C,
@@ -70,7 +70,6 @@ Real sgd_gradient(LogBiLinearModel& model,
 Real mixture_sgd_gradient(LogBiLinearModel& model,
                           const Corpus& training_corpus,
                           const TrainingInstances &result,
-                          Real lambda,
                           LogBiLinearModel::WordVectorsType& g_R,
                           LogBiLinearModel::WordVectorsType& g_Q,
                           LogBiLinearModel::ContextTransformsType& g_C,
@@ -159,7 +158,7 @@ int main(int argc, char **argv) {
   if (vm.count("model-out")) {
     config.model_output_file = vm["model-out"].as<string>();
   }
-  config.l2_parameter = vm["lambda"].as<float>();
+  config.l2_lbl = vm["lambda-lbl"].as<float>();
   config.word_representation_size = vm["word-width"].as<int>();
   config.threads = vm["threads"].as<int>();
   config.step_size = vm["step-size"].as<float>();
@@ -180,7 +179,7 @@ int main(int argc, char **argv) {
   }
   cerr << "# input = " << config.training_file << endl;
   cerr << "# minibatch-size = " << config.minibatch_size << endl;
-  cerr << "# lambda = " << config.l2_parameter << endl;
+  cerr << "# lambda = " << config.l2_lbl << endl;
   cerr << "# iterations = " << config.iterations << endl;
   cerr << "# threads = " << config.threads << endl;
   cerr << "# mixture = " << config.threads << endl;
@@ -323,7 +322,6 @@ void learn(const ModelData& config) {
         global_gradient.setZero();
 
         gradient.setZero();
-        Real lambda = config.l2_parameter*(end-start)/static_cast<Real>(training_corpus.size());
 
         #pragma omp barrier
         cache_data(model, start, end, training_corpus, training_indices, model.unigram,
@@ -331,10 +329,10 @@ void learn(const ModelData& config) {
 
         Real f=0.0;
         if (config.mixture)
-          f = mixture_sgd_gradient(model, training_corpus, training_instances, lambda,
+          f = mixture_sgd_gradient(model, training_corpus, training_instances,
                                    g_R, g_Q, g_C, g_B, g_M);
         else
-          f = sgd_gradient(model, training_corpus, training_instances, lambda,
+          f = sgd_gradient(model, training_corpus, training_instances,
                            config.pseudo_likelihood_cne, g_R, g_Q, g_C, g_B);
 
         #pragma omp critical
@@ -357,7 +355,10 @@ void learn(const ModelData& config) {
         //        model.B -= (step_size*g_B);
 
           // regularisation
-          if (lambda > 0) model.l2_gradient_update(step_size*lambda);
+          if (model.l2_lbl > 0) {
+            Real minibatch_factor = static_cast<Real>(end - start) / training_corpus.size();
+            model.l2GradientUpdate(minibatch_factor);
+          }
 
           if (minibatch_counter % 100 == 0) { cerr << "."; cout.flush(); }
         }
@@ -453,7 +454,7 @@ void cache_data(const LogBiLinearModel& model,
 Real sgd_gradient(LogBiLinearModel& model,
                 const Corpus& training_corpus,
                 const TrainingInstances &training_instances,
-                Real lambda, bool pseudo,
+                bool pseudo,
                 LogBiLinearModel::WordVectorsType& g_R,
                 LogBiLinearModel::WordVectorsType& g_Q,
                 LogBiLinearModel::ContextTransformsType& g_C,
@@ -653,7 +654,6 @@ Real sgd_gradient(LogBiLinearModel& model,
 Real mixture_sgd_gradient(LogBiLinearModel& model,
                           const Corpus& training_corpus,
                           const TrainingInstances &training_instances,
-                          Real lambda,
                           LogBiLinearModel::WordVectorsType& g_R,
                           LogBiLinearModel::WordVectorsType& g_Q,
                           LogBiLinearModel::ContextTransformsType& g_C,
