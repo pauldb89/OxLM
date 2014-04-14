@@ -4,7 +4,9 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/program_options.hpp>
+#include <boost/make_shared.hpp>
 #include <boost/serialization/vector.hpp>
+#include <boost/shared_ptr.hpp>
 
 #include "corpus/corpus.h"
 #include "lbl/factored_nlm.h"
@@ -50,12 +52,17 @@ struct SimplePair {
   double second;
 };
 
-template<class NLM>
 class FF_LBLLM : public FeatureFunction {
  public:
-  FF_LBLLM(const string& filename, const string& feature_name)
+  FF_LBLLM(
+      const string& filename, const string& feature_name, bool maxent_model)
       : fid(FD::Convert(feature_name)),
         fid_oov(FD::Convert(feature_name + "_OOV")) {
+    if (maxent_model) {
+      lm = boost::make_shared<FactoredMaxentNLM>();
+    } else {
+      lm = boost::make_shared<FactoredNLM>();
+    }
     loadLanguageModel(filename);
 
     cerr << "Initializing map contents (map size=" << dict.max() << ")\n";
@@ -87,7 +94,7 @@ class FF_LBLLM : public FeatureFunction {
     */
     last_id = id;
 //    cerr << "\n  Cached contexts: " << lm.m_context_cache.size() << endl;
-    lm.clear_cache();
+    lm->clear_cache();
   }
 
   inline void AddToWordMap(const WordID lbl_id) {
@@ -140,8 +147,8 @@ class FF_LBLLM : public FeatureFunction {
       abort();
     }
     boost::archive::text_iarchive ia(ifile);
-    ia >> lm;
-    dict = lm.label_set();
+    ia >> *lm;
+    dict = lm->label_set();
     Time stop_time = GetTime();
     cerr << "Reading language model took " << GetDuration(start_time, stop_time)
          << " seconds..." << endl;
@@ -181,7 +188,7 @@ class FF_LBLLM : public FeatureFunction {
 //      cerr << dict.Convert(xx[j]) << " ";
 //    cerr << " | " << dict.Convert(word);
 
-    double s = lm.log_prob(word, xx, true, true);
+    double s = lm->log_prob(word, xx, true, true);
 
 //    cerr << "), s = " << s << endl;
 
@@ -326,7 +333,7 @@ class FF_LBLLM : public FeatureFunction {
   WordID kUNKNOWN;
   WordID kNONE;
   WordID kSTAR;
-  NLM lm;
+  boost::shared_ptr<FactoredNLM> lm;
   const int fid;
   const int fid_oov;
   vector<int> cdec2lbl; // cdec2lbl[TD::Convert("word")] returns the index in the lbl model
@@ -340,11 +347,5 @@ extern "C" FeatureFunction* create_ff(const string& str) {
   string filename, feature_name;
   bool maxent_model;
   parse_options(str, filename, feature_name, maxent_model);
-  if (maxent_model) {
-    return new FF_LBLLM<FactoredMaxentNLM>(filename, feature_name);
-  } else {
-    return new FF_LBLLM<FactoredNLM>(filename, feature_name);
-  }
+  return new FF_LBLLM(filename, feature_name, maxent_model);
 }
-
-

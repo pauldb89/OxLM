@@ -4,6 +4,8 @@
 
 namespace oxlm {
 
+FactoredMaxentNLM::FactoredMaxentNLM() {}
+
 FactoredMaxentNLM::FactoredMaxentNLM(
     const ModelData& config, const Dict& labels,
     const WordToClassIndex& index,
@@ -94,3 +96,5 @@ Real FactoredMaxentNLM::l2Objective(Real minibatch_factor) const {
 }
 
 } // namespace oxlm
+
+BOOST_CLASS_EXPORT_IMPLEMENT(oxlm::FactoredMaxentNLM)

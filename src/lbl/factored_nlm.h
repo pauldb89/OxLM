@@ -1,5 +1,7 @@
 #pragma once
 
+#include <boost/serialization/export.hpp>
+
 #include "lbl/nlm.h"
 #include "lbl/word_to_class_index.h"
 
@@ -84,3 +86,5 @@ class FactoredNLM: public NLM {
 };
 
 } // namespace oxlm
+
+BOOST_CLASS_EXPORT_KEY(oxlm::FactoredNLM)

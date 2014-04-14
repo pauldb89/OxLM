@@ -4,6 +4,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/shared_ptr.hpp>
+#include <boost/serialization/export.hpp>
 
 #include "lbl/feature_context_extractor.h"
 #include "lbl/factored_nlm.h"
@@ -19,6 +20,8 @@ namespace oxlm {
 
 class FactoredMaxentNLM : public FactoredNLM {
  public:
+  FactoredMaxentNLM();
+
   FactoredMaxentNLM(
       const ModelData& config, const Dict& labels,
       const WordToClassIndex& index,
@@ -45,8 +48,6 @@ class FactoredMaxentNLM : public FactoredNLM {
   template<class Archive>
   void load(Archive& ar, const unsigned int version) {
     ar >> boost::serialization::base_object<FactoredNLM>(*this);
-    ar.register_type(static_cast<UnconstrainedFeatureStore*>(NULL));
-    ar.register_type(static_cast<SparseFeatureStore*>(NULL));
     ar >> *extractor >> U >> V;
   }
 
@@ -59,3 +60,5 @@ class FactoredMaxentNLM : public FactoredNLM {
 };
 
 } // namespace oxlm
+
+BOOST_CLASS_EXPORT_KEY(oxlm::FactoredMaxentNLM)

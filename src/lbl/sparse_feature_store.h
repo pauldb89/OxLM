@@ -3,6 +3,8 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include <boost/serialization/export.hpp>
+
 #include "lbl/feature_context.h"
 #include "lbl/feature_store.h"
 #include "lbl/utils.h"
@@ -128,3 +130,5 @@ struct CwiseDenominatorOp {
 };
 
 } // namespace oxlm
+
+BOOST_CLASS_EXPORT_KEY(oxlm::SparseFeatureStore)

@@ -2,6 +2,8 @@
 
 #include <unordered_map>
 
+#include <boost/serialization/export.hpp>
+
 #include "lbl/feature_context.h"
 #include "lbl/feature_store.h"
 #include "lbl/utils.h"
@@ -95,3 +97,5 @@ class UnconstrainedFeatureStore : public FeatureStore {
 };
 
 } // namespace oxlm
+
+BOOST_CLASS_EXPORT_KEY(oxlm::UnconstrainedFeatureStore)

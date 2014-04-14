@@ -194,4 +194,6 @@ void FactoredNLM::clear_cache() {
   m_context_class_cache.reserve(1000000);
 }
 
-}
+} // namespace oxlm
+
+BOOST_CLASS_EXPORT_IMPLEMENT(oxlm::FactoredNLM)

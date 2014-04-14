@@ -128,3 +128,5 @@ boost::shared_ptr<UnconstrainedFeatureStore> UnconstrainedFeatureStore::cast(
 }
 
 } // namespace oxlm
+
+BOOST_CLASS_EXPORT_IMPLEMENT(oxlm::UnconstrainedFeatureStore)
