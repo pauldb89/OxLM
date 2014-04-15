@@ -5,6 +5,8 @@
 #include <unordered_set>
 #include <vector>
 
+#include <boost/shared_ptr.hpp>
+
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 
@@ -21,6 +23,7 @@ typedef vector<WordId> Corpus;
 
 typedef int                                                 FeatureContextId;
 typedef unordered_map<FeatureContextId, unordered_set<int>> FeatureIndexes;
+typedef boost::shared_ptr<FeatureIndexes>                   FeatureIndexesPtr;
 
 typedef Eigen::Matrix<Real, Eigen::Dynamic, Eigen::Dynamic> MatrixReal;
 typedef Eigen::Matrix<Real, Eigen::Dynamic, 1>              VectorReal;

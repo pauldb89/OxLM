@@ -43,10 +43,10 @@ FactoredNLM learn(ModelData& config);
 
 typedef int TrainingInstance;
 typedef vector<TrainingInstance> TrainingInstances;
-void cache_data(int start, int end,
-                const Corpus& training_corpus,
-                const vector<size_t>& indices,
-                TrainingInstances &result);
+void scatter_data(int start, int end,
+                  const Corpus& training_corpus,
+                  const vector<size_t>& indices,
+                  TrainingInstances &result);
 
 Real sgd_gradient(FactoredNLM& model,
                   const Corpus& training_corpus,
@@ -224,7 +224,7 @@ FactoredNLM learn(ModelData& config) {
         g_FB.setZero();
 
         #pragma omp barrier
-        cache_data(start, end, training_corpus, training_indices, training_instances);
+        scatter_data(start, end, training_corpus, training_indices, training_instances);
         Real f = sgd_gradient(model, training_corpus, training_instances, index,
                               g_R, g_Q, g_C, g_B, g_F, g_FB);
 
@@ -307,7 +307,7 @@ FactoredNLM learn(ModelData& config) {
 }
 
 
-void cache_data(int start, int end, const Corpus& training_corpus, const vector<size_t>& indices, TrainingInstances &result) {
+void scatter_data(int start, int end, const Corpus& training_corpus, const vector<size_t>& indices, TrainingInstances &result) {
   assert (start>=0 && start < end && end <= static_cast<int>(training_corpus.size()));
   assert (training_corpus.size() == indices.size());
 

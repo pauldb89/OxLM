@@ -49,10 +49,10 @@ FactoredMaxentNLM learn(ModelData& config);
 
 typedef int TrainingInstance;
 typedef vector<TrainingInstance> TrainingInstances;
-void cache_data(int start, int end,
-                const Corpus& training_corpus,
-                const vector<size_t>& indices,
-                TrainingInstances &result);
+void scatter_data(int start, int end,
+                  const Corpus& training_corpus,
+                  const vector<size_t>& indices,
+                  TrainingInstances &result);
 
 Real sgd_gradient(FactoredMaxentNLM& model,
                   const Corpus& training_corpus,
@@ -167,7 +167,6 @@ FactoredMaxentNLM learn(ModelData& config) {
 
   boost::shared_ptr<FeatureStore> global_gradientU, adaGradU;
   vector<boost::shared_ptr<FeatureStore>> global_gradientV, adaGradV;
-  initializer.initialize(global_gradientU, global_gradientV);
   initializer.initialize(adaGradU, adaGradV);
 
   omp_set_num_threads(config.threads);
@@ -210,7 +209,6 @@ FactoredMaxentNLM learn(ModelData& config) {
     VectorReal g_FB(num_classes);
     boost::shared_ptr<FeatureStore> g_U;
     vector<boost::shared_ptr<FeatureStore>> g_V;
-    initializer.initialize(g_U, g_V);
 
     //////////////////////////////////////////////
 
@@ -228,7 +226,6 @@ FactoredMaxentNLM learn(ModelData& config) {
           std::random_shuffle(training_indices.begin(), training_indices.end());
       }
 
-      TrainingInstances training_instances;
       Real step_size = config.step_size;
 
       for (size_t start=0; start < training_corpus.size() && (int)start < config.instances; ++minibatch_counter) {
@@ -239,23 +236,26 @@ FactoredMaxentNLM learn(ModelData& config) {
           global_gradient.setZero();
           global_gradientF.setZero();
           global_gradientFB.setZero();
-          global_gradientU->clear();
-          for (int i = 0; i < num_classes; ++i) {
-            global_gradientV[i]->clear();
-          }
+
+          vector<int> minibatch_indices(end - start);
+          copy(training_indices.begin() + start,
+               training_indices.begin() + end,
+               minibatch_indices.begin());
+          initializer.initialize(
+              global_gradientU, global_gradientV, minibatch_indices);
         }
+
+        #pragma omp barrier
+        vector<int> minibatch_thread_indices;
+        scatter_data(start, end, training_corpus, training_indices, minibatch_thread_indices);
 
         gradient.setZero();
         g_F.setZero();
         g_FB.setZero();
-        g_U->clear();
-        for (auto& store: g_V) {
-          store->clear();
-        }
-        #pragma omp barrier
-        cache_data(start, end, training_corpus, training_indices, training_instances);
+        initializer.initialize(g_U, g_V, minibatch_thread_indices);
+
         Real f = sgd_gradient(
-            model, training_corpus, training_instances, index, extractor,
+            model, training_corpus, minibatch_thread_indices, index, extractor,
             g_R, g_Q, g_C, g_B, g_F, g_FB, g_U, g_V);
 
         #pragma omp critical
@@ -269,6 +269,7 @@ FactoredMaxentNLM learn(ModelData& config) {
           }
           av_f += f;
         }
+
         #pragma omp barrier
         #pragma omp master
         {
@@ -362,7 +363,7 @@ FactoredMaxentNLM learn(ModelData& config) {
   return model;
 }
 
-void cache_data(int start, int end, const Corpus& training_corpus, const vector<size_t>& indices, TrainingInstances &result) {
+void scatter_data(int start, int end, const Corpus& training_corpus, const vector<size_t>& indices, TrainingInstances &result) {
   assert (start>=0 && start < end && end <= static_cast<int>(training_corpus.size()));
   assert (training_corpus.size() == indices.size());
 

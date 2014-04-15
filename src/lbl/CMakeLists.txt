@@ -10,6 +10,7 @@ add_library(lbl SHARED
   feature_context.cc
   feature_context_extractor.cc
   feature_matcher.cc
+  feature_indexes_pair.cc
   feature_store_initializer.cc
   nlm.cc
   nlm_approximate_z.cc

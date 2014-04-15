@@ -147,16 +147,7 @@ TEST_F(SparseFeatureStoreTest, TestUpdateAdaGrad) {
 
 TEST_F(SparseFeatureStoreTest, TestClear) {
   store.clear();
-  EXPECT_EQ(3, store.size());
-
-  EXPECT_MATRIX_NEAR(VectorReal::Zero(5), store.get(feature_context_ids1), EPS);
-
-  VectorReal values(5);
-  values << 1, 2, 3, 4, 5;
-  store.update(feature_context_ids1, values);
-  VectorReal expected_values(5);
-  expected_values << 0, 2, 0, 0, 5;
-  EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids1), EPS);
+  EXPECT_EQ(0, store.size());
 }
 
 TEST_F(SparseFeatureStoreTest, TestSerialization) {

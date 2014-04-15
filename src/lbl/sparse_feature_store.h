@@ -22,7 +22,7 @@ class SparseFeatureStore : public FeatureStore {
 
   SparseFeatureStore(
       int vector_max_size,
-      const FeatureIndexes& feature_indexes,
+      FeatureIndexesPtr feature_indexes,
       bool random_weights);
 
   virtual VectorReal get(
@@ -101,7 +101,6 @@ class SparseFeatureStore : public FeatureStore {
 
   BOOST_SERIALIZATION_SPLIT_MEMBER();
 
-  unordered_set<FeatureContextId> observedContexts;
   unordered_map<FeatureContextId, SparseVectorReal> featureWeights;
   int vectorMaxSize;
 };
