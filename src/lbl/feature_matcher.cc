@@ -6,23 +6,26 @@ FeatureMatcher::FeatureMatcher(
     const Corpus& corpus, const WordToClassIndex& index,
     const ContextProcessor& processor,
     const boost::shared_ptr<FeatureContextExtractor>& extractor)
-    : word_features(index.getNumClasses()) {
+    : index(index), processor(processor),
+      extractor(extractor), word_features(index.getNumClasses()) {
   for (size_t i = 0; i < corpus.size(); ++i) {
     int class_id = index.getClass(corpus[i]);
+    int word_class_id = index.getWordIndexInClass(corpus[i]);
     vector<WordId> context = processor.extract(i);
     vector<FeatureContextId> feature_context_ids =
         extractor->getFeatureContextIds(context);
-    class_features.push_back(make_pair(feature_context_ids, class_id));
-    word_features[class_id].push_back(make_pair(
-        feature_context_ids, index.getWordIndexInClass(corpus[i])));
+    for (const FeatureContextId& feature_context_id: feature_context_ids) {
+      class_features[feature_context_id].insert(class_id);
+      word_features[class_id][feature_context_id].insert(word_class_id);
+    }
   }
 }
 
-MatchingContexts FeatureMatcher::getClassFeatures() const {
+FeatureIndexes FeatureMatcher::getClassFeatures() const {
   return class_features;
 }
 
-MatchingContexts FeatureMatcher::getWordFeatures(int class_id) const {
+FeatureIndexes FeatureMatcher::getWordFeatures(int class_id) const {
   return word_features[class_id];
 }
 

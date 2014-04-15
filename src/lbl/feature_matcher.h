@@ -1,5 +1,9 @@
 #pragma once
 
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
+
 #include <boost/shared_ptr.hpp>
 
 #include "lbl/context_processor.h"
@@ -18,13 +22,16 @@ class FeatureMatcher {
       const ContextProcessor& processor,
       const boost::shared_ptr<FeatureContextExtractor>& extractor);
 
-  MatchingContexts getClassFeatures() const;
+  FeatureIndexes getClassFeatures() const;
 
-  MatchingContexts getWordFeatures(int class_id) const;
+  FeatureIndexes getWordFeatures(int class_id) const;
 
  private:
-  MatchingContexts class_features;
-  vector<MatchingContexts> word_features;
+  const WordToClassIndex& index;
+  const ContextProcessor& processor;
+  boost::shared_ptr<FeatureContextExtractor> extractor;
+  FeatureIndexes class_features;
+  vector<FeatureIndexes> word_features;
 };
 
 } // namespace oxlm

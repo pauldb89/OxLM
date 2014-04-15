@@ -7,7 +7,20 @@
 
 namespace oxlm {
 
-TEST(FeatureMatcherTest, TestBasic) {
+class FeatureMatcherTest : public testing::Test {
+ protected:
+  void checkFeatureContexts(
+      const FeatureIndexes& feature_indexes,
+      const vector<FeatureContextId>& feature_context_ids,
+      int feature_index) const {
+    for (const FeatureContextId& feature_context_id: feature_context_ids) {
+      EXPECT_TRUE(feature_indexes.count(feature_context_id));
+      EXPECT_TRUE(feature_indexes.at(feature_context_id).count(feature_index));
+    }
+  }
+};
+
+TEST_F(FeatureMatcherTest, TestBasic) {
   vector<int> class_markers = {0, 2, 3, 4};
   Corpus corpus = {2, 3, 3, 1, 2, 2};
   WordToClassIndex index(class_markers);
@@ -19,65 +32,53 @@ TEST(FeatureMatcherTest, TestBasic) {
   vector<FeatureContextId> feature_context_ids;
   FeatureMatcher feature_matcher(corpus, index, processor, extractor);
 
-  MatchingContexts matching_contexts = feature_matcher.getClassFeatures();
-  EXPECT_EQ(6, matching_contexts.size());
+  FeatureIndexes feature_indexes = feature_matcher.getClassFeatures();
+  EXPECT_EQ(7, feature_indexes.size());
   history = {0, 0};
   feature_context_ids = extractor->getFeatureContextIds(history);
-  EXPECT_EQ(feature_context_ids, matching_contexts[0].first);
-  EXPECT_EQ(1, matching_contexts[0].second);
+  checkFeatureContexts(feature_indexes, feature_context_ids, 1);
   history = {2, 0};
   feature_context_ids = extractor->getFeatureContextIds(history);
-  EXPECT_EQ(feature_context_ids, matching_contexts[1].first);
-  EXPECT_EQ(2, matching_contexts[1].second);
+  checkFeatureContexts(feature_indexes, feature_context_ids, 2);
   history = {3, 2};
   feature_context_ids = extractor->getFeatureContextIds(history);
-  EXPECT_EQ(feature_context_ids, matching_contexts[2].first);
-  EXPECT_EQ(2, matching_contexts[2].second);
+  checkFeatureContexts(feature_indexes, feature_context_ids, 2);
   history = {3, 3};
   feature_context_ids = extractor->getFeatureContextIds(history);
-  EXPECT_EQ(feature_context_ids, matching_contexts[3].first);
-  EXPECT_EQ(0, matching_contexts[3].second);
+  checkFeatureContexts(feature_indexes, feature_context_ids, 0);
   history = {0, 0};
   feature_context_ids = extractor->getFeatureContextIds(history);
-  EXPECT_EQ(feature_context_ids, matching_contexts[4].first);
-  EXPECT_EQ(1, matching_contexts[4].second);
+  checkFeatureContexts(feature_indexes, feature_context_ids, 1);
   history = {2, 0};
   feature_context_ids = extractor->getFeatureContextIds(history);
-  EXPECT_EQ(feature_context_ids, matching_contexts[5].first);
-  EXPECT_EQ(1, matching_contexts[5].second);
+  checkFeatureContexts(feature_indexes, feature_context_ids, 1);
 
-  matching_contexts = feature_matcher.getWordFeatures(0);
-  EXPECT_EQ(1, matching_contexts.size());
+  feature_indexes = feature_matcher.getWordFeatures(0);
+  EXPECT_EQ(2, feature_indexes.size());
   history = {3, 3};
   feature_context_ids = extractor->getFeatureContextIds(history);
-  EXPECT_EQ(feature_context_ids, matching_contexts[0].first);
-  EXPECT_EQ(1, matching_contexts[0].second);
+  checkFeatureContexts(feature_indexes, feature_context_ids, 1);
 
-  matching_contexts = feature_matcher.getWordFeatures(1);
-  EXPECT_EQ(3, matching_contexts.size());
+  feature_indexes = feature_matcher.getWordFeatures(1);
+  EXPECT_EQ(4, feature_indexes.size());
   history = {0, 0};
   feature_context_ids = extractor->getFeatureContextIds(history);
-  EXPECT_EQ(feature_context_ids, matching_contexts[0].first);
-  EXPECT_EQ(0, matching_contexts[0].second);
+  checkFeatureContexts(feature_indexes, feature_context_ids, 0);
   history = {0, 0};
   feature_context_ids = extractor->getFeatureContextIds(history);
-  EXPECT_EQ(feature_context_ids, matching_contexts[1].first);
-  EXPECT_EQ(0, matching_contexts[1].second);
+  checkFeatureContexts(feature_indexes, feature_context_ids, 0);
   history = {2, 0};
   feature_context_ids = extractor->getFeatureContextIds(history);
-  EXPECT_EQ(feature_context_ids, matching_contexts[2].first);
-  EXPECT_EQ(0, matching_contexts[2].second);
+  checkFeatureContexts(feature_indexes, feature_context_ids, 0);
 
-  matching_contexts = feature_matcher.getWordFeatures(2);
-  EXPECT_EQ(2, matching_contexts.size());
+  feature_indexes = feature_matcher.getWordFeatures(2);
+  EXPECT_EQ(4, feature_indexes.size());
   history = {2, 0};
   feature_context_ids = extractor->getFeatureContextIds(history);
-  EXPECT_EQ(feature_context_ids, matching_contexts[0].first);
-  EXPECT_EQ(0, matching_contexts[0].second);
+  checkFeatureContexts(feature_indexes, feature_context_ids, 0);
   history = {3, 2};
   feature_context_ids = extractor->getFeatureContextIds(history);
-  EXPECT_EQ(feature_context_ids, matching_contexts[1].first);
-  EXPECT_EQ(0, matching_contexts[1].second);
+  checkFeatureContexts(feature_indexes, feature_context_ids, 0);
 }
 
 } // namespace oxlm

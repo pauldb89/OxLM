@@ -26,35 +26,35 @@ class SparseFeatureStoreTest : public ::testing::Test {
     VectorReal values(5);
 
     feature_context_ids1 = {1};
-    store.hintFeatureIndex(feature_context_ids1, 1);
-    g_store.hintFeatureIndex(feature_context_ids1, 1);
-    store.hintFeatureIndex(feature_context_ids1, 4);
-    g_store.hintFeatureIndex(feature_context_ids1, 4);
+    store.hintFeatureIndex(feature_context_ids1[0], 1);
+    g_store.hintFeatureIndex(feature_context_ids1[0], 1);
+    store.hintFeatureIndex(feature_context_ids1[0], 4);
+    g_store.hintFeatureIndex(feature_context_ids1[0], 4);
     values << 0, 2, 0, 0, 4;
     store.update(feature_context_ids1, values);
 
     feature_context_ids2 = {2};
     values = SparseVectorReal(5);
     values << 1, 0, 0, 0, 3;
-    store.hintFeatureIndex(feature_context_ids2, 0);
-    store.hintFeatureIndex(feature_context_ids2, 1);
-    store.hintFeatureIndex(feature_context_ids2, 4);
+    store.hintFeatureIndex(feature_context_ids2[0], 0);
+    store.hintFeatureIndex(feature_context_ids2[0], 1);
+    store.hintFeatureIndex(feature_context_ids2[0], 4);
     store.update(feature_context_ids2, values);
 
     values = SparseVectorReal(5);
     values << 5, 3, 0, 0, 0;
-    g_store.hintFeatureIndex(feature_context_ids2, 0);
-    g_store.hintFeatureIndex(feature_context_ids2, 1);
-    g_store.hintFeatureIndex(feature_context_ids2, 4);
+    g_store.hintFeatureIndex(feature_context_ids2[0], 0);
+    g_store.hintFeatureIndex(feature_context_ids2[0], 1);
+    g_store.hintFeatureIndex(feature_context_ids2[0], 4);
     g_store.update(feature_context_ids2, values);
 
     feature_context_ids3 = {3};
     values = SparseVectorReal(5);
     values << 0, 0, 2, 1, 0;
-    store.hintFeatureIndex(feature_context_ids3, 2);
-    g_store.hintFeatureIndex(feature_context_ids3, 2);
-    store.hintFeatureIndex(feature_context_ids3, 3);
-    g_store.hintFeatureIndex(feature_context_ids3, 3);
+    store.hintFeatureIndex(feature_context_ids3[0], 2);
+    g_store.hintFeatureIndex(feature_context_ids3[0], 2);
+    store.hintFeatureIndex(feature_context_ids3[0], 3);
+    g_store.hintFeatureIndex(feature_context_ids3[0], 3);
     g_store.update(feature_context_ids3, values);
 
     gradient_store = boost::make_shared<SparseFeatureStore>(g_store);
@@ -72,9 +72,9 @@ TEST_F(SparseFeatureStoreTest, TestBasic) {
   EXPECT_MATRIX_NEAR(
       VectorReal::Zero(5), feature_store.get(feature_context_ids1), EPS);
 
-  feature_store.hintFeatureIndex(feature_context_ids1, 1);
-  feature_store.hintFeatureIndex(feature_context_ids1, 3);
-  feature_store.hintFeatureIndex(feature_context_ids1, 4);
+  feature_store.hintFeatureIndex(feature_context_ids1[0], 1);
+  feature_store.hintFeatureIndex(feature_context_ids1[0], 3);
+  feature_store.hintFeatureIndex(feature_context_ids1[0], 4);
   VectorReal values(5), expected_values(5);
   values << 10, 1, 20, 3, 4;
   expected_values << 0, 1, 0, 3, 4;

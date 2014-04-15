@@ -32,8 +32,6 @@ class FeatureContext {
   vector<int> data;
 };
 
-typedef vector<pair<vector<FeatureContextId>, int>> MatchingContexts;
-
 } // namespace oxlm
 
 namespace std {

@@ -13,15 +13,17 @@ SparseFeatureStore::SparseFeatureStore(int vector_max_size)
 
 SparseFeatureStore::SparseFeatureStore(
     int vector_max_size,
-    const MatchingContexts& matching_contexts,
+    const FeatureIndexes& feature_indexes,
     bool random_weights)
     : vectorMaxSize(vector_max_size) {
   random_device rd;
   std::mt19937 gen(rd());
   std::normal_distribution<Real> gaussian(0, 0.1);
-  for (const auto& matching_context: matching_contexts) {
-    Real value = random_weights ? gaussian(gen) : 0;
-    hintFeatureIndex(matching_context.first, matching_context.second, value);
+  for (const auto& feature_context_indexes: feature_indexes) {
+    for (int feature_index: feature_context_indexes.second) {
+      Real value = random_weights ? gaussian(gen) : 0;
+      hintFeatureIndex(feature_context_indexes.first, feature_index, value);
+    }
   }
 }
 
@@ -115,17 +117,14 @@ size_t SparseFeatureStore::size() const {
 }
 
 void SparseFeatureStore::hintFeatureIndex(
-    const vector<FeatureContextId>& feature_context_ids,
-    int feature_index, Real value) {
-  for (const FeatureContextId& feature_context_id: feature_context_ids) {
-    auto it = featureWeights.find(feature_context_id);
-    if (it != featureWeights.end()) {
-      it->second.coeffRef(feature_index) = value;
-    } else {
-      SparseVectorReal weights(vectorMaxSize);
-      weights.coeffRef(feature_index) = value;
-      featureWeights.insert(make_pair(feature_context_id, weights));
-    }
+    FeatureContextId feature_context_id, int feature_index, Real value) {
+  auto it = featureWeights.find(feature_context_id);
+  if (it != featureWeights.end()) {
+    it->second.coeffRef(feature_index) = value;
+  } else {
+    SparseVectorReal weights(vectorMaxSize);
+    weights.coeffRef(feature_index) = value;
+    featureWeights.insert(make_pair(feature_context_id, weights));
   }
 }
 

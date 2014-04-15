@@ -1,6 +1,9 @@
 #pragma once
 
 #include <chrono>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
@@ -16,7 +19,8 @@ typedef int            WordId;
 typedef vector<WordId> Sentence;
 typedef vector<WordId> Corpus;
 
-typedef int            FeatureContextId;
+typedef int                                                 FeatureContextId;
+typedef unordered_map<FeatureContextId, unordered_set<int>> FeatureIndexes;
 
 typedef Eigen::Matrix<Real, Eigen::Dynamic, Eigen::Dynamic> MatrixReal;
 typedef Eigen::Matrix<Real, Eigen::Dynamic, 1>              VectorReal;
