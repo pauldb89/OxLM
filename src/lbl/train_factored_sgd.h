@@ -59,10 +59,37 @@ Real sgd_gradient(FactoredNLM& model,
                   MatrixReal & g_F,
                   VectorReal & g_FB);
 
-Real perplexity(const FactoredNLM& model, const Corpus& test_corpus, int stride=1);
+Real perplexity(const FactoredNLM& model, const Corpus& test_corpus);
 void freq_bin_type(const std::string &corpus, int num_classes, std::vector<int>& classes, Dict& dict, VectorReal& class_bias);
 void classes_from_file(const std::string &class_file, vector<int>& classes, Dict& dict, VectorReal& class_bias);
 
+void displayStats(
+    int minibatch_counter, Real& pp,
+    const FactoredNLM& model,
+    const Corpus& test_corpus) {
+  if (test_corpus.size()) {
+    #pragma omp master
+    pp = 0.0;
+
+    // Each thread must wait until the perplexity is set to 0.
+    // Otherwise, partial results might get overwritten.
+    #pragma omp barrier
+
+    Real local_pp = perplexity(model, test_corpus);
+    #pragma omp critical
+    pp += local_pp;
+
+    // Wait for all threads to compute the perplexity for their slice of
+    // test data.
+    #pragma omp barrier
+    #pragma omp master
+    {
+      pp = exp(-pp / test_corpus.size());
+      cout << "\tMinibatch " << minibatch_counter
+           << ", Test Perplexity = " << pp << endl;
+    }
+  }
+}
 
 FactoredNLM learn(ModelData& config) {
   Corpus training_corpus, test_corpus;
@@ -191,15 +218,15 @@ FactoredNLM learn(ModelData& config) {
     VectorReal g_FB(num_classes);
     //////////////////////////////////////////////
 
-    size_t minibatch_counter=0;
+    size_t minibatch_counter = 1;
     size_t minibatch_size = config.minibatch_size;
     for (int iteration=0; iteration < config.iterations; ++iteration) {
-      clock_t iteration_start=clock();
+      auto iteration_start = GetTime();
       #pragma omp master
       {
         av_f=0.0;
         pp=0.0;
-        cout << "Iteration " << iteration << ": "; cout.flush();
+        cout << "Iteration " << iteration << ": " << endl;
 
         if (config.randomise) {
           std::random_shuffle(training_indices.begin(), training_indices.end());
@@ -223,6 +250,8 @@ FactoredNLM learn(ModelData& config) {
         g_F.setZero();
         g_FB.setZero();
 
+        // Wait for global gradients to be cleared before updating them with
+        // data from this minibatch.
         #pragma omp barrier
         scatter_data(start, end, training_corpus, training_indices, training_instances);
         Real f = sgd_gradient(model, training_corpus, training_instances, index,
@@ -235,6 +264,9 @@ FactoredNLM learn(ModelData& config) {
           global_gradientFB += g_FB;
           av_f += f;
         }
+
+        // All global gradient updates must be completed before executing
+        // adagrad updates.
         #pragma omp barrier
         #pragma omp master
         {
@@ -256,33 +288,27 @@ FactoredNLM learn(ModelData& config) {
             model.l2GradientUpdate(minibatch_factor);
             av_f += model.l2Objective(minibatch_factor);
           }
-
-          if (minibatch_counter % 100 == 0) { cerr << "."; cout.flush(); }
         }
 
-        //start += (minibatch_size*omp_get_num_threads());
+        // Wait for master thread to update model.
+        #pragma omp barrier
+
+        if (minibatch_counter % 100 == 0) {
+          displayStats(minibatch_counter, pp, model, test_corpus);
+        }
+
         start += minibatch_size;
       }
-      #pragma omp master
-      cerr << endl;
 
-      Real iteration_time = (clock()-iteration_start) / (Real)CLOCKS_PER_SEC;
-      if (test_corpus.size()) {
-        Real local_pp = perplexity(model, test_corpus, 1);
+      displayStats(minibatch_counter, pp, model, test_corpus);
 
-        #pragma omp critical
-        { pp += local_pp; }
-        #pragma omp barrier
-      }
-
+      Real iteration_time = GetDuration(iteration_start, GetTime());
       #pragma omp master
       {
-        pp = exp(-pp/test_corpus.size());
-        cerr << " | Time: " << iteration_time << " seconds, Average f = " << av_f/training_corpus.size();
-        if (test_corpus.size()) {
-          cerr << ", Test Perplexity = " << pp;
-        }
-        cerr << " |" << endl << endl;
+        cout << "Iteration: " << iteration << ", "
+             << "Time: " << iteration_time << " seconds, "
+             << "Average f = " << av_f / training_corpus.size() << endl;
+        cout << endl;
 
         if (iteration >= 1 && config.reclass) {
           model.reclass(training_corpus, test_corpus);
@@ -425,96 +451,35 @@ Real sgd_gradient(FactoredNLM& model,
   return f;
 }
 
-/*
-Real perplexity(const FactoredNLM& model, const Corpus& test_corpus, int stride) {
-  Real p=0.0;
-
-  int word_width = model.config.word_representation_size;
-  int context_width = model.config.ngram_order-1;
-
-  // cache the products of Q with the contexts
-  std::vector<MatrixReal> q_context_products(context_width);
-  for (int i=0; i<context_width; i++)
-    q_context_products.at(i) = model.context_product(i, model.Q);
-
-  int tokens=0;
-  WordId start_id = model.label_set().Lookup("<s>");
-  WordId end_id = model.label_set().Lookup("</s>");
-
-  {
-    #pragma omp master
-    cerr << "Calculating perplexity for " << test_corpus.size()/stride << " tokens";
-
-    VectorReal prediction_vector(word_width);
-    size_t thread_num = omp_get_thread_num();
-    size_t num_threads = omp_get_num_threads();
-    for (size_t s = (thread_num*stride); s < test_corpus.size(); s += (num_threads*stride)) {
-      WordId w = test_corpus.at(s);
-      prediction_vector.setZero();
-
-      int context_start = s - context_width;
-      bool sentence_start = (s==0);
-      for (int i=context_width-1; i>=0; --i) {
-        int j=context_start+i;
-        sentence_start = (sentence_start || j<0 || test_corpus.at(j) == end_id);
-        int v_i = (sentence_start ? start_id : test_corpus.at(j));
-        prediction_vector += q_context_products[i].row(v_i).transpose();
-      }
-
-      // a simple non-linearity
-      prediction_vector = (1.0 + (-prediction_vector).array().exp()).inverse(); // sigmoid
-//      for (int x=0; x<word_width; ++x)
-//        prediction_vector(x) *= (prediction_vector(x) > 0 ? 1 : 0.01); // rectifier
-
-      int c = model.get_class(w);
-      int c_start = model.indexes.at(c);
-      VectorReal class_probs = logSoftMax(model.F * prediction_vector + model.FB);
-      VectorReal word_probs = logSoftMax(model.class_R(c) * prediction_vector + model.class_B(c));
-//      cerr << model.label_str(w) << ": class=" << c << " log_prob=" << class_probs(c)
-//           << "+" << word_probs(w-c_start) << " sum=" << word_probs.array().exp().sum() << endl;
-
-      p += class_probs(c) + word_probs(w-c_start);
-
-      #pragma omp master
-      if (tokens % 1000 == 0) { cerr << "."; cerr.flush(); }
-
-      tokens++;
-    }
-    #pragma omp master
-    cerr << endl;
-  }
-
-  return p;
-}
-*/
-Real perplexity(const FactoredNLM& model, const Corpus& test_corpus, int stride) {
+Real perplexity(const FactoredNLM& model, const Corpus& test_corpus) {
   Real p=0.0;
 
   int context_width = model.config.ngram_order-1;
-  int tokens=0;
+  int tokens = 0;
   WordId start_id = model.label_set().Lookup("<s>");
   WordId end_id = model.label_set().Lookup("</s>");
   ContextProcessor processor(test_corpus, context_width, start_id, end_id);
 
   #pragma omp master
-  cerr << "Calculating perplexity for " << test_corpus.size()/stride << " tokens";
+  cout << "Calculating perplexity for " << test_corpus.size() << " tokens";
 
   size_t thread_num = omp_get_thread_num();
   size_t num_threads = omp_get_num_threads();
-  for (size_t s = (thread_num*stride); s < test_corpus.size(); s += (num_threads*stride)) {
+  for (size_t s = thread_num; s < test_corpus.size(); s += num_threads) {
     vector<WordId> context = processor.extract(s);
     Real log_prob = model.log_prob(test_corpus[s], context, true, false);
     p += log_prob;
 
     #pragma omp master
     if (tokens % 1000 == 0) {
-      cerr << "."; cerr.flush();
+      cout << ".";
+      cout.flush();
     }
 
     tokens++;
   }
   #pragma omp master
-  cerr << endl;
+  cout << endl;
 
   return p;
 }

@@ -68,10 +68,37 @@ Real sgd_gradient(FactoredMaxentNLM& model,
                   const boost::shared_ptr<FeatureStore>& g_U,
                   const vector<boost::shared_ptr<FeatureStore>>& g_V);
 
-
 Real perplexity(const FactoredMaxentNLM& model, const Corpus& test_corpus);
 void freq_bin_type(const std::string &corpus, int num_classes, std::vector<int>& classes, Dict& dict, VectorReal& class_bias);
 void classes_from_file(const std::string &class_file, vector<int>& classes, Dict& dict, VectorReal& class_bias);
+
+void displayStats(
+    int minibatch_counter, Real& pp,
+    const FactoredMaxentNLM& model,
+    const Corpus& test_corpus) {
+  if (test_corpus.size()) {
+    #pragma omp master
+    pp = 0.0;
+
+    // Each thread must wait until the perplexity is set to 0.
+    // Otherwise, partial results might get overwritten.
+    #pragma omp barrier
+
+    Real local_pp = perplexity(model, test_corpus);
+    #pragma omp critical
+    pp += local_pp;
+
+    // Wait for all threads to compute the perplexity for their slice of
+    // test data.
+    #pragma omp barrier
+    #pragma omp master
+    {
+      pp = exp(-pp / test_corpus.size());
+      cout << "\tMinibatch " << minibatch_counter
+           << ", Test Perplexity = " << pp << endl;
+    }
+  }
+}
 
 FactoredMaxentNLM learn(ModelData& config) {
   Corpus training_corpus, test_corpus;
@@ -212,15 +239,15 @@ FactoredMaxentNLM learn(ModelData& config) {
 
     //////////////////////////////////////////////
 
-    size_t minibatch_counter=0;
+    size_t minibatch_counter = 1;
     size_t minibatch_size = config.minibatch_size;
     for (int iteration=0; iteration < config.iterations; ++iteration) {
-      clock_t iteration_start=clock();
+      auto iteration_start = GetTime();
       #pragma omp master
       {
         av_f=0.0;
         pp=0.0;
-        cout << "Iteration " << iteration << ": "; cout.flush();
+        cout << "Iteration " << iteration << ": " << endl;
 
         if (config.randomise)
           std::random_shuffle(training_indices.begin(), training_indices.end());
@@ -245,6 +272,8 @@ FactoredMaxentNLM learn(ModelData& config) {
               global_gradientU, global_gradientV, minibatch_indices);
         }
 
+        // Wait for global gradients to be cleared before updating them with
+        // data from this minibatch.
         #pragma omp barrier
         vector<int> minibatch_thread_indices;
         scatter_data(start, end, training_corpus, training_indices, minibatch_thread_indices);
@@ -270,6 +299,8 @@ FactoredMaxentNLM learn(ModelData& config) {
           av_f += f;
         }
 
+        // All global gradient updates must be completed before executing
+        // adagrad updates.
         #pragma omp barrier
         #pragma omp master
         {
@@ -301,36 +332,27 @@ FactoredMaxentNLM learn(ModelData& config) {
             model.l2GradientUpdate(minibatch_factor);
             av_f += model.l2Objective(minibatch_factor);
           }
-
-          if (minibatch_counter % 100 == 0) {
-            cout << ".";
-            cout.flush();
-          }
         }
 
-        //start += (minibatch_size*omp_get_num_threads());
+        // Wait for master thread to update model.
+        #pragma omp barrier
+
+        if (minibatch_counter % 100 == 0) {
+          displayStats(minibatch_counter, pp, model, test_corpus);
+        }
+
         start += minibatch_size;
       }
-      pp = 0.0;
-      cerr << endl;
 
-      Real iteration_time = (clock()-iteration_start) / (Real)CLOCKS_PER_SEC;
-      if (test_corpus.size()) {
-        Real local_pp = perplexity(model, test_corpus);
+      displayStats(minibatch_counter, pp, model, test_corpus);
 
-        #pragma omp critical
-        { pp += local_pp; }
-        #pragma omp barrier
-      }
-
+      Real iteration_time = GetDuration(iteration_start, GetTime());
       #pragma omp master
       {
-        pp = exp(-pp/test_corpus.size());
-        cerr << " | Time: " << iteration_time << " seconds, Average f = " << av_f/training_corpus.size();
-        if (test_corpus.size()) {
-          cerr << ", Test Perplexity = " << pp;
-        }
-        cerr << " |" << endl << endl;
+        cout << "Iteration: " << iteration << ", "
+             << "Time: " << iteration_time << " seconds, "
+             << "Average f = " << av_f / training_corpus.size() << endl;
+        cout << endl;
 
         if (iteration >= 1 && config.reclass) {
           model.reclass(training_corpus, test_corpus);
@@ -487,13 +509,13 @@ Real perplexity(const FactoredMaxentNLM& model, const Corpus& test_corpus) {
   Real p=0.0;
 
   int context_width = model.config.ngram_order-1;
-  int tokens=0;
+  int tokens = 0;
   WordId start_id = model.label_set().Lookup("<s>");
   WordId end_id = model.label_set().Lookup("</s>");
   ContextProcessor processor(test_corpus, context_width, start_id, end_id);
 
   #pragma omp master
-  cerr << "Calculating perplexity for " << test_corpus.size() << " tokens";
+  cout << "\tCalculating perplexity for " << test_corpus.size() << " tokens";
 
   size_t thread_num = omp_get_thread_num();
   size_t num_threads = omp_get_num_threads();
@@ -503,12 +525,15 @@ Real perplexity(const FactoredMaxentNLM& model, const Corpus& test_corpus) {
     p += log_prob;
 
     #pragma omp master
-    if (tokens % 1000 == 0) { cerr << "."; cerr.flush(); }
+    if (tokens % 1000 == 0) {
+      cout << ".";
+      cout.flush();
+    }
 
     tokens++;
   }
   #pragma omp master
-  cerr << endl;
+  cout << endl;
 
   return p;
 }
