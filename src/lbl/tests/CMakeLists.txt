@@ -7,6 +7,9 @@ target_link_libraries(feature_context_test lbl)
 add_test(feature_context_extractor_test)
 target_link_libraries(feature_context_extractor_test lbl)
 
+add_test(feature_indexes_pair_test)
+target_link_libraries(feature_indexes_pair_test lbl)
+
 add_test(feature_matcher_test)
 target_link_libraries(feature_matcher_test lbl)
 
