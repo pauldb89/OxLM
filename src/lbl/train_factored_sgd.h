@@ -66,7 +66,7 @@ void freq_bin_type(const std::string &corpus, int num_classes, std::vector<int>&
 void classes_from_file(const std::string &class_file, vector<int>& classes, Dict& dict, VectorReal& class_bias);
 
 void displayStats(
-    int minibatch_counter, Real& pp,
+    int minibatch_counter, Real& pp, Real& best_pp,
     const FactoredNLM& model,
     const boost::shared_ptr<Corpus>& test_corpus) {
   if (test_corpus != nullptr) {
@@ -89,6 +89,7 @@ void displayStats(
       pp = exp(-pp / test_corpus->size());
       cout << "\tMinibatch " << minibatch_counter
            << ", Test Perplexity = " << pp << endl;
+      best_pp = min(best_pp, pp);
     }
   }
 }
@@ -114,7 +115,7 @@ FactoredNLM learn(ModelData& config) {
   }
   //////////////////////////////////////////////
 
-
+ 
   //////////////////////////////////////////////
   // read the training sentences
   ifstream in(config.training_file);
@@ -174,8 +175,8 @@ FactoredNLM learn(ModelData& config) {
 
   VectorReal adaGrad = VectorReal::Zero(model.num_weights());
   VectorReal global_gradient(model.num_weights());
-  Real av_f=0.0;
-  Real pp=0;
+  Real av_f = 0;
+  Real pp = 0, best_pp = numeric_limits<Real>::infinity();
 
   MatrixReal global_gradientF(model.F.rows(), model.F.cols());
   VectorReal global_gradientFB(model.FB.size());
@@ -299,13 +300,13 @@ FactoredNLM learn(ModelData& config) {
         #pragma omp barrier
 
         if (minibatch_counter % 100 == 0) {
-          displayStats(minibatch_counter, pp, model, test_corpus);
+          displayStats(minibatch_counter, pp, best_pp, model, test_corpus);
         }
 
         start += minibatch_size;
       }
 
-      displayStats(minibatch_counter, pp, model, test_corpus);
+      displayStats(minibatch_counter, pp, best_pp, model, test_corpus);
 
       Real iteration_time = GetDuration(iteration_start, GetTime());
       #pragma omp master
@@ -334,6 +335,9 @@ FactoredNLM learn(ModelData& config) {
       }
     }
   }
+
+  cout << "Overall minimum perplexity: " << best_pp << endl;
+
   return model;
 }
 
