@@ -11,13 +11,13 @@ namespace oxlm {
 class ContextProcessor {
  public:
   ContextProcessor(
-      const Corpus& corpus, int context_size,
+      const boost::shared_ptr<Corpus>& corpus, int context_size,
       int start_id, int end_id);
 
   vector<WordId> extract(int position) const;
 
  private:
-  const Corpus& corpus;
+  boost::shared_ptr<Corpus> corpus;
   int contextSize, startId, endId;
 };
 

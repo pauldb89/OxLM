@@ -24,7 +24,7 @@ class FactoredMaxentNLM : public FactoredNLM {
 
   FactoredMaxentNLM(
       const ModelData& config, const Dict& labels,
-      const WordToClassIndex& index,
+      const boost::shared_ptr<WordToClassIndex>& index,
       const boost::shared_ptr<FeatureContextExtractor>& extractor,
       const FeatureStoreInitializer& initializer);
 

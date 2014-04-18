@@ -11,13 +11,16 @@ class FeatureMatcherTest : public testing::Test {
  protected:
   void SetUp() {
     vector<int> class_markers = {0, 2, 3, 4};
-    corpus = {2, 3, 3, 1, 3, 2};
-    index = WordToClassIndex(class_markers);
-    processor = boost::make_shared<ContextProcessor>(corpus, 2, 0, 1);
+    vector<int> data = {2, 3, 3, 1, 3, 2};
+    boost::shared_ptr<Corpus> corpus = boost::make_shared<Corpus>(data);
+    boost::shared_ptr<WordToClassIndex> index =
+        boost::make_shared<WordToClassIndex>(class_markers);
+    boost::shared_ptr<ContextProcessor> processor =
+        boost::make_shared<ContextProcessor>(corpus, 2, 0, 1);
     extractor = boost::make_shared<FeatureContextExtractor>(
-        corpus, *processor, 2);
+        corpus, processor, 2);
     feature_matcher = boost::make_shared<FeatureMatcher>(
-        corpus, index, *processor, extractor);
+        corpus, index, processor, extractor);
   }
 
   void checkFeatureContexts(
@@ -30,9 +33,6 @@ class FeatureMatcherTest : public testing::Test {
     }
   }
 
-  Corpus corpus;
-  WordToClassIndex index;
-  boost::shared_ptr<ContextProcessor> processor;
   boost::shared_ptr<FeatureContextExtractor> extractor;
   boost::shared_ptr<FeatureMatcher> feature_matcher;
 };

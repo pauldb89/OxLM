@@ -3,7 +3,8 @@
 namespace oxlm {
 
 ContextProcessor::ContextProcessor(
-    const Corpus& corpus, int context_size, int start_id, int end_id)
+    const boost::shared_ptr<Corpus>& corpus, int context_size,
+    int start_id, int end_id)
     : corpus(corpus), contextSize(context_size),
       startId(start_id), endId(end_id) {}
 
@@ -16,8 +17,8 @@ vector<WordId> ContextProcessor::extract(int position) const {
   bool sentence_start = position == 0;
   for (int i = contextSize - 1; i >= 0; --i) {
     int index = context_start + i;
-    sentence_start |= (index < 0 || corpus.at(index) == endId);
-    int word_id = sentence_start ? startId : corpus.at(index);
+    sentence_start |= (index < 0 || corpus->at(index) == endId);
+    int word_id = sentence_start ? startId : corpus->at(index);
     context.push_back(word_id);
   }
 

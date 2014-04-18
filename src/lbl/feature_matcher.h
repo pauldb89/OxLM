@@ -19,8 +19,9 @@ namespace oxlm {
 class FeatureMatcher {
  public:
   FeatureMatcher(
-      const Corpus& corpus, const WordToClassIndex& index,
-      const ContextProcessor& processor,
+      const boost::shared_ptr<Corpus>& corpus,
+      const boost::shared_ptr<WordToClassIndex>& index,
+      const boost::shared_ptr<ContextProcessor>& processor,
       const boost::shared_ptr<FeatureContextExtractor>& extractor);
 
   FeatureIndexesPairPtr getFeatures() const;
@@ -31,9 +32,9 @@ class FeatureMatcher {
   void addFeatureIndexes(
       int training_index, FeatureIndexesPairPtr feature_indexes) const;
 
-  const Corpus& corpus;
-  const WordToClassIndex& index;
-  const ContextProcessor& processor;
+  boost::shared_ptr<Corpus> corpus;
+  boost::shared_ptr<WordToClassIndex> index;
+  boost::shared_ptr<ContextProcessor> processor;
   boost::shared_ptr<FeatureContextExtractor> extractor;
   FeatureIndexesPairPtr feature_indexes;
 };

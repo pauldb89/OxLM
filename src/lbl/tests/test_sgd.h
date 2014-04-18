@@ -1,5 +1,7 @@
 #include "gtest/gtest.h"
 
+#include <boost/make_shared.hpp>
+
 #include "corpus/corpus.h"
 #include "lbl/config.h"
 #include "lbl/utils.h"
@@ -23,8 +25,8 @@ class TestSGD : public ::testing::Test {
 
   // TODO: This method should be refactored together with all the other places
   // where we read test corpora from files.
-  Corpus loadTestCorpus(Dict dict) {
-    Corpus test_corpus;
+  boost::shared_ptr<Corpus> loadTestCorpus(Dict dict) {
+    boost::shared_ptr<Corpus> test_corpus = boost::make_shared<Corpus>();
     int end_id = dict.Convert("</s>", false);
     assert(end_id >= 0);
 
@@ -39,9 +41,9 @@ class TestSGD : public ::testing::Test {
           cerr << token << " " << w << endl;
           assert(!"Unknown word found in test corpus.");
         }
-        test_corpus.push_back(w);
+        test_corpus->push_back(w);
       }
-      test_corpus.push_back(end_id);
+      test_corpus->push_back(end_id);
     }
 
     return test_corpus;

@@ -23,8 +23,8 @@ namespace oxlm {
 class FeatureContextExtractor {
  public:
   FeatureContextExtractor(
-      const Corpus& corpus,
-      const ContextProcessor& processor,
+      const boost::shared_ptr<Corpus>& corpus,
+      const boost::shared_ptr<ContextProcessor>& processor,
       size_t feature_context_size);
 
   vector<FeatureContextId> getFeatureContextIds(

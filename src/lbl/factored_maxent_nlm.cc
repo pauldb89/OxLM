@@ -8,7 +8,7 @@ FactoredMaxentNLM::FactoredMaxentNLM() {}
 
 FactoredMaxentNLM::FactoredMaxentNLM(
     const ModelData& config, const Dict& labels,
-    const WordToClassIndex& index,
+    const boost::shared_ptr<WordToClassIndex>& index,
     const boost::shared_ptr<FeatureContextExtractor>& extractor,
     const FeatureStoreInitializer& initializer)
     : FactoredNLM(config, labels, index), extractor(extractor) {
@@ -29,7 +29,7 @@ Real FactoredMaxentNLM::log_prob(
     else            prediction_vector += Q.row(context.at(i-gap)) * C.at(i);
 
   int c = get_class(w);
-  int word_index = index.getWordIndexInClass(w);
+  int word_index = index->getWordIndexInClass(w);
   vector<FeatureContextId> feature_context_ids =
       extractor->getFeatureContextIds(context);
   VectorReal class_feature_scores = U->get(feature_context_ids);

@@ -1,11 +1,14 @@
 #include "gtest/gtest.h"
 
+#include <boost/make_shared.hpp>
+
 #include "lbl/context_processor.h"
 
 namespace oxlm {
 
 TEST(ContextProcessorTest, TestExtract) {
-  Corpus corpus = {2, 3, 4, 1, 5, 6};
+  vector<int> data = {2, 3, 4, 1, 5, 6};
+  boost::shared_ptr<Corpus> corpus = boost::make_shared<Corpus>(data);
   ContextProcessor processor(corpus, 3, 0, 1);
 
   vector<WordId> expected_context = {0, 0, 0};

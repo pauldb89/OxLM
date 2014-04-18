@@ -9,8 +9,8 @@ namespace oxlm {
 
 FeatureStoreInitializer::FeatureStoreInitializer(
     const ModelData& config,
-    const WordToClassIndex& index,
-    const FeatureMatcher& matcher)
+    const boost::shared_ptr<WordToClassIndex>& index,
+    const boost::shared_ptr<FeatureMatcher>& matcher)
     : config(config), index(index), matcher(matcher) {}
 
 void FeatureStoreInitializer::initialize(
@@ -18,7 +18,7 @@ void FeatureStoreInitializer::initialize(
     vector<boost::shared_ptr<FeatureStore>>& V,
     bool random_weights) const {
   if (config.sparse_features) {
-    initializeSparseStores(U, V, matcher.getFeatures(), random_weights);
+    initializeSparseStores(U, V, matcher->getFeatures(), random_weights);
   } else {
     initializeUnconstrainedStores(U, V);
   }
@@ -30,7 +30,7 @@ void FeatureStoreInitializer::initialize(
     const vector<int>& minibatch_indices, bool random_weights) const {
   if (config.sparse_features) {
     initializeSparseStores(
-        U, V, matcher.getFeatures(minibatch_indices), random_weights);
+        U, V, matcher->getFeatures(minibatch_indices), random_weights);
   } else {
     initializeUnconstrainedStores(U, V);
   }
@@ -42,7 +42,8 @@ void FeatureStoreInitializer::initializeUnconstrainedStores(
   U = boost::make_shared<UnconstrainedFeatureStore>(config.classes);
   V.resize(config.classes);
   for (int i = 0; i < config.classes; ++i) {
-    V[i] = boost::make_shared<UnconstrainedFeatureStore>(index.getClassSize(i));
+    V[i] = boost::make_shared<UnconstrainedFeatureStore>(
+        index->getClassSize(i));
   }
 }
 
@@ -56,7 +57,7 @@ void FeatureStoreInitializer::initializeSparseStores(
   V.resize(config.classes);
   for (int i = 0; i < config.classes; ++i) {
     V[i] = boost::make_shared<SparseFeatureStore>(
-        index.getClassSize(i),
+        index->getClassSize(i),
         feature_indexes_pair->getWordIndexes(i),
         random_weights);
   }

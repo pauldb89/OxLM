@@ -9,7 +9,7 @@ FactoredNLM::FactoredNLM(const ModelData& config, const Dict& labels)
 
 FactoredNLM::FactoredNLM(
     const ModelData& config, const Dict& labels,
-    const WordToClassIndex& index)
+    const boost::shared_ptr<WordToClassIndex>& index)
     : NLM(config, labels, config.diagonal_contexts), index(index),
       F(MatrixReal::Zero(config.classes, config.word_representation_size)),
       FB(VectorReal::Zero(config.classes)) {
@@ -27,25 +27,25 @@ FactoredNLM::FactoredNLM(
 }
 
 Eigen::Block<WordVectorsType> FactoredNLM::class_R(const int c) {
-  return R.block(index.getClassMarker(c), 0, index.getClassSize(c), R.cols());
+  return R.block(index->getClassMarker(c), 0, index->getClassSize(c), R.cols());
 }
 
 const Eigen::Block<const WordVectorsType> FactoredNLM::class_R(
     const int c) const {
-  return R.block(index.getClassMarker(c), 0, index.getClassSize(c), R.cols());
+  return R.block(index->getClassMarker(c), 0, index->getClassSize(c), R.cols());
 }
 
 Eigen::VectorBlock<WeightsType> FactoredNLM::class_B(const int c) {
-  return B.segment(index.getClassMarker(c), index.getClassSize(c));
+  return B.segment(index->getClassMarker(c), index->getClassSize(c));
 }
 
 const Eigen::VectorBlock<const WeightsType> FactoredNLM::class_B(
     const int c) const {
-  return B.segment(index.getClassMarker(c), index.getClassSize(c));
+  return B.segment(index->getClassMarker(c), index->getClassSize(c));
 }
 
 int FactoredNLM::get_class(const WordId& w) const {
-  return index.getClass(w);
+  return index->getClass(w);
 }
 
 void FactoredNLM::l2GradientUpdate(Real minibatch_factor) {
@@ -64,7 +64,9 @@ Real FactoredNLM::l2Objective(Real minibatch_factor) const {
   return result;
 }
 
-void FactoredNLM::reclass(vector<WordId>& train, vector<WordId>& test) {
+void FactoredNLM::reclass(
+    const boost::shared_ptr<Corpus>& training_corpus,
+    const boost::shared_ptr<Corpus>& test_corpus) {
   /*
   cerr << "\n Reallocating classes:" << endl;
   MatrixReal class_dot_products = R * F.transpose();
@@ -175,7 +177,7 @@ Real FactoredNLM::log_prob(
   if (cache && !class_context_cache_result.second) {
     word_log_prob = R.row(w)*prediction_vector + B(w) - class_context_cache_result.first->second;
   } else {
-    int word_index = index.getWordIndexInClass(w);
+    int word_index = index->getWordIndexInClass(w);
     Real w_log_z=0;
     VectorReal word_probs = logSoftMax(class_R(c)*prediction_vector + class_B(c), &w_log_z);
     word_log_prob = word_probs(word_index);

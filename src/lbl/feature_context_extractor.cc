@@ -3,12 +3,12 @@
 namespace oxlm {
 
 FeatureContextExtractor::FeatureContextExtractor(
-    const Corpus& corpus,
-    const ContextProcessor& processor,
+    const boost::shared_ptr<Corpus>& corpus,
+    const boost::shared_ptr<ContextProcessor>& processor,
     size_t feature_context_size)
     : feature_context_size(feature_context_size) {
-  for (size_t i = 0; i < corpus.size(); ++i) {
-    vector<int> context = processor.extract(i);
+  for (size_t i = 0; i < corpus->size(); ++i) {
+    vector<int> context = processor->extract(i);
     vector<FeatureContext> feature_contexts = getFeatureContexts(context);
     for (const FeatureContext& feature_context: feature_contexts) {
       auto it = featureContextsMap.find(feature_context);

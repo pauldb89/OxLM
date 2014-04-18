@@ -1,12 +1,16 @@
 #include "gtest/gtest.h"
 
+#include <boost/make_shared.hpp>
+
 #include "lbl/feature_context_extractor.h"
 
 namespace oxlm {
 
 TEST(FeatureContextExtractorTest, TestLongerHistory) {
-  vector<int> corpus = {2, 3, 4, 5, 6, 1};
-  ContextProcessor processor(corpus, 5, 0, 1);
+  vector<int> data = {2, 3, 4, 5, 6, 1};
+  boost::shared_ptr<Corpus> corpus = boost::make_shared<Corpus>(data);
+  boost::shared_ptr<ContextProcessor> processor =
+      boost::make_shared<ContextProcessor>(corpus, 5, 0, 1);
   FeatureContextExtractor extractor(corpus, processor, 3);
 
   vector<int> history = {6, 5, 4, 3, 2};
@@ -19,8 +23,10 @@ TEST(FeatureContextExtractorTest, TestLongerHistory) {
 }
 
 TEST(FeatureContextExtractorTest, TestShorterHistory) {
-  vector<int> corpus = {2, 3, 4, 5, 6, 1};
-  ContextProcessor processor(corpus, 3, 0, 1);
+  vector<int> data = {2, 3, 4, 5, 6, 1};
+  boost::shared_ptr<Corpus> corpus = boost::make_shared<Corpus>(data);
+  boost::shared_ptr<ContextProcessor> processor =
+      boost::make_shared<ContextProcessor>(corpus, 3, 0, 1);
   FeatureContextExtractor extractor(corpus, processor, 5);
 
   vector<int> history = {6, 5, 4};

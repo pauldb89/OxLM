@@ -11,9 +11,9 @@ TEST_F(TestSGD, TestTrainMaxentSGD) {
 
   FactoredMaxentNLM model = learn(config);
   config.test_file = "test.txt";
-  Corpus test_corpus = loadTestCorpus(model.label_set());
+  boost::shared_ptr<Corpus> test_corpus = loadTestCorpus(model.label_set());
   double log_pp = perplexity(model, test_corpus);
-  EXPECT_NEAR(60.1676, exp(-log_pp / test_corpus.size()), 1e-3);
+  EXPECT_NEAR(60.1676, exp(-log_pp / test_corpus->size()), 1e-3);
 }
 
 TEST_F(TestSGD, TestTrainMaxentSGDSparseFeatures) {
@@ -23,9 +23,9 @@ TEST_F(TestSGD, TestTrainMaxentSGDSparseFeatures) {
 
   FactoredMaxentNLM model = learn(config);
   config.test_file = "test.txt";
-  Corpus test_corpus = loadTestCorpus(model.label_set());
+  boost::shared_ptr<Corpus> test_corpus = loadTestCorpus(model.label_set());
   double log_pp = perplexity(model, test_corpus);
-  EXPECT_NEAR(62.6341, exp(-log_pp / test_corpus.size()), 1e-3);
+  EXPECT_NEAR(62.6341, exp(-log_pp / test_corpus->size()), 1e-3);
 }
 
 } // namespace oxlm

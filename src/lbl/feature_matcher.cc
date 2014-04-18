@@ -5,17 +5,18 @@
 namespace oxlm {
 
 FeatureMatcher::FeatureMatcher(
-    const Corpus& corpus, const WordToClassIndex& index,
-    const ContextProcessor& processor,
+    const boost::shared_ptr<Corpus>& corpus,
+    const boost::shared_ptr<WordToClassIndex>& index,
+    const boost::shared_ptr<ContextProcessor>& processor,
     const boost::shared_ptr<FeatureContextExtractor>& extractor)
     : corpus(corpus), index(index), processor(processor), extractor(extractor) {
-  feature_indexes = boost::make_shared<FeatureIndexesPair>(index.getNumClasses());
-  for (size_t i = 0; i < corpus.size(); ++i) {
-    int word_id = corpus[i];
-    int class_id = index.getClass(word_id);
-    int word_class_id = index.getWordIndexInClass(word_id);
+  feature_indexes = boost::make_shared<FeatureIndexesPair>(index->getNumClasses());
+  for (size_t i = 0; i < corpus->size(); ++i) {
+    int word_id = corpus->at(i);
+    int class_id = index->getClass(word_id);
+    int word_class_id = index->getWordIndexInClass(word_id);
 
-    vector<WordId> context = processor.extract(i);
+    vector<WordId> context = processor->extract(i);
     vector<FeatureContextId> feature_context_ids =
         extractor->getFeatureContextIds(context);
     for (const FeatureContextId& feature_context_id: feature_context_ids) {
@@ -32,13 +33,13 @@ FeatureIndexesPairPtr FeatureMatcher::getFeatures() const {
 FeatureIndexesPairPtr FeatureMatcher::getFeatures(
     const vector<int>& minibatch_indexes) const {
   FeatureIndexesPairPtr minibatch_feature_indexes =
-      boost::make_shared<FeatureIndexesPair>(index.getNumClasses());
+      boost::make_shared<FeatureIndexesPair>(index->getNumClasses());
   for (int i: minibatch_indexes) {
-    int word_id = corpus[i];
-    int class_id = index.getClass(word_id);
-    int word_class_id = index.getWordIndexInClass(word_id);
+    int word_id = corpus->at(i);
+    int class_id = index->getClass(word_id);
+    int word_class_id = index->getWordIndexInClass(word_id);
 
-    vector<WordId> context = processor.extract(i);
+    vector<WordId> context = processor->extract(i);
     vector<FeatureContextId> feature_context_ids =
         extractor->getFeatureContextIds(context);
     for (const FeatureContextId& feature_context_id: feature_context_ids) {

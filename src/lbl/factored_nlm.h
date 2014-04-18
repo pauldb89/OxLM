@@ -1,6 +1,7 @@
 #pragma once
 
 #include <boost/serialization/export.hpp>
+#include <boost/serialization/shared_ptr.hpp>
 
 #include "lbl/nlm.h"
 #include "lbl/word_to_class_index.h"
@@ -15,8 +16,9 @@ class FactoredNLM: public NLM {
 
   FactoredNLM(const ModelData& config, const Dict& labels);
 
-  FactoredNLM(const ModelData& config, const Dict& labels,
-              const WordToClassIndex& index);
+  FactoredNLM(
+      const ModelData& config, const Dict& labels,
+      const boost::shared_ptr<WordToClassIndex>& index);
 
   Eigen::Block<WordVectorsType> class_R(const int c);
 
@@ -32,7 +34,9 @@ class FactoredNLM: public NLM {
 
   virtual Real l2Objective(Real minibatch_factor) const;
 
-  void reclass(vector<WordId>& train, vector<WordId>& test);
+  void reclass(
+      const boost::shared_ptr<Corpus>& training_corpus,
+      const boost::shared_ptr<Corpus>& test_corpus);
 
   virtual Real log_prob(
       const WordId w, const vector<WordId>& context,
@@ -76,7 +80,7 @@ class FactoredNLM: public NLM {
   BOOST_SERIALIZATION_SPLIT_MEMBER();
 
  public:
-  WordToClassIndex index;
+  boost::shared_ptr<WordToClassIndex> index;
   MatrixReal F;
   VectorReal FB;
 

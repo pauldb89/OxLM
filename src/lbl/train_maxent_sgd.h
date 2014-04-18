@@ -50,14 +50,13 @@ FactoredMaxentNLM learn(ModelData& config);
 typedef int TrainingInstance;
 typedef vector<TrainingInstance> TrainingInstances;
 void scatter_data(int start, int end,
-                  const Corpus& training_corpus,
                   const vector<size_t>& indices,
                   TrainingInstances &result);
 
 Real sgd_gradient(FactoredMaxentNLM& model,
-                  const Corpus& training_corpus,
+                  const boost::shared_ptr<Corpus>& training_corpus,
                   const TrainingInstances &indexes,
-                  const WordToClassIndex& index,
+                  const boost::shared_ptr<WordToClassIndex>& index,
                   const boost::shared_ptr<FeatureContextExtractor>& extractor,
                   WordVectorsType& g_R,
                   WordVectorsType& g_Q,
@@ -68,15 +67,17 @@ Real sgd_gradient(FactoredMaxentNLM& model,
                   const boost::shared_ptr<FeatureStore>& g_U,
                   const vector<boost::shared_ptr<FeatureStore>>& g_V);
 
-Real perplexity(const FactoredMaxentNLM& model, const Corpus& test_corpus);
+Real perplexity(
+    const FactoredMaxentNLM& model,
+    const boost::shared_ptr<Corpus>& test_corpus);
 void freq_bin_type(const std::string &corpus, int num_classes, std::vector<int>& classes, Dict& dict, VectorReal& class_bias);
 void classes_from_file(const std::string &class_file, vector<int>& classes, Dict& dict, VectorReal& class_bias);
 
 void displayStats(
     int minibatch_counter, Real& pp,
     const FactoredMaxentNLM& model,
-    const Corpus& test_corpus) {
-  if (test_corpus.size()) {
+    const boost::shared_ptr<Corpus>& test_corpus) {
+  if (test_corpus != nullptr) {
     #pragma omp master
     pp = 0.0;
 
@@ -93,7 +94,7 @@ void displayStats(
     #pragma omp barrier
     #pragma omp master
     {
-      pp = exp(-pp / test_corpus.size());
+      pp = exp(-pp / test_corpus->size());
       cout << "\tMinibatch " << minibatch_counter
            << ", Test Perplexity = " << pp << endl;
     }
@@ -101,7 +102,7 @@ void displayStats(
 }
 
 FactoredMaxentNLM learn(ModelData& config) {
-  Corpus training_corpus, test_corpus;
+  boost::shared_ptr<Corpus> training_corpus, test_corpus;
   Dict dict;
   WordId start_id = dict.Convert("<s>");
   WordId end_id = dict.Convert("</s>");
@@ -126,11 +127,12 @@ FactoredMaxentNLM learn(ModelData& config) {
   ifstream in(config.training_file);
   string line, token;
 
+  training_corpus = boost::make_shared<Corpus>();
   while (getline(in, line)) {
     stringstream line_stream(line);
     while (line_stream >> token)
-      training_corpus.push_back(dict.Convert(token));
-    training_corpus.push_back(end_id);
+      training_corpus->push_back(dict.Convert(token));
+    training_corpus->push_back(end_id);
   }
   in.close();
   //////////////////////////////////////////////
@@ -138,6 +140,7 @@ FactoredMaxentNLM learn(ModelData& config) {
   //////////////////////////////////////////////
   // read the test sentences
   if (config.test_file.size()) {
+    test_corpus = boost::make_shared<Corpus>();
     ifstream test_in(config.test_file);
     while (getline(test_in, line)) {
       stringstream line_stream(line);
@@ -148,21 +151,26 @@ FactoredMaxentNLM learn(ModelData& config) {
           cerr << token << " " << w << endl;
           assert(!"Unknown word found in test corpus.");
         }
-        test_corpus.push_back(w);
+        test_corpus->push_back(w);
       }
-      test_corpus.push_back(end_id);
+      test_corpus->push_back(end_id);
     }
     test_in.close();
   }
   //////////////////////////////////////////////
   //
   int context_width = config.ngram_order - 1;
-  WordToClassIndex index(classes);
-  ContextProcessor processor(training_corpus, context_width, start_id, end_id);
+  boost::shared_ptr<WordToClassIndex> index =
+      boost::make_shared<WordToClassIndex>(classes);
+  boost::shared_ptr<ContextProcessor> processor =
+      boost::make_shared<ContextProcessor>(
+          training_corpus, context_width, start_id, end_id);
   boost::shared_ptr<FeatureContextExtractor> extractor =
       boost::make_shared<FeatureContextExtractor>(
           training_corpus, processor, config.feature_context_size);
-  FeatureMatcher feature_matcher(training_corpus, index, processor, extractor);
+  boost::shared_ptr<FeatureMatcher> feature_matcher =
+      boost::make_shared<FeatureMatcher>(
+          training_corpus, index, processor, extractor);
   FeatureStoreInitializer initializer(config, index, feature_matcher);
   FactoredMaxentNLM model(config, dict, index, extractor, initializer);
   model.FB = class_bias;
@@ -173,10 +181,10 @@ FactoredMaxentNLM learn(ModelData& config) {
     ar >> model;
   }
 
-  vector<size_t> training_indices(training_corpus.size());
+  vector<size_t> training_indices(training_corpus->size());
   model.unigram = VectorReal::Zero(model.labels());
   for (size_t i=0; i<training_indices.size(); i++) {
-    model.unigram(training_corpus[i]) += 1;
+    model.unigram(training_corpus->at(i)) += 1;
     training_indices[i] = i;
   }
   model.B = ((model.unigram.array()+1.0)/(model.unigram.sum()+model.unigram.size())).log();
@@ -255,8 +263,8 @@ FactoredMaxentNLM learn(ModelData& config) {
 
       Real step_size = config.step_size;
 
-      for (size_t start=0; start < training_corpus.size() && (int)start < config.instances; ++minibatch_counter) {
-        size_t end = min(training_corpus.size(), start + minibatch_size);
+      for (size_t start=0; start < training_corpus->size() && (int)start < config.instances; ++minibatch_counter) {
+        size_t end = min(training_corpus->size(), start + minibatch_size);
 
         #pragma omp master
         {
@@ -276,7 +284,7 @@ FactoredMaxentNLM learn(ModelData& config) {
         // data from this minibatch.
         #pragma omp barrier
         vector<int> minibatch_thread_indices;
-        scatter_data(start, end, training_corpus, training_indices, minibatch_thread_indices);
+        scatter_data(start, end, training_indices, minibatch_thread_indices);
 
         gradient.setZero();
         g_F.setZero();
@@ -328,7 +336,7 @@ FactoredMaxentNLM learn(ModelData& config) {
 
           // regularisation
           if (config.l2_lbl > 0 || config.l2_maxent > 0) {
-            Real minibatch_factor = static_cast<Real>(end - start) / training_corpus.size();
+            Real minibatch_factor = static_cast<Real>(end - start) / training_corpus->size();
             model.l2GradientUpdate(minibatch_factor);
             av_f += model.l2Objective(minibatch_factor);
           }
@@ -351,7 +359,7 @@ FactoredMaxentNLM learn(ModelData& config) {
       {
         cout << "Iteration: " << iteration << ", "
              << "Time: " << iteration_time << " seconds, "
-             << "Average f = " << av_f / training_corpus.size() << endl;
+             << "Average f = " << av_f / training_corpus->size() << endl;
         cout << endl;
 
         if (iteration >= 1 && config.reclass) {
@@ -385,10 +393,7 @@ FactoredMaxentNLM learn(ModelData& config) {
   return model;
 }
 
-void scatter_data(int start, int end, const Corpus& training_corpus, const vector<size_t>& indices, TrainingInstances &result) {
-  assert (start>=0 && start < end && end <= static_cast<int>(training_corpus.size()));
-  assert (training_corpus.size() == indices.size());
-
+void scatter_data(int start, int end, const vector<size_t>& indices, TrainingInstances &result) {
   size_t thread_num = omp_get_thread_num();
   size_t num_threads = omp_get_num_threads();
 
@@ -402,9 +407,9 @@ void scatter_data(int start, int end, const Corpus& training_corpus, const vecto
 
 
 Real sgd_gradient(FactoredMaxentNLM& model,
-                  const Corpus& training_corpus,
+                  const boost::shared_ptr<Corpus>& training_corpus,
                   const TrainingInstances &training_instances,
-                  const WordToClassIndex& index,
+                  const boost::shared_ptr<WordToClassIndex>& index,
                   const boost::shared_ptr<FeatureContextExtractor>& extractor,
                   WordVectorsType& g_R,
                   WordVectorsType& g_Q,
@@ -442,11 +447,11 @@ Real sgd_gradient(FactoredMaxentNLM& model,
   // Calculate the function and gradient for each ngram.
   for (int instance=0; instance < instances; instance++) {
     int w_i = training_instances.at(instance);
-    WordId w = training_corpus.at(w_i);
+    WordId w = training_corpus->at(w_i);
     int c = model.get_class(w);
-    int c_start = index.getClassMarker(c);
-    int c_size = index.getClassSize(c);
-    int word_index = index.getWordIndexInClass(w);
+    int c_start = index->getClassMarker(c);
+    int c_size = index->getClassSize(c);
+    int word_index = index->getWordIndexInClass(w);
 
     vector<FeatureContextId> feature_context_ids =
         extractor->getFeatureContextIds(contexts[instance]);
@@ -505,23 +510,27 @@ Real sgd_gradient(FactoredMaxentNLM& model,
   return f;
 }
 
-Real perplexity(const FactoredMaxentNLM& model, const Corpus& test_corpus) {
+Real perplexity(
+    const FactoredMaxentNLM& model,
+    const boost::shared_ptr<Corpus>& test_corpus) {
   Real p=0.0;
 
   int context_width = model.config.ngram_order-1;
   int tokens = 0;
   WordId start_id = model.label_set().Lookup("<s>");
   WordId end_id = model.label_set().Lookup("</s>");
-  ContextProcessor processor(test_corpus, context_width, start_id, end_id);
+  boost::shared_ptr<ContextProcessor> processor =
+      boost::make_shared<ContextProcessor>(
+          test_corpus, context_width, start_id, end_id);
 
   #pragma omp master
-  cout << "\tCalculating perplexity for " << test_corpus.size() << " tokens";
+  cout << "\tCalculating perplexity for " << test_corpus->size() << " tokens";
 
   size_t thread_num = omp_get_thread_num();
   size_t num_threads = omp_get_num_threads();
-  for (size_t s = thread_num; s < test_corpus.size(); s += num_threads) {
-    vector<WordId> context = processor.extract(s);
-    Real log_prob = model.log_prob(test_corpus[s], context, true, false);
+  for (size_t s = thread_num; s < test_corpus->size(); s += num_threads) {
+    vector<WordId> context = processor->extract(s);
+    Real log_prob = model.log_prob(test_corpus->at(s), context, true, false);
     p += log_prob;
 
     #pragma omp master

@@ -16,8 +16,8 @@ class FeatureStoreInitializer {
  public:
   FeatureStoreInitializer(
       const ModelData& config,
-      const WordToClassIndex& index,
-      const FeatureMatcher& matcher);
+      const boost::shared_ptr<WordToClassIndex>& index,
+      const boost::shared_ptr<FeatureMatcher>& matcher);
 
   void initialize(
       boost::shared_ptr<FeatureStore>& U,
@@ -40,9 +40,9 @@ class FeatureStoreInitializer {
       FeatureIndexesPairPtr feature_indexes_pair,
       bool random_weights) const;
 
-  const ModelData& config;
-  const WordToClassIndex& index;
-  const FeatureMatcher& matcher;
+  ModelData config;
+  boost::shared_ptr<WordToClassIndex> index;
+  boost::shared_ptr<FeatureMatcher> matcher;
 };
 
 } // namespace oxlm
