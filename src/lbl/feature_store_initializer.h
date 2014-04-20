@@ -21,13 +21,12 @@ class FeatureStoreInitializer {
 
   void initialize(
       boost::shared_ptr<FeatureStore>& U,
-      vector<boost::shared_ptr<FeatureStore>>& V,
-      bool random_weights = false) const;
+      vector<boost::shared_ptr<FeatureStore>>& V) const;
 
   void initialize(
       boost::shared_ptr<FeatureStore>& U,
       vector<boost::shared_ptr<FeatureStore>>& V,
-      const vector<int>& minibatch_indices, bool random_weights = false) const;
+      const vector<int>& minibatch_indices) const;
 
  private:
   void initializeUnconstrainedStores(
@@ -37,8 +36,7 @@ class FeatureStoreInitializer {
   void initializeSparseStores(
       boost::shared_ptr<FeatureStore>& U,
       vector<boost::shared_ptr<FeatureStore>>& V,
-      FeatureIndexesPairPtr feature_indexes_pair,
-      bool random_weights) const;
+      FeatureIndexesPairPtr feature_indexes_pair) const;
 
   ModelData config;
   boost::shared_ptr<WordToClassIndex> index;

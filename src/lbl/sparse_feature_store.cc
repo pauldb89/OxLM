@@ -1,7 +1,5 @@
 #include "lbl/sparse_feature_store.h"
 
-#include <random>
-
 #include "lbl/operators.h"
 #include "utils/constants.h"
 
@@ -13,17 +11,11 @@ SparseFeatureStore::SparseFeatureStore(int vector_max_size)
     : vectorMaxSize(vector_max_size) {}
 
 SparseFeatureStore::SparseFeatureStore(
-    int vector_max_size,
-    FeatureIndexesPtr feature_indexes,
-    bool random_weights)
+    int vector_max_size, FeatureIndexesPtr feature_indexes)
     : vectorMaxSize(vector_max_size) {
-  random_device rd;
-  std::mt19937 gen(rd());
-  std::normal_distribution<Real> gaussian(0, 0.1);
   for (const auto& feature_context_indexes: *feature_indexes) {
     for (int feature_index: feature_context_indexes.second) {
-      Real value = random_weights ? gaussian(gen) : 0;
-      hintFeatureIndex(feature_context_indexes.first, feature_index, value);
+      hintFeatureIndex(feature_context_indexes.first, feature_index);
     }
   }
 }
@@ -106,13 +98,13 @@ size_t SparseFeatureStore::size() const {
 }
 
 void SparseFeatureStore::hintFeatureIndex(
-    FeatureContextId feature_context_id, int feature_index, Real value) {
+    FeatureContextId feature_context_id, int feature_index) {
   auto it = featureWeights.find(feature_context_id);
   if (it != featureWeights.end()) {
-    it->second.coeffRef(feature_index) = value;
+    it->second.coeffRef(feature_index) = 0;
   } else {
     SparseVectorReal weights(vectorMaxSize);
-    weights.coeffRef(feature_index) = value;
+    weights.coeffRef(feature_index) = 0;
     featureWeights.insert(make_pair(feature_context_id, weights));
   }
 }

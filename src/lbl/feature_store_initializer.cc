@@ -15,10 +15,9 @@ FeatureStoreInitializer::FeatureStoreInitializer(
 
 void FeatureStoreInitializer::initialize(
     boost::shared_ptr<FeatureStore>& U,
-    vector<boost::shared_ptr<FeatureStore>>& V,
-    bool random_weights) const {
+    vector<boost::shared_ptr<FeatureStore>>& V) const {
   if (config.sparse_features) {
-    initializeSparseStores(U, V, matcher->getFeatures(), random_weights);
+    initializeSparseStores(U, V, matcher->getFeatures());
   } else {
     initializeUnconstrainedStores(U, V);
   }
@@ -27,10 +26,10 @@ void FeatureStoreInitializer::initialize(
 void FeatureStoreInitializer::initialize(
     boost::shared_ptr<FeatureStore>& U,
     vector<boost::shared_ptr<FeatureStore>>& V,
-    const vector<int>& minibatch_indices, bool random_weights) const {
+    const vector<int>& minibatch_indices) const {
   if (config.sparse_features) {
     initializeSparseStores(
-        U, V, matcher->getFeatures(minibatch_indices), random_weights);
+        U, V, matcher->getFeatures(minibatch_indices));
   } else {
     initializeUnconstrainedStores(U, V);
   }
@@ -50,16 +49,14 @@ void FeatureStoreInitializer::initializeUnconstrainedStores(
 void FeatureStoreInitializer::initializeSparseStores(
     boost::shared_ptr<FeatureStore>& U,
     vector<boost::shared_ptr<FeatureStore>>& V,
-    FeatureIndexesPairPtr feature_indexes_pair,
-    bool random_weights) const {
+    FeatureIndexesPairPtr feature_indexes_pair) const {
   U = boost::make_shared<SparseFeatureStore>(
-      config.classes, feature_indexes_pair->getClassIndexes(), random_weights);
+      config.classes, feature_indexes_pair->getClassIndexes());
   V.resize(config.classes);
   for (int i = 0; i < config.classes; ++i) {
     V[i] = boost::make_shared<SparseFeatureStore>(
         index->getClassSize(i),
-        feature_indexes_pair->getWordIndexes(i),
-        random_weights);
+        feature_indexes_pair->getWordIndexes(i));
   }
 }
 

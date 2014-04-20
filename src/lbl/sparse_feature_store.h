@@ -21,9 +21,7 @@ class SparseFeatureStore : public FeatureStore {
   SparseFeatureStore(int vector_max_size);
 
   SparseFeatureStore(
-      int vector_max_size,
-      FeatureIndexesPtr feature_indexes,
-      bool random_weights);
+      int vector_max_size, FeatureIndexesPtr feature_indexes);
 
   virtual VectorReal get(
       const vector<FeatureContextId>& feature_context_ids) const;
@@ -51,7 +49,7 @@ class SparseFeatureStore : public FeatureStore {
   virtual size_t size() const;
 
   void hintFeatureIndex(
-      FeatureContextId feature_context_id, int feature_index, Real value = 0);
+      FeatureContextId feature_context_id, int feature_index);
 
   bool operator==(const SparseFeatureStore& store) const;
 
