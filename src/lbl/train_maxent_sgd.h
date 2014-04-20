@@ -538,7 +538,7 @@ Real perplexity(
     p += log_prob;
 
     #pragma omp master
-    if (tokens % 1000 == 0) {
+    if (tokens % 10000 == 0) {
       cout << ".";
       cout.flush();
     }

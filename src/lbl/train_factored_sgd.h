@@ -477,7 +477,7 @@ Real perplexity(const FactoredNLM& model, const boost::shared_ptr<Corpus>& test_
     p += log_prob;
 
     #pragma omp master
-    if (tokens % 1000 == 0) {
+    if (tokens % 10000 == 0) {
       cout << ".";
       cout.flush();
     }
