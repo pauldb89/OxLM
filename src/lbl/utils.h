@@ -39,10 +39,15 @@ inline VectorReal softMax(const VectorReal& v) {
   return (v.array() - (log((v.array() - max).exp().sum()) + max)).exp();
 }
 
-inline VectorReal logSoftMax(const VectorReal& v, Real* lz = NULL) {
+inline VectorReal logSoftMax(const VectorReal& v) {
   Real max = v.maxCoeff();
   Real log_z = log((v.array() - max).exp().sum()) + max;
-  if (lz != 0) *lz = log_z;
+  return v.array() - log_z;
+}
+
+inline VectorReal logSoftMax(const VectorReal& v, Real& log_z) {
+  Real max = v.maxCoeff();
+  log_z = log((v.array() - max).exp().sum()) + max;
   return v.array() - log_z;
 }
 

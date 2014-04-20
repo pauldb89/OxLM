@@ -48,10 +48,10 @@ Real FactoredMaxentNLM::log_prob(
     assert (context_cache_result.first->second != 0);
     class_log_prob = F.row(c)*prediction_vector + FB(c) + class_feature_scores(c) - context_cache_result.first->second;
   } else {
-    Real c_log_z=0;
-    VectorReal class_probs = logSoftMax(F*prediction_vector + FB + class_feature_scores, &c_log_z);
-    assert(c_log_z != 0);
+    Real c_log_z = 0;
+    VectorReal class_probs = logSoftMax(F*prediction_vector + FB + class_feature_scores, c_log_z);
     class_log_prob = class_probs(c);
+    assert(isfinite(class_log_prob));
     if (cache) {
       context_cache_result.first->second = c_log_z;
     }
@@ -66,8 +66,9 @@ Real FactoredMaxentNLM::log_prob(
     word_log_prob  = R.row(w)*prediction_vector + B(w) + word_feature_scores(word_index) - class_context_cache_result.first->second;
   } else {
     Real w_log_z = 0;
-    VectorReal word_probs = logSoftMax(class_R(c) * prediction_vector + class_B(c) + word_feature_scores, &w_log_z);
+    VectorReal word_probs = logSoftMax(class_R(c) * prediction_vector + class_B(c) + word_feature_scores, w_log_z);
     word_log_prob = word_probs(word_index);
+    assert(isfinite(word_log_prob));
     if (cache) {
       class_context_cache_result.first->second = w_log_z;
     }

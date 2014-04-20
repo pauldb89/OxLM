@@ -18,9 +18,30 @@ TEST(UtilsTest, TestSoftMax) {
 TEST(UtilsTest, TestLogSoftMax) {
   VectorReal v(3);
   v << 1, 2, 3;
-  VectorReal w = logSoftMax(v);
+  Real log_z;
+
+  VectorReal w = logSoftMax(v, log_z);
   VectorReal expected_w(3);
   expected_w << -2.407605, -1.407605, -0.407605;
+  EXPECT_MATRIX_NEAR(expected_w, w, EPS);
+  EXPECT_NEAR(3.407605964, log_z, EPS);
+
+  w = logSoftMax(v);
+  EXPECT_MATRIX_NEAR(expected_w, w, EPS);
+}
+
+TEST(UtilsTest, TestLogSoftMaxZero) {
+  VectorReal v(1);
+  v << 0;
+  Real log_z;
+
+  VectorReal w = logSoftMax(v, log_z);
+  VectorReal expected_w(1);
+  expected_w << 0;
+  EXPECT_MATRIX_NEAR(expected_w, w, EPS);
+  EXPECT_NEAR(0, log_z, EPS);
+
+  w = logSoftMax(v);
   EXPECT_MATRIX_NEAR(expected_w, w, EPS);
 }
 
