@@ -2,6 +2,7 @@
 
 #include <random>
 
+#include "lbl/operators.h"
 #include "utils/constants.h"
 
 namespace oxlm {
@@ -91,9 +92,8 @@ void SparseFeatureStore::updateAdaGrad(
     const SparseVectorReal& gradient = entry.second;
     const SparseVectorReal& adagrad =
         adagrad_store->featureWeights.at(entry.first);
-    const SparseVectorReal& denominator =
-        adagrad.cwiseSqrt().unaryExpr(CwiseDenominatorOp<Real>(EPS));
-    weights -= step_size * gradient.cwiseProduct(denominator);
+    weights -= gradient.binaryExpr(
+        adagrad, CwiseAdagradUpdateOp<Real>(step_size));
   }
 }
 

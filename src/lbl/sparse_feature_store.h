@@ -105,28 +105,6 @@ class SparseFeatureStore : public FeatureStore {
   int vectorMaxSize;
 };
 
-template<class Scalar>
-struct CwiseSetValueOp {
-  CwiseSetValueOp(const Scalar& value) : value(value) {}
-
-  const Scalar operator()(const Scalar& x) const {
-    return value;
-  }
-
-  Scalar value;
-};
-
-template<class Scalar>
-struct CwiseDenominatorOp {
-  CwiseDenominatorOp(Scalar eps) : eps(eps) {}
-
-  const Scalar operator()(const Scalar& x) const {
-    return fabs(x) < eps ? 1.0 : 1.0 / x;
-  }
-
-  Scalar eps;
-};
-
 } // namespace oxlm
 
 BOOST_CLASS_EXPORT_KEY(oxlm::SparseFeatureStore)

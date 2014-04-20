@@ -30,6 +30,7 @@
 #include "lbl/context_processor.h"
 #include "lbl/factored_nlm.h"
 #include "lbl/log_add.h"
+#include "lbl/operators.h"
 #include "lbl/word_to_class_index.h"
 
 // Namespaces
@@ -277,16 +278,15 @@ FactoredNLM learn(ModelData& config) {
         #pragma omp master
         {
           adaGrad.array() += global_gradient.array().square();
-          for (int w=0; w<model.num_weights(); ++w)
-            if (adaGrad(w)) model.W(w) -= (step_size*global_gradient(w) / sqrt(adaGrad(w)));
+          model.W -= global_gradient.binaryExpr(
+              adaGrad, CwiseAdagradUpdateOp<Real>(step_size));
 
           adaGradF.array() += global_gradientF.array().square();
+          model.F -= global_gradientF.binaryExpr(
+              adaGradF, CwiseAdagradUpdateOp<Real>(step_size));
           adaGradFB.array() += global_gradientFB.array().square();
-          for (int r=0; r < adaGradF.rows(); ++r) {
-            if (adaGradFB(r)) model.FB(r) -= (step_size*global_gradientFB(r) / sqrt(adaGradFB(r)));
-            for (int c=0; c < adaGradF.cols(); ++c)
-              if (adaGradF(r,c)) model.F(r,c) -= (step_size*global_gradientF(r,c) / sqrt(adaGradF(r,c)));
-          }
+          model.FB -= global_gradientFB.binaryExpr(
+              adaGradFB, CwiseAdagradUpdateOp<Real>(step_size));
 
           // regularisation
           if (config.l2_lbl > 0) {

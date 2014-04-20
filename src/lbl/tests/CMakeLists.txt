@@ -16,6 +16,8 @@ target_link_libraries(feature_matcher_test lbl)
 add_test(feature_store_initializer_test)
 target_link_libraries(feature_store_initializer_test lbl)
 
+add_test(operators_test)
+
 add_test(sparse_feature_store_test)
 target_link_libraries(sparse_feature_store_test lbl)
 
