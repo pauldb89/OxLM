@@ -322,15 +322,15 @@ FactoredNLM learn(ModelData& config) {
           adaGradFB = VectorReal::Zero(model.FB.size());
           adaGrad = VectorReal::Zero(model.num_weights());
         }
-      }
 
-      if (config.model_output_file.size() && config.log_period) {
-        if (iteration % config.log_period == 0) {
-          string file = config.model_output_file + ".i" + to_string(iteration);
-          cout << "Writing trained model to " << file << endl;
-          std::ofstream f(file);
-          boost::archive::text_oarchive ar(f);
-          ar << model;
+        if (config.model_output_file.size() && config.log_period) {
+          if (iteration % config.log_period == 0) {
+            string file = config.model_output_file + ".i" + to_string(iteration);
+            cout << "Writing trained model to " << file << endl;
+            std::ofstream f(file);
+            boost::archive::text_oarchive ar(f);
+            ar << model;
+          }
         }
       }
     }
