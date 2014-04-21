@@ -18,12 +18,12 @@ TEST(FeatureIndexesPairTest, TestBasic) {
   EXPECT_EQ(1, indexes_pair.getClassIndexes()->size());
   EXPECT_EQ(1, indexes_pair.getWordIndexes(2)->size());
 
-  unordered_set<int> expected_indexes = {2};
+  vector<int> expected_indexes = {2};
   EXPECT_EQ(expected_indexes, indexes_pair.getClassFeatures(1));
   expected_indexes = {5};
   EXPECT_EQ(expected_indexes, indexes_pair.getWordFeatures(2, 1));
 
-  unordered_set<int> new_indexes = {1};
+  vector<int> new_indexes = {1};
   indexes_pair.setClassIndexes(2, new_indexes);
   new_indexes = {3};
   indexes_pair.setWordIndexes(1, 2, new_indexes);

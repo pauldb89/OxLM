@@ -38,6 +38,7 @@ vector<FeatureContext> FeatureContextExtractor::getFeatureContexts(
   vector<FeatureContext> feature_contexts;
   vector<int> context;
   for (size_t i = 0; i < min(feature_context_size, history.size()); ++i) {
+    context.reserve(context.size() + 1);
     context.push_back(history[i]);
     feature_contexts.push_back(FeatureContext(context));
   }

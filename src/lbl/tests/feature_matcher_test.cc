@@ -27,9 +27,11 @@ class FeatureMatcherTest : public testing::Test {
       FeatureIndexesPtr feature_indexes,
       const vector<FeatureContextId>& feature_context_ids,
       int feature_index) const {
-    for (const FeatureContextId& feature_context_id: feature_context_ids) {
-      EXPECT_TRUE(feature_indexes->count(feature_context_id));
-      EXPECT_TRUE(feature_indexes->at(feature_context_id).count(feature_index));
+    for (const FeatureContextId& context_id: feature_context_ids) {
+      EXPECT_TRUE(feature_indexes->count(context_id));
+      vector<int>& indexes = feature_indexes->at(context_id);
+      EXPECT_TRUE(
+          find(indexes.begin(), indexes.end(), feature_index) != indexes.end());
     }
   }
 

@@ -16,9 +16,9 @@ class FeatureIndexesPair {
 
   FeatureIndexesPtr getWordIndexes(int class_id) const;
 
-  unordered_set<int> getClassFeatures(int feature_context_id) const;
+  vector<int> getClassFeatures(int feature_context_id) const;
 
-  unordered_set<int> getWordFeatures(
+  vector<int> getWordFeatures(
       int class_id, int feature_context_id) const;
 
   void addClassIndex(FeatureContextId feature_context_id, int class_id);
@@ -28,12 +28,12 @@ class FeatureIndexesPair {
 
   void setClassIndexes(
       FeatureContextId feature_context_id,
-      const unordered_set<int>& indexes);
+      const vector<int>& indexes);
 
   void setWordIndexes(
       int class_id,
       FeatureContextId feature_context_id,
-      const unordered_set<int>& indexes);
+      const vector<int>& indexes);
 
  private:
   FeatureIndexesPtr class_indexes;

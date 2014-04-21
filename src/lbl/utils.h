@@ -2,7 +2,6 @@
 
 #include <chrono>
 #include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 #include <boost/shared_ptr.hpp>
@@ -22,7 +21,7 @@ typedef vector<WordId> Sentence;
 typedef vector<WordId> Corpus;
 
 typedef int                                                 FeatureContextId;
-typedef unordered_map<FeatureContextId, unordered_set<int>> FeatureIndexes;
+typedef unordered_map<FeatureContextId, vector<int>>        FeatureIndexes;
 typedef boost::shared_ptr<FeatureIndexes>                   FeatureIndexesPtr;
 
 typedef Eigen::Matrix<Real, Eigen::Dynamic, Eigen::Dynamic> MatrixReal;

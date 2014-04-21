@@ -162,20 +162,26 @@ FactoredMaxentNLM learn(ModelData& config) {
   }
   //////////////////////////////////////////////
   //
+  cout << "done reading corpora" << endl;
   int context_width = config.ngram_order - 1;
   boost::shared_ptr<WordToClassIndex> index =
       boost::make_shared<WordToClassIndex>(classes);
+  cout << "done creating index" << endl;
   boost::shared_ptr<ContextProcessor> processor =
       boost::make_shared<ContextProcessor>(
           training_corpus, context_width, start_id, end_id);
+  cout << "done creating processor" << endl;
   boost::shared_ptr<FeatureContextExtractor> extractor =
       boost::make_shared<FeatureContextExtractor>(
           training_corpus, processor, config.feature_context_size);
+  cout << "done creating feature context extractor" << endl;
   boost::shared_ptr<FeatureMatcher> feature_matcher =
       boost::make_shared<FeatureMatcher>(
           training_corpus, index, processor, extractor);
+  cout << "done creating feature matcher" << endl;
   FeatureStoreInitializer initializer(config, index, feature_matcher);
   FactoredMaxentNLM model(config, dict, index, extractor, initializer);
+  cout << "done creating model" << endl;
   model.FB = class_bias;
 
   if (config.model_input_file.size()) {
@@ -202,10 +208,12 @@ FactoredMaxentNLM learn(ModelData& config) {
   VectorReal global_gradientFB(model.FB.size());
   MatrixReal adaGradF = MatrixReal::Zero(model.F.rows(), model.F.cols());
   VectorReal adaGradFB = VectorReal::Zero(model.FB.size());
+  cout << "done initializing gradients" << endl;
 
   boost::shared_ptr<FeatureStore> global_gradientU, adaGradU;
   vector<boost::shared_ptr<FeatureStore>> global_gradientV, adaGradV;
   initializer.initialize(adaGradU, adaGradV);
+  cout << "done initializing gradient stores" << endl;
 
   omp_set_num_threads(config.threads);
   #pragma omp parallel shared(global_gradient, global_gradientF)
