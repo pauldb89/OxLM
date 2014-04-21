@@ -17,11 +17,15 @@ FeatureMatcher::FeatureMatcher(
     int word_class_id = index->getWordIndexInClass(word_id);
 
     vector<WordId> context = processor->extract(i);
-    vector<FeatureContextId> feature_context_ids =
-        extractor->getFeatureContextIds(context);
-    for (const FeatureContextId& feature_context_id: feature_context_ids) {
-      feature_indexes->addClassIndex(feature_context_id, class_id);
-      feature_indexes->addWordIndex(class_id, feature_context_id, word_class_id);
+    pair<vector<int>, vector<int>> feature_context_ids =
+        extractor->getFeatureContextIds(class_id, context);
+
+    for (int class_context_id: feature_context_ids.first) {
+      feature_indexes->addClassIndex(class_context_id, class_id);
+    }
+
+    for (int word_context_id: feature_context_ids.second) {
+      feature_indexes->addWordIndex(class_id, word_context_id, word_class_id);
     }
   }
 }
@@ -40,18 +44,23 @@ FeatureIndexesPairPtr FeatureMatcher::getFeatures(
     int word_class_id = index->getWordIndexInClass(word_id);
 
     vector<WordId> context = processor->extract(i);
-    vector<FeatureContextId> feature_context_ids =
-        extractor->getFeatureContextIds(context);
-    for (const FeatureContextId& feature_context_id: feature_context_ids) {
+    pair<vector<int>, vector<int>> feature_context_ids =
+        extractor->getFeatureContextIds(class_id, context);
+
+    for (int class_context_id: feature_context_ids.first) {
       minibatch_feature_indexes->setClassIndexes(
-          feature_context_id,
-          feature_indexes->getClassFeatures(feature_context_id));
+          class_context_id,
+          feature_indexes->getClassFeatures(class_context_id));
+    }
+
+    for (int word_context_id: feature_context_ids.second) {
       minibatch_feature_indexes->setWordIndexes(
           class_id,
-          feature_context_id,
-          feature_indexes->getWordFeatures(class_id, feature_context_id));
+          word_context_id,
+          feature_indexes->getWordFeatures(class_id, word_context_id));
     }
   }
+
   return minibatch_feature_indexes;
 }
 

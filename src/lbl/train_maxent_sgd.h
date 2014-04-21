@@ -173,7 +173,7 @@ FactoredMaxentNLM learn(ModelData& config) {
   cout << "done creating processor" << endl;
   boost::shared_ptr<FeatureContextExtractor> extractor =
       boost::make_shared<FeatureContextExtractor>(
-          training_corpus, processor, config.feature_context_size);
+          training_corpus, index, processor, config.feature_context_size);
   cout << "done creating feature context extractor" << endl;
   boost::shared_ptr<FeatureMatcher> feature_matcher =
       boost::make_shared<FeatureMatcher>(
@@ -465,16 +465,16 @@ Real sgd_gradient(FactoredMaxentNLM& model,
     int c_size = index->getClassSize(c);
     int word_index = index->getWordIndexInClass(w);
 
-    vector<FeatureContextId> feature_context_ids =
-        extractor->getFeatureContextIds(contexts[instance]);
+    pair<vector<int>, vector<int>> feature_context_ids =
+        extractor->getFeatureContextIds(c, contexts[instance]);
 
     // a simple sigmoid non-linearity
     prediction_vectors.row(instance) = sigmoid(prediction_vectors.row(instance));
     //for (int x=0; x<word_width; ++x)
     //  prediction_vectors.row(instance)(x) *= (prediction_vectors.row(instance)(x) > 0 ? 1 : 0.01); // rectifier
 
-    VectorReal class_feature_scores = model.U->get(feature_context_ids);
-    VectorReal word_feature_scores = model.V[c]->get(feature_context_ids);
+    VectorReal class_feature_scores = model.U->get(feature_context_ids.first);
+    VectorReal word_feature_scores = model.V[c]->get(feature_context_ids.second);
     VectorReal class_conditional_scores = model.F * prediction_vectors.row(instance).transpose() + model.FB + class_feature_scores;
     VectorReal word_conditional_scores  = model.class_R(c) * prediction_vectors.row(instance).transpose() + model.class_B(c) + word_feature_scores;
 
@@ -499,8 +499,8 @@ Real sgd_gradient(FactoredMaxentNLM& model,
     g_FB += class_conditional_probs;
     g_R.block(c_start, 0, c_size, g_R.cols()) += word_conditional_probs * prediction_vectors.row(instance);
     g_B.segment(c_start, c_size) += word_conditional_probs;
-    g_U->update(feature_context_ids, class_conditional_probs);
-    g_V[c]->update(feature_context_ids, word_conditional_probs);
+    g_U->update(feature_context_ids.first, class_conditional_probs);
+    g_V[c]->update(feature_context_ids.second, word_conditional_probs);
 
     // a simple sigmoid non-linearity derivative
     weightedRepresentations.row(instance).array() *=

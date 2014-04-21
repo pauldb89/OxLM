@@ -20,7 +20,7 @@ class FeatureStoreInitializerTest : public testing::Test {
     processor = boost::make_shared<ContextProcessor>(
         corpus, config.ngram_order, 0, 1);
     extractor = boost::make_shared<FeatureContextExtractor>(
-        corpus, processor, 0);
+        corpus, index, processor, 0);
     matcher = boost::make_shared<FeatureMatcher>(
         corpus, index, processor, extractor);
   }

@@ -7,11 +7,15 @@
 #include "lbl/context_processor.h"
 #include "lbl/feature_context.h"
 #include "lbl/utils.h"
+#include "lbl/word_to_class_index.h"
 #include "utils/serialization_helpers.h"
 
 using namespace std;
 
 namespace oxlm {
+
+typedef unordered_map<FeatureContext, int, hash<FeatureContext>>
+    FeatureContextHash;
 
 /**
  * Given a context of words [w_{n-1}, w_{n-2}, ...] generates all the feature
@@ -24,11 +28,14 @@ class FeatureContextExtractor {
  public:
   FeatureContextExtractor(
       const boost::shared_ptr<Corpus>& corpus,
+      const boost::shared_ptr<WordToClassIndex>& index,
       const boost::shared_ptr<ContextProcessor>& processor,
       size_t feature_context_size);
 
-  vector<FeatureContextId> getFeatureContextIds(
-      const vector<WordId>& history) const;
+  // Produces a pair of class context ids and word context ids given the class.
+  // Unobserved contexts are skipped.
+  pair<vector<int>, vector<int>> getFeatureContextIds(
+      int class_id, const vector<WordId>& history) const;
 
 private:
   vector<FeatureContext> getFeatureContexts(
@@ -38,12 +45,17 @@ private:
 
   template<class Archive>
   void serialize(Archive& ar, const unsigned int version) {
-    ar & feature_context_size & featureContextsMap;
+    ar & index;
+    ar & featureContextSize;
+    ar & classContextIdsMap;
+    ar & wordContextIdsMap;
   }
 
-  size_t feature_context_size;
-  unordered_map<FeatureContext, FeatureContextId, hash<FeatureContext>>
-      featureContextsMap;
+  boost::shared_ptr<WordToClassIndex> index;
+
+  size_t featureContextSize;
+  FeatureContextHash classContextIdsMap;
+  vector<FeatureContextHash> wordContextIdsMap;
 };
 
 } // namespace oxlm

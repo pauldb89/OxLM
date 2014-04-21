@@ -30,10 +30,10 @@ Real FactoredMaxentNLM::log_prob(
 
   int c = get_class(w);
   int word_index = index->getWordIndexInClass(w);
-  vector<FeatureContextId> feature_context_ids =
-      extractor->getFeatureContextIds(context);
-  VectorReal class_feature_scores = U->get(feature_context_ids);
-  VectorReal word_feature_scores = V[c]->get(feature_context_ids);
+  pair<vector<int>, vector<int>> feature_context_ids =
+      extractor->getFeatureContextIds(c, context);
+  VectorReal class_feature_scores = U->get(feature_context_ids.first);
+  VectorReal word_feature_scores = V[c]->get(feature_context_ids.second);
 
   // a simple non-linearity
   if (non_linear) {
