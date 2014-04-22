@@ -29,13 +29,15 @@ void UnconstrainedFeatureStore::update(
   }
 }
 
-void UnconstrainedFeatureStore::l2GradientUpdate(Real sigma) {
+void UnconstrainedFeatureStore::l2GradientUpdate(
+    const boost::shared_ptr<MinibatchFeatureStore>&, Real sigma) {
   for (auto& entry: featureWeights) {
     entry.second -= sigma * entry.second;
   }
 }
 
-Real UnconstrainedFeatureStore::l2Objective(Real factor) const {
+Real UnconstrainedFeatureStore::l2Objective(
+    const boost::shared_ptr<MinibatchFeatureStore>&, Real factor) const {
   Real result = 0;
   for (const auto& entry: featureWeights) {
     result += entry.second.array().square().sum();

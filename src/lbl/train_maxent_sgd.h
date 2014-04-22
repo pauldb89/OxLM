@@ -293,6 +293,9 @@ FactoredMaxentNLM learn(ModelData& config) {
               global_gradientU, global_gradientV, minibatch_indices);
         }
 
+        #pragma omp master
+        cout << "done minibatch init: " << GetDuration(iteration_start, GetTime()) << " seconds..." << endl;
+
         // Wait for global gradients to be cleared before updating them with
         // data from this minibatch.
         #pragma omp barrier
@@ -308,6 +311,9 @@ FactoredMaxentNLM learn(ModelData& config) {
             model, training_corpus, minibatch_thread_indices, index, extractor,
             g_R, g_Q, g_C, g_B, g_F, g_FB, g_U, g_V);
 
+        #pragma omp master
+        cout << "done sgd gradient: " << GetDuration(iteration_start, GetTime()) << " seconds..." << endl;
+
         #pragma omp critical
         {
           global_gradient += gradient;
@@ -320,38 +326,52 @@ FactoredMaxentNLM learn(ModelData& config) {
           av_f += f;
         }
 
+        #pragma omp master
+        cout << "done sgd update: " << GetDuration(iteration_start, GetTime()) << " seconds..." << endl;
+
         // All global gradient updates must be completed before executing
         // adagrad updates.
         #pragma omp barrier
         #pragma omp master
         {
           adaGrad.array() += global_gradient.array().square();
-          model.W -= global_gradient.binaryExpr(
-              adaGrad, CwiseAdagradUpdateOp<Real>(step_size));
-
           adaGradF.array() += global_gradientF.array().square();
-          model.F -= global_gradientF.binaryExpr(
-              adaGradF, CwiseAdagradUpdateOp<Real>(step_size));
           adaGradFB.array() += global_gradientFB.array().square();
-          model.FB -= global_gradientFB.binaryExpr(
-              adaGradFB, CwiseAdagradUpdateOp<Real>(step_size));
-
           adaGradU->updateSquared(global_gradientU);
           for (int i = 0; i < num_classes; ++i) {
             adaGradV[i]->updateSquared(global_gradientV[i]);
           }
+
+          cout << "done squared update: " << GetDuration(iteration_start, GetTime()) << " seconds..." << endl;
+
+          model.W -= global_gradient.binaryExpr(
+              adaGrad, CwiseAdagradUpdateOp<Real>(step_size));
+          model.F -= global_gradientF.binaryExpr(
+              adaGradF, CwiseAdagradUpdateOp<Real>(step_size));
+          model.FB -= global_gradientFB.binaryExpr(
+              adaGradFB, CwiseAdagradUpdateOp<Real>(step_size));
 
           model.U->updateAdaGrad(global_gradientU, adaGradU, step_size);
           for (int i = 0; i < num_classes; ++i) {
             model.V[i]->updateAdaGrad(global_gradientV[i], adaGradV[i], step_size);
           }
 
+          cout << "done adagrad update: " << GetDuration(iteration_start, GetTime()) << " seconds..." << endl;
+
           // regularisation
           if (config.l2_lbl > 0 || config.l2_maxent > 0) {
             Real minibatch_factor = static_cast<Real>(end - start) / training_corpus->size();
-            model.l2GradientUpdate(minibatch_factor);
-            av_f += model.l2Objective(minibatch_factor);
+            model.l2GradientUpdate(
+                global_gradientU, global_gradientV, minibatch_factor);
+            av_f += model.l2Objective(
+                global_gradientU, global_gradientV, minibatch_factor);
           }
+        }
+
+        #pragma omp master
+        {
+          cout << "done all updates: " << GetDuration(iteration_start, GetTime()) << " seconds..." << endl;
+          cout << endl;
         }
 
         // Wait for master thread to update model.

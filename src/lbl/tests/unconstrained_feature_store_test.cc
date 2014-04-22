@@ -75,8 +75,8 @@ TEST_F(UnconstrainedFeatureStoreTest, TestCombined) {
 }
 
 TEST_F(UnconstrainedFeatureStoreTest, TestUpdateRegularizer) {
-  store.l2GradientUpdate(0.5);
-  EXPECT_NEAR(22.75, store.l2Objective(1), EPS);
+  store.l2GradientUpdate(gradient_store, 0.5);
+  EXPECT_NEAR(22.75, store.l2Objective(gradient_store, 1), EPS);
 
   VectorReal expected_values(3);
   expected_values << 0.5, 1, 1.5;

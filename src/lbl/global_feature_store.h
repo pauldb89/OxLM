@@ -7,9 +7,13 @@ namespace oxlm {
 
 class GlobalFeatureStore : virtual public FeatureStore {
  public:
-  virtual void l2GradientUpdate(Real sigma) = 0;
+  virtual void l2GradientUpdate(
+      const boost::shared_ptr<MinibatchFeatureStore>& base_minibatch_store,
+      Real sigma) = 0;
 
-  virtual Real l2Objective(Real sigma) const = 0;
+  virtual Real l2Objective(
+      const boost::shared_ptr<MinibatchFeatureStore>& base_minibatch_store,
+      Real sigma) const = 0;
 
   virtual void updateSquared(
       const boost::shared_ptr<MinibatchFeatureStore>& base_minibatch_store) = 0;

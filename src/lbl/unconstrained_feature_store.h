@@ -26,9 +26,13 @@ class UnconstrainedFeatureStore :
       const vector<int>& feature_context_ids,
       const VectorReal& values);
 
-  virtual void l2GradientUpdate(Real sigma);
+  virtual void l2GradientUpdate(
+      const boost::shared_ptr<MinibatchFeatureStore>& base_minibatch_store,
+      Real sigma);
 
-  virtual Real l2Objective(Real factor) const;
+  virtual Real l2Objective(
+      const boost::shared_ptr<MinibatchFeatureStore>& base_minibatch_store,
+      Real factor) const;
 
   virtual void update(const boost::shared_ptr<MinibatchFeatureStore>& store);
 

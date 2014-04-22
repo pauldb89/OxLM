@@ -35,17 +35,28 @@ VectorReal SparseGlobalFeatureStore::get(
   return result;
 }
 
-void SparseGlobalFeatureStore::l2GradientUpdate(Real sigma) {
-  for (auto& weights: featureWeights) {
-    weights -= sigma * weights;
+void SparseGlobalFeatureStore::l2GradientUpdate(
+    const boost::shared_ptr<MinibatchFeatureStore>& base_minibatch_store,
+    Real sigma) {
+  boost::shared_ptr<SparseMinibatchFeatureStore> minibatch_store =
+      SparseMinibatchFeatureStore::cast(base_minibatch_store);
+
+  for (const auto& entry: minibatch_store->featureWeights) {
+    featureWeights[entry.first] -= sigma * featureWeights[entry.first];
   }
 }
 
-Real SparseGlobalFeatureStore::l2Objective(Real factor) const {
+Real SparseGlobalFeatureStore::l2Objective(
+    const boost::shared_ptr<MinibatchFeatureStore>& base_minibatch_store,
+    Real factor) const {
+  boost::shared_ptr<SparseMinibatchFeatureStore> minibatch_store =
+      SparseMinibatchFeatureStore::cast(base_minibatch_store);
+
   Real result = 0;
-  for (const auto& weights: featureWeights) {
-    result += weights.cwiseAbs2().sum();
+  for (const auto& entry: minibatch_store->featureWeights) {
+    result += featureWeights[entry.first].cwiseAbs2().sum();
   }
+
   return factor * result;
 }
 
@@ -67,6 +78,7 @@ void SparseGlobalFeatureStore::updateAdaGrad(
       SparseMinibatchFeatureStore::cast(base_gradient_store);
   boost::shared_ptr<SparseGlobalFeatureStore> adagrad_store =
       cast(base_adagrad_store);
+
   for (const auto& entry: gradient_store->featureWeights) {
     SparseVectorReal& weights = featureWeights.at(entry.first);
     const SparseVectorReal& gradient = entry.second;

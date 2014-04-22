@@ -77,21 +77,27 @@ Real FactoredMaxentNLM::log_prob(
   return class_log_prob + word_log_prob;
 }
 
-void FactoredMaxentNLM::l2GradientUpdate(Real minibatch_factor) {
+void FactoredMaxentNLM::l2GradientUpdate(
+    const boost::shared_ptr<MinibatchFeatureStore>& class_store,
+    const vector<boost::shared_ptr<MinibatchFeatureStore>>& word_stores,
+    Real minibatch_factor) {
   FactoredNLM::l2GradientUpdate(minibatch_factor);
   Real sigma = minibatch_factor * config.step_size * config.l2_maxent;
-  U->l2GradientUpdate(sigma);
-  for (const auto& store: V) {
-    store->l2GradientUpdate(sigma);
+  U->l2GradientUpdate(class_store, sigma);
+  for (size_t i = 0; i < V.size(); ++i) {
+    V[i]->l2GradientUpdate(word_stores[i], sigma);
   }
 }
 
-Real FactoredMaxentNLM::l2Objective(Real minibatch_factor) const {
+Real FactoredMaxentNLM::l2Objective(
+    const boost::shared_ptr<MinibatchFeatureStore>& class_store,
+    const vector<boost::shared_ptr<MinibatchFeatureStore>>& word_stores,
+    Real minibatch_factor) const {
   Real result = FactoredNLM::l2Objective(minibatch_factor);
   Real factor = 0.5 * minibatch_factor * config.l2_maxent;
-  result += U->l2Objective(factor);
-  for (const auto& store: V) {
-    result += store->l2Objective(factor);
+  result += U->l2Objective(class_store, factor);
+  for (size_t i = 0; i < V.size(); ++i) {
+    result += V[i]->l2Objective(word_stores[i], factor);
   }
   return result;
 }
