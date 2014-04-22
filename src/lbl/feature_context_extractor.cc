@@ -54,4 +54,12 @@ vector<FeatureContext> FeatureContextExtractor::getFeatureContexts(
   return feature_contexts;
 }
 
+int FeatureContextExtractor::getNumClassContexts() const {
+  return classContextIdsMap.size();
+}
+
+int FeatureContextExtractor::getNumWordContexts(int class_id) const {
+  return wordContextIdsMap[class_id].size();
+}
+
 } // namespace oxlm

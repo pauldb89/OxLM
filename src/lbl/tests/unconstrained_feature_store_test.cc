@@ -42,11 +42,9 @@ class UnconstrainedFeatureStoreTest : public ::testing::Test {
     gradient_store->update(feature_context_ids3, values);
   }
 
-  vector<FeatureContextId> feature_context_ids1;
-  vector<FeatureContextId> feature_context_ids2;
-  vector<FeatureContextId> feature_context_ids3;
+  vector<int> feature_context_ids1, feature_context_ids2, feature_context_ids3;
   UnconstrainedFeatureStore store;
-  boost::shared_ptr<FeatureStore> gradient_store;
+  boost::shared_ptr<UnconstrainedFeatureStore> gradient_store;
 };
 
 TEST_F(UnconstrainedFeatureStoreTest, TestBasic) {
@@ -69,7 +67,7 @@ TEST_F(UnconstrainedFeatureStoreTest, TestBasic) {
 }
 
 TEST_F(UnconstrainedFeatureStoreTest, TestCombined) {
-  vector<FeatureContextId> feature_context_ids = {1, 2};
+  vector<int> feature_context_ids = {1, 2};
 
   VectorReal expected_values(3);
   expected_values << 7, 7, 7;

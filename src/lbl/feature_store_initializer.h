@@ -5,9 +5,9 @@
 #include <boost/shared_ptr.hpp>
 
 #include "lbl/config.h"
-#include "lbl/feature_indexes_pair.h"
 #include "lbl/feature_matcher.h"
-#include "lbl/feature_store.h"
+#include "lbl/global_feature_store.h"
+#include "lbl/minibatch_feature_store.h"
 #include "lbl/word_to_class_index.h"
 
 namespace oxlm {
@@ -20,24 +20,15 @@ class FeatureStoreInitializer {
       const boost::shared_ptr<FeatureMatcher>& matcher);
 
   void initialize(
-      boost::shared_ptr<FeatureStore>& U,
-      vector<boost::shared_ptr<FeatureStore>>& V) const;
+      boost::shared_ptr<GlobalFeatureStore>& U,
+      vector<boost::shared_ptr<GlobalFeatureStore>>& V) const;
 
   void initialize(
-      boost::shared_ptr<FeatureStore>& U,
-      vector<boost::shared_ptr<FeatureStore>>& V,
+      boost::shared_ptr<MinibatchFeatureStore>& U,
+      vector<boost::shared_ptr<MinibatchFeatureStore>>& V,
       const vector<int>& minibatch_indices) const;
 
  private:
-  void initializeUnconstrainedStores(
-      boost::shared_ptr<FeatureStore>& U,
-      vector<boost::shared_ptr<FeatureStore>>& V) const;
-
-  void initializeSparseStores(
-      boost::shared_ptr<FeatureStore>& U,
-      vector<boost::shared_ptr<FeatureStore>>& V,
-      FeatureIndexesPairPtr feature_indexes_pair) const;
-
   ModelData config;
   boost::shared_ptr<WordToClassIndex> index;
   boost::shared_ptr<FeatureMatcher> matcher;

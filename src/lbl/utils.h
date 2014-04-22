@@ -20,9 +20,10 @@ typedef int            WordId;
 typedef vector<WordId> Sentence;
 typedef vector<WordId> Corpus;
 
-typedef int                                                 FeatureContextId;
-typedef unordered_map<FeatureContextId, vector<int>>        FeatureIndexes;
-typedef boost::shared_ptr<FeatureIndexes>                   FeatureIndexesPtr;
+typedef vector<vector<int>>                        GlobalFeatureIndexes;
+typedef boost::shared_ptr<GlobalFeatureIndexes>    GlobalFeatureIndexesPtr;
+typedef unordered_map<int, vector<int>>            MinibatchFeatureIndexes;
+typedef boost::shared_ptr<MinibatchFeatureIndexes> MinibatchFeatureIndexesPtr;
 
 typedef Eigen::Matrix<Real, Eigen::Dynamic, Eigen::Dynamic> MatrixReal;
 typedef Eigen::Matrix<Real, Eigen::Dynamic, 1>              VectorReal;

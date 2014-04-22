@@ -37,6 +37,10 @@ class FeatureContextExtractor {
   pair<vector<int>, vector<int>> getFeatureContextIds(
       int class_id, const vector<WordId>& history) const;
 
+  int getNumClassContexts() const;
+
+  int getNumWordContexts(int class_id) const;
+
 private:
   vector<FeatureContext> getFeatureContexts(
       const vector<WordId>& history) const;

@@ -24,10 +24,22 @@ class FeatureMatcherTest : public testing::Test {
   }
 
   void checkFeatureContexts(
-      FeatureIndexesPtr feature_indexes,
-      const vector<FeatureContextId>& feature_context_ids,
+      GlobalFeatureIndexesPtr feature_indexes,
+      const vector<int>& feature_context_ids,
       int feature_index) const {
-    for (const FeatureContextId& context_id: feature_context_ids) {
+    for (int context_id: feature_context_ids) {
+      EXPECT_TRUE(0 <= context_id && context_id < feature_indexes->size());
+      vector<int>& indexes = feature_indexes->at(context_id);
+      EXPECT_TRUE(
+          find(indexes.begin(), indexes.end(), feature_index) != indexes.end());
+    }
+  }
+
+  void checkFeatureContexts(
+      MinibatchFeatureIndexesPtr feature_indexes,
+      const vector<int>& feature_context_ids,
+      int feature_index) const {
+    for (int context_id: feature_context_ids) {
       EXPECT_TRUE(feature_indexes->count(context_id));
       vector<int>& indexes = feature_indexes->at(context_id);
       EXPECT_TRUE(
@@ -39,12 +51,12 @@ class FeatureMatcherTest : public testing::Test {
   boost::shared_ptr<FeatureMatcher> feature_matcher;
 };
 
-TEST_F(FeatureMatcherTest, TestBasic) {
+TEST_F(FeatureMatcherTest, TestGlobal) {
   vector<int> history;
   vector<int> class_context_ids, word_context_ids;
-  FeatureIndexesPairPtr feature_indexes_pair = feature_matcher->getFeatures();
+  auto feature_indexes_pair = feature_matcher->getGlobalFeatures();
 
-  FeatureIndexesPtr feature_indexes = feature_indexes_pair->getClassIndexes();
+  GlobalFeatureIndexesPtr feature_indexes = feature_indexes_pair->getClassIndexes();
   EXPECT_EQ(8, feature_indexes->size());
   history = {0, 0};
   class_context_ids = extractor->getFeatureContextIds(1, history).first;
@@ -98,9 +110,10 @@ TEST_F(FeatureMatcherTest, TestSubset) {
 
   vector<int> history;
   vector<int> class_context_ids, word_context_ids;
-  boost::shared_ptr<FeatureIndexesPair> feature_indexes_pair =
-      feature_matcher->getFeatures(minibatch_indexes);
-  boost::shared_ptr<FeatureIndexes> feature_indexes =
+  boost::shared_ptr<MinibatchFeatureIndexesPair> feature_indexes_pair =
+      feature_matcher->getMinibatchFeatures(minibatch_indexes);
+  return;
+  boost::shared_ptr<MinibatchFeatureIndexes> feature_indexes =
       feature_indexes_pair->getClassIndexes();
   EXPECT_EQ(4, feature_indexes->size());
   history = {2, 0};

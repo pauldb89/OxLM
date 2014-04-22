@@ -2,7 +2,8 @@
 
 #include <boost/make_shared.hpp>
 
-#include "lbl/sparse_feature_store.h"
+#include "lbl/sparse_global_feature_store.h"
+#include "lbl/sparse_minibatch_feature_store.h"
 #include "lbl/unconstrained_feature_store.h"
 
 namespace oxlm {
@@ -14,49 +15,48 @@ FeatureStoreInitializer::FeatureStoreInitializer(
     : config(config), index(index), matcher(matcher) {}
 
 void FeatureStoreInitializer::initialize(
-    boost::shared_ptr<FeatureStore>& U,
-    vector<boost::shared_ptr<FeatureStore>>& V) const {
+    boost::shared_ptr<GlobalFeatureStore>& U,
+    vector<boost::shared_ptr<GlobalFeatureStore>>& V) const {
   if (config.sparse_features) {
-    initializeSparseStores(U, V, matcher->getFeatures());
+    auto feature_indexes_pair = matcher->getGlobalFeatures();
+    U = boost::make_shared<SparseGlobalFeatureStore>(config.classes, feature_indexes_pair->getClassIndexes());
+    V.resize(config.classes);
+    for (int i = 0; i < config.classes; ++i) {
+      V[i] = boost::make_shared<SparseGlobalFeatureStore>(
+          index->getClassSize(i),
+          feature_indexes_pair->getWordIndexes(i));
+    }
   } else {
-    initializeUnconstrainedStores(U, V);
+    U = boost::make_shared<UnconstrainedFeatureStore>(config.classes);
+    V.resize(config.classes);
+    for (int i = 0; i < config.classes; ++i) {
+      V[i] = boost::make_shared<UnconstrainedFeatureStore>(
+          index->getClassSize(i));
+    }
   }
 }
 
 void FeatureStoreInitializer::initialize(
-    boost::shared_ptr<FeatureStore>& U,
-    vector<boost::shared_ptr<FeatureStore>>& V,
+    boost::shared_ptr<MinibatchFeatureStore>& U,
+    vector<boost::shared_ptr<MinibatchFeatureStore>>& V,
     const vector<int>& minibatch_indices) const {
   if (config.sparse_features) {
-    initializeSparseStores(
-        U, V, matcher->getFeatures(minibatch_indices));
+    auto feature_indexes_pair = matcher->getMinibatchFeatures(minibatch_indices);
+    U = boost::make_shared<SparseMinibatchFeatureStore>(
+        config.classes, feature_indexes_pair->getClassIndexes());
+    V.resize(config.classes);
+    for (int i = 0; i < config.classes; ++i) {
+      V[i] = boost::make_shared<SparseMinibatchFeatureStore>(
+          index->getClassSize(i),
+          feature_indexes_pair->getWordIndexes(i));
+    }
   } else {
-    initializeUnconstrainedStores(U, V);
-  }
-}
-
-void FeatureStoreInitializer::initializeUnconstrainedStores(
-    boost::shared_ptr<FeatureStore>& U,
-    vector<boost::shared_ptr<FeatureStore>>& V) const {
-  U = boost::make_shared<UnconstrainedFeatureStore>(config.classes);
-  V.resize(config.classes);
-  for (int i = 0; i < config.classes; ++i) {
-    V[i] = boost::make_shared<UnconstrainedFeatureStore>(
-        index->getClassSize(i));
-  }
-}
-
-void FeatureStoreInitializer::initializeSparseStores(
-    boost::shared_ptr<FeatureStore>& U,
-    vector<boost::shared_ptr<FeatureStore>>& V,
-    FeatureIndexesPairPtr feature_indexes_pair) const {
-  U = boost::make_shared<SparseFeatureStore>(
-      config.classes, feature_indexes_pair->getClassIndexes());
-  V.resize(config.classes);
-  for (int i = 0; i < config.classes; ++i) {
-    V[i] = boost::make_shared<SparseFeatureStore>(
-        index->getClassSize(i),
-        feature_indexes_pair->getWordIndexes(i));
+    U = boost::make_shared<UnconstrainedFeatureStore>(config.classes);
+    V.resize(config.classes);
+    for (int i = 0; i < config.classes; ++i) {
+      V[i] = boost::make_shared<UnconstrainedFeatureStore>(
+          index->getClassSize(i));
+    }
   }
 }
 

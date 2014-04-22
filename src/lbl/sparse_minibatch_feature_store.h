@@ -1,24 +1,27 @@
 #pragma once
 
 #include <unordered_map>
+#include <unordered_set>
 
 #include <boost/serialization/export.hpp>
 
 #include "lbl/feature_context.h"
-#include "lbl/global_feature_store.h"
 #include "lbl/minibatch_feature_store.h"
 #include "lbl/utils.h"
+#include "utils/serialization_helpers.h"
 
 using namespace std;
 
 namespace oxlm {
 
-class UnconstrainedFeatureStore :
-    public GlobalFeatureStore, public MinibatchFeatureStore {
+class SparseMinibatchFeatureStore : public MinibatchFeatureStore {
  public:
-  UnconstrainedFeatureStore();
+  SparseMinibatchFeatureStore();
 
-  UnconstrainedFeatureStore(int vector_size);
+  SparseMinibatchFeatureStore(int vector_max_size);
+
+  SparseMinibatchFeatureStore(
+      int vector_max_size, MinibatchFeatureIndexesPtr feature_indexes);
 
   virtual VectorReal get(const vector<int>& feature_context_ids) const;
 
@@ -26,77 +29,64 @@ class UnconstrainedFeatureStore :
       const vector<int>& feature_context_ids,
       const VectorReal& values);
 
-  virtual void l2GradientUpdate(Real sigma);
-
-  virtual Real l2Objective(Real factor) const;
-
   virtual void update(const boost::shared_ptr<MinibatchFeatureStore>& store);
-
-  virtual void updateSquared(
-      const boost::shared_ptr<MinibatchFeatureStore>& store);
-
-  virtual void updateAdaGrad(
-      const boost::shared_ptr<MinibatchFeatureStore>& gradient_store,
-      const boost::shared_ptr<GlobalFeatureStore>& adagrad_store,
-      Real step_size);
 
   virtual void clear();
 
   virtual size_t size() const;
 
-  bool operator==(const UnconstrainedFeatureStore& store) const;
+  void hintFeatureIndex(int feature_context_id, int feature_index);
+
+  static boost::shared_ptr<SparseMinibatchFeatureStore> cast(
+      const boost::shared_ptr<MinibatchFeatureStore>& base_store);
+
+  bool operator==(const SparseMinibatchFeatureStore& store) const;
 
  private:
   void update(int feature_context_id, const VectorReal& values);
 
-  boost::shared_ptr<UnconstrainedFeatureStore> cast(
-      const boost::shared_ptr<FeatureStore>& base_store) const;
+  void update(int feature_context_id, const SparseVectorReal& values);
 
   friend class boost::serialization::access;
 
   template<class Archive>
   void save(Archive& ar, const unsigned int version) const {
-    ar << boost::serialization::base_object<const GlobalFeatureStore>(*this);
     ar << boost::serialization::base_object<const MinibatchFeatureStore>(*this);
 
-    ar << vectorSize;
+    ar << vectorMaxSize;
 
     size_t num_entries = featureWeights.size();
     ar << num_entries;
     for (const auto& entry: featureWeights) {
-      ar << entry.first;
-      const VectorReal weights = entry.second;
-      ar << boost::serialization::make_array(weights.data(), weights.rows());
+      ar << entry.first << entry.second;
     }
   }
 
   template<class Archive>
   void load(Archive& ar, const unsigned int version) {
-    ar >> boost::serialization::base_object<GlobalFeatureStore>(*this);
     ar >> boost::serialization::base_object<MinibatchFeatureStore>(*this);
 
-    ar >> vectorSize;
+    ar >> vectorMaxSize;
 
     size_t num_entries;
     ar >> num_entries;
     for (size_t i = 0; i < num_entries; ++i) {
       int feature_context_id;
       ar >> feature_context_id;
-
-      VectorReal weights = VectorReal::Zero(vectorSize);
-      ar >> boost::serialization::make_array(weights.data(), vectorSize);
-
+      SparseVectorReal weights;
+      ar >> weights;
       featureWeights.insert(make_pair(feature_context_id, weights));
     }
   }
 
   BOOST_SERIALIZATION_SPLIT_MEMBER();
 
-  unordered_map<int, VectorReal> featureWeights;
-  int vectorSize;
+  friend class SparseGlobalFeatureStore;
 
+  unordered_map<int, SparseVectorReal> featureWeights;
+  int vectorMaxSize;
 };
 
 } // namespace oxlm
 
-BOOST_CLASS_EXPORT_KEY(oxlm::UnconstrainedFeatureStore)
+BOOST_CLASS_EXPORT_KEY(oxlm::SparseMinibatchFeatureStore)

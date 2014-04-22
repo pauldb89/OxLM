@@ -28,6 +28,11 @@ TEST(FeatureContextExtractorTest, TestLongerHistory) {
   EXPECT_EQ(0, feature_context_ids.second[0]);
   EXPECT_EQ(1, feature_context_ids.second[1]);
   EXPECT_EQ(2, feature_context_ids.second[2]);
+
+  EXPECT_EQ(18, extractor.getNumClassContexts());
+  EXPECT_EQ(3, extractor.getNumWordContexts(0));
+  EXPECT_EQ(6, extractor.getNumWordContexts(1));
+  EXPECT_EQ(9, extractor.getNumWordContexts(2));
 }
 
 TEST(FeatureContextExtractorTest, TestShorterHistory) {

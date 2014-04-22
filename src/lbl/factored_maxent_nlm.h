@@ -8,9 +8,8 @@
 
 #include "lbl/feature_context_extractor.h"
 #include "lbl/factored_nlm.h"
-#include "lbl/feature_store.h"
+#include "lbl/global_feature_store.h"
 #include "lbl/feature_store_initializer.h"
-#include "lbl/sparse_feature_store.h"
 #include "lbl/unconstrained_feature_store.h"
 #include "lbl/word_to_class_index.h"
 
@@ -55,8 +54,8 @@ class FactoredMaxentNLM : public FactoredNLM {
 
  public:
   boost::shared_ptr<FeatureContextExtractor> extractor;
-  boost::shared_ptr<FeatureStore> U;
-  vector<boost::shared_ptr<FeatureStore>> V;
+  boost::shared_ptr<GlobalFeatureStore> U;
+  vector<boost::shared_ptr<GlobalFeatureStore>> V;
 };
 
 } // namespace oxlm

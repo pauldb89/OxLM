@@ -10,7 +10,7 @@ FeatureMatcher::FeatureMatcher(
     const boost::shared_ptr<ContextProcessor>& processor,
     const boost::shared_ptr<FeatureContextExtractor>& extractor)
     : corpus(corpus), index(index), processor(processor), extractor(extractor) {
-  feature_indexes = boost::make_shared<FeatureIndexesPair>(index->getNumClasses());
+  feature_indexes = boost::make_shared<GlobalFeatureIndexesPair>(index, extractor);
   for (size_t i = 0; i < corpus->size(); ++i) {
     int word_id = corpus->at(i);
     int class_id = index->getClass(word_id);
@@ -30,14 +30,15 @@ FeatureMatcher::FeatureMatcher(
   }
 }
 
-FeatureIndexesPairPtr FeatureMatcher::getFeatures() const {
+GlobalFeatureIndexesPairPtr FeatureMatcher::getGlobalFeatures() const {
   return feature_indexes;
 }
 
-FeatureIndexesPairPtr FeatureMatcher::getFeatures(
+MinibatchFeatureIndexesPairPtr FeatureMatcher::getMinibatchFeatures(
     const vector<int>& minibatch_indexes) const {
-  FeatureIndexesPairPtr minibatch_feature_indexes =
-      boost::make_shared<FeatureIndexesPair>(index->getNumClasses());
+  MinibatchFeatureIndexesPairPtr minibatch_feature_indexes =
+      boost::make_shared<MinibatchFeatureIndexesPair>(index);
+
   for (int i: minibatch_indexes) {
     int word_id = corpus->at(i);
     int class_id = index->getClass(word_id);

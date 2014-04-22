@@ -9,7 +9,8 @@
 #include "lbl/context_processor.h"
 #include "lbl/feature_context.h"
 #include "lbl/feature_context_extractor.h"
-#include "lbl/feature_indexes_pair.h"
+#include "lbl/global_feature_indexes_pair.h"
+#include "lbl/minibatch_feature_indexes_pair.h"
 #include "lbl/word_to_class_index.h"
 
 using namespace std;
@@ -24,19 +25,17 @@ class FeatureMatcher {
       const boost::shared_ptr<ContextProcessor>& processor,
       const boost::shared_ptr<FeatureContextExtractor>& extractor);
 
-  FeatureIndexesPairPtr getFeatures() const;
+  GlobalFeatureIndexesPairPtr getGlobalFeatures() const;
 
-  FeatureIndexesPairPtr getFeatures(const vector<int>& minibatch_indexes) const;
+  MinibatchFeatureIndexesPairPtr getMinibatchFeatures(
+      const vector<int>& minibatch_indexes) const;
 
  private:
-  void addFeatureIndexes(
-      int training_index, FeatureIndexesPairPtr feature_indexes) const;
-
   boost::shared_ptr<Corpus> corpus;
   boost::shared_ptr<WordToClassIndex> index;
   boost::shared_ptr<ContextProcessor> processor;
   boost::shared_ptr<FeatureContextExtractor> extractor;
-  FeatureIndexesPairPtr feature_indexes;
+  GlobalFeatureIndexesPairPtr feature_indexes;
 };
 
 } // namespace oxlm

@@ -66,8 +66,8 @@ Real sgd_gradient(FactoredMaxentNLM& model,
                   WeightsType& g_B,
                   MatrixReal & g_F,
                   VectorReal & g_FB,
-                  const boost::shared_ptr<FeatureStore>& g_U,
-                  const vector<boost::shared_ptr<FeatureStore>>& g_V);
+                  const boost::shared_ptr<MinibatchFeatureStore>& g_U,
+                  const vector<boost::shared_ptr<MinibatchFeatureStore>>& g_V);
 
 Real perplexity(
     const FactoredMaxentNLM& model,
@@ -210,8 +210,10 @@ FactoredMaxentNLM learn(ModelData& config) {
   VectorReal adaGradFB = VectorReal::Zero(model.FB.size());
   cout << "done initializing gradients" << endl;
 
-  boost::shared_ptr<FeatureStore> global_gradientU, adaGradU;
-  vector<boost::shared_ptr<FeatureStore>> global_gradientV, adaGradV;
+  boost::shared_ptr<MinibatchFeatureStore> global_gradientU;
+  boost::shared_ptr<GlobalFeatureStore> adaGradU;
+  vector<boost::shared_ptr<MinibatchFeatureStore>> global_gradientV;
+  vector<boost::shared_ptr<GlobalFeatureStore>> adaGradV;
   initializer.initialize(adaGradU, adaGradV);
   cout << "done initializing gradient stores" << endl;
 
@@ -253,8 +255,8 @@ FactoredMaxentNLM learn(ModelData& config) {
     WeightsType g_M(ptr+B_size, M_size);
     MatrixReal g_F(num_classes, word_width);
     VectorReal g_FB(num_classes);
-    boost::shared_ptr<FeatureStore> g_U;
-    vector<boost::shared_ptr<FeatureStore>> g_V;
+    boost::shared_ptr<MinibatchFeatureStore> g_U;
+    vector<boost::shared_ptr<MinibatchFeatureStore>> g_V;
 
     //////////////////////////////////////////////
 
@@ -429,8 +431,8 @@ Real sgd_gradient(FactoredMaxentNLM& model,
                   WeightsType& g_B,
                   MatrixReal& g_F,
                   VectorReal& g_FB,
-                  const boost::shared_ptr<FeatureStore>& g_U,
-                  const vector<boost::shared_ptr<FeatureStore>>& g_V) {
+                  const boost::shared_ptr<MinibatchFeatureStore>& g_U,
+                  const vector<boost::shared_ptr<MinibatchFeatureStore>>& g_V) {
   Real f=0;
   WordId start_id = model.label_set().Convert("<s>");
   WordId end_id = model.label_set().Convert("</s>");

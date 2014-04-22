@@ -10,9 +10,9 @@ UnconstrainedFeatureStore::UnconstrainedFeatureStore(int vector_size)
     : vectorSize(vector_size) {}
 
 VectorReal UnconstrainedFeatureStore::get(
-    const vector<FeatureContextId>& feature_context_ids) const {
+    const vector<int>& feature_context_ids) const {
   VectorReal result = VectorReal::Zero(vectorSize);
-  for (const FeatureContextId& feature_context_id: feature_context_ids) {
+  for (int feature_context_id: feature_context_ids) {
     auto it = featureWeights.find(feature_context_id);
     if (it != featureWeights.end()) {
       result += it->second;
@@ -22,9 +22,9 @@ VectorReal UnconstrainedFeatureStore::get(
 }
 
 void UnconstrainedFeatureStore::update(
-    const vector<FeatureContextId>& feature_context_ids,
+    const vector<int>& feature_context_ids,
     const VectorReal& values) {
-  for (const FeatureContextId& feature_context_id: feature_context_ids) {
+  for (int feature_context_id: feature_context_ids) {
     update(feature_context_id, values);
   }
 }
@@ -44,7 +44,7 @@ Real UnconstrainedFeatureStore::l2Objective(Real factor) const {
 }
 
 void UnconstrainedFeatureStore::update(
-const boost::shared_ptr<FeatureStore>& base_store) {
+    const boost::shared_ptr<MinibatchFeatureStore>& base_store) {
   boost::shared_ptr<UnconstrainedFeatureStore> store = cast(base_store);
   for (const auto& entry: store->featureWeights) {
     update(entry.first, entry.second);
@@ -52,7 +52,7 @@ const boost::shared_ptr<FeatureStore>& base_store) {
 }
 
 void UnconstrainedFeatureStore::updateSquared(
-    const boost::shared_ptr<FeatureStore>& base_store) {
+    const boost::shared_ptr<MinibatchFeatureStore>& base_store) {
   boost::shared_ptr<UnconstrainedFeatureStore> store = cast(base_store);
   for (const auto& entry: store->featureWeights) {
     update(entry.first, entry.second.array().square());
@@ -60,8 +60,8 @@ void UnconstrainedFeatureStore::updateSquared(
 }
 
 void UnconstrainedFeatureStore::updateAdaGrad(
-    const boost::shared_ptr<FeatureStore>& base_gradient_store,
-    const boost::shared_ptr<FeatureStore>& base_adagrad_store,
+    const boost::shared_ptr<MinibatchFeatureStore>& base_gradient_store,
+    const boost::shared_ptr<GlobalFeatureStore>& base_adagrad_store,
     Real step_size) {
   boost::shared_ptr<UnconstrainedFeatureStore> gradient_store =
       cast(base_gradient_store);
@@ -110,7 +110,7 @@ bool UnconstrainedFeatureStore::operator==(
 }
 
 void UnconstrainedFeatureStore::update(
-    const FeatureContextId& feature_context_id, const VectorReal& values) {
+    int feature_context_id, const VectorReal& values) {
   auto it = featureWeights.find(feature_context_id);
   if (it != featureWeights.end()) {
     it->second += values;
