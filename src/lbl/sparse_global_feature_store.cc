@@ -10,7 +10,10 @@ SparseGlobalFeatureStore::SparseGlobalFeatureStore() {}
 
 SparseGlobalFeatureStore::SparseGlobalFeatureStore(
     int vector_max_size, int num_contexts)
-    : vectorMaxSize(vector_max_size), featureWeights(num_contexts) {}
+    : vectorMaxSize(vector_max_size) {
+  featureWeights = vector<SparseVectorReal>(
+      num_contexts, SparseVectorReal(vectorMaxSize));
+}
 
 SparseGlobalFeatureStore::SparseGlobalFeatureStore(
     int vector_max_size, GlobalFeatureIndexesPtr feature_indexes)

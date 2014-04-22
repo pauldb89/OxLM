@@ -1,36 +1,21 @@
-add_test(context_processor_test)
-target_link_libraries(context_processor_test lbl)
+set(TESTS
+    context_processor_test
+    feature_context_test
+    feature_context_extractor_test
+    feature_matcher_test
+    feature_store_initializer_test
+    global_feature_indexes_pair_test
+    minibatch_feature_indexes_pair_test
+    operators_test
+    sparse_global_feature_store_test
+    sparse_minibatch_feature_store_test
+    train_maxent_sgd_test
+    train_factored_sgd_test
+    unconstrained_feature_store_test
+    utils_test
+    word_to_class_index_test)
 
-add_test(feature_context_test)
-target_link_libraries(feature_context_test lbl)
-
-add_test(feature_context_extractor_test)
-target_link_libraries(feature_context_extractor_test lbl)
-
-# add_test(feature_indexes_pair_test)
-# target_link_libraries(feature_indexes_pair_test lbl)
-
-add_test(feature_matcher_test)
-target_link_libraries(feature_matcher_test lbl)
-
-add_test(feature_store_initializer_test)
-target_link_libraries(feature_store_initializer_test lbl)
-
-add_test(operators_test)
-
-# add_test(sparse_feature_store_test)
-# target_link_libraries(sparse_feature_store_test lbl)
-
-add_test(train_factored_sgd_test)
-target_link_libraries(train_factored_sgd_test lbl)
-
-add_test(train_maxent_sgd_test)
-target_link_libraries(train_maxent_sgd_test lbl)
-
-add_test(unconstrained_feature_store_test)
-target_link_libraries(unconstrained_feature_store_test lbl)
-
-add_test(utils_test)
-
-add_test(word_to_class_index_test)
-target_link_libraries(word_to_class_index_test lbl)
+foreach(test ${TESTS})
+    add_test(${test})
+    target_link_libraries(${test} lbl)
+endforeach(test)

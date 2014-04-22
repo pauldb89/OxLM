@@ -2,6 +2,8 @@
 
 #include "utils/constants.h"
 
+using namespace std;
+
 namespace oxlm {
 
 template<class Scalar>

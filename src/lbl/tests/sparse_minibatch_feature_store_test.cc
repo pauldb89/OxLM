@@ -8,7 +8,7 @@
 #include <boost/make_shared.hpp>
 #include <boost/shared_ptr.hpp>
 
-#include "lbl/sparse_feature_store.h"
+#include "lbl/sparse_minibatch_feature_store.h"
 #include "utils/constants.h"
 #include "utils/testing.h"
 
@@ -17,11 +17,11 @@ namespace ar = boost::archive;
 
 namespace oxlm {
 
-class SparseFeatureStoreTest : public ::testing::Test {
+class SparseMinibatchFeatureStoreTest : public ::testing::Test {
  protected:
   virtual void SetUp() {
-    store = SparseFeatureStore(5);
-    SparseFeatureStore g_store(5);
+    store = SparseMinibatchFeatureStore(5);
+    SparseMinibatchFeatureStore g_store(5);
 
     VectorReal values(5);
 
@@ -57,18 +57,16 @@ class SparseFeatureStoreTest : public ::testing::Test {
     g_store.hintFeatureIndex(feature_context_ids3[0], 3);
     g_store.update(feature_context_ids3, values);
 
-    gradient_store = boost::make_shared<SparseFeatureStore>(g_store);
+    gradient_store = boost::make_shared<SparseMinibatchFeatureStore>(g_store);
   }
 
-  SparseFeatureStore store;
-  boost::shared_ptr<FeatureStore> gradient_store;
-  vector<FeatureContextId> feature_context_ids1;
-  vector<FeatureContextId> feature_context_ids2;
-  vector<FeatureContextId> feature_context_ids3;
+  SparseMinibatchFeatureStore store;
+  boost::shared_ptr<MinibatchFeatureStore> gradient_store;
+  vector<int> feature_context_ids1, feature_context_ids2, feature_context_ids3;
 };
 
-TEST_F(SparseFeatureStoreTest, TestBasic) {
-  SparseFeatureStore feature_store(5);
+TEST_F(SparseMinibatchFeatureStoreTest, TestBasic) {
+  SparseMinibatchFeatureStore feature_store(5);
   EXPECT_MATRIX_NEAR(
       VectorReal::Zero(5), feature_store.get(feature_context_ids1), EPS);
 
@@ -87,25 +85,14 @@ TEST_F(SparseFeatureStoreTest, TestBasic) {
       expected_values, feature_store.get(feature_context_ids1), EPS);
 }
 
-TEST_F(SparseFeatureStoreTest, TestCombined) {
-  vector<FeatureContextId> feature_context_ids = {1, 2};
+TEST_F(SparseMinibatchFeatureStoreTest, TestCombined) {
+  vector<int> feature_context_ids = {1, 2};
   VectorReal expected_values(5);
   expected_values << 1, 2, 0, 0, 7;
   EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids), EPS);
 }
 
-TEST_F(SparseFeatureStoreTest, TestUpdateRegularizer) {
-  store.l2GradientUpdate(0.5);
-  EXPECT_NEAR(7.5, store.l2Objective(1), EPS);
-
-  VectorReal expected_values(5);
-  expected_values << 0, 1, 0, 0, 2;
-  EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids1), EPS);
-  expected_values << 0.5, 0, 0, 0, 1.5;
-  EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids2), EPS);
-}
-
-TEST_F(SparseFeatureStoreTest, TestUpdateStore) {
+TEST_F(SparseMinibatchFeatureStoreTest, TestUpdateStore) {
   store.update(gradient_store);
 
   EXPECT_EQ(3, store.size());
@@ -118,44 +105,17 @@ TEST_F(SparseFeatureStoreTest, TestUpdateStore) {
   EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids3), EPS);
 }
 
-TEST_F(SparseFeatureStoreTest, TestUpdateSquared) {
-  store.updateSquared(gradient_store);
-
-  EXPECT_EQ(3, store.size());
-  VectorReal expected_values(5);
-  expected_values << 0, 2, 0, 0, 4;
-  EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids1), EPS);
-  expected_values << 26, 9, 0, 0, 3;
-  EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids2), EPS);
-  expected_values << 0, 0, 4, 1, 0;
-  EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids3), EPS);
-}
-
-TEST_F(SparseFeatureStoreTest, TestUpdateAdaGrad) {
-  store.updateAdaGrad(gradient_store, gradient_store, 1);
-
-  EXPECT_EQ(3, store.size());
-  VectorReal expected_values(5);
-  expected_values << 0, 2, 0, 0, 4;
-  EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids1), EPS);
-  expected_values << -1.236067, -1.732050, 0, 0, 3;
-  EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids2), EPS);
-  expected_values << 0, 0, -1.41421, -1, 0;
-  EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids3), EPS);
-
-}
-
-TEST_F(SparseFeatureStoreTest, TestClear) {
+TEST_F(SparseMinibatchFeatureStoreTest, TestClear) {
   store.clear();
   EXPECT_EQ(0, store.size());
 }
 
-TEST_F(SparseFeatureStoreTest, TestSerialization) {
+TEST_F(SparseMinibatchFeatureStoreTest, TestSerialization) {
   stringstream stream(ios_base::binary | ios_base::out | ios_base::in);
   ar::binary_oarchive output_stream(stream);
   output_stream << store;
 
-  SparseFeatureStore store_copy;
+  SparseMinibatchFeatureStore store_copy;
   ar::binary_iarchive input_stream(stream);
   input_stream >> store_copy;
 
