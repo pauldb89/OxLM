@@ -73,6 +73,7 @@ void saveModel(
     std::ofstream f(output_file);
     boost::archive::text_oarchive ar(f);
     ar << model;
+    cout << "Done..." << endl;
   }
 }
 
@@ -314,7 +315,8 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
         // Wait for master thread to update model.
         #pragma omp barrier
 
-        if (minibatch_counter % 100 == 0) {
+        if ((minibatch_counter % 100 == 0 && minibatch_counter <= 1000) ||
+            minibatch_counter % 1000 == 0) {
           evaluateModel(config, model, test_corpus, minibatch_counter, pp, best_pp);
         }
 
