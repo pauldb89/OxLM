@@ -71,7 +71,6 @@ struct ModelData {
   float       gnorm_threshold;
   float       eta;
   float       multinomial_step_size;
-  int         log_period;
   bool        sparse_features;
   bool        random_weights;
 
@@ -107,7 +106,6 @@ struct ModelData {
     ar & gnorm_threshold;
     ar & eta;
     ar & multinomial_step_size;
-    ar & log_period;
     ar & sparse_features;
     ar & random_weights;
   }

@@ -48,8 +48,6 @@ int main(int argc, char **argv) {
         "initial model")
     ("model-out,o", value<string>(),
         "base filename of model output files")
-    ("log-period", value<int>()->default_value(0),
-        "Log model every X iterations")
     ("lambda-lbl,r", value<float>()->default_value(2.0),
         "LBL regularisation strength parameter")
     ("lambda-maxent", value<float>()->default_value(2.0),
@@ -104,7 +102,6 @@ int main(int argc, char **argv) {
   if (vm.count("model-out")) {
     config.model_output_file = vm["model-out"].as<string>();
   }
-  config.log_period = vm["log-period"].as<int>();
   config.l2_lbl = vm["lambda-lbl"].as<float>();
   config.l2_maxent = vm["lambda-maxent"].as<float>();
   config.word_representation_size = vm["word-width"].as<int>();

@@ -66,10 +66,19 @@ Real perplexity(
 void freq_bin_type(const std::string &corpus, int num_classes, std::vector<int>& classes, Dict& dict, VectorReal& class_bias);
 void classes_from_file(const std::string &class_file, vector<int>& classes, Dict& dict, VectorReal& class_bias);
 
-void displayStats(
-    int minibatch_counter, Real& pp, Real& best_pp,
-    const FactoredNLM& model,
-    const boost::shared_ptr<Corpus>& test_corpus) {
+void saveModel(const string& output_file, const FactoredNLM& model) {
+  if (output_file.size()) {
+    cout << "Writing trained model to " << output_file << endl;
+    std::ofstream f(output_file);
+    boost::archive::text_oarchive ar(f);
+    ar << model;
+  }
+}
+
+void evaluateModel(
+    const ModelData& config, const FactoredNLM& model,
+    const boost::shared_ptr<Corpus>& test_corpus,
+    int minibatch_counter, Real& pp, Real& best_pp) {
   if (test_corpus != nullptr) {
     #pragma omp master
     pp = 0.0;
@@ -90,7 +99,11 @@ void displayStats(
       pp = exp(-pp / test_corpus->size());
       cout << "\tMinibatch " << minibatch_counter
            << ", Test Perplexity = " << pp << endl;
-      best_pp = min(best_pp, pp);
+
+      if (pp < best_pp) {
+        best_pp = pp;
+        saveModel(config.model_output_file, model);
+      }
     }
   }
 }
@@ -300,13 +313,13 @@ FactoredNLM learn(ModelData& config) {
         #pragma omp barrier
 
         if (minibatch_counter % 100 == 0) {
-          displayStats(minibatch_counter, pp, best_pp, model, test_corpus);
+          evaluateModel(config, model, test_corpus, minibatch_counter, pp, best_pp);
         }
 
         start += minibatch_size;
       }
 
-      displayStats(minibatch_counter, pp, best_pp, model, test_corpus);
+      evaluateModel(config, model, test_corpus, minibatch_counter, pp, best_pp);
 
       Real iteration_time = GetDuration(iteration_start, GetTime());
       #pragma omp master
@@ -321,16 +334,6 @@ FactoredNLM learn(ModelData& config) {
           adaGradF = MatrixReal::Zero(model.F.rows(), model.F.cols());
           adaGradFB = VectorReal::Zero(model.FB.size());
           adaGrad = VectorReal::Zero(model.num_weights());
-        }
-
-        if (config.model_output_file.size() && config.log_period) {
-          if (iteration % config.log_period == 0) {
-            string file = config.model_output_file + ".i" + to_string(iteration);
-            cout << "Writing trained model to " << file << endl;
-            std::ofstream f(file);
-            boost::archive::text_oarchive ar(f);
-            ar << model;
-          }
         }
       }
     }
