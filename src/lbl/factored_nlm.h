@@ -1,6 +1,5 @@
 #pragma once
 
-#include <boost/serialization/export.hpp>
 #include <boost/serialization/shared_ptr.hpp>
 
 #include "lbl/nlm.h"
@@ -90,5 +89,3 @@ class FactoredNLM: public NLM {
 };
 
 } // namespace oxlm
-
-BOOST_CLASS_EXPORT_KEY(oxlm::FactoredNLM)

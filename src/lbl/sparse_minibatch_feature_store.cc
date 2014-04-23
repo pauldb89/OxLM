@@ -115,5 +115,3 @@ boost::shared_ptr<SparseMinibatchFeatureStore> SparseMinibatchFeatureStore::cast
 }
 
 } // namespace oxlm
-
-BOOST_CLASS_EXPORT_IMPLEMENT(oxlm::SparseMinibatchFeatureStore)

@@ -1,10 +1,15 @@
 #pragma once
 
-// Use boost::shared_ptr instead of std::shared_ptr to facilitate serialization.
-#include <boost/shared_ptr.hpp>
+// We need to include the archives in the shared library so BOOST_EXPORT knows
+// to register implementations for all archive/derived class pairs.
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/serialization/export.hpp>
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/shared_ptr.hpp>
-#include <boost/serialization/export.hpp>
+// Use boost::shared_ptr instead of std::shared_ptr to facilitate the
+// serialization.
+#include <boost/shared_ptr.hpp>
 
 #include "lbl/feature_context_extractor.h"
 #include "lbl/factored_nlm.h"
@@ -45,18 +50,12 @@ class FactoredMaxentNLM : public FactoredNLM {
   friend class boost::serialization::access;
 
   template<class Archive>
-  void save(Archive& ar, const unsigned int version) const {
-    ar << boost::serialization::base_object<const FactoredNLM>(*this);
-    ar << *extractor << U << V;
+  void serialize(Archive& ar, const unsigned int version) {
+    ar & boost::serialization::base_object<FactoredNLM>(*this);
+    ar & extractor;
+    ar & U;
+    ar & V;
   }
-
-  template<class Archive>
-  void load(Archive& ar, const unsigned int version) {
-    ar >> boost::serialization::base_object<FactoredNLM>(*this);
-    ar >> *extractor >> U >> V;
-  }
-
-  BOOST_SERIALIZATION_SPLIT_MEMBER();
 
  public:
   boost::shared_ptr<FeatureContextExtractor> extractor;

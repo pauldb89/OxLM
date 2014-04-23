@@ -198,5 +198,3 @@ void FactoredNLM::clear_cache() {
 }
 
 } // namespace oxlm
-
-BOOST_CLASS_EXPORT_IMPLEMENT(oxlm::FactoredNLM)

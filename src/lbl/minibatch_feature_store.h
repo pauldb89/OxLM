@@ -14,14 +14,6 @@ class MinibatchFeatureStore : virtual public FeatureStore {
       const boost::shared_ptr<MinibatchFeatureStore>& base_minibatch_store) = 0;
 
   virtual void clear() = 0;
-
- private:
-  friend class boost::serialization::access;
-
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int version) {
-    ar & boost::serialization::base_object<FeatureStore>(*this);
-  }
 };
 
 }

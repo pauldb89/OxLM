@@ -3,8 +3,6 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include <boost/serialization/export.hpp>
-
 #include "lbl/feature_context.h"
 #include "lbl/minibatch_feature_store.h"
 #include "lbl/utils.h"
@@ -47,40 +45,6 @@ class SparseMinibatchFeatureStore : public MinibatchFeatureStore {
 
   void update(int feature_context_id, const SparseVectorReal& values);
 
-  friend class boost::serialization::access;
-
-  template<class Archive>
-  void save(Archive& ar, const unsigned int version) const {
-    ar << boost::serialization::base_object<const MinibatchFeatureStore>(*this);
-
-    ar << vectorMaxSize;
-
-    size_t num_entries = featureWeights.size();
-    ar << num_entries;
-    for (const auto& entry: featureWeights) {
-      ar << entry.first << entry.second;
-    }
-  }
-
-  template<class Archive>
-  void load(Archive& ar, const unsigned int version) {
-    ar >> boost::serialization::base_object<MinibatchFeatureStore>(*this);
-
-    ar >> vectorMaxSize;
-
-    size_t num_entries;
-    ar >> num_entries;
-    for (size_t i = 0; i < num_entries; ++i) {
-      int feature_context_id;
-      ar >> feature_context_id;
-      SparseVectorReal weights;
-      ar >> weights;
-      featureWeights.insert(make_pair(feature_context_id, weights));
-    }
-  }
-
-  BOOST_SERIALIZATION_SPLIT_MEMBER();
-
   friend class SparseGlobalFeatureStore;
 
   unordered_map<int, SparseVectorReal> featureWeights;
@@ -88,5 +52,3 @@ class SparseMinibatchFeatureStore : public MinibatchFeatureStore {
 };
 
 } // namespace oxlm
-
-BOOST_CLASS_EXPORT_KEY(oxlm::SparseMinibatchFeatureStore)

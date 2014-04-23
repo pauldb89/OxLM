@@ -94,8 +94,6 @@ TEST_F(SparseGlobalFeatureStoreTest, TestUpdateRegularizer) {
   EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids2), EPS);
 }
 
-
-
 TEST_F(SparseGlobalFeatureStoreTest, TestSerialization) {
   stringstream stream(ios_base::binary | ios_base::out | ios_base::in);
   ar::binary_oarchive output_stream(stream);

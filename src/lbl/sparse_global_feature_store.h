@@ -3,6 +3,10 @@
 #include <unordered_map>
 #include <unordered_set>
 
+// We need to include the archives in the shared library so BOOST_EXPORT knows
+// to register implementations for all archive/derived class pairs.
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
 #include <boost/serialization/export.hpp>
 
 #include "lbl/feature_context.h"

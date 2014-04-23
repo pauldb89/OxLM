@@ -2,6 +2,8 @@
 
 namespace oxlm {
 
+FeatureContextExtractor::FeatureContextExtractor() {}
+
 FeatureContextExtractor::FeatureContextExtractor(
     const boost::shared_ptr<Corpus>& corpus,
     const boost::shared_ptr<WordToClassIndex>& index,

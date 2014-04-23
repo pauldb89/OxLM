@@ -147,7 +147,7 @@ class FF_LBLLM : public FeatureFunction {
       abort();
     }
     boost::archive::text_iarchive ia(ifile);
-    ia >> *lm;
+    ia >> lm;
     dict = lm->label_set();
     Time stop_time = GetTime();
     cerr << "Reading language model took " << GetDuration(start_time, stop_time)

@@ -26,6 +26,8 @@ typedef unordered_map<FeatureContext, int, hash<FeatureContext>>
  **/
 class FeatureContextExtractor {
  public:
+  FeatureContextExtractor();
+
   FeatureContextExtractor(
       const boost::shared_ptr<Corpus>& corpus,
       const boost::shared_ptr<WordToClassIndex>& index,

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <unordered_map>
+#include <unordered_set>
 
 #include <boost/serialization/serialization.hpp>
 
@@ -73,6 +74,38 @@ inline void serialize(
     Archive& ar, std::unordered_map<Key, Value>& map,
     const unsigned int version) {
   boost::serialization::split_free(ar, map, version);
+}
+
+
+// Serialization support for std::unordered_set<Value>.
+
+template<class Archive, class Value>
+inline void save(
+    Archive& ar, const std::unordered_set<Value>& set,
+    const unsigned int version) {
+  size_t num_entries = set.size();
+  ar << num_entries;
+  for (const Value& value: set) {
+    ar << value;
+  }
+}
+
+template<class Archive, class Value>
+inline void load(
+    Archive& ar, std::unordered_set<Value>& set, const unsigned int version) {
+  size_t num_entries;
+  ar >> num_entries;
+  for (size_t i = 0; i < num_entries; ++i) {
+    Value value;
+    ar >> value;
+    set.insert(value);
+  }
+}
+
+template<class Archive, class Value>
+inline void serialize(
+    Archive& ar, std::unordered_set<Value>& set, const unsigned int version) {
+  boost::serialization::split_free(ar, set, version);
 }
 
 } // namespace serialization

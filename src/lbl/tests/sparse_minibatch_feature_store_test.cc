@@ -110,16 +110,4 @@ TEST_F(SparseMinibatchFeatureStoreTest, TestClear) {
   EXPECT_EQ(0, store.size());
 }
 
-TEST_F(SparseMinibatchFeatureStoreTest, TestSerialization) {
-  stringstream stream(ios_base::binary | ios_base::out | ios_base::in);
-  ar::binary_oarchive output_stream(stream);
-  output_stream << store;
-
-  SparseMinibatchFeatureStore store_copy;
-  ar::binary_iarchive input_stream(stream);
-  input_stream >> store_copy;
-
-  EXPECT_EQ(store, store_copy);
-}
-
 }
