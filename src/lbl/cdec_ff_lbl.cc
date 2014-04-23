@@ -24,14 +24,13 @@ using namespace oxlm;
 namespace po = boost::program_options;
 
 void parse_options(const string& input, string& filename,
-                   string& feature_name, bool& maxent_model) {
+                   string& feature_name) {
   po::options_description options("LBL language model options");
   options.add_options()
       ("file,f", po::value<string>()->required(),
           "File containing serialized language model")
       ("name,n", po::value<string>()->default_value("LBLLM"),
-          "Feature name")
-      ("maxent", "Enable if the model has maxent features");
+          "Feature name");
 
   po::variables_map vm;
   vector<string> args;
@@ -41,7 +40,6 @@ void parse_options(const string& input, string& filename,
 
   filename = vm["file"].as<string>();
   feature_name = vm["name"].as<string>();
-  maxent_model = vm.count("maxent");
 }
 
 struct SimplePair {
@@ -55,14 +53,9 @@ struct SimplePair {
 class FF_LBLLM : public FeatureFunction {
  public:
   FF_LBLLM(
-      const string& filename, const string& feature_name, bool maxent_model)
+      const string& filename, const string& feature_name)
       : fid(FD::Convert(feature_name)),
         fid_oov(FD::Convert(feature_name + "_OOV")) {
-    if (maxent_model) {
-      lm = boost::make_shared<FactoredMaxentNLM>();
-    } else {
-      lm = boost::make_shared<FactoredNLM>();
-    }
     loadLanguageModel(filename);
 
     cerr << "Initializing map contents (map size=" << dict.max() << ")\n";
@@ -345,7 +338,6 @@ class FF_LBLLM : public FeatureFunction {
 
 extern "C" FeatureFunction* create_ff(const string& str) {
   string filename, feature_name;
-  bool maxent_model;
-  parse_options(str, filename, feature_name, maxent_model);
-  return new FF_LBLLM(filename, feature_name, maxent_model);
+  parse_options(str, filename, feature_name);
+  return new FF_LBLLM(filename, feature_name);
 }
