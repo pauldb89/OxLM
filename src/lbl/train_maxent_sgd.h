@@ -377,7 +377,6 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
 
         if ((minibatch_counter % 100 == 0 && minibatch_counter <= 1000) ||
             minibatch_counter % 1000 == 0) {
-          cout << "Time: " << GetDuration(iteration_start, GetTime()) << " seconds..." << endl;
           evaluateModel(config, model, test_corpus, minibatch_counter, pp, best_pp);
         }
 
