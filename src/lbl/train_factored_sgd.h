@@ -18,7 +18,6 @@
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/archive/binary_iarchive.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/make_shared.hpp>
 
 // Eigen
@@ -30,7 +29,9 @@
 #include "lbl/context_processor.h"
 #include "lbl/factored_nlm.h"
 #include "lbl/log_add.h"
+#include "lbl/model_utils.h"
 #include "lbl/operators.h"
+#include "lbl/utils.h"
 #include "lbl/word_to_class_index.h"
 
 // Namespaces
@@ -45,10 +46,6 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config);
 
 typedef int TrainingInstance;
 typedef vector<TrainingInstance> TrainingInstances;
-void scatter_data(int start, int end,
-                  const vector<size_t>& indices,
-                  TrainingInstances &result);
-
 Real sgd_gradient(const boost::shared_ptr<FactoredNLM>& model,
                   const boost::shared_ptr<Corpus>& training_corpus,
                   const TrainingInstances &indexes,
@@ -60,79 +57,25 @@ Real sgd_gradient(const boost::shared_ptr<FactoredNLM>& model,
                   MatrixReal & g_F,
                   VectorReal & g_FB);
 
-Real perplexity(
-    const boost::shared_ptr<FactoredNLM>& model,
-    const boost::shared_ptr<Corpus>& test_corpus);
-void freq_bin_type(const std::string &corpus, int num_classes, std::vector<int>& classes, Dict& dict, VectorReal& class_bias);
-void classes_from_file(const std::string &class_file, vector<int>& classes, Dict& dict, VectorReal& class_bias);
-
-void saveModel(
-    const string& output_file, const boost::shared_ptr<FactoredNLM>& model) {
-  if (output_file.size()) {
-    cout << "Writing trained model to " << output_file << endl;
-    std::ofstream f(output_file);
-    boost::archive::text_oarchive ar(f);
-    ar << model;
-    cout << "Done..." << endl;
-  }
-}
-
-void evaluateModel(
-    const ModelData& config, const boost::shared_ptr<FactoredNLM>& model,
-    const boost::shared_ptr<Corpus>& test_corpus,
-    int minibatch_counter, Real& pp, Real& best_pp) {
-  if (test_corpus != nullptr) {
-    #pragma omp master
-    pp = 0.0;
-
-    // Each thread must wait until the perplexity is set to 0.
-    // Otherwise, partial results might get overwritten.
-    #pragma omp barrier
-
-    Real local_pp = perplexity(model, test_corpus);
-    #pragma omp critical
-    pp += local_pp;
-
-    // Wait for all threads to compute the perplexity for their slice of
-    // test data.
-    #pragma omp barrier
-    #pragma omp master
-    {
-      pp = exp(-pp / test_corpus->size());
-      cout << "\tMinibatch " << minibatch_counter
-           << ", Test Perplexity = " << pp << endl;
-
-      if (pp < best_pp) {
-        best_pp = pp;
-        saveModel(config.model_output_file, model);
-      }
-    }
-  }
-}
-
 boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
   boost::shared_ptr<Corpus> training_corpus, test_corpus;
   Dict dict;
   dict.Convert("<s>");
   WordId end_id = dict.Convert("</s>");
 
-  //////////////////////////////////////////////
-  // separate the word types into classes using
-  // frequency binning
+  // Read classe from file or bin words according to freqeuncy.
   vector<int> classes;
-  VectorReal class_bias = VectorReal::Zero(config.classes);
+  VectorReal class_bias;
   if (config.class_file.size()) {
     cerr << "--class-file set, ignoring --classes." << endl;
-    classes_from_file(config.class_file, classes, dict, class_bias);
+    loadClassesFromFile(
+        config.class_file, config.training_file, classes, dict, class_bias);
     config.classes = classes.size() - 1;
   } else {
-    freq_bin_type(config.training_file, config.classes, classes,
-                  dict, class_bias);
+    frequencyBinning(
+        config.training_file, config.classes, classes, dict, class_bias);
   }
-  //////////////////////////////////////////////
 
- 
-  //////////////////////////////////////////////
   // read the training sentences
   ifstream in(config.training_file);
   string line, token;
@@ -181,7 +124,7 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
     ar >> model;
   }
 
-  vector<size_t> training_indices(training_corpus->size());
+  vector<int> training_indices(training_corpus->size());
   model->unigram = VectorReal::Zero(model->labels());
   for (size_t i=0; i<training_indices.size(); i++) {
     model->unigram(training_corpus->at(i)) += 1;
@@ -276,7 +219,8 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
         // Wait for global gradients to be cleared before updating them with
         // data from this minibatch.
         #pragma omp barrier
-        scatter_data(start, end, training_indices, training_instances);
+        vector<int> training_instances =
+            scatterMinibatch(start, end, training_indices);
         Real f = sgd_gradient(model, training_corpus, training_instances, index,
                               g_R, g_Q, g_C, g_B, g_F, g_FB);
 
@@ -347,19 +291,6 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
 
   return model;
 }
-
-void scatter_data(int start, int end, const vector<size_t>& indices, TrainingInstances &result) {
-  size_t thread_num = omp_get_thread_num();
-  size_t num_threads = omp_get_num_threads();
-
-  result.clear();
-  result.reserve((end-start)/num_threads);
-
-  for (int s = start+thread_num; s < end; s += num_threads) {
-    result.push_back(indices.at(s));
-  }
-}
-
 
 Real sgd_gradient(
     const boost::shared_ptr<FactoredNLM>& model,
@@ -459,145 +390,4 @@ Real sgd_gradient(
 //  clock_t context_time = clock() - context_start;
 
   return f;
-}
-
-Real perplexity(
-    const boost::shared_ptr<FactoredNLM>& model,
-    const boost::shared_ptr<Corpus>& test_corpus) {
-  Real p=0.0;
-
-  int context_width = model->config.ngram_order-1;
-  int tokens = 0;
-  WordId start_id = model->label_set().Lookup("<s>");
-  WordId end_id = model->label_set().Lookup("</s>");
-  ContextProcessor processor(test_corpus, context_width, start_id, end_id);
-
-  #pragma omp master
-  cout << "Calculating perplexity for " << test_corpus->size() << " tokens";
-
-  size_t thread_num = omp_get_thread_num();
-  size_t num_threads = omp_get_num_threads();
-  for (size_t s = thread_num; s < test_corpus->size(); s += num_threads) {
-    vector<WordId> context = processor.extract(s);
-    Real log_prob = model->log_prob(test_corpus->at(s), context, true, false);
-    p += log_prob;
-
-    #pragma omp master
-    if (tokens % 10000 == 0) {
-      cout << ".";
-      cout.flush();
-    }
-
-    tokens++;
-  }
-  #pragma omp master
-  cout << endl;
-
-  return p;
-}
-
-
-void freq_bin_type(const std::string &corpus, int num_classes, vector<int>& classes, Dict& dict, VectorReal& class_bias) {
-  ifstream in(corpus.c_str());
-  string line, token;
-
-  map<string,int> tmp_dict;
-  vector< pair<string,int> > counts;
-  int sum=0, eos_sum=0;
-  string eos = "</s>";
-
-  while (getline(in, line)) {
-    stringstream line_stream(line);
-    while (line_stream >> token) {
-      if (token == eos) continue;
-      int w_id = tmp_dict.insert(make_pair(token,tmp_dict.size())).first->second;
-      assert (w_id <= int(counts.size()));
-      if (w_id == int(counts.size())) counts.push_back( make_pair(token, 1) );
-      else                            counts[w_id].second += 1;
-      sum++;
-    }
-    eos_sum++;
-  }
-
-  sort(counts.begin(), counts.end(),
-       [](const pair<string,int>& a, const pair<string,int>& b) -> bool { return a.second > b.second; });
-
-  classes.clear();
-  classes.push_back(0);
-
-  classes.push_back(2);
-  class_bias(0) = log(eos_sum);
-  int bin_size = sum / (num_classes-1);
-
-//  int bin_size = counts.size()/(num_classes);
-
-  int mass=0;
-  for (int i=0; i < int(counts.size()); ++i) {
-    WordId id = dict.Convert(counts.at(i).first);
-
-//    if ((mass += 1) > bin_size) {
-
-    if ((mass += counts.at(i).second) > bin_size) {
-      bin_size = (sum -= mass) / (num_classes - classes.size());
-      class_bias(classes.size()-1) = log(mass);
-
-
-//      class_bias(classes.size()-1) = 1;
-
-      classes.push_back(id+1);
-
-//      cerr << " " << classes.size() << ": " << classes.back() << " " << mass << endl;
-      mass=0;
-    }
-  }
-  if (classes.back() != int(dict.size()))
-    classes.push_back(dict.size());
-
-//  cerr << " " << classes.size() << ": " << classes.back() << " " << mass << endl;
-  class_bias.array() -= log(eos_sum+sum);
-
-  cerr << "Binned " << dict.size() << " types in " << classes.size()-1 << " classes with an average of "
-       << float(dict.size()) / float(classes.size()-1) << " types per bin." << endl;
-  in.close();
-}
-
-void classes_from_file(const std::string &class_file, vector<int>& classes, Dict& dict, VectorReal& class_bias) {
-  ifstream in(class_file.c_str());
-
-  vector<int> class_freqs(1,0);
-  classes.clear();
-  classes.push_back(0);
-  classes.push_back(2);
-
-  int mass=0, total_mass=0;
-  string prev_class_str="", class_str="", token_str="", freq_str="";
-  while (in >> class_str >> token_str >> freq_str) {
-    int w_id = dict.Convert(token_str);
-
-    if (!prev_class_str.empty() && class_str != prev_class_str) {
-      class_freqs.push_back(log(mass));
-      classes.push_back(w_id);
-//      cerr << " " << classes.size() << ": " << classes.back() << " " << mass << endl;
-      mass=0;
-    }
-
-    int freq = lexical_cast<int>(freq_str);
-    mass += freq;
-    total_mass += freq;
-
-    prev_class_str=class_str;
-  }
-
-  class_freqs.push_back(log(mass));
-  classes.push_back(dict.size());
-//  cerr << " " << classes.size() << ": " << classes.back() << " " << mass << endl;
-
-  class_bias = VectorReal::Zero(class_freqs.size());
-  for (size_t i=0; i<class_freqs.size(); ++i)
-    class_bias(i) = class_freqs.at(i) - log(total_mass);
-
-  cerr << "Read " << dict.size() << " types in " << classes.size()-1 << " classes with an average of "
-       << float(dict.size()) / float(classes.size()-1) << " types per bin." << endl;
-
-  in.close();
 }

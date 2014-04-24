@@ -34,6 +34,8 @@ typedef high_resolution_clock Clock;
 typedef Clock::time_point     Time;
 
 
+// Helper operations on vectors.
+
 inline VectorReal softMax(const VectorReal& v) {
   Real max = v.maxCoeff();
   return (v.array() - (log((v.array() - max).exp().sum()) + max)).exp();
@@ -54,6 +56,8 @@ inline VectorReal logSoftMax(const VectorReal& v, Real& log_z) {
 inline VectorReal sigmoid(const VectorReal& v) {
   return (1.0 + (-v).array().exp()).inverse();
 }
+
+// Helper functions for time measurement.
 
 Time GetTime();
 

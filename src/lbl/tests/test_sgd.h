@@ -25,29 +25,6 @@ class TestSGD : public ::testing::Test {
 
   // TODO: This method should be refactored together with all the other places
   // where we read test corpora from files.
-  boost::shared_ptr<Corpus> loadTestCorpus(Dict dict) {
-    boost::shared_ptr<Corpus> test_corpus = boost::make_shared<Corpus>();
-    int end_id = dict.Convert("</s>", false);
-    assert(end_id >= 0);
-
-    ifstream test_in(config.test_file);
-    string line;
-    while (getline(test_in, line)) {
-      stringstream line_stream(line);
-      string token;
-      while (line_stream >> token) {
-        WordId w = dict.Convert(token, true);
-        if (w < 0) {
-          cerr << token << " " << w << endl;
-          assert(!"Unknown word found in test corpus.");
-        }
-        test_corpus->push_back(w);
-      }
-      test_corpus->push_back(end_id);
-    }
-
-    return test_corpus;
-  }
 
   ModelData config;
 };

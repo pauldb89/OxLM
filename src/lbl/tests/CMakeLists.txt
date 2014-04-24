@@ -6,6 +6,7 @@ set(TESTS
     feature_store_initializer_test
     global_feature_indexes_pair_test
     minibatch_feature_indexes_pair_test
+    model_utils_test
     operators_test
     sparse_global_feature_store_test
     sparse_minibatch_feature_store_test

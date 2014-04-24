@@ -10,9 +10,11 @@ FactoredNLM::FactoredNLM(const ModelData& config, const Dict& labels)
 FactoredNLM::FactoredNLM(
     const ModelData& config, const Dict& labels,
     const boost::shared_ptr<WordToClassIndex>& index)
-    : NLM(config, labels, config.diagonal_contexts), index(index),
-      F(MatrixReal::Zero(config.classes, config.word_representation_size)),
-      FB(VectorReal::Zero(config.classes)) {
+    : NLM(config, labels, config.diagonal_contexts), index(index) {
+  F = MatrixReal::Zero(
+      index->getNumClasses(), config.word_representation_size);
+  FB = VectorReal::Zero(index->getNumClasses());
+
   if (config.random_weights) {
     random_device rd;
     std::mt19937 gen(rd());
