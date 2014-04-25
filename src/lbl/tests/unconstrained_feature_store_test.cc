@@ -135,15 +135,25 @@ TEST_F(UnconstrainedFeatureStoreTest, TestUpdateAdaGrad) {
 }
 
 TEST_F(UnconstrainedFeatureStoreTest, TestSerialization) {
+  boost::shared_ptr<GlobalFeatureStore> store_ptr =
+      boost::make_shared<UnconstrainedFeatureStore>(store);
+  boost::shared_ptr<GlobalFeatureStore> store_copy_ptr;
+
   stringstream stream(ios_base::binary | ios_base::out | ios_base::in);
   ar::binary_oarchive output_stream(stream, ar::no_header);
-  output_stream << store;
+  output_stream << store_ptr;
 
-  UnconstrainedFeatureStore store_copy;
   ar::binary_iarchive input_stream(stream, ar::no_header);
-  input_stream >> store_copy;
+  input_stream >> store_copy_ptr;
 
-  EXPECT_EQ(store, store_copy);
+  boost::shared_ptr<UnconstrainedFeatureStore> expected_ptr =
+      UnconstrainedFeatureStore::cast(store_ptr);
+  boost::shared_ptr<UnconstrainedFeatureStore> actual_ptr =
+      UnconstrainedFeatureStore::cast(store_copy_ptr);
+
+  EXPECT_NE(nullptr, expected_ptr);
+  EXPECT_NE(nullptr, actual_ptr);
+  EXPECT_EQ(*expected_ptr, *actual_ptr);
 }
 
 }

@@ -13,6 +13,10 @@ vector<int> WordContextExtractor::getFeatureContextIds(
   return hasher->getWordContextIds(classId, context);
 }
 
+bool WordContextExtractor::operator==(const WordContextExtractor& other) const {
+  return classId == other.classId && *hasher == *other.hasher;
+}
+
 } // namespace oxlm
 
 BOOST_CLASS_EXPORT_IMPLEMENT(oxlm::WordContextExtractor)

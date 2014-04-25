@@ -122,7 +122,7 @@ void UnconstrainedFeatureStore::update(
 }
 
 boost::shared_ptr<UnconstrainedFeatureStore> UnconstrainedFeatureStore::cast(
-        const boost::shared_ptr<FeatureStore>& base_store) const {
+        const boost::shared_ptr<FeatureStore>& base_store) {
   boost::shared_ptr<UnconstrainedFeatureStore> store =
       dynamic_pointer_cast<UnconstrainedFeatureStore>(base_store);
   assert(store != nullptr);

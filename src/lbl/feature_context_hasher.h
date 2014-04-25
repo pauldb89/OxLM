@@ -43,6 +43,8 @@ class FeatureContextHasher {
 
   int getNumWordContexts(int class_id) const;
 
+  bool operator==(const FeatureContextHasher& other) const;
+
 private:
   vector<FeatureContext> getFeatureContexts(
       const vector<WordId>& history) const;

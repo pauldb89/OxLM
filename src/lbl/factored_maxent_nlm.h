@@ -1,16 +1,12 @@
 #pragma once
 
-// We need to include the archives in the shared library so BOOST_EXPORT knows
-// to register implementations for all archive/derived class pairs.
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/serialization/export.hpp>
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/shared_ptr.hpp>
 // Use boost::shared_ptr instead of std::shared_ptr to facilitate the
 // serialization.
 #include <boost/shared_ptr.hpp>
 
+#include "lbl/archive_export.h"
 #include "lbl/factored_nlm.h"
 #include "lbl/global_feature_store.h"
 #include "lbl/feature_store_initializer.h"

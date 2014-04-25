@@ -1,14 +1,8 @@
 #pragma once
 
-// We need to include the archives in the shared library so BOOST_EXPORT knows
-// to register implementations for all archives in use.
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/serialization/export.hpp>
 #include <boost/serialization/shared_ptr.hpp>
 
+#include "lbl/archive_export.h"
 #include "lbl/feature_context_extractor.h"
 #include "lbl/feature_context_hasher.h"
 
@@ -22,6 +16,8 @@ class WordContextExtractor : public FeatureContextExtractor {
       int class_id, const boost::shared_ptr<FeatureContextHasher>& hasher);
 
   virtual vector<int> getFeatureContextIds(const vector<int>& context) const;
+
+  bool operator==(const WordContextExtractor& other) const;
 
  private:
   friend class boost::serialization::access;

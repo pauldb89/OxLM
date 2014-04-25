@@ -13,6 +13,11 @@ vector<int> ClassContextExtractor::getFeatureContextIds(
   return hasher->getClassContextIds(context);
 }
 
+bool ClassContextExtractor::operator==(
+    const ClassContextExtractor& other) const {
+  return *hasher == *other.hasher;
+}
+
 } // namespace oxlm
 
 BOOST_CLASS_EXPORT_IMPLEMENT(oxlm::ClassContextExtractor)

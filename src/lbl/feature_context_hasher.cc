@@ -74,4 +74,10 @@ int FeatureContextHasher::getNumWordContexts(int class_id) const {
   return wordContextIdsMap[class_id].size();
 }
 
+bool FeatureContextHasher::operator==(const FeatureContextHasher& other) const {
+  return featureContextSize == other.featureContextSize
+      && classContextIdsMap == other.classContextIdsMap
+      && wordContextIdsMap == other.wordContextIdsMap;
+}
+
 } // namespace oxlm
