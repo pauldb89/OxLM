@@ -67,6 +67,8 @@ int main(int argc, char **argv) {
     ("diagonal-contexts", "Use diagonal context matrices (usually faster).")
     ("sparse-features", value<bool>()->default_value(true),
         "Only define maximum entropy feature functions for observed contexts")
+    ("hash-space", value<int>()->default_value(0),
+        "The size of the space in which the maxent features are mapped to.")
     ("random-weights", value<bool>()->default_value(true),
         "Initialize the weights randomly.");
   options_description config_options, cmdline_options;
@@ -114,6 +116,7 @@ int main(int argc, char **argv) {
   config.diagonal_contexts = vm.count("diagonal-contexts");
   config.sparse_features = vm["sparse-features"].as<bool>();
   config.random_weights = vm["random-weights"].as<bool>();
+  config.hash_space = vm["hash-space"].as<int>();
 
   cerr << "################################" << endl;
   cerr << "# Config Summary" << endl;
@@ -134,6 +137,7 @@ int main(int argc, char **argv) {
   cerr << "# threads = " << config.threads << endl;
   cerr << "# classes = " << config.classes << endl;
   cerr << "# sparse features = " << config.sparse_features << endl;
+  cerr << "# hash space = " << config.hash_space << endl;
   cerr << "################################" << endl;
 
   learn(config);

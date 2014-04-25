@@ -73,6 +73,7 @@ struct ModelData {
   float       multinomial_step_size;
   bool        sparse_features;
   bool        random_weights;
+  int         hash_space;
 
   friend class boost::serialization::access;
   template<class Archive>
@@ -108,6 +109,7 @@ struct ModelData {
     ar & multinomial_step_size;
     ar & sparse_features;
     ar & random_weights;
+    ar & hash_space;
   }
 };
 
