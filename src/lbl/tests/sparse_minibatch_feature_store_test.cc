@@ -8,7 +8,10 @@
 #include <boost/make_shared.hpp>
 #include <boost/shared_ptr.hpp>
 
+#include "lbl/class_context_extractor.h"
+#include "lbl/context_processor.h"
 #include "lbl/sparse_minibatch_feature_store.h"
+#include "lbl/word_to_class_index.h"
 #include "utils/constants.h"
 #include "utils/testing.h"
 
@@ -20,76 +23,83 @@ namespace oxlm {
 class SparseMinibatchFeatureStoreTest : public ::testing::Test {
  protected:
   virtual void SetUp() {
-    store = SparseMinibatchFeatureStore(5);
-    SparseMinibatchFeatureStore g_store(5);
+    vector<int> data = {2, 3, 4, 5, 6};
+    vector<int> classes = {0, 2, 7};
+    boost::shared_ptr<Corpus> corpus = boost::make_shared<Corpus>(data);
+    boost::shared_ptr<WordToClassIndex> index =
+        boost::make_shared<WordToClassIndex>(classes);
+    boost::shared_ptr<ContextProcessor> processor =
+        boost::make_shared<ContextProcessor>(corpus, 1);
+    boost::shared_ptr<FeatureContextHasher> hasher =
+        boost::make_shared<FeatureContextHasher>(corpus, index, processor, 1);
+    extractor = boost::make_shared<ClassContextExtractor>(hasher);
+
+    store = SparseMinibatchFeatureStore(5, extractor);
+    SparseMinibatchFeatureStore g_store(5, extractor);
 
     VectorReal values(5);
 
-    feature_context_ids1 = {1};
-    store.hintFeatureIndex(feature_context_ids1[0], 1);
-    g_store.hintFeatureIndex(feature_context_ids1[0], 1);
-    store.hintFeatureIndex(feature_context_ids1[0], 4);
-    g_store.hintFeatureIndex(feature_context_ids1[0], 4);
+    context1 = {2};
+    int feature_context_id = 1;
+    store.hintFeatureIndex(feature_context_id, 1);
+    g_store.hintFeatureIndex(feature_context_id, 1);
+    store.hintFeatureIndex(feature_context_id, 4);
+    g_store.hintFeatureIndex(feature_context_id, 4);
     values << 0, 2, 0, 0, 4;
-    store.update(feature_context_ids1, values);
+    store.update(context1, values);
 
-    feature_context_ids2 = {2};
+    context2 = {3};
+    feature_context_id = 2;
     values = SparseVectorReal(5);
     values << 1, 0, 0, 0, 3;
-    store.hintFeatureIndex(feature_context_ids2[0], 0);
-    store.hintFeatureIndex(feature_context_ids2[0], 1);
-    store.hintFeatureIndex(feature_context_ids2[0], 4);
-    store.update(feature_context_ids2, values);
+    store.hintFeatureIndex(feature_context_id, 0);
+    store.hintFeatureIndex(feature_context_id, 1);
+    store.hintFeatureIndex(feature_context_id, 4);
+    store.update(context2, values);
 
     values = SparseVectorReal(5);
     values << 5, 3, 0, 0, 0;
-    g_store.hintFeatureIndex(feature_context_ids2[0], 0);
-    g_store.hintFeatureIndex(feature_context_ids2[0], 1);
-    g_store.hintFeatureIndex(feature_context_ids2[0], 4);
-    g_store.update(feature_context_ids2, values);
+    g_store.hintFeatureIndex(feature_context_id, 0);
+    g_store.hintFeatureIndex(feature_context_id, 1);
+    g_store.hintFeatureIndex(feature_context_id, 4);
+    g_store.update(context2, values);
 
-    feature_context_ids3 = {3};
+    context3 = {4};
+    feature_context_id = 3;
     values = SparseVectorReal(5);
     values << 0, 0, 2, 1, 0;
-    store.hintFeatureIndex(feature_context_ids3[0], 2);
-    g_store.hintFeatureIndex(feature_context_ids3[0], 2);
-    store.hintFeatureIndex(feature_context_ids3[0], 3);
-    g_store.hintFeatureIndex(feature_context_ids3[0], 3);
-    g_store.update(feature_context_ids3, values);
+    store.hintFeatureIndex(feature_context_id, 2);
+    g_store.hintFeatureIndex(feature_context_id, 2);
+    store.hintFeatureIndex(feature_context_id, 3);
+    g_store.hintFeatureIndex(feature_context_id, 3);
+    g_store.update(context3, values);
 
     gradient_store = boost::make_shared<SparseMinibatchFeatureStore>(g_store);
   }
 
+  vector<int> context1, context2, context3;
+  boost::shared_ptr<FeatureContextExtractor> extractor;
   SparseMinibatchFeatureStore store;
   boost::shared_ptr<MinibatchFeatureStore> gradient_store;
-  vector<int> feature_context_ids1, feature_context_ids2, feature_context_ids3;
 };
 
 TEST_F(SparseMinibatchFeatureStoreTest, TestBasic) {
-  SparseMinibatchFeatureStore feature_store(5);
-  EXPECT_MATRIX_NEAR(
-      VectorReal::Zero(5), feature_store.get(feature_context_ids1), EPS);
+  SparseMinibatchFeatureStore feature_store(5, extractor);
+  EXPECT_MATRIX_NEAR(VectorReal::Zero(5), feature_store.get(context1), EPS);
 
-  feature_store.hintFeatureIndex(feature_context_ids1[0], 1);
-  feature_store.hintFeatureIndex(feature_context_ids1[0], 3);
-  feature_store.hintFeatureIndex(feature_context_ids1[0], 4);
+  int feature_context_id = 1;
+  feature_store.hintFeatureIndex(feature_context_id, 1);
+  feature_store.hintFeatureIndex(feature_context_id, 3);
+  feature_store.hintFeatureIndex(feature_context_id, 4);
   VectorReal values(5), expected_values(5);
   values << 10, 1, 20, 3, 4;
   expected_values << 0, 1, 0, 3, 4;
-  feature_store.update(feature_context_ids1, values);
+  feature_store.update(context1, values);
   EXPECT_MATRIX_NEAR(
-      expected_values, feature_store.get(feature_context_ids1), EPS);
-  feature_store.update(feature_context_ids1, values);
+      expected_values, feature_store.get(context1), EPS);
+  feature_store.update(context1, values);
   expected_values *= 2;
-  EXPECT_MATRIX_NEAR(
-      expected_values, feature_store.get(feature_context_ids1), EPS);
-}
-
-TEST_F(SparseMinibatchFeatureStoreTest, TestCombined) {
-  vector<int> feature_context_ids = {1, 2};
-  VectorReal expected_values(5);
-  expected_values << 1, 2, 0, 0, 7;
-  EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids), EPS);
+  EXPECT_MATRIX_NEAR(expected_values, feature_store.get(context1), EPS);
 }
 
 TEST_F(SparseMinibatchFeatureStoreTest, TestUpdateStore) {
@@ -98,11 +108,11 @@ TEST_F(SparseMinibatchFeatureStoreTest, TestUpdateStore) {
   EXPECT_EQ(3, store.size());
   VectorReal expected_values(5);
   expected_values << 0, 2, 0, 0, 4;
-  EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids1), EPS);
+  EXPECT_MATRIX_NEAR(expected_values, store.get(context1), EPS);
   expected_values << 6, 3, 0, 0, 3;
-  EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids2), EPS);
+  EXPECT_MATRIX_NEAR(expected_values, store.get(context2), EPS);
   expected_values << 0, 0, 2, 1, 0;
-  EXPECT_MATRIX_NEAR(expected_values, store.get(feature_context_ids3), EPS);
+  EXPECT_MATRIX_NEAR(expected_values, store.get(context3), EPS);
 }
 
 TEST_F(SparseMinibatchFeatureStoreTest, TestClear) {

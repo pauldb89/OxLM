@@ -9,9 +9,8 @@ FactoredMaxentNLM::FactoredMaxentNLM() {}
 FactoredMaxentNLM::FactoredMaxentNLM(
     const ModelData& config, const Dict& labels,
     const boost::shared_ptr<WordToClassIndex>& index,
-    const boost::shared_ptr<FeatureContextExtractor>& extractor,
     const FeatureStoreInitializer& initializer)
-    : FactoredNLM(config, labels, index), extractor(extractor) {
+    : FactoredNLM(config, labels, index) {
   initializer.initialize(U, V);
 }
 
@@ -30,10 +29,8 @@ Real FactoredMaxentNLM::log_prob(
 
   int c = get_class(w);
   int word_index = index->getWordIndexInClass(w);
-  pair<vector<int>, vector<int>> feature_context_ids =
-      extractor->getFeatureContextIds(c, context);
-  VectorReal class_feature_scores = U->get(feature_context_ids.first);
-  VectorReal word_feature_scores = V[c]->get(feature_context_ids.second);
+  VectorReal class_feature_scores = U->get(context);
+  VectorReal word_feature_scores = V[c]->get(context);
 
   // a simple non-linearity
   if (non_linear) {

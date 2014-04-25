@@ -9,8 +9,8 @@ TEST_F(TestSGD, TestTrainMaxentSGD) {
   config.l2_maxent = 2;
   config.feature_context_size = 3;
 
-  config.test_file = "test.txt";
   boost::shared_ptr<FactoredNLM> model = learn(config);
+  config.test_file = "test.txt";
   boost::shared_ptr<Corpus> test_corpus =
       readCorpus(config.training_file, model->label_set());
   double log_pp = perplexity(model, test_corpus);
@@ -22,8 +22,8 @@ TEST_F(TestSGD, TestTrainMaxentSGDSparseFeatures) {
   config.feature_context_size = 3;
   config.sparse_features = true;
 
-  config.test_file = "test.txt";
   boost::shared_ptr<FactoredNLM> model = learn(config);
+  config.test_file = "test.txt";
   boost::shared_ptr<Corpus> test_corpus =
       readCorpus(config.training_file, model->label_set());
   double log_pp = perplexity(model, test_corpus);

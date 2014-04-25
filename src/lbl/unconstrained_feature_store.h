@@ -7,8 +7,9 @@
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/serialization/export.hpp>
+#include <boost/serialization/shared_ptr.hpp>
 
-#include "lbl/feature_context.h"
+#include "lbl/feature_context_extractor.h"
 #include "lbl/global_feature_store.h"
 #include "lbl/minibatch_feature_store.h"
 #include "lbl/utils.h"
@@ -22,13 +23,13 @@ class UnconstrainedFeatureStore :
  public:
   UnconstrainedFeatureStore();
 
-  UnconstrainedFeatureStore(int vector_size);
+  UnconstrainedFeatureStore(
+      int vector_size,
+      const boost::shared_ptr<FeatureContextExtractor>& extractor);
 
-  virtual VectorReal get(const vector<int>& feature_context_ids) const;
+  virtual VectorReal get(const vector<int>& context) const;
 
-  virtual void update(
-      const vector<int>& feature_context_ids,
-      const VectorReal& values);
+  virtual void update(const vector<int>& context, const VectorReal& values);
 
   virtual void l2GradientUpdate(
       const boost::shared_ptr<MinibatchFeatureStore>& base_minibatch_store,
@@ -68,6 +69,7 @@ class UnconstrainedFeatureStore :
     ar << boost::serialization::base_object<const MinibatchFeatureStore>(*this);
 
     ar << vectorSize;
+    ar << extractor;
 
     size_t num_entries = featureWeights.size();
     ar << num_entries;
@@ -84,6 +86,7 @@ class UnconstrainedFeatureStore :
     ar >> boost::serialization::base_object<MinibatchFeatureStore>(*this);
 
     ar >> vectorSize;
+    ar >> extractor;
 
     size_t num_entries;
     ar >> num_entries;
@@ -100,9 +103,9 @@ class UnconstrainedFeatureStore :
 
   BOOST_SERIALIZATION_SPLIT_MEMBER();
 
-  unordered_map<int, VectorReal> featureWeights;
   int vectorSize;
-
+  boost::shared_ptr<FeatureContextExtractor> extractor;
+  unordered_map<int, VectorReal> featureWeights;
 };
 
 } // namespace oxlm

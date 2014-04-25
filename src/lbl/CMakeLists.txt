@@ -3,12 +3,13 @@
 #############################################
 
 add_library(lbl SHARED
+  class_context_extractor.cc
   config.cc
   context_processor.cc
   factored_maxent_nlm.cc
   factored_nlm.cc
   feature_context.cc
-  feature_context_extractor.cc
+  feature_context_hasher.cc
   feature_matcher.cc
   feature_store_initializer.cc
   global_feature_indexes_pair.cc
@@ -20,6 +21,7 @@ add_library(lbl SHARED
   sparse_minibatch_feature_store.cc
   unconstrained_feature_store.cc
   utils.cc
+  word_context_extractor.cc
   word_to_class_index.cc
 )
 

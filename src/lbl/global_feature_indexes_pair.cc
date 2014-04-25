@@ -6,12 +6,12 @@ namespace oxlm {
 
 GlobalFeatureIndexesPair::GlobalFeatureIndexesPair(
     const boost::shared_ptr<WordToClassIndex>& index,
-    const boost::shared_ptr<FeatureContextExtractor>& extractor) {
+    const boost::shared_ptr<FeatureContextHasher>& hasher) {
   class_indexes = boost::make_shared<GlobalFeatureIndexes>(
-      extractor->getNumClassContexts());
+      hasher->getNumClassContexts());
   for (int i = 0; i < index->getNumClasses(); ++i) {
     word_indexes.push_back(boost::make_shared<GlobalFeatureIndexes>(
-        extractor->getNumWordContexts(i)));
+        hasher->getNumWordContexts(i)));
   }
 }
 

@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include "lbl/feature_context_extractor.h"
+#include "lbl/feature_context_hasher.h"
 #include "lbl/word_to_class_index.h"
 #include "lbl/utils.h"
 
@@ -14,7 +14,7 @@ class GlobalFeatureIndexesPair {
  public:
   GlobalFeatureIndexesPair(
       const boost::shared_ptr<WordToClassIndex>& index,
-      const boost::shared_ptr<FeatureContextExtractor>& extractor);
+      const boost::shared_ptr<FeatureContextHasher>& hasher);
 
   GlobalFeatureIndexesPtr getClassIndexes() const;
 

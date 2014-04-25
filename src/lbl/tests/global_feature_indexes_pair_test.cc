@@ -14,9 +14,9 @@ TEST(GlobalFeatureIndexesPairTest, TestBasic) {
       boost::make_shared<WordToClassIndex>(classes);
   boost::shared_ptr<ContextProcessor> processor =
       boost::make_shared<ContextProcessor>(corpus, 2, 0, 1);
-  boost::shared_ptr<FeatureContextExtractor> extractor =
-      boost::make_shared<FeatureContextExtractor>(corpus, index, processor, 2);
-  GlobalFeatureIndexesPair indexes_pair(index, extractor);
+  boost::shared_ptr<FeatureContextHasher> hasher =
+      boost::make_shared<FeatureContextHasher>(corpus, index, processor, 2);
+  GlobalFeatureIndexesPair indexes_pair(index, hasher);
 
   EXPECT_EQ(7, indexes_pair.getClassIndexes()->size());
   EXPECT_EQ(2, indexes_pair.getWordIndexes(0)->size());

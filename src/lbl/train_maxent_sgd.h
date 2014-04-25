@@ -28,7 +28,6 @@
 #include "corpus/corpus.h"
 #include "lbl/context_processor.h"
 #include "lbl/feature_context.h"
-#include "lbl/feature_context_extractor.h"
 #include "lbl/feature_store.h"
 #include "lbl/feature_store_initializer.h"
 #include "lbl/factored_maxent_nlm.h"
@@ -56,7 +55,6 @@ Real sgd_gradient(const boost::shared_ptr<FactoredMaxentNLM>& model,
                   const boost::shared_ptr<Corpus>& training_corpus,
                   const TrainingInstances &indexes,
                   const boost::shared_ptr<WordToClassIndex>& index,
-                  const boost::shared_ptr<FeatureContextExtractor>& extractor,
                   WordVectorsType& g_R,
                   WordVectorsType& g_Q,
                   ContextTransformsType& g_C,
@@ -91,29 +89,12 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
   if (config.test_file.size()) {
     test_corpus = readCorpus(config.test_file, dict);
   }
-  cout << "done reading corpora" << endl;
-
   int context_width = config.ngram_order - 1;
   boost::shared_ptr<WordToClassIndex> index =
       boost::make_shared<WordToClassIndex>(classes);
-  cout << "done creating index" << endl;
-  boost::shared_ptr<ContextProcessor> processor =
-      boost::make_shared<ContextProcessor>(
-          training_corpus, context_width, start_id, end_id);
-  cout << "done creating processor" << endl;
-  boost::shared_ptr<FeatureContextExtractor> extractor =
-      boost::make_shared<FeatureContextExtractor>(
-          training_corpus, index, processor, config.feature_context_size);
-  cout << "done creating feature context extractor" << endl;
-  boost::shared_ptr<FeatureMatcher> feature_matcher =
-      boost::make_shared<FeatureMatcher>(
-          training_corpus, index, processor, extractor);
-  cout << "done creating feature matcher" << endl;
-  FeatureStoreInitializer initializer(config, index, feature_matcher);
+  FeatureStoreInitializer initializer(config, training_corpus, index);
   boost::shared_ptr<FactoredMaxentNLM> model =
-      boost::make_shared<FactoredMaxentNLM>(
-          config, dict, index, extractor, initializer);
-  cout << "done creating model" << endl;
+      boost::make_shared<FactoredMaxentNLM>(config, dict, index, initializer);
   model->FB = class_bias;
 
   if (config.model_input_file.size()) {
@@ -238,7 +219,7 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
         initializer.initialize(g_U, g_V, minibatch_thread_indices);
 
         Real f = sgd_gradient(
-            model, training_corpus, minibatch_thread_indices, index, extractor,
+            model, training_corpus, minibatch_thread_indices, index,
             g_R, g_Q, g_C, g_B, g_F, g_FB, g_U, g_V);
 
         #pragma omp critical
@@ -328,7 +309,6 @@ Real sgd_gradient(const boost::shared_ptr<FactoredMaxentNLM>& model,
                   const boost::shared_ptr<Corpus>& training_corpus,
                   const TrainingInstances &training_instances,
                   const boost::shared_ptr<WordToClassIndex>& index,
-                  const boost::shared_ptr<FeatureContextExtractor>& extractor,
                   WordVectorsType& g_R,
                   WordVectorsType& g_Q,
                   ContextTransformsType& g_C,
@@ -371,16 +351,13 @@ Real sgd_gradient(const boost::shared_ptr<FactoredMaxentNLM>& model,
     int c_size = index->getClassSize(c);
     int word_index = index->getWordIndexInClass(w);
 
-    pair<vector<int>, vector<int>> feature_context_ids =
-        extractor->getFeatureContextIds(c, contexts[instance]);
-
     // a simple sigmoid non-linearity
     prediction_vectors.row(instance) = sigmoid(prediction_vectors.row(instance));
     //for (int x=0; x<word_width; ++x)
     //  prediction_vectors.row(instance)(x) *= (prediction_vectors.row(instance)(x) > 0 ? 1 : 0.01); // rectifier
 
-    VectorReal class_feature_scores = model->U->get(feature_context_ids.first);
-    VectorReal word_feature_scores = model->V[c]->get(feature_context_ids.second);
+    VectorReal class_feature_scores = model->U->get(contexts[instance]);
+    VectorReal word_feature_scores = model->V[c]->get(contexts[instance]);
     VectorReal class_conditional_scores = model->F * prediction_vectors.row(instance).transpose() + model->FB + class_feature_scores;
     VectorReal word_conditional_scores  = model->class_R(c) * prediction_vectors.row(instance).transpose() + model->class_B(c) + word_feature_scores;
 
@@ -405,8 +382,8 @@ Real sgd_gradient(const boost::shared_ptr<FactoredMaxentNLM>& model,
     g_FB += class_conditional_probs;
     g_R.block(c_start, 0, c_size, g_R.cols()) += word_conditional_probs * prediction_vectors.row(instance);
     g_B.segment(c_start, c_size) += word_conditional_probs;
-    g_U->update(feature_context_ids.first, class_conditional_probs);
-    g_V[c]->update(feature_context_ids.second, word_conditional_probs);
+    g_U->update(contexts[instance], class_conditional_probs);
+    g_V[c]->update(contexts[instance], word_conditional_probs);
 
     // a simple sigmoid non-linearity derivative
     weightedRepresentations.row(instance).array() *=

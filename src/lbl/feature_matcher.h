@@ -8,7 +8,7 @@
 
 #include "lbl/context_processor.h"
 #include "lbl/feature_context.h"
-#include "lbl/feature_context_extractor.h"
+#include "lbl/feature_context_hasher.h"
 #include "lbl/global_feature_indexes_pair.h"
 #include "lbl/minibatch_feature_indexes_pair.h"
 #include "lbl/word_to_class_index.h"
@@ -23,7 +23,7 @@ class FeatureMatcher {
       const boost::shared_ptr<Corpus>& corpus,
       const boost::shared_ptr<WordToClassIndex>& index,
       const boost::shared_ptr<ContextProcessor>& processor,
-      const boost::shared_ptr<FeatureContextExtractor>& extractor);
+      const boost::shared_ptr<FeatureContextHasher>& hasher);
 
   GlobalFeatureIndexesPairPtr getGlobalFeatures() const;
 
@@ -34,7 +34,7 @@ class FeatureMatcher {
   boost::shared_ptr<Corpus> corpus;
   boost::shared_ptr<WordToClassIndex> index;
   boost::shared_ptr<ContextProcessor> processor;
-  boost::shared_ptr<FeatureContextExtractor> extractor;
+  boost::shared_ptr<FeatureContextHasher> hasher;
   GlobalFeatureIndexesPairPtr feature_indexes;
 };
 

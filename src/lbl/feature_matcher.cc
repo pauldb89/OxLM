@@ -8,23 +8,20 @@ FeatureMatcher::FeatureMatcher(
     const boost::shared_ptr<Corpus>& corpus,
     const boost::shared_ptr<WordToClassIndex>& index,
     const boost::shared_ptr<ContextProcessor>& processor,
-    const boost::shared_ptr<FeatureContextExtractor>& extractor)
-    : corpus(corpus), index(index), processor(processor), extractor(extractor) {
-  feature_indexes = boost::make_shared<GlobalFeatureIndexesPair>(index, extractor);
+    const boost::shared_ptr<FeatureContextHasher>& hasher)
+    : corpus(corpus), index(index), processor(processor), hasher(hasher) {
+  feature_indexes = boost::make_shared<GlobalFeatureIndexesPair>(index, hasher);
   for (size_t i = 0; i < corpus->size(); ++i) {
     int word_id = corpus->at(i);
     int class_id = index->getClass(word_id);
     int word_class_id = index->getWordIndexInClass(word_id);
-
     vector<WordId> context = processor->extract(i);
-    pair<vector<int>, vector<int>> feature_context_ids =
-        extractor->getFeatureContextIds(class_id, context);
 
-    for (int class_context_id: feature_context_ids.first) {
+    for (int class_context_id: hasher->getClassContextIds(context)) {
       feature_indexes->addClassIndex(class_context_id, class_id);
     }
 
-    for (int word_context_id: feature_context_ids.second) {
+    for (int word_context_id: hasher->getWordContextIds(class_id, context)) {
       feature_indexes->addWordIndex(class_id, word_context_id, word_class_id);
     }
   }
@@ -43,18 +40,15 @@ MinibatchFeatureIndexesPairPtr FeatureMatcher::getMinibatchFeatures(
     int word_id = corpus->at(i);
     int class_id = index->getClass(word_id);
     int word_class_id = index->getWordIndexInClass(word_id);
-
     vector<WordId> context = processor->extract(i);
-    pair<vector<int>, vector<int>> feature_context_ids =
-        extractor->getFeatureContextIds(class_id, context);
 
-    for (int class_context_id: feature_context_ids.first) {
+    for (int class_context_id: hasher->getClassContextIds(context)) {
       minibatch_feature_indexes->setClassIndexes(
           class_context_id,
           feature_indexes->getClassFeatures(class_context_id));
     }
 
-    for (int word_context_id: feature_context_ids.second) {
+    for (int word_context_id: hasher->getWordContextIds(class_id, context)) {
       minibatch_feature_indexes->setWordIndexes(
           class_id,
           word_context_id,

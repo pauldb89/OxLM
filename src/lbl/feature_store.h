@@ -14,7 +14,7 @@ namespace oxlm {
 
 class FeatureStore {
  public:
-  virtual VectorReal get(const vector<int>& feature_context_ids) const = 0;
+  virtual VectorReal get(const vector<int>& context) const = 0;
 
   virtual size_t size() const = 0;
 

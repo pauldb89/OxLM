@@ -9,15 +9,18 @@ namespace oxlm {
 SparseGlobalFeatureStore::SparseGlobalFeatureStore() {}
 
 SparseGlobalFeatureStore::SparseGlobalFeatureStore(
-    int vector_max_size, int num_contexts)
-    : vectorMaxSize(vector_max_size) {
+    int vector_max_size, int num_contexts,
+    const boost::shared_ptr<FeatureContextExtractor>& extractor)
+    : vectorMaxSize(vector_max_size), extractor(extractor) {
   featureWeights = vector<SparseVectorReal>(
       num_contexts, SparseVectorReal(vectorMaxSize));
 }
 
 SparseGlobalFeatureStore::SparseGlobalFeatureStore(
-    int vector_max_size, GlobalFeatureIndexesPtr feature_indexes)
-    : vectorMaxSize(vector_max_size) {
+    int vector_max_size,
+    GlobalFeatureIndexesPtr feature_indexes,
+    const boost::shared_ptr<FeatureContextExtractor>& extractor)
+    : vectorMaxSize(vector_max_size), extractor(extractor) {
   featureWeights = vector<SparseVectorReal>(
       feature_indexes->size(), SparseVectorReal(vectorMaxSize));
   for (size_t i = 0; i < feature_indexes->size(); ++i) {
@@ -27,10 +30,9 @@ SparseGlobalFeatureStore::SparseGlobalFeatureStore(
   }
 }
 
-VectorReal SparseGlobalFeatureStore::get(
-    const vector<int>& feature_context_ids) const {
+VectorReal SparseGlobalFeatureStore::get(const vector<int>& context) const {
   VectorReal result = VectorReal::Zero(vectorMaxSize);
-  for (int feature_context_id: feature_context_ids) {
+  for (int feature_context_id: extractor->getFeatureContextIds(context)) {
     // We do not extract feature context ids for contexts that have not been
     // observed.
     result += featureWeights[feature_context_id];

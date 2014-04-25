@@ -1,7 +1,8 @@
 set(TESTS
+    class_context_extractor_test
     context_processor_test
     feature_context_test
-    feature_context_extractor_test
+    feature_context_hasher_test
     feature_matcher_test
     feature_store_initializer_test
     global_feature_indexes_pair_test
@@ -14,6 +15,7 @@ set(TESTS
     train_factored_sgd_test
     unconstrained_feature_store_test
     utils_test
+    word_context_extractor_test
     word_to_class_index_test)
 
 foreach(test ${TESTS})

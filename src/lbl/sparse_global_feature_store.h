@@ -8,8 +8,9 @@
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/serialization/export.hpp>
+#include <boost/serialization/shared_ptr.hpp>
 
-#include "lbl/feature_context.h"
+#include "lbl/feature_context_extractor.h"
 #include "lbl/global_feature_store.h"
 #include "lbl/utils.h"
 #include "utils/serialization_helpers.h"
@@ -22,12 +23,15 @@ class SparseGlobalFeatureStore : public GlobalFeatureStore {
  public:
   SparseGlobalFeatureStore();
 
-  SparseGlobalFeatureStore(int vector_max_size, int num_contexts);
+  SparseGlobalFeatureStore(
+      int vector_max_size, int num_contexts,
+      const boost::shared_ptr<FeatureContextExtractor>& extractor);
 
   SparseGlobalFeatureStore(
-      int vector_max_size, GlobalFeatureIndexesPtr feature_indexes);
+      int vector_max_size, GlobalFeatureIndexesPtr feature_indexes,
+      const boost::shared_ptr<FeatureContextExtractor>& extractor);
 
-  virtual VectorReal get(const vector<int>& feature_context_ids) const;
+  virtual VectorReal get(const vector<int>& context) const;
 
   virtual void l2GradientUpdate(
       const boost::shared_ptr<MinibatchFeatureStore>& base_minibatch_store,
@@ -64,13 +68,15 @@ class SparseGlobalFeatureStore : public GlobalFeatureStore {
     ar & boost::serialization::base_object<GlobalFeatureStore>(*this);
 
     ar & vectorMaxSize;
+    ar & extractor;
     ar & featureWeights;
   }
 
   friend class SparseMinibatchFeatureStore;
 
-  vector<SparseVectorReal> featureWeights;
   int vectorMaxSize;
+  boost::shared_ptr<FeatureContextExtractor> extractor;
+  vector<SparseVectorReal> featureWeights;
 };
 
 } // namespace oxlm

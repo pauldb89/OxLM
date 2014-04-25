@@ -1,10 +1,10 @@
-#include "feature_context_extractor.h"
+#include "feature_context_hasher.h"
 
 namespace oxlm {
 
-FeatureContextExtractor::FeatureContextExtractor() {}
+FeatureContextHasher::FeatureContextHasher() {}
 
-FeatureContextExtractor::FeatureContextExtractor(
+FeatureContextHasher::FeatureContextHasher(
     const boost::shared_ptr<Corpus>& corpus,
     const boost::shared_ptr<WordToClassIndex>& index,
     const boost::shared_ptr<ContextProcessor>& processor,
@@ -24,27 +24,37 @@ FeatureContextExtractor::FeatureContextExtractor(
   }
 }
 
-pair<vector<int>, vector<int>> FeatureContextExtractor::getFeatureContextIds(
-    int class_id, const vector<WordId>& history) const {
-  vector<int> class_context_ids, word_context_ids;
-  vector<FeatureContext> feature_contexts = getFeatureContexts(history);
-  for (const FeatureContext& feature_context: feature_contexts) {
+vector<int> FeatureContextHasher::getClassContextIds(
+    const vector<int>& context) const {
+  vector<int> class_context_ids;
+  for (const FeatureContext& feature_context: getFeatureContexts(context)) {
     // Feature contexts for the test set are not guaranteed to exist in the
     // hash. Unobserved contexts are skipped.
     auto it = classContextIdsMap.find(feature_context);
     if (it != classContextIdsMap.end()) {
       class_context_ids.push_back(it->second);
     }
+  }
 
-    it = wordContextIdsMap[class_id].find(feature_context);
+  return class_context_ids;
+}
+
+vector<int> FeatureContextHasher::getWordContextIds(
+    int class_id, const vector<WordId>& context) const {
+  vector<int> word_context_ids;
+  for (const FeatureContext& feature_context: getFeatureContexts(context)) {
+    // Feature contexts for the test set are not guaranteed to exist in the
+    // hash. Unobserved contexts are skipped.
+    auto it = wordContextIdsMap[class_id].find(feature_context);
     if (it != classContextIdsMap.end()) {
       word_context_ids.push_back(it->second);
     }
   }
-  return make_pair(class_context_ids, word_context_ids);
+
+  return word_context_ids;
 }
 
-vector<FeatureContext> FeatureContextExtractor::getFeatureContexts(
+vector<FeatureContext> FeatureContextHasher::getFeatureContexts(
     const vector<WordId>& history) const {
   vector<FeatureContext> feature_contexts;
   vector<int> context;
@@ -56,11 +66,11 @@ vector<FeatureContext> FeatureContextExtractor::getFeatureContexts(
   return feature_contexts;
 }
 
-int FeatureContextExtractor::getNumClassContexts() const {
+int FeatureContextHasher::getNumClassContexts() const {
   return classContextIdsMap.size();
 }
 
-int FeatureContextExtractor::getNumWordContexts(int class_id) const {
+int FeatureContextHasher::getNumWordContexts(int class_id) const {
   return wordContextIdsMap[class_id].size();
 }
 

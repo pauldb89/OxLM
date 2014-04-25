@@ -18,25 +18,16 @@ class FeatureStoreInitializerTest : public testing::Test {
 
     corpus = boost::make_shared<Corpus>();
     index = boost::make_shared<WordToClassIndex>(classes);
-    processor = boost::make_shared<ContextProcessor>(
-        corpus, config.ngram_order, 0, 1);
-    extractor = boost::make_shared<FeatureContextExtractor>(
-        corpus, index, processor, 0);
-    matcher = boost::make_shared<FeatureMatcher>(
-        corpus, index, processor, extractor);
   }
 
   ModelData config;
   boost::shared_ptr<Corpus> corpus;
   boost::shared_ptr<WordToClassIndex> index;
-  boost::shared_ptr<ContextProcessor> processor;
-  boost::shared_ptr<FeatureContextExtractor> extractor;
-  boost::shared_ptr<FeatureMatcher> matcher;
 };
 
 TEST_F(FeatureStoreInitializerTest, TestUnconstrainedGlobal) {
   config.sparse_features = false;
-  FeatureStoreInitializer initializer(config, index, matcher);
+  FeatureStoreInitializer initializer(config, corpus, index);
 
   boost::shared_ptr<GlobalFeatureStore> U;
   vector<boost::shared_ptr<GlobalFeatureStore>> V;
@@ -48,7 +39,7 @@ TEST_F(FeatureStoreInitializerTest, TestUnconstrainedGlobal) {
 
 TEST_F(FeatureStoreInitializerTest, TestUnconstrainedMinibatch) {
   config.sparse_features = false;
-  FeatureStoreInitializer initializer(config, index, matcher);
+  FeatureStoreInitializer initializer(config, corpus, index);
 
   boost::shared_ptr<MinibatchFeatureStore> U;
   vector<boost::shared_ptr<MinibatchFeatureStore>> V;
@@ -61,7 +52,7 @@ TEST_F(FeatureStoreInitializerTest, TestUnconstrainedMinibatch) {
 
 TEST_F(FeatureStoreInitializerTest, TestSparseGlobal) {
   config.sparse_features = true;
-  FeatureStoreInitializer initializer(config, index, matcher);
+  FeatureStoreInitializer initializer(config, corpus, index);
 
   boost::shared_ptr<GlobalFeatureStore> U;
   vector<boost::shared_ptr<GlobalFeatureStore>> V;
@@ -73,7 +64,7 @@ TEST_F(FeatureStoreInitializerTest, TestSparseGlobal) {
 
 TEST_F(FeatureStoreInitializerTest, TestSparseMinibatch) {
   config.sparse_features = true;
-  FeatureStoreInitializer initializer(config, index, matcher);
+  FeatureStoreInitializer initializer(config, corpus, index);
 
   boost::shared_ptr<MinibatchFeatureStore> U;
   vector<boost::shared_ptr<MinibatchFeatureStore>> V;

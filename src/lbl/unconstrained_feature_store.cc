@@ -6,13 +6,14 @@ namespace oxlm {
 
 UnconstrainedFeatureStore::UnconstrainedFeatureStore() {}
 
-UnconstrainedFeatureStore::UnconstrainedFeatureStore(int vector_size)
-    : vectorSize(vector_size) {}
+UnconstrainedFeatureStore::UnconstrainedFeatureStore(
+    int vector_size,
+    const boost::shared_ptr<FeatureContextExtractor>& extractor)
+    : vectorSize(vector_size), extractor(extractor) {}
 
-VectorReal UnconstrainedFeatureStore::get(
-    const vector<int>& feature_context_ids) const {
+VectorReal UnconstrainedFeatureStore::get(const vector<int>& context) const {
   VectorReal result = VectorReal::Zero(vectorSize);
-  for (int feature_context_id: feature_context_ids) {
+  for (int feature_context_id: extractor->getFeatureContextIds(context)) {
     auto it = featureWeights.find(feature_context_id);
     if (it != featureWeights.end()) {
       result += it->second;
@@ -22,9 +23,8 @@ VectorReal UnconstrainedFeatureStore::get(
 }
 
 void UnconstrainedFeatureStore::update(
-    const vector<int>& feature_context_ids,
-    const VectorReal& values) {
-  for (int feature_context_id: feature_context_ids) {
+    const vector<int>& context, const VectorReal& values) {
+  for (int feature_context_id: extractor->getFeatureContextIds(context)) {
     update(feature_context_id, values);
   }
 }

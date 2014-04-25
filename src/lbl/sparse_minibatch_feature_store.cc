@@ -7,12 +7,16 @@ namespace oxlm {
 
 SparseMinibatchFeatureStore::SparseMinibatchFeatureStore() {}
 
-SparseMinibatchFeatureStore::SparseMinibatchFeatureStore(int vector_max_size)
-    : vectorMaxSize(vector_max_size) {}
+SparseMinibatchFeatureStore::SparseMinibatchFeatureStore(
+    int vector_max_size,
+    const boost::shared_ptr<FeatureContextExtractor>& extractor)
+    : vectorMaxSize(vector_max_size), extractor(extractor) {}
 
 SparseMinibatchFeatureStore::SparseMinibatchFeatureStore(
-    int vector_max_size, MinibatchFeatureIndexesPtr feature_indexes)
-    : vectorMaxSize(vector_max_size) {
+    int vector_max_size,
+    MinibatchFeatureIndexesPtr feature_indexes,
+    const boost::shared_ptr<FeatureContextExtractor>& extractor)
+    : vectorMaxSize(vector_max_size), extractor(extractor) {
   for (const auto& feature_context_indexes: *feature_indexes) {
     for (int feature_index: feature_context_indexes.second) {
       hintFeatureIndex(feature_context_indexes.first, feature_index);
@@ -20,10 +24,9 @@ SparseMinibatchFeatureStore::SparseMinibatchFeatureStore(
   }
 }
 
-VectorReal SparseMinibatchFeatureStore::get(
-    const vector<int>& feature_context_ids) const {
+VectorReal SparseMinibatchFeatureStore::get(const vector<int>& context) const {
   VectorReal result = VectorReal::Zero(vectorMaxSize);
-  for (int feature_context_id: feature_context_ids) {
+  for (int feature_context_id: extractor->getFeatureContextIds(context)) {
     auto it = featureWeights.find(feature_context_id);
     if (it != featureWeights.end()) {
       result += it->second;
@@ -33,9 +36,8 @@ VectorReal SparseMinibatchFeatureStore::get(
 }
 
 void SparseMinibatchFeatureStore::update(
-    const vector<int>& feature_context_ids,
-    const VectorReal& values) {
-  for (int feature_context_id: feature_context_ids) {
+    const vector<int>& context, const VectorReal& values) {
+  for (int feature_context_id: extractor->getFeatureContextIds(context)) {
     update(feature_context_id, values);
   }
 }

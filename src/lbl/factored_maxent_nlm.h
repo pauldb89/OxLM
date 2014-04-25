@@ -11,7 +11,6 @@
 // serialization.
 #include <boost/shared_ptr.hpp>
 
-#include "lbl/feature_context_extractor.h"
 #include "lbl/factored_nlm.h"
 #include "lbl/global_feature_store.h"
 #include "lbl/feature_store_initializer.h"
@@ -29,7 +28,6 @@ class FactoredMaxentNLM : public FactoredNLM {
   FactoredMaxentNLM(
       const ModelData& config, const Dict& labels,
       const boost::shared_ptr<WordToClassIndex>& index,
-      const boost::shared_ptr<FeatureContextExtractor>& extractor,
       const FeatureStoreInitializer& initializer);
 
   virtual Real log_prob(
@@ -52,13 +50,11 @@ class FactoredMaxentNLM : public FactoredNLM {
   template<class Archive>
   void serialize(Archive& ar, const unsigned int version) {
     ar & boost::serialization::base_object<FactoredNLM>(*this);
-    ar & extractor;
     ar & U;
     ar & V;
   }
 
  public:
-  boost::shared_ptr<FeatureContextExtractor> extractor;
   boost::shared_ptr<GlobalFeatureStore> U;
   vector<boost::shared_ptr<GlobalFeatureStore>> V;
 };
