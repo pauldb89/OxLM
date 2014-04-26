@@ -9,6 +9,7 @@ add_library(lbl SHARED
   factored_maxent_nlm.cc
   factored_nlm.cc
   feature_context.cc
+  feature_context_generator.cc
   feature_context_hasher.cc
   feature_matcher.cc
   feature_store_initializer.cc

@@ -2,6 +2,7 @@ set(TESTS
     class_context_extractor_test
     context_processor_test
     feature_context_test
+    feature_context_generator_test
     feature_context_hasher_test
     feature_matcher_test
     feature_store_initializer_test

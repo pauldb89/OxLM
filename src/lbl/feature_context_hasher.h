@@ -6,6 +6,7 @@
 
 #include "lbl/context_processor.h"
 #include "lbl/feature_context.h"
+#include "lbl/feature_context_generator.h"
 #include "lbl/utils.h"
 #include "lbl/word_to_class_index.h"
 #include "utils/serialization_helpers.h"
@@ -46,22 +47,19 @@ class FeatureContextHasher {
   bool operator==(const FeatureContextHasher& other) const;
 
 private:
-  vector<FeatureContext> getFeatureContexts(
-      const vector<WordId>& history) const;
-
   friend class boost::serialization::access;
 
   template<class Archive>
   void serialize(Archive& ar, const unsigned int version) {
     ar & index;
-    ar & featureContextSize;
+    ar & generator;
     ar & classContextIdsMap;
     ar & wordContextIdsMap;
   }
 
   boost::shared_ptr<WordToClassIndex> index;
+  boost::shared_ptr<FeatureContextGenerator> generator;
 
-  size_t featureContextSize;
   FeatureContextHash classContextIdsMap;
   vector<FeatureContextHash> wordContextIdsMap;
 };
