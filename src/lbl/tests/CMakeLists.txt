@@ -4,6 +4,7 @@ set(TESTS
     feature_context_test
     feature_context_generator_test
     feature_context_hasher_test
+    feature_context_keyer_test
     feature_matcher_test
     feature_store_initializer_test
     global_feature_indexes_pair_test

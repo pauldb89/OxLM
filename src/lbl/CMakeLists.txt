@@ -11,6 +11,7 @@ add_library(lbl SHARED
   feature_context.cc
   feature_context_generator.cc
   feature_context_hasher.cc
+  feature_context_keyer.cc
   feature_matcher.cc
   feature_store_initializer.cc
   global_feature_indexes_pair.cc
