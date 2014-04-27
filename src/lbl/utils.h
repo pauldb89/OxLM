@@ -27,6 +27,7 @@ typedef boost::shared_ptr<MinibatchFeatureIndexes> MinibatchFeatureIndexesPtr;
 
 typedef Eigen::Matrix<Real, Eigen::Dynamic, Eigen::Dynamic> MatrixReal;
 typedef Eigen::Matrix<Real, Eigen::Dynamic, 1>              VectorReal;
+typedef Eigen::Map<VectorReal>                              VectorRealMap;
 typedef Eigen::Array<Real, Eigen::Dynamic, 1>               ArrayReal;
 typedef Eigen::SparseVector<Real>                           SparseVectorReal;
 
