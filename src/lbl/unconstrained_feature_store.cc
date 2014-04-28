@@ -1,5 +1,6 @@
 #include "lbl/unconstrained_feature_store.h"
 
+#include "lbl/operators.h"
 #include "utils/constants.h"
 
 namespace oxlm {
@@ -70,14 +71,10 @@ void UnconstrainedFeatureStore::updateAdaGrad(
   boost::shared_ptr<UnconstrainedFeatureStore> adagrad_store =
       cast(base_adagrad_store);
   for (const auto& entry: gradient_store->featureWeights) {
-    VectorReal weights = VectorReal::Zero(vectorSize);
     const VectorReal& gradient = entry.second;
     const VectorReal& adagrad = adagrad_store->featureWeights.at(entry.first);
-    for (int r = 0; r < adagrad.rows(); ++r) {
-      if (adagrad(r)) {
-        weights(r) = -step_size * gradient(r) / sqrt(adagrad(r));
-      }
-    }
+    const VectorReal weights = -gradient.binaryExpr(
+        adagrad, CwiseAdagradUpdateOp<Real>(step_size));
     update(entry.first, weights);
   }
 }
@@ -88,6 +85,14 @@ void UnconstrainedFeatureStore::clear() {
 
 size_t UnconstrainedFeatureStore::size() const {
   return featureWeights.size();
+}
+
+boost::shared_ptr<UnconstrainedFeatureStore> UnconstrainedFeatureStore::cast(
+        const boost::shared_ptr<FeatureStore>& base_store) {
+  boost::shared_ptr<UnconstrainedFeatureStore> store =
+      dynamic_pointer_cast<UnconstrainedFeatureStore>(base_store);
+  assert(store != nullptr);
+  return store;
 }
 
 bool UnconstrainedFeatureStore::operator==(
@@ -111,6 +116,8 @@ bool UnconstrainedFeatureStore::operator==(
   return true;
 }
 
+UnconstrainedFeatureStore::~UnconstrainedFeatureStore() {}
+
 void UnconstrainedFeatureStore::update(
     int feature_context_id, const VectorReal& values) {
   auto it = featureWeights.find(feature_context_id);
@@ -119,14 +126,6 @@ void UnconstrainedFeatureStore::update(
   } else {
     featureWeights.insert(make_pair(feature_context_id, values));
   }
-}
-
-boost::shared_ptr<UnconstrainedFeatureStore> UnconstrainedFeatureStore::cast(
-        const boost::shared_ptr<FeatureStore>& base_store) {
-  boost::shared_ptr<UnconstrainedFeatureStore> store =
-      dynamic_pointer_cast<UnconstrainedFeatureStore>(base_store);
-  assert(store != nullptr);
-  return store;
 }
 
 } // namespace oxlm

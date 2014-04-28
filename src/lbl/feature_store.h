@@ -18,6 +18,8 @@ class FeatureStore {
 
   virtual size_t size() const = 0;
 
+  virtual ~FeatureStore();
+
  private:
   friend class boost::serialization::access;
 

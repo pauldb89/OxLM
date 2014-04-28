@@ -14,7 +14,7 @@ TEST_F(TestSGD, TestTrainMaxentSGD) {
   boost::shared_ptr<Corpus> test_corpus =
       readCorpus(config.training_file, model->label_set());
   double log_pp = perplexity(model, test_corpus);
-  EXPECT_NEAR(101.731446, exp(-log_pp / test_corpus->size()), 1e-3);
+  EXPECT_NEAR(101.755784, exp(-log_pp / test_corpus->size()), 1e-3);
 }
 
 TEST_F(TestSGD, TestTrainMaxentSGDSparseFeatures) {

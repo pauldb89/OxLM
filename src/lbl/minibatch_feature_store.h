@@ -13,6 +13,8 @@ class MinibatchFeatureStore : virtual public FeatureStore {
       const boost::shared_ptr<MinibatchFeatureStore>& base_minibatch_store) = 0;
 
   virtual void clear() = 0;
+
+  virtual ~MinibatchFeatureStore();
 };
 
 }

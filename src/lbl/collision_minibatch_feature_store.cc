@@ -1,37 +1,16 @@
 #include "lbl/collision_minibatch_feature_store.h"
 
-#include <boost/make_shared.hpp>
-
-#include "lbl/circular_feature_batch.h"
-#include "lbl/continuous_feature_batch.h"
-
 namespace oxlm {
 
 CollisionMinibatchFeatureStore::CollisionMinibatchFeatureStore(
     int vector_size, int hash_space, int feature_context_size)
-    : vectorSize(vector_size), hashSpace(hash_space),
-      keyer(feature_context_size) {
-  assert(vectorSize <= hashSpace);
-  featureWeights = new Real[hashSpace];
-  VectorRealMap weights(featureWeights, hashSpace);
-  weights.setZero();
-}
-
-VectorReal CollisionMinibatchFeatureStore::get(
-    const vector<int>& context) const {
-  VectorReal result = VectorReal::Zero(vectorSize);
-  for (int key: getKeys(context)) {
-    result += getBatch(key, vectorSize)->values();
-  }
-
-  return result;
-}
+    : CollisionStore(vector_size, hash_space, feature_context_size) {}
 
 void CollisionMinibatchFeatureStore::update(
     const vector<int>& context, const VectorReal& values) {
   for (int key: getKeys(context)) {
     markBatch(key, vectorSize);
-    getBatch(key, vectorSize)->add(values);
+    getBatch(key, vectorSize)->update(values);
   }
 }
 
@@ -41,7 +20,7 @@ void CollisionMinibatchFeatureStore::update(
 
   for (const auto& batch: store->observedBatches) {
     markBatch(batch);
-    getBatch(batch)->add(store->getBatch(batch)->values());
+    getBatch(batch)->update(store->getBatch(batch)->values());
   }
 }
 
@@ -69,30 +48,7 @@ boost::shared_ptr<CollisionMinibatchFeatureStore> CollisionMinibatchFeatureStore
   return store;
 }
 
-vector<int> CollisionMinibatchFeatureStore::getKeys(
-    const vector<int>& context) const {
-  vector<int> keys;
-  for (size_t raw_key: keyer.getKeys(context)) {
-    keys.push_back(raw_key % hashSpace);
-  }
-  return keys;
-}
-
-boost::shared_ptr<FeatureBatch> CollisionMinibatchFeatureStore::getBatch(
-    const pair<int, int>& batch) const {
-  if (batch.first + batch.second < hashSpace) {
-    return boost::make_shared<ContinuousFeatureBatch>(
-        featureWeights, batch.first, batch.second);
-  } else {
-    return boost::make_shared<CircularFeatureBatch>(
-        featureWeights, batch.first, batch.second, hashSpace);
-  }
-}
-
-boost::shared_ptr<FeatureBatch> CollisionMinibatchFeatureStore::getBatch(
-    int start_key, int length) const {
-  return getBatch(make_pair(start_key, length));
-}
+CollisionMinibatchFeatureStore::~CollisionMinibatchFeatureStore() {}
 
 void CollisionMinibatchFeatureStore::markBatch(pair<int, int> batch) {
   // Search if the current batch crosses with a batch located to the right.

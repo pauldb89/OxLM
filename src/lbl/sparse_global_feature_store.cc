@@ -122,6 +122,8 @@ bool SparseGlobalFeatureStore::operator==(
   return true;
 }
 
+SparseGlobalFeatureStore::~SparseGlobalFeatureStore() {}
+
 void SparseGlobalFeatureStore::update(
     int feature_context_id, const SparseVectorReal& values) {
   // All features involved in gradient updates must be defined since the

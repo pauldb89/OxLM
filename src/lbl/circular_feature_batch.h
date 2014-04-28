@@ -11,9 +11,20 @@ class CircularFeatureBatch : public FeatureBatch {
 
   virtual VectorReal values() const;
 
-  virtual void add(const VectorReal& values);
+  virtual Real l2Objective(Real sigma) const;
+
+  virtual void update(const VectorReal& values);
+
+  virtual void updateSquared(const VectorReal& values);
+
+  virtual void updateAdaGrad(
+      const VectorReal& gradient, const VectorReal& adagrad, Real step_size);
+
+  virtual void l2Update(Real sigma);
 
   virtual void setZero();
+
+  virtual ~CircularFeatureBatch();
 
  private:
   int vectorSize;

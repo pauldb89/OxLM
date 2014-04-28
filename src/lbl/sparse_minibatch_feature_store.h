@@ -42,6 +42,8 @@ class SparseMinibatchFeatureStore : public MinibatchFeatureStore {
 
   bool operator==(const SparseMinibatchFeatureStore& store) const;
 
+  virtual ~SparseMinibatchFeatureStore();
+
  private:
   void update(int feature_context_id, const VectorReal& values);
 

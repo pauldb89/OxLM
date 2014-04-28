@@ -91,6 +91,8 @@ bool SparseMinibatchFeatureStore::operator==(const SparseMinibatchFeatureStore& 
   return true;
 }
 
+SparseMinibatchFeatureStore::~SparseMinibatchFeatureStore() {}
+
 void SparseMinibatchFeatureStore::update(
     int feature_context_id, const VectorReal& values) {
   SparseVectorReal& weights = featureWeights.at(feature_context_id);

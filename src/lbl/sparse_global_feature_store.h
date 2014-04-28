@@ -54,6 +54,8 @@ class SparseGlobalFeatureStore : public GlobalFeatureStore {
 
   bool operator==(const SparseGlobalFeatureStore& store) const;
 
+  virtual ~SparseGlobalFeatureStore();
+
  private:
   void update(int feature_context_id, const SparseVectorReal& values);
 

@@ -49,10 +49,12 @@ class UnconstrainedFeatureStore :
 
   virtual size_t size() const;
 
-  bool operator==(const UnconstrainedFeatureStore& store) const;
-
   static boost::shared_ptr<UnconstrainedFeatureStore> cast(
       const boost::shared_ptr<FeatureStore>& base_store);
+
+  bool operator==(const UnconstrainedFeatureStore& store) const;
+
+  virtual ~UnconstrainedFeatureStore();
 
  private:
   void update(int feature_context_id, const VectorReal& values);

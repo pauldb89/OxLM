@@ -5,20 +5,26 @@
 add_library(lbl SHARED
   circular_feature_batch.cc
   class_context_extractor.cc
+  collision_global_feature_store.cc
   collision_minibatch_feature_store.cc
+  collision_store.cc
   config.cc
   continuous_feature_batch.cc
   context_processor.cc
   factored_maxent_nlm.cc
   factored_nlm.cc
+  feature_batch.cc
   feature_context.cc
   feature_context_generator.cc
   feature_context_hasher.cc
   feature_context_keyer.cc
   feature_matcher.cc
+  feature_store.cc
   feature_store_initializer.cc
   global_feature_indexes_pair.cc
+  global_feature_store.cc
   minibatch_feature_indexes_pair.cc
+  minibatch_feature_store.cc
   model_utils.cc
   nlm.cc
   nlm_approximate_z.cc

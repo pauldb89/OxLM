@@ -23,6 +23,8 @@ class GlobalFeatureStore : virtual public FeatureStore {
       const boost::shared_ptr<GlobalFeatureStore>& base_adagrad_store,
       Real step_size) = 0;
 
+  virtual ~GlobalFeatureStore();
+
  private:
   friend class boost::serialization::access;
 
