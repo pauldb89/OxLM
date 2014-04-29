@@ -3,17 +3,13 @@
 #############################################
 
 add_library(lbl SHARED
-  circular_feature_batch.cc
   class_context_extractor.cc
   collision_global_feature_store.cc
   collision_minibatch_feature_store.cc
-  collision_store.cc
   config.cc
-  continuous_feature_batch.cc
   context_processor.cc
   factored_maxent_nlm.cc
   factored_nlm.cc
-  feature_batch.cc
   feature_context.cc
   feature_context_extractor.cc
   feature_context_generator.cc

@@ -1,21 +1,44 @@
 #include "lbl/collision_global_feature_store.h"
 
+#include "lbl/operators.h"
+
 namespace oxlm {
 
-CollisionGlobalFeatureStore::CollisionGlobalFeatureStore()
-    : CollisionStore() {}
+CollisionGlobalFeatureStore::CollisionGlobalFeatureStore() {}
+
+CollisionGlobalFeatureStore::CollisionGlobalFeatureStore(
+    const CollisionGlobalFeatureStore& other) {
+  deepCopy(other);
+}
 
 CollisionGlobalFeatureStore::CollisionGlobalFeatureStore(
     int vector_size, int hash_space, int feature_context_size)
-    : CollisionStore(vector_size, hash_space, feature_context_size) {}
+    : vectorSize(vector_size), hashSpace(hash_space),
+      keyer(hash_space, feature_context_size) {
+  assert(vectorSize <= hashSpace);
+  featureWeights = new Real[hashSpace];
+  VectorRealMap featureWeightsMap(featureWeights, hashSpace);
+  featureWeightsMap = VectorReal::Zero(hashSpace);
+}
+
+VectorReal CollisionGlobalFeatureStore::get(const vector<int>& context) const {
+  VectorReal result = VectorReal::Zero(vectorSize);
+  for (int key: keyer.getKeys(context)) {
+    for (int i = 0; i < vectorSize; ++i) {
+      result(i) += featureWeights[(key + i) % hashSpace];
+    }
+  }
+
+  return result;
+}
 
 void CollisionGlobalFeatureStore::l2GradientUpdate(
     const boost::shared_ptr<MinibatchFeatureStore>& base_store, Real sigma) {
   boost::shared_ptr<CollisionMinibatchFeatureStore> store =
       CollisionMinibatchFeatureStore::cast(base_store);
 
-  for (const auto& batch: store->observedBatches) {
-    getBatch(batch)->l2Update(sigma);
+  for (const auto& entry: store->featureWeights) {
+    featureWeights[entry.first] -= sigma * featureWeights[entry.first];
   }
 }
 
@@ -26,10 +49,10 @@ Real CollisionGlobalFeatureStore::l2Objective(
       CollisionMinibatchFeatureStore::cast(base_store);
 
   Real result = 0;
-  for (const auto& batch: store->observedBatches) {
-    result += getBatch(batch)->l2Objective(sigma);
+  for (const auto& entry: store->featureWeights) {
+    result += featureWeights[entry.first] * featureWeights[entry.first];
   }
-  return result;
+  return sigma * result;
 }
 
 void CollisionGlobalFeatureStore::updateSquared(
@@ -37,8 +60,8 @@ void CollisionGlobalFeatureStore::updateSquared(
   boost::shared_ptr<CollisionMinibatchFeatureStore> store =
       CollisionMinibatchFeatureStore::cast(base_store);
 
-  for (const auto& batch: store->observedBatches) {
-    getBatch(batch)->updateSquared(store->getBatch(batch)->values());
+  for (const auto& entry: store->featureWeights) {
+    featureWeights[entry.first] += entry.second * entry.second;
   }
 }
 
@@ -51,11 +74,10 @@ void CollisionGlobalFeatureStore::updateAdaGrad(
   boost::shared_ptr<CollisionGlobalFeatureStore> adagrad_store =
       CollisionGlobalFeatureStore::cast(base_adagrad_store);
 
-  for (const auto& batch: gradient_store->observedBatches) {
-    getBatch(batch)->updateAdaGrad(
-        gradient_store->getBatch(batch)->values(),
-        adagrad_store->getBatch(batch)->values(),
-        step_size);
+  CwiseAdagradUpdateOp<Real> op(step_size);
+  for (const auto& entry: gradient_store->featureWeights) {
+    featureWeights[entry.first] -=
+        op(entry.second, adagrad_store->featureWeights[entry.first]);
   }
 }
 
@@ -88,7 +110,24 @@ bool CollisionGlobalFeatureStore::operator==(
   return true;
 }
 
-CollisionGlobalFeatureStore::~CollisionGlobalFeatureStore() {}
+CollisionGlobalFeatureStore& CollisionGlobalFeatureStore::operator=(
+    const CollisionGlobalFeatureStore& other) {
+  deepCopy(other);
+  return *this;
+}
+
+CollisionGlobalFeatureStore::~CollisionGlobalFeatureStore() {
+  delete[] featureWeights;
+}
+
+void CollisionGlobalFeatureStore::deepCopy(
+    const CollisionGlobalFeatureStore& other) {
+  vectorSize = other.vectorSize;
+  hashSpace = other.hashSpace;
+  keyer = other.keyer;
+  featureWeights = new Real[hashSpace];
+  memcpy(featureWeights, other.featureWeights, hashSpace * sizeof(Real));
+}
 
 } // namespace oxlm
 

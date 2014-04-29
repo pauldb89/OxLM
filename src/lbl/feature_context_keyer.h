@@ -8,9 +8,9 @@ class FeatureContextKeyer {
  public:
   FeatureContextKeyer();
 
-  FeatureContextKeyer(int feature_context_size);
+  FeatureContextKeyer(int hash_space, int feature_context_size);
 
-  vector<size_t> getKeys(const vector<int>& context) const;
+  vector<int> getKeys(const vector<int>& context) const;
 
   bool operator==(const FeatureContextKeyer& other) const;
 
@@ -19,11 +19,13 @@ class FeatureContextKeyer {
 
   template<class Archive>
   void serialize(Archive& ar, const unsigned int version) {
+    ar & hashSpace;
     ar & generator;
   }
 
-  hash<FeatureContext> hash_function;
+  int hashSpace;
   FeatureContextGenerator generator;
+  hash<FeatureContext> hash_function;
 };
 
 } // namespace oxlm
