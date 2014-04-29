@@ -3,6 +3,8 @@
 #include <boost/make_shared.hpp>
 #include <boost/shared_ptr.hpp>
 
+#include "lbl/collision_global_feature_store.h"
+#include "lbl/collision_minibatch_feature_store.h"
 #include "lbl/feature_store_initializer.h"
 #include "lbl/sparse_global_feature_store.h"
 #include "lbl/sparse_minibatch_feature_store.h"
@@ -73,6 +75,31 @@ TEST_F(FeatureStoreInitializerTest, TestSparseMinibatch) {
   EXPECT_TRUE(typeid(*U.get()) == typeid(SparseMinibatchFeatureStore));
   EXPECT_EQ(1, V.size());
   EXPECT_TRUE(typeid(*V[0].get()) == typeid(SparseMinibatchFeatureStore));
+}
+
+TEST_F(FeatureStoreInitializerTest, TestCollisionGlobal) {
+  config.hash_space = 1000000;
+  FeatureStoreInitializer initializer(config, corpus, index);
+
+  boost::shared_ptr<GlobalFeatureStore> U;
+  vector<boost::shared_ptr<GlobalFeatureStore>> V;
+  initializer.initialize(U, V);
+  EXPECT_TRUE(typeid(*U.get()) == typeid(CollisionGlobalFeatureStore));
+  EXPECT_EQ(1, V.size());
+  EXPECT_TRUE(typeid(*V[0].get()) == typeid(CollisionGlobalFeatureStore));
+}
+
+TEST_F(FeatureStoreInitializerTest, TestCollisionMinibatch) {
+  config.hash_space = 1000000;
+  FeatureStoreInitializer initializer(config, corpus, index);
+
+  boost::shared_ptr<MinibatchFeatureStore> U;
+  vector<boost::shared_ptr<MinibatchFeatureStore>> V;
+  vector<int> minibatch_indices;
+  initializer.initialize(U, V, minibatch_indices);
+  EXPECT_TRUE(typeid(*U.get()) == typeid(CollisionMinibatchFeatureStore));
+  EXPECT_EQ(1, V.size());
+  EXPECT_TRUE(typeid(*V[0].get()) == typeid(CollisionMinibatchFeatureStore));
 }
 
 } // namespace oxlm

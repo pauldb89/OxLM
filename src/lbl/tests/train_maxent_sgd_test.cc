@@ -30,4 +30,17 @@ TEST_F(TestSGD, TestTrainMaxentSGDSparseFeatures) {
   EXPECT_NEAR(138.587834, exp(-log_pp / test_corpus->size()), 1e-3);
 }
 
+TEST_F(TestSGD, TestTrainMaxentSGDCollisions) {
+  config.l2_maxent = 0.1;
+  config.feature_context_size = 3;
+  config.hash_space = 1000000;
+
+  boost::shared_ptr<FactoredNLM> model = learn(config);
+  config.test_file = "test.txt";
+  boost::shared_ptr<Corpus> test_corpus =
+      readCorpus(config.training_file, model->label_set());
+  double log_pp = perplexity(model, test_corpus);
+  EXPECT_NEAR(111.157249, exp(-log_pp / test_corpus->size()), 1e-3);
+}
+
 } // namespace oxlm
