@@ -17,6 +17,8 @@ bool WordContextExtractor::operator==(const WordContextExtractor& other) const {
   return classId == other.classId && *hasher == *other.hasher;
 }
 
+WordContextExtractor::~WordContextExtractor() {}
+
 } // namespace oxlm
 
 BOOST_CLASS_EXPORT_IMPLEMENT(oxlm::WordContextExtractor)

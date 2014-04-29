@@ -43,6 +43,8 @@ class FactoredNLM: public NLM {
 
   void clear_cache();
 
+  virtual ~FactoredNLM();
+
  private:
   friend class boost::serialization::access;
   template<class Archive>

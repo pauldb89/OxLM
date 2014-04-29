@@ -18,6 +18,8 @@ bool ClassContextExtractor::operator==(
   return *hasher == *other.hasher;
 }
 
+ClassContextExtractor::~ClassContextExtractor() {}
+
 } // namespace oxlm
 
 BOOST_CLASS_EXPORT_IMPLEMENT(oxlm::ClassContextExtractor)

@@ -13,6 +13,8 @@ class FeatureContextExtractor {
   virtual vector<int> getFeatureContextIds(
       const vector<int>& context) const = 0;
 
+  virtual ~FeatureContextExtractor();
+
  private:
   friend class boost::serialization::access;
 

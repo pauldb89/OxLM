@@ -40,6 +40,8 @@ class FactoredMaxentNLM : public FactoredNLM {
       const vector<boost::shared_ptr<MinibatchFeatureStore>>& word_stores,
       Real minibatch_factor) const;
 
+  virtual ~FactoredMaxentNLM();
+
  private:
   friend class boost::serialization::access;
 

@@ -19,6 +19,8 @@ class WordContextExtractor : public FeatureContextExtractor {
 
   bool operator==(const WordContextExtractor& other) const;
 
+  virtual ~WordContextExtractor();
+
  private:
   friend class boost::serialization::access;
 

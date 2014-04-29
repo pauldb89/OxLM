@@ -18,6 +18,8 @@ class ClassContextExtractor : public FeatureContextExtractor {
 
   bool operator==(const ClassContextExtractor& extractor) const;
 
+  virtual ~ClassContextExtractor();
+
  private:
   friend class boost::serialization::access;
 

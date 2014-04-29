@@ -199,4 +199,6 @@ void FactoredNLM::clear_cache() {
   m_context_class_cache.reserve(1000000);
 }
 
+FactoredNLM::~FactoredNLM() {}
+
 } // namespace oxlm

@@ -15,6 +15,7 @@ add_library(lbl SHARED
   factored_nlm.cc
   feature_batch.cc
   feature_context.cc
+  feature_context_extractor.cc
   feature_context_generator.cc
   feature_context_hasher.cc
   feature_context_keyer.cc

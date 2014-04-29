@@ -99,6 +99,8 @@ Real FactoredMaxentNLM::l2Objective(
   return result;
 }
 
+FactoredMaxentNLM::~FactoredMaxentNLM() {}
+
 } // namespace oxlm
 
 BOOST_CLASS_EXPORT_IMPLEMENT(oxlm::FactoredMaxentNLM)
