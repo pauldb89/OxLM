@@ -61,14 +61,16 @@ int main(int argc, char **argv) {
     ("classes", value<int>()->default_value(100),
         "number of classes for factored output.")
     ("class-file", value<string>(),
-        "file containing word to class mappings in the format <class> <word> <frequence>.")
+        "file containing word to class mappings in the format"
+        "<class> <word> <frequence>.")
     ("randomise", "visit the training tokens in random order")
     ("reclass", "reallocate word classes after the first epoch.")
     ("diagonal-contexts", "Use diagonal context matrices (usually faster).")
     ("sparse-features", value<bool>()->default_value(true),
         "Only define maximum entropy feature functions for observed contexts")
     ("hash-space", value<int>()->default_value(0),
-        "The size of the space in which the maxent features are mapped to.")
+        "The size of the space in which the maxent features are mapped to "
+        "(in millions).")
     ("random-weights", value<bool>()->default_value(true),
         "Initialize the weights randomly.");
   options_description config_options, cmdline_options;
@@ -116,7 +118,7 @@ int main(int argc, char **argv) {
   config.diagonal_contexts = vm.count("diagonal-contexts");
   config.sparse_features = vm["sparse-features"].as<bool>();
   config.random_weights = vm["random-weights"].as<bool>();
-  config.hash_space = vm["hash-space"].as<int>();
+  config.hash_space = vm["hash-space"].as<int>() * 1000000;
 
   cerr << "################################" << endl;
   cerr << "# Config Summary" << endl;
