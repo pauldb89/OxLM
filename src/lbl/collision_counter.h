@@ -25,9 +25,12 @@ class CollisionCounter {
   boost::shared_ptr<WordToClassIndex> index;
   boost::shared_ptr<ContextProcessor> processor;
   FeatureContextGenerator generator;
-  FeatureContextKeyer keyer;
-  unordered_set<FeatureContext> observedContexts;
-  unordered_set<int> observedKeys;
+  FeatureContextKeyer class_keyer;
+  FeatureContextKeyer word_keyer;
+  unordered_set<FeatureContext> observedClassContexts;
+  vector<unordered_set<FeatureContext>> observedWordContexts;
+  unordered_set<int> observedClassKeys;
+  vector<unordered_set<int>> observedWordKeys;
 };
 
 } // namespace oxlm
