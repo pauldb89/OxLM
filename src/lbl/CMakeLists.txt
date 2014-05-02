@@ -34,6 +34,8 @@ add_library(lbl SHARED
   word_to_class_index.cc
 )
 
+target_link_libraries(lbl murmurhash)
+
 if(CDEC_FOUND)
   include_directories(cdec_ff_lbl PRIVATE ${CDEC_INCLUDE_DIRS})
   add_library(cdec_ff_lbl SHARED cdec_ff_lbl.cc)

@@ -18,7 +18,7 @@ TEST(CollisionCounterTest, TestBasic) {
   config.hash_space = 100;
   CollisionCounter counter(corpus, index, config);
 
-  EXPECT_EQ(25, counter.count());
+  EXPECT_EQ(22, counter.count());
 }
 
 } // namespace oxlm

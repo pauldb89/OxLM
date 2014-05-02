@@ -33,22 +33,22 @@ TEST_F(CollisionMinibatchFeatureStoreTest, TestBasic) {
   values << 4, 2, 5;
   store->update(context, values);
   // Due to collisions we don't get 3 x values.
-  expected_values << 20, 10, 25;
+  expected_values << 24, 28, 29;
   EXPECT_MATRIX_NEAR(expected_values, store->get(context), EPS);
-  EXPECT_EQ(6, store->size());
+  EXPECT_EQ(4, store->size());
 }
 
 TEST_F(CollisionMinibatchFeatureStoreTest, TestGradientUpdate) {
   store->update(g_store);
 
   VectorReal expected_values(3);
-  expected_values << 20, 10, 25;
+  expected_values << 24, 28, 29;
   EXPECT_MATRIX_NEAR(expected_values, store->get(context), EPS);
-  EXPECT_EQ(6, store->size());
+  EXPECT_EQ(4, store->size());
 }
 
 TEST_F(CollisionMinibatchFeatureStoreTest, TestClear) {
-  EXPECT_EQ(6, g_store->size());
+  EXPECT_EQ(4, g_store->size());
 
   g_store->clear();
   EXPECT_EQ(0, g_store->size());

@@ -5,7 +5,8 @@ cmake_minimum_required(VERSION 2.4)
 set(CMAKE_BUILD_TYPE Release)
 
 add_library(
-  SMHasherSupport
+  murmurhash
+  SHARED
   AvalancheTest.cpp
   Bitslice.cpp
   Bitvec.cpp
@@ -39,5 +40,5 @@ add_executable(
 
 target_link_libraries(
   SMHasher
-  SMHasherSupport
+  murmurhash
 )

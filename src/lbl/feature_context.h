@@ -38,9 +38,7 @@ namespace std {
 
 template<> struct hash<oxlm::FeatureContext> {
   inline size_t operator()(const oxlm::FeatureContext& feature_context) const {
-    size_t result = 0;
-    boost::hash_combine(result, feature_context.data);
-    return result;
+    return oxlm::MurmurHash(feature_context.data);
   }
 };
 

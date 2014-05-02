@@ -53,7 +53,7 @@ int CollisionCounter::count() const {
   cout << "Observed class contexts: " << class_contexts << endl;
   cout << "Class collisions: " << class_collisions << endl;
   cout << "Ratio (for classes): "
-       << Real(class_collisions) / class_contexts << endl;
+       << 100.0 * class_collisions / class_contexts << "%" << endl;
 
   int word_contexts_total = 0, word_collisions = 0;
   for (int i = 0; i < index->getNumClasses(); ++i) {
@@ -64,13 +64,13 @@ int CollisionCounter::count() const {
   cout << "Observed word contexts: " << word_contexts_total << endl;
   cout << "Word collisions: " << word_collisions << endl;
   cout << "Ratio (for words): "
-       << Real(word_collisions) / word_contexts_total << endl;
+       << 100.0 * word_collisions / word_contexts_total << "%" << endl;
 
   int contexts = class_contexts + word_contexts_total;
   int collisions = class_collisions + word_collisions;
   cout << "Observed contexts: " << contexts << endl;
   cout << "Collisions: " << collisions << endl;
-  cout << "Overall ratio: " << Real(collisions) / contexts << endl;
+  cout << "Overall ratio: " << 100.0 * collisions / contexts << "%" << endl;
 
   return collisions;
 }

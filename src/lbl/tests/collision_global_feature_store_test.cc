@@ -37,7 +37,7 @@ TEST_F(CollisionGlobalFeatureStoreTest, TestUpdateSquared) {
   store.updateSquared(gradient_store);
 
   VectorReal expected_values(3);
-  expected_values << 144, 36, 225;
+  expected_values << 216, 262, 281;
   EXPECT_MATRIX_NEAR(expected_values, store.get(context), EPS);
 }
 
@@ -48,7 +48,7 @@ TEST_F(CollisionGlobalFeatureStoreTest, TestUpdateAdaGrad) {
 
   store.updateAdaGrad(gradient_store, adagrad_store, 1);
   VectorReal expected_values(3);
-  expected_values << 141, 33, 222;
+  expected_values << 213, 259, 278;
   EXPECT_MATRIX_NEAR(expected_values, store.get(context), EPS);
 }
 
@@ -56,9 +56,9 @@ TEST_F(CollisionGlobalFeatureStoreTest, TestUpdateRegularizer) {
   store.updateSquared(gradient_store);
   store.l2GradientUpdate(gradient_store, 0.5);
 
-  EXPECT_NEAR(3812.25, store.l2Objective(gradient_store, 1), EPS);
+  EXPECT_NEAR(6704.25, store.l2Objective(gradient_store, 1), EPS);
   VectorReal expected_values(3);
-  expected_values << 72, 18, 112.5;
+  expected_values << 108, 131, 140.5;
   EXPECT_MATRIX_NEAR(expected_values, store.get(context), EPS);
 }
 
@@ -85,7 +85,7 @@ TEST_F(CollisionGlobalFeatureStoreTest, TestSerialization) {
   EXPECT_EQ(*expected_ptr, *actual_ptr);
 
   VectorReal expected_values(3);
-  expected_values << 144, 36, 225;
+  expected_values << 216, 262, 281;
   EXPECT_MATRIX_NEAR(expected_values, actual_ptr->get(context), EPS);
 }
 

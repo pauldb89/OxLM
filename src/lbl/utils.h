@@ -9,6 +9,8 @@
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 
+#include "third_party/smhasher/MurmurHash3.h"
+
 using namespace std;
 using namespace chrono;
 
@@ -63,5 +65,11 @@ inline VectorReal sigmoid(const VectorReal& v) {
 Time GetTime();
 
 double GetDuration(const Time& start_time, const Time& stop_time);
+
+inline size_t MurmurHash(const vector<int>& data) {
+  size_t result[2] = {0, 0};
+  MurmurHash3_x64_128(data.data(), data.size() * sizeof(int), 0, result);
+  return result[0];
+}
 
 } // namespace oxlm
