@@ -94,7 +94,7 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
   boost::shared_ptr<WordToClassIndex> index =
       boost::make_shared<WordToClassIndex>(classes);
 
-  if (config.hash_space > 0) {
+  if (config.hash_space > 0 && config.count_collisions) {
     CollisionCounter counter(training_corpus, index, config);
     counter.count();
   }

@@ -74,6 +74,7 @@ struct ModelData {
   bool        sparse_features;
   bool        random_weights;
   int         hash_space;
+  bool        count_collisions;
 
   friend class boost::serialization::access;
   template<class Archive>
@@ -110,6 +111,7 @@ struct ModelData {
     ar & sparse_features;
     ar & random_weights;
     ar & hash_space;
+    ar & count_collisions;
   }
 };
 

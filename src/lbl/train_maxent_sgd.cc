@@ -71,6 +71,8 @@ int main(int argc, char **argv) {
     ("hash-space", value<int>()->default_value(0),
         "The size of the space in which the maxent features are mapped to "
         "(in millions).")
+    ("count-collisions", value<bool>()->default_value(true),
+        "Print collision statistics (leads to a memory usage spike)")
     ("random-weights", value<bool>()->default_value(true),
         "Initialize the weights randomly.");
   options_description config_options, cmdline_options;
@@ -119,6 +121,7 @@ int main(int argc, char **argv) {
   config.sparse_features = vm["sparse-features"].as<bool>();
   config.random_weights = vm["random-weights"].as<bool>();
   config.hash_space = vm["hash-space"].as<int>() * 1000000;
+  config.count_collisions = vm["count-collisions"].as<bool>();
 
   cerr << "################################" << endl;
   cerr << "# Config Summary" << endl;
