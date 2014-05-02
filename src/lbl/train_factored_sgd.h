@@ -6,7 +6,6 @@
 #include <iterator>
 #include <cstring>
 #include <functional>
-#include <omp.h>
 #include <time.h>
 #include <math.h>
 #include <float.h>
@@ -33,6 +32,7 @@
 #include "lbl/operators.h"
 #include "lbl/utils.h"
 #include "lbl/word_to_class_index.h"
+#include "utils/conditional_omp.h"
 
 // Namespaces
 using namespace boost;

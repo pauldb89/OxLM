@@ -6,7 +6,6 @@
 #include <iterator>
 #include <cstring>
 #include <functional>
-#include <omp.h>
 #include <time.h>
 #include <math.h>
 #include <float.h>
@@ -27,9 +26,10 @@
 #include <Eigen/Core>
 
 // Local
-#include "lbl/log_bilinear_model.h"
-#include "lbl/log_add.h"
 #include "corpus/corpus.h"
+#include "lbl/log_add.h"
+#include "lbl/log_bilinear_model.h"
+#include "utils/conditional_omp.h"
 
 static const char *REVISION = "$Rev: 247 $";
 

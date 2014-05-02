@@ -2,9 +2,9 @@
 
 #include <boost/lexical_cast.hpp>
 #include <boost/make_shared.hpp>
-#include <omp.h>
 
 #include "lbl/context_processor.h"
+#include "utils/conditional_omp.h"
 
 namespace oxlm {
 
