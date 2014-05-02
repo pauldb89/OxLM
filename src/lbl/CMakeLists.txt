@@ -4,6 +4,7 @@
 
 add_library(lbl SHARED
   class_context_extractor.cc
+  collision_counter.cc
   collision_global_feature_store.cc
   collision_minibatch_feature_store.cc
   config.cc

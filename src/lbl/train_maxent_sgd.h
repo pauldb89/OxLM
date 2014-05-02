@@ -26,6 +26,7 @@
 
 // Local
 #include "corpus/corpus.h"
+#include "lbl/collision_counter.h"
 #include "lbl/context_processor.h"
 #include "lbl/feature_context.h"
 #include "lbl/feature_store.h"
@@ -92,6 +93,12 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
   int context_width = config.ngram_order - 1;
   boost::shared_ptr<WordToClassIndex> index =
       boost::make_shared<WordToClassIndex>(classes);
+
+  if (config.hash_space > 0) {
+    CollisionCounter counter(training_corpus, index, config);
+    counter.count();
+  }
+
   FeatureStoreInitializer initializer(config, training_corpus, index);
   boost::shared_ptr<FactoredMaxentNLM> model =
       boost::make_shared<FactoredMaxentNLM>(config, dict, index, initializer);
