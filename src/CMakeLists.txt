@@ -97,3 +97,4 @@ add_subdirectory(lbl)
 
 # Third party libraries
 add_subdirectory(third_party/gtest)
+add_subdirectory(third_party/smhasher)

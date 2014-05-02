@@ -1,0 +1,269 @@
+K 25
+svn:wc:ra_dav:version-url
+V 23
+/svn/!svn/ver/152/trunk
+END
+PMurHash.h
+K 25
+svn:wc:ra_dav:version-url
+V 34
+/svn/!svn/ver/146/trunk/PMurHash.h
+END
+CMakeLists.txt
+K 25
+svn:wc:ra_dav:version-url
+V 38
+/svn/!svn/ver/146/trunk/CMakeLists.txt
+END
+sha1.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 32
+/svn/!svn/ver/144/trunk/sha1.cpp
+END
+DifferentialTest.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/svn/!svn/ver/144/trunk/DifferentialTest.cpp
+END
+Stats.h
+K 25
+svn:wc:ra_dav:version-url
+V 31
+/svn/!svn/ver/144/trunk/Stats.h
+END
+SpeedTest.h
+K 25
+svn:wc:ra_dav:version-url
+V 35
+/svn/!svn/ver/144/trunk/SpeedTest.h
+END
+crc.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 31
+/svn/!svn/ver/144/trunk/crc.cpp
+END
+CityTest.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 36
+/svn/!svn/ver/144/trunk/CityTest.cpp
+END
+City.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 32
+/svn/!svn/ver/148/trunk/City.cpp
+END
+Types.h
+K 25
+svn:wc:ra_dav:version-url
+V 31
+/svn/!svn/ver/144/trunk/Types.h
+END
+KeysetTest.h
+K 25
+svn:wc:ra_dav:version-url
+V 36
+/svn/!svn/ver/144/trunk/KeysetTest.h
+END
+Bitvec.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 34
+/svn/!svn/ver/144/trunk/Bitvec.cpp
+END
+Hashes.h
+K 25
+svn:wc:ra_dav:version-url
+V 32
+/svn/!svn/ver/144/trunk/Hashes.h
+END
+Random.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 34
+/svn/!svn/ver/144/trunk/Random.cpp
+END
+MurmurHash1.h
+K 25
+svn:wc:ra_dav:version-url
+V 37
+/svn/!svn/ver/151/trunk/MurmurHash1.h
+END
+AvalancheTest.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 41
+/svn/!svn/ver/144/trunk/AvalancheTest.cpp
+END
+MurmurHash2.h
+K 25
+svn:wc:ra_dav:version-url
+V 37
+/svn/!svn/ver/151/trunk/MurmurHash2.h
+END
+MurmurHash3.h
+K 25
+svn:wc:ra_dav:version-url
+V 37
+/svn/!svn/ver/151/trunk/MurmurHash3.h
+END
+md5.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 31
+/svn/!svn/ver/144/trunk/md5.cpp
+END
+Spooky.h
+K 25
+svn:wc:ra_dav:version-url
+V 32
+/svn/!svn/ver/145/trunk/Spooky.h
+END
+Platform.h
+K 25
+svn:wc:ra_dav:version-url
+V 34
+/svn/!svn/ver/149/trunk/Platform.h
+END
+pstdint.h
+K 25
+svn:wc:ra_dav:version-url
+V 33
+/svn/!svn/ver/151/trunk/pstdint.h
+END
+lookup3.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 35
+/svn/!svn/ver/144/trunk/lookup3.cpp
+END
+Stats.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 33
+/svn/!svn/ver/144/trunk/Stats.cpp
+END
+Bitslice.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 36
+/svn/!svn/ver/144/trunk/Bitslice.cpp
+END
+SpeedTest.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 37
+/svn/!svn/ver/144/trunk/SpeedTest.cpp
+END
+sha1.h
+K 25
+svn:wc:ra_dav:version-url
+V 30
+/svn/!svn/ver/144/trunk/sha1.h
+END
+DifferentialTest.h
+K 25
+svn:wc:ra_dav:version-url
+V 42
+/svn/!svn/ver/144/trunk/DifferentialTest.h
+END
+KeysetTest.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 38
+/svn/!svn/ver/147/trunk/KeysetTest.cpp
+END
+Types.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 33
+/svn/!svn/ver/144/trunk/Types.cpp
+END
+Hashes.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 34
+/svn/!svn/ver/144/trunk/Hashes.cpp
+END
+MurmurHash1.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 39
+/svn/!svn/ver/144/trunk/MurmurHash1.cpp
+END
+MurmurHash2.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 39
+/svn/!svn/ver/144/trunk/MurmurHash2.cpp
+END
+City.h
+K 25
+svn:wc:ra_dav:version-url
+V 30
+/svn/!svn/ver/152/trunk/City.h
+END
+MurmurHash3.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 39
+/svn/!svn/ver/150/trunk/MurmurHash3.cpp
+END
+SuperFastHash.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 41
+/svn/!svn/ver/144/trunk/SuperFastHash.cpp
+END
+Bitvec.h
+K 25
+svn:wc:ra_dav:version-url
+V 32
+/svn/!svn/ver/144/trunk/Bitvec.h
+END
+Platform.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 36
+/svn/!svn/ver/146/trunk/Platform.cpp
+END
+SpookyTest.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 38
+/svn/!svn/ver/144/trunk/SpookyTest.cpp
+END
+main.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 32
+/svn/!svn/ver/146/trunk/main.cpp
+END
+Spooky.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 34
+/svn/!svn/ver/144/trunk/Spooky.cpp
+END
+Random.h
+K 25
+svn:wc:ra_dav:version-url
+V 32
+/svn/!svn/ver/144/trunk/Random.h
+END
+PMurHash.c
+K 25
+svn:wc:ra_dav:version-url
+V 34
+/svn/!svn/ver/146/trunk/PMurHash.c
+END
+AvalancheTest.h
+K 25
+svn:wc:ra_dav:version-url
+V 39
+/svn/!svn/ver/144/trunk/AvalancheTest.h
+END

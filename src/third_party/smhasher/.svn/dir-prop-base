@@ -1,0 +1,21 @@
+K 10
+svn:ignore
+V 117
+CMakeFiles
+Debug
+Release
+x64
+BUILD
+LICENSE
+OWNERS
+README.google
+SMHasher
+Makefile
+CMakeCache.txt
+cmake_install.cmake
+
+K 13
+svn:mergeinfo
+V 31
+/branches/chandlerc_dev:137-143
+END
