@@ -128,14 +128,12 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
   VectorReal global_gradientFB(model->FB.size());
   MatrixReal adaGradF = MatrixReal::Zero(model->F.rows(), model->F.cols());
   VectorReal adaGradFB = VectorReal::Zero(model->FB.size());
-  cout << "done initializing gradients" << endl;
 
   boost::shared_ptr<MinibatchFeatureStore> global_gradientU;
   boost::shared_ptr<GlobalFeatureStore> adaGradU;
   vector<boost::shared_ptr<MinibatchFeatureStore>> global_gradientV;
   vector<boost::shared_ptr<GlobalFeatureStore>> adaGradV;
   initializer.initialize(adaGradU, adaGradV);
-  cout << "done initializing gradient stores" << endl;
 
   omp_set_num_threads(config.threads);
   #pragma omp parallel shared(global_gradient, global_gradientF)
@@ -188,7 +186,6 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
       {
         av_f=0.0;
         pp=0.0;
-        cout << "Iteration " << iteration << ": " << endl;
 
         if (config.randomise) {
           std::random_shuffle(training_indices.begin(), training_indices.end());
@@ -260,7 +257,6 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
               adaGradF, CwiseAdagradUpdateOp<Real>(step_size));
           model->FB -= global_gradientFB.binaryExpr(
               adaGradFB, CwiseAdagradUpdateOp<Real>(step_size));
-
           model->U->updateAdaGrad(global_gradientU, adaGradU, step_size);
           for (int i = 0; i < num_classes; ++i) {
             model->V[i]->updateAdaGrad(global_gradientV[i], adaGradV[i], step_size);

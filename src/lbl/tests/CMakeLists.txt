@@ -1,5 +1,6 @@
 set(TESTS
     class_context_extractor_test
+    class_hash_space_decider_test
     collision_counter_test
     collision_global_feature_store_test
     collision_minibatch_feature_store_test

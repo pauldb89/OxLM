@@ -3,6 +3,7 @@
 #include <boost/make_shared.hpp>
 
 #include "lbl/class_context_extractor.h"
+#include "lbl/class_hash_space_decider.h"
 #include "lbl/collision_global_feature_store.h"
 #include "lbl/collision_minibatch_feature_store.h"
 #include "lbl/sparse_global_feature_store.h"
@@ -34,11 +35,12 @@ void FeatureStoreInitializer::initialize(
   if (config.hash_space) {
     U = boost::make_shared<CollisionGlobalFeatureStore>(
         index->getNumClasses(), config.hash_space, config.feature_context_size);
+    ClassHashSpaceDecider decider(index, config.hash_space);
     V.resize(index->getNumClasses());
     for (int i = 0; i < index->getNumClasses(); ++i) {
       V[i] = boost::make_shared<CollisionGlobalFeatureStore>(
           index->getClassSize(i),
-          config.hash_space / index->getNumClasses(),
+          decider.getHashSpace(i),
           config.feature_context_size);
     }
   } else if (config.sparse_features) {
@@ -76,9 +78,10 @@ void FeatureStoreInitializer::initialize(
         index->getNumClasses(), config.hash_space, config.feature_context_size);
     V.resize(index->getNumClasses());
     for (int i = 0; i < index->getNumClasses(); ++i) {
+      ClassHashSpaceDecider decider(index, config.hash_space);
       V[i] = boost::make_shared<CollisionMinibatchFeatureStore>(
           index->getClassSize(i),
-          config.hash_space / index->getNumClasses(),
+          decider.getHashSpace(i),
           config.feature_context_size);
     }
   } else if (config.sparse_features) {

@@ -2,6 +2,11 @@
 
 #include <boost/make_shared.hpp>
 
+#include "lbl/class_hash_space_decider.h"
+#include "lbl/context_processor.h"
+#include "lbl/feature_context_generator.h"
+#include "lbl/feature_context_keyer.h"
+
 namespace oxlm {
 
 CollisionCounter::CollisionCounter(
@@ -11,17 +16,21 @@ CollisionCounter::CollisionCounter(
     : corpus(corpus), index(index), config(config),
       observedWordContexts(index->getNumClasses()),
       observedWordKeys(index->getNumClasses()) {
-  processor = boost::make_shared<ContextProcessor>(
-      corpus, config.ngram_order - 1);
-  generator = FeatureContextGenerator(config.feature_context_size);
-  class_keyer = FeatureContextKeyer(
+  boost::shared_ptr<ContextProcessor> processor =
+      boost::make_shared<ContextProcessor>(corpus, config.ngram_order - 1);
+  FeatureContextGenerator generator(config.feature_context_size);
+  FeatureContextKeyer class_keyer(
       config.hash_space, config.feature_context_size);
-  int class_hash_space = config.hash_space / index->getNumClasses();
-  word_keyer = FeatureContextKeyer(
-      class_hash_space, config.feature_context_size);
+  ClassHashSpaceDecider decider(index, config.hash_space);
+  vector<FeatureContextKeyer> word_keyers(index->getNumClasses());
+  for (int i = 0; i < index->getNumClasses(); ++i) {
+    word_keyers[i] = FeatureContextKeyer(
+        decider.getHashSpace(i), config.feature_context_size);
+  }
 
   for (size_t i = 0; i < corpus->size(); ++i) {
     int class_id = index->getClass(corpus->at(i));
+    int class_hash_space = decider.getHashSpace(class_id);
     vector<int> context = processor->extract(i);
     vector<FeatureContext> feature_contexts =
         generator.getFeatureContexts(context);
@@ -35,7 +44,7 @@ CollisionCounter::CollisionCounter(
       }
     }
 
-    vector<int> word_keys = word_keyer.getKeys(context);
+    vector<int> word_keys = word_keyers[class_id].getKeys(context);
     assert(feature_contexts.size() == word_keys.size());
     for (size_t i = 0; i < feature_contexts.size(); ++i) {
       observedWordContexts[class_id].insert(feature_contexts[i]);
