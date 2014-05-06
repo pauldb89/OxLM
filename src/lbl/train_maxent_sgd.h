@@ -12,8 +12,7 @@
 #include <set>
 
 // Boost
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/make_shared.hpp>
@@ -106,7 +105,7 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
 
   if (config.model_input_file.size()) {
     std::ifstream f(config.model_input_file);
-    boost::archive::text_iarchive ar(f);
+    boost::archive::binary_iarchive ar(f);
     ar >> model;
   }
 

@@ -1,5 +1,6 @@
 #include "lbl/model_utils.h"
 
+#include <boost/archive/binary_oarchive.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/make_shared.hpp>
 
@@ -50,7 +51,7 @@ void saveModel(
   if (output_file.size()) {
     cout << "Writing trained model to " << output_file << "..." << endl;
     std::ofstream f(output_file);
-    boost::archive::text_oarchive ar(f);
+    boost::archive::binary_oarchive ar(f);
     ar << model;
     cout << "Done..." << endl;
   }

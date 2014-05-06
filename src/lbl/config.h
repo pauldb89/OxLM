@@ -1,11 +1,12 @@
 #pragma once
 
-#include <iostream>
 #include <fstream>
+#include <iostream>
 #include <map>
-#include <boost/shared_ptr.hpp>
+
 #include <boost/lexical_cast.hpp>
-#include <boost/archive/text_oarchive.hpp>
+#include <boost/shared_ptr.hpp>
+#include <boost/serialization/serialization.hpp>
 
 using namespace std;
 

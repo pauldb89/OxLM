@@ -2,7 +2,7 @@
 #include <string>
 
 #include <boost/algorithm/string.hpp>
-#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/binary_iarchive.hpp>
 #include <boost/program_options.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/serialization/vector.hpp>
@@ -139,7 +139,7 @@ class FF_LBLLM : public FeatureFunction {
       cerr << "Failed to open " << filename << " for reading" << endl;
       abort();
     }
-    boost::archive::text_iarchive ia(ifile);
+    boost::archive::binary_iarchive ia(ifile);
     ia >> lm;
     dict = lm->label_set();
     Time stop_time = GetTime();
