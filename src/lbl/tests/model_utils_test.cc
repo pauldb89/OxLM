@@ -3,6 +3,7 @@
 #include <boost/make_shared.hpp>
 
 #include "lbl/model_utils.h"
+#include "lbl/train_maxent_sgd.h"
 #include "lbl/tests/test_sgd.h"
 #include "utils/constants.h"
 
@@ -129,6 +130,24 @@ TEST_F(ModelUtilsTest, TestFrequnecyBinning) {
   EXPECT_NEAR(-2.021676685, class_bias(1), EPS);
   EXPECT_NEAR(-2.841139018, class_bias(2), EPS);
   EXPECT_NEAR(-3.035927343, class_bias(3), EPS);
+}
+
+TEST_F(ModelUtilsTest, TestSerializeModel) {
+  config.l2_maxent = 0.1;
+  config.feature_context_size = 3;
+  config.sparse_features = true;
+
+  boost::shared_ptr<FactoredNLM> model = learn(config);
+  config.test_file = "test.txt";
+  boost::shared_ptr<Corpus> test_corpus =
+      readCorpus(config.test_file, model->label_set());
+  double expected_perplexity = perplexity(model, test_corpus);
+
+  saveModel("model.bin", model);
+  boost::shared_ptr<FactoredNLM> model_copy =
+      loadModel("model.bin", test_corpus);
+
+  EXPECT_NEAR(expected_perplexity, perplexity(model_copy, test_corpus), EPS);
 }
 
 } // namespace oxlm

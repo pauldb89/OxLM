@@ -25,6 +25,9 @@ void evaluateModel(
     const boost::shared_ptr<Corpus>& test_corpus,
     int minibatch_counter, Real& pp, Real& best_pp);
 
+boost::shared_ptr<FactoredNLM> loadModel(
+    const string& input_file, const boost::shared_ptr<Corpus>& test_corpus);
+
 vector<int> scatterMinibatch(int start, int end, const vector<int>& indices);
 
 void loadClassesFromFile(

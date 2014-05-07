@@ -12,9 +12,6 @@
 #include <set>
 
 // Boost
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
-#include <boost/archive/binary_iarchive.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/random.hpp>
 #include <boost/shared_ptr.hpp>
@@ -99,14 +96,18 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
   }
 
   FeatureStoreInitializer initializer(config, training_corpus, index);
-  boost::shared_ptr<FactoredMaxentNLM> model =
-      boost::make_shared<FactoredMaxentNLM>(config, dict, index, initializer);
-  model->FB = class_bias;
 
+  boost::shared_ptr<FactoredMaxentNLM> model;
   if (config.model_input_file.size()) {
-    std::ifstream f(config.model_input_file);
-    boost::archive::binary_iarchive ar(f);
-    ar >> model;
+    auto base_model = loadModel(config.model_input_file, test_corpus);
+    // Convert FactoredNLM to FactoredMaxentNLM.
+    model = dynamic_pointer_cast<FactoredMaxentNLM>(base_model);
+    // Verify if the conversion was successful.
+    assert(model != nullptr);
+  } else {
+    model = boost::make_shared<FactoredMaxentNLM>(
+        config, dict, index, initializer);
+    model->FB = class_bias;
   }
 
   vector<int> training_indices(training_corpus->size());

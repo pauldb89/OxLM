@@ -13,9 +13,6 @@
 
 // Boost
 #include <boost/random.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
-#include <boost/archive/binary_iarchive.hpp>
 #include <boost/make_shared.hpp>
 
 // Eigen
@@ -75,52 +72,20 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
         config.training_file, config.classes, classes, dict, class_bias);
   }
 
-  // read the training sentences
-  ifstream in(config.training_file);
-  string line, token;
-
-  training_corpus = boost::make_shared<Corpus>();
-  while (getline(in, line)) {
-    stringstream line_stream(line);
-    while (line_stream >> token)
-      training_corpus->push_back(dict.Convert(token));
-    training_corpus->push_back(end_id);
-  }
-  in.close();
-  //////////////////////////////////////////////
-
-  //////////////////////////////////////////////
-  // read the test sentences
+  training_corpus = readCorpus(config.training_file, dict);
   if (config.test_file.size()) {
-    test_corpus = boost::make_shared<Corpus>();
-    ifstream test_in(config.test_file);
-    while (getline(test_in, line)) {
-      stringstream line_stream(line);
-      Sentence tokens;
-      while (line_stream >> token) {
-        WordId w = dict.Convert(token, true);
-        if (w < 0) {
-          cerr << token << " " << w << endl;
-          assert(!"Unknown word found in test corpus.");
-        }
-        test_corpus->push_back(w);
-      }
-      test_corpus->push_back(end_id);
-    }
-    test_in.close();
+    test_corpus = readCorpus(config.test_file, dict);
   }
-  //////////////////////////////////////////////
 
   boost::shared_ptr<WordToClassIndex> index =
       boost::make_shared<WordToClassIndex>(classes);
-  boost::shared_ptr<FactoredNLM> model =
-      boost::make_shared<FactoredNLM>(config, dict, index);
-  model->FB = class_bias;
 
+  boost::shared_ptr<FactoredNLM> model;
   if (config.model_input_file.size()) {
-    std::ifstream f(config.model_input_file);
-    boost::archive::binary_iarchive ar(f);
-    ar >> model;
+    model = loadModel(config.model_input_file, test_corpus);
+  } else {
+    model = boost::make_shared<FactoredNLM>(config, dict, index);
+    model->FB = class_bias;
   }
 
   vector<int> training_indices(training_corpus->size());

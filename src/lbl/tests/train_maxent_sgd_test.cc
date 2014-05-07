@@ -2,6 +2,7 @@
 
 #include "lbl/tests/test_sgd.h"
 #include "lbl/train_maxent_sgd.h"
+#include "utils/constants.h"
 
 namespace oxlm {
 
@@ -12,9 +13,9 @@ TEST_F(TestSGD, TestTrainMaxentSGD) {
   boost::shared_ptr<FactoredNLM> model = learn(config);
   config.test_file = "test.txt";
   boost::shared_ptr<Corpus> test_corpus =
-      readCorpus(config.training_file, model->label_set());
+      readCorpus(config.test_file, model->label_set());
   double log_pp = perplexity(model, test_corpus);
-  EXPECT_NEAR(101.755784, exp(-log_pp / test_corpus->size()), 1e-3);
+  EXPECT_NEAR(87.922121, exp(-log_pp / test_corpus->size()), EPS);
 }
 
 TEST_F(TestSGD, TestTrainMaxentSGDSparseFeatures) {
@@ -25,9 +26,9 @@ TEST_F(TestSGD, TestTrainMaxentSGDSparseFeatures) {
   boost::shared_ptr<FactoredNLM> model = learn(config);
   config.test_file = "test.txt";
   boost::shared_ptr<Corpus> test_corpus =
-      readCorpus(config.training_file, model->label_set());
+      readCorpus(config.test_file, model->label_set());
   double log_pp = perplexity(model, test_corpus);
-  EXPECT_NEAR(138.587834, exp(-log_pp / test_corpus->size()), 1e-3);
+  EXPECT_NEAR(102.451838, exp(-log_pp / test_corpus->size()), EPS);
 }
 
 TEST_F(TestSGD, TestTrainMaxentSGDCollisions) {
@@ -38,9 +39,9 @@ TEST_F(TestSGD, TestTrainMaxentSGDCollisions) {
   boost::shared_ptr<FactoredNLM> model = learn(config);
   config.test_file = "test.txt";
   boost::shared_ptr<Corpus> test_corpus =
-      readCorpus(config.training_file, model->label_set());
+      readCorpus(config.test_file, model->label_set());
   double log_pp = perplexity(model, test_corpus);
-  EXPECT_NEAR(83.617782, exp(-log_pp / test_corpus->size()), 1e-3);
+  EXPECT_NEAR(83.6499782, exp(-log_pp / test_corpus->size()), EPS);
 }
 
 } // namespace oxlm

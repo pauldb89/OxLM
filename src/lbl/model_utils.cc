@@ -1,5 +1,6 @@
 #include "lbl/model_utils.h"
 
+#include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/make_shared.hpp>
@@ -87,7 +88,30 @@ void evaluateModel(
         saveModel(config.model_output_file, model);
       }
     }
+  } else {
+    saveModel(config.model_output_file, model);
   }
+}
+
+boost::shared_ptr<FactoredNLM> loadModel(
+    const string& input_file, const boost::shared_ptr<Corpus>& test_corpus) {
+  boost::shared_ptr<FactoredNLM> model;
+  if (input_file.size() == 0) {
+    return model;
+  }
+
+  cout << "Loading model from " << input_file << "..." << endl;
+  ifstream f(input_file);
+  boost::archive::binary_iarchive ar(f);
+  ar >> model;
+  cout << "Done..." << endl;
+
+  if (test_corpus != nullptr) {
+    cout << "Initial perplexity: "
+         << exp(-perplexity(model, test_corpus) / test_corpus->size()) << endl;
+  }
+
+  return model;
 }
 
 vector<int> scatterMinibatch(int start, int end, const vector<int>& indices) {
