@@ -20,12 +20,14 @@ Real FactoredMaxentNLM::log_prob(
     bool non_linear=false, bool cache=false) const {
   VectorReal prediction_vector = VectorReal::Zero(config.word_representation_size);
   int width = config.ngram_order-1;
-  int gap = width-context.size();
-  assert(gap == 0);
   assert(static_cast<int>(context.size()) <= width);
-  for (int i=gap; i < width; i++)
-    if (m_diagonal) prediction_vector += C.at(i).asDiagonal() * Q.row(context.at(i-gap)).transpose();
-    else            prediction_vector += Q.row(context.at(i-gap)) * C.at(i);
+  for (int i = 0; i < width; i++) {
+    if (m_diagonal) {
+      prediction_vector += C.at(i).asDiagonal() * Q.row(context.at(i)).transpose();
+    } else {
+      prediction_vector += Q.row(context.at(i)) * C.at(i);
+    }
+  }
 
   int c = get_class(w);
   int word_index = index->getWordIndexInClass(w);

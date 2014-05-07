@@ -163,29 +163,21 @@ class FF_LBLLM : public FeatureFunction {
     *(static_cast<char*>(state) + ss_off) = size;
   }
 
-  inline double WordProb(WordID word, WordID const* context) const {
-    vector<WordID> xx;
-    for (int i=0; i<kORDER-1 && context && (*context != kNONE); ++i) {
-      xx.push_back(*context++);
+  inline double WordProb(WordID word, const WordID* history) const {
+    vector<WordID> context;
+    for (int i = 0; i < kORDER - 1 && history && (*history != kNONE); ++i) {
+      context.push_back(*history++);
     }
-    //if (xx.size() != kORDER-1) return 0;
 
-    if (!xx.empty() && xx.back() == kSTART)
-      xx.resize(kORDER-1, kSTART);
-    else
-      xx.resize(kORDER-1, kUNKNOWN);
+    if (!context.empty() && context.back() == kSTART) {
+      context.resize(kORDER - 1, kSTART);
+    } else {
+      context.resize(kORDER - 1, kUNKNOWN);
+    }
 
-    reverse(xx.begin(),xx.end());
-//    cerr << "LEN=" << xx.size() << ", (";
-//    for (unsigned j = 0; j < xx.size(); ++j)
-//      cerr << dict.Convert(xx[j]) << " ";
-//    cerr << " | " << dict.Convert(word);
+    double score = lm->log_prob(word, context, true, true);
 
-    double s = lm->log_prob(word, xx, true, true);
-
-//    cerr << "), s = " << s << endl;
-
-    return s;
+    return score;
   }
 
   // first = prob, second = unk
