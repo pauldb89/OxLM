@@ -89,6 +89,9 @@ int main(int argc, char **argv) {
   }
   if (vm.count("model-out")) {
     config.model_output_file = vm["model-out"].as<string>();
+    if (GIT_REVISION) {
+      config.model_output_file += "." + string(GIT_REVISION);
+    }
   }
   config.l2_lbl = vm["lambda-lbl"].as<float>();
   config.word_representation_size = vm["word-width"].as<int>();
