@@ -14,7 +14,9 @@ set(TESTS
     global_feature_indexes_pair_test
     minibatch_feature_indexes_pair_test
     model_utils_test
+    ngram_query_test
     operators_test
+    query_cache_test
     sparse_global_feature_store_test
     sparse_minibatch_feature_store_test
     train_maxent_sgd_test

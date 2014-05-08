@@ -3,7 +3,10 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include <boost/serialization/array.hpp>
 #include <boost/serialization/serialization.hpp>
+#include <boost/serialization/split_free.hpp>
+#include <Eigen/Sparse>
 
 namespace boost {
 namespace serialization {
@@ -50,7 +53,7 @@ inline void save(
     const unsigned int version) {
   size_t num_entries = map.size();
   ar << num_entries;
-  for (const pair<Key, Value>& item: map) {
+  for (const std::pair<Key, Value>& item: map) {
     ar << item.first << item.second;
   }
 }

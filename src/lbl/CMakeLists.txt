@@ -25,8 +25,10 @@ add_library(lbl SHARED
   minibatch_feature_indexes_pair.cc
   minibatch_feature_store.cc
   model_utils.cc
+  ngram_query.cc
   nlm.cc
   nlm_approximate_z.cc
+  query_cache.cc
   sparse_global_feature_store.cc
   sparse_minibatch_feature_store.cc
   unconstrained_feature_store.cc

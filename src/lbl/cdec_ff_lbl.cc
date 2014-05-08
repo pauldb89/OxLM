@@ -3,14 +3,17 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/archive/binary_iarchive.hpp>
-#include <boost/program_options.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/filesystem.hpp>
 #include <boost/make_shared.hpp>
+#include <boost/program_options.hpp>
 #include <boost/serialization/vector.hpp>
 #include <boost/shared_ptr.hpp>
 
 #include "corpus/corpus.h"
 #include "lbl/factored_nlm.h"
 #include "lbl/factored_maxent_nlm.h"
+#include "lbl/query_cache.h"
 
 // cdec headers
 #include "ff.h"
@@ -23,14 +26,16 @@ using namespace std;
 using namespace oxlm;
 namespace po = boost::program_options;
 
-void parse_options(const string& input, string& filename,
-                   string& feature_name) {
+void ParseOptions(
+    const string& input, string& filename, string& feature_name,
+    bool& cache_queries) {
   po::options_description options("LBL language model options");
   options.add_options()
       ("file,f", po::value<string>()->required(),
           "File containing serialized language model")
       ("name,n", po::value<string>()->default_value("LBLLM"),
-          "Feature name");
+          "Feature name")
+      ("cache-queries", "Whether should cache n-gram probabilities.");
 
   po::variables_map vm;
   vector<string> args;
@@ -40,6 +45,7 @@ void parse_options(const string& input, string& filename,
 
   filename = vm["file"].as<string>();
   feature_name = vm["name"].as<string>();
+  cache_queries = vm.count("cache-queries");
 }
 
 struct SimplePair {
@@ -53,10 +59,24 @@ struct SimplePair {
 class FF_LBLLM : public FeatureFunction {
  public:
   FF_LBLLM(
-      const string& filename, const string& feature_name)
+      const string& filename, const string& feature_name,
+      const bool& cache_queries)
       : fid(FD::Convert(feature_name)),
-        fid_oov(FD::Convert(feature_name + "_OOV")) {
+        fid_oov(FD::Convert(feature_name + "_OOV")),
+        cacheQueries(cache_queries), cacheHits(0), totalHits(0) {
     loadLanguageModel(filename);
+
+    if (cacheQueries) {
+      cacheFile = filename + ".cache.bin";
+      if (boost::filesystem::exists(cacheFile)) {
+        ifstream f(cacheFile);
+        boost::archive::binary_iarchive ia(f);
+        cerr << "Loading n-gram probability cache from " << cacheFile << endl;
+        ia >> cache;
+        cerr << "Finished loading " << cache.size()
+             << " n-gram probabilities..." << endl;
+      }
+    }
 
     cerr << "Initializing map contents (map size=" << dict.max() << ")\n";
     for (int i = 1; i < dict.max(); ++i)
@@ -78,15 +98,7 @@ class FF_LBLLM : public FeatureFunction {
       cerr << "last_id = " << last_id << " but id = " << id << endl;
       abort();
     }
-    /*
-    if (last_id < ref_sents.size() && last_id < id) {
-      cerr << "  ** LBLLM: Adapting LM using previously translated references for sentences [" << last_id << ',' << id << ")\n";
-      for (unsigned i = last_id; i < id; ++i)
-        if (i < ref_sents.size()) IncorporateSentenceToLM(ref_sents[i]);
-    }
-    */
     last_id = id;
-//    cerr << "\n  Cached contexts: " << lm.m_context_cache.size() << endl;
     lm->clear_cache();
   }
 
@@ -97,17 +109,7 @@ class FF_LBLLM : public FeatureFunction {
       cdec2lbl.resize(cdec_id + 1);
     cdec2lbl[cdec_id] = lbl_id;
   }
-/*
-  void IncorporateSentenceToLM(const vector<WordID>& sent) {
-    oxlm::MT19937 eng;
-    vector<WordID> ctx(kORDER - 1, kSTART);
-    for (auto w : sent) {
-      AddToWordMap(w);
-      lm.increment(w, ctx, eng);
-      ctx.push_back(w);
-    }
-  }
-*/
+
  protected:
   void TraversalFeaturesImpl(const SentenceMetadata&,
                              const HG::Edge& edge,
@@ -175,7 +177,22 @@ class FF_LBLLM : public FeatureFunction {
       context.resize(kORDER - 1, kUNKNOWN);
     }
 
-    double score = lm->log_prob(word, context, true, true);
+    double score;
+
+    if (!cacheQueries) {
+      score = lm->log_prob(word, context, true, true);
+    } else {
+      NGramQuery query(word, context);
+      ++totalHits;
+      pair<double, bool> ret = cache.get(query);
+      if (ret.second) {
+        ++cacheHits;
+        score = ret.first;
+      } else {
+        score = lm->log_prob(word, context, true, true);
+        cache.put(query, score);
+      }
+    }
 
     return score;
   }
@@ -310,6 +327,19 @@ class FF_LBLLM : public FeatureFunction {
       : 0;
   }
 
+  virtual ~FF_LBLLM() {
+    if (cacheQueries) {
+      cerr << "Cache hit ratio: " << Real(cacheHits) / totalHits << endl;
+
+      ofstream f(cacheFile);
+      boost::archive::binary_oarchive ia(f);
+      cerr << "Saving n-gram probability cache to " << cacheFile << endl;
+      ia << cache;
+      cerr << "Finished saving " << cache.size()
+           << " n-gram probabilities..." << endl;
+    }
+  }
+
   oxlm::Dict dict;
   mutable vector<WordID> buffer_;
   int ss_off;
@@ -318,18 +348,22 @@ class FF_LBLLM : public FeatureFunction {
   WordID kUNKNOWN;
   WordID kNONE;
   WordID kSTAR;
-  boost::shared_ptr<FactoredNLM> lm;
   const int fid;
   const int fid_oov;
-  vector<int> cdec2lbl; // cdec2lbl[TD::Convert("word")] returns the index in the lbl model
+  vector<int> cdec2lbl;
+  unsigned last_id;
 
-  // stuff for online updating of LM
-  vector<vector<WordID>> ref_sents;
-  unsigned last_id; // id of the last sentence that was translated
+  boost::shared_ptr<FactoredNLM> lm;
+
+  bool cacheQueries;
+  string cacheFile;
+  mutable QueryCache cache;
+  mutable int cacheHits, totalHits;
 };
 
 extern "C" FeatureFunction* create_ff(const string& str) {
   string filename, feature_name;
-  parse_options(str, filename, feature_name);
-  return new FF_LBLLM(filename, feature_name);
+  bool cache_queries;
+  ParseOptions(str, filename, feature_name, cache_queries);
+  return new FF_LBLLM(filename, feature_name, cache_queries);
 }
