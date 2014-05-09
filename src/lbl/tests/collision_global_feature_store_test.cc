@@ -6,6 +6,7 @@
 #include <boost/serialization/shared_ptr.hpp>
 
 #include "lbl/collision_global_feature_store.h"
+#include "lbl/feature_no_op_filter.h"
 #include "utils/constants.h"
 #include "utils/testing.h"
 
@@ -16,14 +17,17 @@ namespace oxlm {
 class CollisionGlobalFeatureStoreTest : public testing::Test {
  protected:
   void SetUp() {
-    CollisionMinibatchFeatureStore g_store(3, 10, 3);
+    int vector_size = 3;
+    boost::shared_ptr<FeatureNoOpFilter> filter =
+        boost::make_shared<FeatureNoOpFilter>(vector_size);
+    CollisionMinibatchFeatureStore g_store(vector_size, 10, 3, filter);
 
     context = {1, 2, 3};
     VectorReal values(3);
     values << 4, 2, 5;
     g_store.update(context, values);
 
-    store = CollisionGlobalFeatureStore(3, 10, 3);
+    store = CollisionGlobalFeatureStore(vector_size, 10, 3, filter);
     gradient_store = boost::make_shared<CollisionMinibatchFeatureStore>(
         g_store);
   }

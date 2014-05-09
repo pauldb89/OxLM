@@ -9,7 +9,9 @@ set(TESTS
     feature_context_generator_test
     feature_context_hasher_test
     feature_context_keyer_test
+    feature_exact_filter_test
     feature_matcher_test
+    feature_no_op_filter_test
     feature_store_initializer_test
     global_feature_indexes_pair_test
     minibatch_feature_indexes_pair_test

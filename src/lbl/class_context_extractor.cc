@@ -13,6 +13,11 @@ vector<int> ClassContextExtractor::getFeatureContextIds(
   return hasher->getClassContextIds(context);
 }
 
+int ClassContextExtractor::getFeatureContextId(
+    const FeatureContext& feature_context) const {
+  return hasher->getClassContextId(feature_context);
+}
+
 bool ClassContextExtractor::operator==(
     const ClassContextExtractor& other) const {
   return *hasher == *other.hasher;

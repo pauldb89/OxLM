@@ -1,7 +1,10 @@
 #pragma once
 
+#include <boost/serialization/shared_ptr.hpp>
+
 #include "lbl/archive_export.h"
 #include "lbl/collision_minibatch_feature_store.h"
+#include "lbl/feature_context_generator.h"
 #include "lbl/feature_context_keyer.h"
 #include "lbl/global_feature_store.h"
 
@@ -14,7 +17,8 @@ class CollisionGlobalFeatureStore : public GlobalFeatureStore {
   CollisionGlobalFeatureStore(const CollisionGlobalFeatureStore& other);
 
   CollisionGlobalFeatureStore(
-      int vector_size, int hash_space, int feature_context_size);
+      int vector_size, int hash_space, int feature_context_size,
+      const boost::shared_ptr<FeatureFilter>& filter);
 
   virtual VectorReal get(const vector<int>& context) const;
 
@@ -56,7 +60,9 @@ class CollisionGlobalFeatureStore : public GlobalFeatureStore {
     ar << boost::serialization::base_object<FeatureStore>(*this);
     ar << vectorSize;
     ar << hashSpace;
+    ar << generator;
     ar << keyer;
+    ar << filter;
 
     ar << boost::serialization::make_array(featureWeights, hashSpace);
   }
@@ -67,7 +73,9 @@ class CollisionGlobalFeatureStore : public GlobalFeatureStore {
 
     ar >> vectorSize;
     ar >> hashSpace;
+    ar >> generator;
     ar >> keyer;
+    ar >> filter;
 
     featureWeights = new Real[hashSpace];
     ar >> boost::serialization::make_array(featureWeights, hashSpace);
@@ -76,7 +84,9 @@ class CollisionGlobalFeatureStore : public GlobalFeatureStore {
   BOOST_SERIALIZATION_SPLIT_MEMBER();
 
   int vectorSize, hashSpace;
+  FeatureContextGenerator generator;
   FeatureContextKeyer keyer;
+  boost::shared_ptr<FeatureFilter> filter;
   Real* featureWeights;
 };
 

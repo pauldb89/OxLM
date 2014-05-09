@@ -40,6 +40,10 @@ class FeatureContextHasher {
 
   vector<int> getWordContextIds(int class_id, const vector<int>& context) const;
 
+  int getClassContextId(const FeatureContext& feature_context) const;
+
+  int getWordContextId(int class_id, const FeatureContext& feature_context) const;
+
   int getNumClassContexts() const;
 
   int getNumWordContexts(int class_id) const;

@@ -4,21 +4,15 @@ namespace oxlm {
 
 FeatureContextKeyer::FeatureContextKeyer() {}
 
-FeatureContextKeyer::FeatureContextKeyer(
-    int hash_space, int feature_context_size)
-    : hashSpace(hash_space), generator(feature_context_size) {}
+FeatureContextKeyer::FeatureContextKeyer(int hash_space)
+    : hashSpace(hash_space) {}
 
-vector<int> FeatureContextKeyer::getKeys(const vector<int>& context) const {
-  vector<int> keys;
-  for (const auto& feature_context: generator.getFeatureContexts(context)) {
-    keys.push_back(hash_function(feature_context) % hashSpace);
-  }
-
-  return keys;
+int FeatureContextKeyer::getKey(const FeatureContext& feature_context) const {
+  return hash_function(feature_context) % hashSpace;
 }
 
 bool FeatureContextKeyer::operator==(const FeatureContextKeyer& other) const {
-  return generator == other.generator;
+  return hashSpace == other.hashSpace;
 }
 
 } // namespace oxlm

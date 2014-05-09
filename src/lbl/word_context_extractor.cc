@@ -13,6 +13,11 @@ vector<int> WordContextExtractor::getFeatureContextIds(
   return hasher->getWordContextIds(classId, context);
 }
 
+int WordContextExtractor::getFeatureContextId(
+    const FeatureContext& feature_context) const {
+  return hasher->getWordContextId(classId, feature_context);
+}
+
 bool WordContextExtractor::operator==(const WordContextExtractor& other) const {
   return classId == other.classId && *hasher == *other.hasher;
 }

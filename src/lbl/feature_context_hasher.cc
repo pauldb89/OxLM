@@ -31,9 +31,9 @@ vector<int> FeatureContextHasher::getClassContextIds(
   for (const auto& feature_context: generator->getFeatureContexts(context)) {
     // Feature contexts for the test set are not guaranteed to exist in the
     // hash. Unobserved contexts are skipped.
-    auto it = classContextIdsMap.find(feature_context);
-    if (it != classContextIdsMap.end()) {
-      class_context_ids.push_back(it->second);
+    int class_context_id = getClassContextId(feature_context);
+    if (class_context_id != -1) {
+      class_context_ids.push_back(class_context_id);
     }
   }
 
@@ -46,13 +46,25 @@ vector<int> FeatureContextHasher::getWordContextIds(
   for (const auto& feature_context: generator->getFeatureContexts(context)) {
     // Feature contexts for the test set are not guaranteed to exist in the
     // hash. Unobserved contexts are skipped.
-    auto it = wordContextIdsMap[class_id].find(feature_context);
-    if (it != classContextIdsMap.end()) {
-      word_context_ids.push_back(it->second);
+    int word_context_id = getWordContextId(class_id, feature_context);
+    if (word_context_id != -1) {
+      word_context_ids.push_back(word_context_id);
     }
   }
 
   return word_context_ids;
+}
+
+int FeatureContextHasher::getClassContextId(
+    const FeatureContext& feature_context) const {
+  auto it = classContextIdsMap.find(feature_context);
+  return it == classContextIdsMap.end() ? -1 : it->second;
+}
+
+int FeatureContextHasher::getWordContextId(
+    int class_id, const FeatureContext& feature_context) const {
+  auto it = wordContextIdsMap[class_id].find(feature_context);
+  return it == wordContextIdsMap[class_id].end() ? -1 : it->second;
 }
 
 int FeatureContextHasher::getNumClassContexts() const {

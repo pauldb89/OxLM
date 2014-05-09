@@ -12,9 +12,10 @@ CollisionGlobalFeatureStore::CollisionGlobalFeatureStore(
 }
 
 CollisionGlobalFeatureStore::CollisionGlobalFeatureStore(
-    int vector_size, int hash_space, int feature_context_size)
+    int vector_size, int hash_space, int feature_context_size,
+    const boost::shared_ptr<FeatureFilter>& filter)
     : vectorSize(vector_size), hashSpace(hash_space),
-      keyer(hash_space, feature_context_size) {
+      generator(feature_context_size), keyer(hash_space), filter(filter) {
   assert(vectorSize <= hashSpace);
   featureWeights = new Real[hashSpace];
   VectorRealMap featureWeightsMap(featureWeights, hashSpace);
@@ -23,8 +24,9 @@ CollisionGlobalFeatureStore::CollisionGlobalFeatureStore(
 
 VectorReal CollisionGlobalFeatureStore::get(const vector<int>& context) const {
   VectorReal result = VectorReal::Zero(vectorSize);
-  for (int key: keyer.getKeys(context)) {
-    for (int i = 0; i < vectorSize; ++i) {
+  for (const auto& feature_context: generator.getFeatureContexts(context)) {
+    int key = keyer.getKey(feature_context);
+    for (int i: filter->getIndexes(feature_context)) {
       result(i) += featureWeights[(key + i) % hashSpace];
     }
   }
@@ -124,7 +126,9 @@ void CollisionGlobalFeatureStore::deepCopy(
     const CollisionGlobalFeatureStore& other) {
   vectorSize = other.vectorSize;
   hashSpace = other.hashSpace;
+  generator = other.generator;
   keyer = other.keyer;
+  filter = other.filter;
   featureWeights = new Real[hashSpace];
   memcpy(featureWeights, other.featureWeights, hashSpace * sizeof(Real));
 }

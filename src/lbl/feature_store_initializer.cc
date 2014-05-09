@@ -6,6 +6,8 @@
 #include "lbl/class_hash_space_decider.h"
 #include "lbl/collision_global_feature_store.h"
 #include "lbl/collision_minibatch_feature_store.h"
+#include "lbl/feature_exact_filter.h"
+#include "lbl/feature_no_op_filter.h"
 #include "lbl/sparse_global_feature_store.h"
 #include "lbl/sparse_minibatch_feature_store.h"
 #include "lbl/unconstrained_feature_store.h"
@@ -18,7 +20,7 @@ FeatureStoreInitializer::FeatureStoreInitializer(
     const boost::shared_ptr<Corpus>& corpus,
     const boost::shared_ptr<WordToClassIndex>& index)
     : config(config), index(index) {
-  if (!config.hash_space) {
+  if (!config.hash_space || config.filter_contexts) {
     int context_width = config.ngram_order - 1;
     boost::shared_ptr<ContextProcessor> processor =
         boost::make_shared<ContextProcessor>(corpus, context_width);
@@ -33,15 +35,33 @@ void FeatureStoreInitializer::initialize(
     boost::shared_ptr<GlobalFeatureStore>& U,
     vector<boost::shared_ptr<GlobalFeatureStore>>& V) const {
   if (config.hash_space) {
+    GlobalFeatureIndexesPairPtr feature_indexes_pair;
+    boost::shared_ptr<FeatureFilter> filter;
+    if (config.filter_contexts) {
+      feature_indexes_pair = matcher->getGlobalFeatures();
+      filter = boost::make_shared<FeatureExactFilter>(
+          feature_indexes_pair->getClassIndexes(),
+          boost::make_shared<ClassContextExtractor>(hasher));
+    } else {
+      filter = boost::make_shared<FeatureNoOpFilter>(index->getNumClasses());
+    }
     U = boost::make_shared<CollisionGlobalFeatureStore>(
-        index->getNumClasses(), config.hash_space, config.feature_context_size);
+        index->getNumClasses(), config.hash_space,
+        config.feature_context_size, filter);
     ClassHashSpaceDecider decider(index, config.hash_space);
     V.resize(index->getNumClasses());
     for (int i = 0; i < index->getNumClasses(); ++i) {
+      if (config.filter_contexts) {
+        filter = boost::make_shared<FeatureExactFilter>(
+          feature_indexes_pair->getWordIndexes(i),
+          boost::make_shared<WordContextExtractor>(i, hasher));
+      } else {
+        filter = boost::make_shared<FeatureNoOpFilter>(index->getClassSize(i));
+      }
+
       V[i] = boost::make_shared<CollisionGlobalFeatureStore>(
-          index->getClassSize(i),
-          decider.getHashSpace(i),
-          config.feature_context_size);
+          index->getClassSize(i), decider.getHashSpace(i),
+          config.feature_context_size, filter);
     }
   } else if (config.sparse_features) {
     auto feature_indexes_pair = matcher->getGlobalFeatures();
@@ -75,14 +95,18 @@ void FeatureStoreInitializer::initialize(
     const vector<int>& minibatch_indices) const {
   if (config.hash_space) {
     U = boost::make_shared<CollisionMinibatchFeatureStore>(
-        index->getNumClasses(), config.hash_space, config.feature_context_size);
+        index->getNumClasses(),
+        config.hash_space,
+        config.feature_context_size,
+        boost::make_shared<FeatureNoOpFilter>(index->getNumClasses()));
     V.resize(index->getNumClasses());
     for (int i = 0; i < index->getNumClasses(); ++i) {
       ClassHashSpaceDecider decider(index, config.hash_space);
       V[i] = boost::make_shared<CollisionMinibatchFeatureStore>(
           index->getClassSize(i),
           decider.getHashSpace(i),
-          config.feature_context_size);
+          config.feature_context_size,
+          boost::make_shared<FeatureNoOpFilter>(index->getClassSize(i)));
     }
   } else if (config.sparse_features) {
     auto feature_indexes_pair = matcher->getMinibatchFeatures(minibatch_indices);

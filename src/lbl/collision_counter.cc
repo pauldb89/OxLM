@@ -2,10 +2,16 @@
 
 #include <boost/make_shared.hpp>
 
+#include "lbl/class_context_extractor.h"
 #include "lbl/class_hash_space_decider.h"
 #include "lbl/context_processor.h"
 #include "lbl/feature_context_generator.h"
+#include "lbl/feature_context_hasher.h"
 #include "lbl/feature_context_keyer.h"
+#include "lbl/feature_exact_filter.h"
+#include "lbl/feature_matcher.h"
+#include "lbl/feature_no_op_filter.h"
+#include "lbl/word_context_extractor.h"
 
 namespace oxlm {
 
@@ -19,13 +25,39 @@ CollisionCounter::CollisionCounter(
   boost::shared_ptr<ContextProcessor> processor =
       boost::make_shared<ContextProcessor>(corpus, config.ngram_order - 1);
   FeatureContextGenerator generator(config.feature_context_size);
-  FeatureContextKeyer class_keyer(
-      config.hash_space, config.feature_context_size);
+  FeatureContextKeyer class_keyer(config.hash_space);
+
+  boost::shared_ptr<FeatureContextHasher> hasher;
+  boost::shared_ptr<FeatureMatcher> matcher;
+  GlobalFeatureIndexesPairPtr feature_indexes_pair;
+  boost::shared_ptr<FeatureFilter> class_filter;
+  if (config.filter_contexts) {
+    hasher = boost::make_shared<FeatureContextHasher>(
+        corpus, index, processor, config.feature_context_size);
+    matcher = boost::make_shared<FeatureMatcher>(
+        corpus, index, processor, hasher);
+    feature_indexes_pair = matcher->getGlobalFeatures();
+    class_filter = boost::make_shared<FeatureExactFilter>(
+        feature_indexes_pair->getClassIndexes(),
+        boost::make_shared<ClassContextExtractor>(hasher));
+  } else {
+    class_filter = boost::make_shared<FeatureNoOpFilter>(
+        index->getNumClasses());
+  }
+
   ClassHashSpaceDecider decider(index, config.hash_space);
   vector<FeatureContextKeyer> word_keyers(index->getNumClasses());
+  vector<boost::shared_ptr<FeatureFilter>> word_filters(index->getNumClasses());
   for (int i = 0; i < index->getNumClasses(); ++i) {
-    word_keyers[i] = FeatureContextKeyer(
-        decider.getHashSpace(i), config.feature_context_size);
+    word_keyers[i] = FeatureContextKeyer(decider.getHashSpace(i));
+    if (config.filter_contexts) {
+      word_filters[i] = boost::make_shared<FeatureExactFilter>(
+          feature_indexes_pair->getWordIndexes(i),
+          boost::make_shared<WordContextExtractor>(i, hasher));
+    } else {
+      word_filters[i] = boost::make_shared<FeatureNoOpFilter>(
+          index->getClassSize(i));
+    }
   }
 
   for (size_t i = 0; i < corpus->size(); ++i) {
@@ -35,22 +67,17 @@ CollisionCounter::CollisionCounter(
     vector<FeatureContext> feature_contexts =
         generator.getFeatureContexts(context);
 
-    vector<int> class_keys = class_keyer.getKeys(context);
-    assert(feature_contexts.size() == class_keys.size());
-    for (size_t i = 0; i < feature_contexts.size(); ++i) {
-      observedClassContexts.insert(feature_contexts[i]);
-      for (int j = 0; j < index->getNumClasses(); ++j) {
-        observedClassKeys.insert((class_keys[i] + j) % config.hash_space);
+    for (const FeatureContext& feature_context: feature_contexts) {
+      int key = class_keyer.getKey(feature_context);
+      observedClassContexts.insert(feature_context);
+      for (int i: class_filter->getIndexes(feature_context)) {
+        observedClassKeys.insert((key + i) % config.hash_space);
       }
-    }
 
-    vector<int> word_keys = word_keyers[class_id].getKeys(context);
-    assert(feature_contexts.size() == word_keys.size());
-    for (size_t i = 0; i < feature_contexts.size(); ++i) {
-      observedWordContexts[class_id].insert(feature_contexts[i]);
-      for (int j = 0; j < index->getClassSize(class_id); ++j) {
-        observedWordKeys[class_id].insert(
-            (word_keys[i] + j) % class_hash_space);
+      observedWordContexts[class_id].insert(feature_context);
+      key = word_keyers[class_id].getKey(feature_context);
+      for (int i: word_filters[class_id]->getIndexes(feature_context)) {
+        observedWordKeys[class_id].insert((key + i) % class_hash_space);
       }
     }
   }

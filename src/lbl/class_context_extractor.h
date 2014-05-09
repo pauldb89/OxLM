@@ -16,6 +16,8 @@ class ClassContextExtractor : public FeatureContextExtractor {
 
   virtual vector<int> getFeatureContextIds(const vector<int>& context) const;
 
+  int getFeatureContextId(const FeatureContext& feature_context) const;
+
   bool operator==(const ClassContextExtractor& extractor) const;
 
   virtual ~ClassContextExtractor();

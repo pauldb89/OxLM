@@ -3,6 +3,7 @@
 #include <boost/make_shared.hpp>
 
 #include "lbl/collision_minibatch_feature_store.h"
+#include "lbl/feature_no_op_filter.h"
 #include "utils/constants.h"
 #include "utils/testing.h"
 
@@ -11,10 +12,17 @@ namespace oxlm {
 class CollisionMinibatchFeatureStoreTest : public testing::Test {
  protected:
   void SetUp() {
-    context = {1, 2, 3};
-    store = boost::make_shared<CollisionMinibatchFeatureStore>(3, 10, 3);
+    int vector_size = 3;
+    boost::shared_ptr<FeatureNoOpFilter> filter =
+        boost::make_shared<FeatureNoOpFilter>(vector_size);
 
-    g_store = boost::make_shared<CollisionMinibatchFeatureStore>(3, 10, 3);
+    store = boost::make_shared<CollisionMinibatchFeatureStore>(
+        vector_size, 10, 3, filter);
+
+    g_store = boost::make_shared<CollisionMinibatchFeatureStore>(
+        vector_size, 10, 3, filter);
+
+    context = {1, 2, 3};
     VectorReal values(3);
     values << 4, 2, 5;
     g_store->update(context, values);

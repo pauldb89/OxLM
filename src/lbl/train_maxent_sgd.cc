@@ -71,6 +71,8 @@ int main(int argc, char **argv) {
     ("hash-space", value<int>()->default_value(0),
         "The size of the space in which the maxent features are mapped to "
         "(in millions).")
+    ("filter-contexts", value<bool>()->default_value(false),
+        "Prevent false contexts from being hashed.")
     ("count-collisions", value<bool>()->default_value(true),
         "Print collision statistics (leads to a memory usage spike)")
     ("random-weights", value<bool>()->default_value(true),
@@ -124,6 +126,7 @@ int main(int argc, char **argv) {
   config.sparse_features = vm["sparse-features"].as<bool>();
   config.random_weights = vm["random-weights"].as<bool>();
   config.hash_space = vm["hash-space"].as<int>() * 1000000;
+  config.filter_contexts = vm["filter-contexts"].as<bool>();
   config.count_collisions = vm["count-collisions"].as<bool>();
 
   cerr << "################################" << endl;

@@ -28,36 +28,54 @@ class WordContextExtractorTest : public testing::Test {
 TEST_F(WordContextExtractorTest, TestBasic) {
   WordContextExtractor extractor(0, hasher);
   vector<int> context = {3};
+  FeatureContext feature_context(context);
   vector<int> expected_feature_ids = {0};
   EXPECT_EQ(expected_feature_ids, extractor.getFeatureContextIds(context));
+  EXPECT_EQ(0, extractor.getFeatureContextId(feature_context));
   context = {3, 2};
+  feature_context = FeatureContext(context);
   expected_feature_ids = {0, 1};
   EXPECT_EQ(expected_feature_ids, extractor.getFeatureContextIds(context));
+  EXPECT_EQ(1, extractor.getFeatureContextId(feature_context));
 
   extractor = WordContextExtractor(1, hasher);
   context = {0};
+  feature_context = FeatureContext(context);
   expected_feature_ids = {0};
   EXPECT_EQ(expected_feature_ids, extractor.getFeatureContextIds(context));
+  EXPECT_EQ(0, extractor.getFeatureContextId(feature_context));
   context = {0, 0};
+  feature_context = FeatureContext(context);
   expected_feature_ids = {0, 1};
   EXPECT_EQ(expected_feature_ids, extractor.getFeatureContextIds(context));
+  EXPECT_EQ(1, extractor.getFeatureContextId(feature_context));
   context = {2};
+  feature_context = FeatureContext(context);
   expected_feature_ids = {2};
   EXPECT_EQ(expected_feature_ids, extractor.getFeatureContextIds(context));
+  EXPECT_EQ(2, extractor.getFeatureContextId(feature_context));
   context = {2, 0};
+  feature_context = FeatureContext(context);
   expected_feature_ids = {2, 3};
   EXPECT_EQ(expected_feature_ids, extractor.getFeatureContextIds(context));
+  EXPECT_EQ(3, extractor.getFeatureContextId(feature_context));
   context = {2, 2};
+  feature_context = FeatureContext(context);
   expected_feature_ids = {2, 4};
   EXPECT_EQ(expected_feature_ids, extractor.getFeatureContextIds(context));
+  EXPECT_EQ(4, extractor.getFeatureContextId(feature_context));
 
   extractor = WordContextExtractor(2, hasher);
   context = {2};
+  feature_context = FeatureContext(context);
   expected_feature_ids = {0};
   EXPECT_EQ(expected_feature_ids, extractor.getFeatureContextIds(context));
+  EXPECT_EQ(0, extractor.getFeatureContextId(feature_context));
   context = {2, 2};
   expected_feature_ids = {0, 1};
+  feature_context = FeatureContext(context);
   EXPECT_EQ(expected_feature_ids, extractor.getFeatureContextIds(context));
+  EXPECT_EQ(1, extractor.getFeatureContextId(feature_context));
 }
 
 TEST_F(WordContextExtractorTest, TestSerialization) {
