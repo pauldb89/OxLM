@@ -31,6 +31,7 @@ add_library(lbl SHARED
   ngram_query.cc
   nlm.cc
   nlm_approximate_z.cc
+  process_identifier.cc
   query_cache.cc
   sparse_global_feature_store.cc
   sparse_minibatch_feature_store.cc

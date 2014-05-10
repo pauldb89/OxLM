@@ -18,6 +18,7 @@ set(TESTS
     model_utils_test
     ngram_query_test
     operators_test
+    process_identifier_test
     query_cache_test
     sparse_global_feature_store_test
     sparse_minibatch_feature_store_test

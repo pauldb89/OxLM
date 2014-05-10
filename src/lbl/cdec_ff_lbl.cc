@@ -13,6 +13,7 @@
 #include "corpus/corpus.h"
 #include "lbl/factored_nlm.h"
 #include "lbl/factored_maxent_nlm.h"
+#include "lbl/process_identifier.h"
 #include "lbl/query_cache.h"
 
 // cdec headers
@@ -63,11 +64,19 @@ class FF_LBLLM : public FeatureFunction {
       const bool& cache_queries)
       : fid(FD::Convert(feature_name)),
         fid_oov(FD::Convert(feature_name + "_OOV")),
+        processIdentifier("FF_LBLLM"),
         cacheQueries(cache_queries), cacheHits(0), totalHits(0) {
     loadLanguageModel(filename);
 
+    // Note: This is a hack due to lack of time.
+    // Ideally, we would like a to have client server architecture, where the
+    // server contains both the LM and the n-gram cache, preventing these huge
+    // data structures from being replicated to every process. Also, that
+    // approach would not require us to save the n-gram cache to disk after
+    // every MIRA iteration.
     if (cacheQueries) {
-      cacheFile = filename + ".cache.bin";
+      processId = processIdentifier.getId();
+      cacheFile = filename + "." + to_string(processId) + ".cache.bin";
       if (boost::filesystem::exists(cacheFile)) {
         ifstream f(cacheFile);
         boost::archive::binary_iarchive ia(f);
@@ -337,6 +346,8 @@ class FF_LBLLM : public FeatureFunction {
       ia << cache;
       cerr << "Finished saving " << cache.size()
            << " n-gram probabilities..." << endl;
+
+      processIdentifier.freeId(processId);
     }
   }
 
@@ -354,6 +365,9 @@ class FF_LBLLM : public FeatureFunction {
   unsigned last_id;
 
   boost::shared_ptr<FactoredNLM> lm;
+
+  ProcessIdentifier processIdentifier;
+  int processId;
 
   bool cacheQueries;
   string cacheFile;
