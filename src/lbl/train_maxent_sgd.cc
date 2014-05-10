@@ -149,6 +149,7 @@ int main(int argc, char **argv) {
   cerr << "# classes = " << config.classes << endl;
   cerr << "# sparse features = " << config.sparse_features << endl;
   cerr << "# hash space = " << config.hash_space << endl;
+  cerr << "# filter contexts = " << config.filter_contexts << endl;
   cerr << "################################" << endl;
 
   learn(config);
