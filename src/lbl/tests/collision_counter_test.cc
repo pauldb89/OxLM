@@ -16,7 +16,14 @@ TEST(CollisionCounterTest, TestBasic) {
   config.ngram_order = 4;
   config.feature_context_size = 4;
   config.hash_space = 100;
-  CollisionCounter counter(corpus, index, config);
+  boost::shared_ptr<ContextProcessor> processor =
+      boost::make_shared<ContextProcessor>(corpus, config.ngram_order - 1);
+  boost::shared_ptr<FeatureContextHasher> hasher =
+      boost::make_shared<FeatureContextHasher>(
+          corpus, index, processor, config.feature_context_size);
+  boost::shared_ptr<FeatureMatcher> matcher =
+      boost::make_shared<FeatureMatcher>(corpus, index, processor, hasher);
+  CollisionCounter counter(corpus, index, hasher, matcher, config);
 
   EXPECT_EQ(25, counter.count());
 }

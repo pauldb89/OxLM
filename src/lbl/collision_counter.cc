@@ -6,10 +6,8 @@
 #include "lbl/class_hash_space_decider.h"
 #include "lbl/context_processor.h"
 #include "lbl/feature_context_generator.h"
-#include "lbl/feature_context_hasher.h"
 #include "lbl/feature_context_keyer.h"
 #include "lbl/feature_exact_filter.h"
-#include "lbl/feature_matcher.h"
 #include "lbl/feature_no_op_filter.h"
 #include "lbl/word_context_extractor.h"
 
@@ -18,24 +16,20 @@ namespace oxlm {
 CollisionCounter::CollisionCounter(
     const boost::shared_ptr<Corpus>& corpus,
     const boost::shared_ptr<WordToClassIndex>& index,
+    const boost::shared_ptr<FeatureContextHasher>& hasher,
+    const boost::shared_ptr<FeatureMatcher>& matcher,
     const ModelData& config)
-    : corpus(corpus), index(index), config(config),
-      observedWordContexts(index->getNumClasses()),
+    : corpus(corpus), index(index), hasher(hasher), matcher(matcher),
+      config(config), observedWordContexts(index->getNumClasses()),
       observedWordKeys(index->getNumClasses()) {
   boost::shared_ptr<ContextProcessor> processor =
       boost::make_shared<ContextProcessor>(corpus, config.ngram_order - 1);
   FeatureContextGenerator generator(config.feature_context_size);
   FeatureContextKeyer class_keyer(config.hash_space);
 
-  boost::shared_ptr<FeatureContextHasher> hasher;
-  boost::shared_ptr<FeatureMatcher> matcher;
   GlobalFeatureIndexesPairPtr feature_indexes_pair;
   boost::shared_ptr<FeatureFilter> class_filter;
   if (config.filter_contexts) {
-    hasher = boost::make_shared<FeatureContextHasher>(
-        corpus, index, processor, config.feature_context_size);
-    matcher = boost::make_shared<FeatureMatcher>(
-        corpus, index, processor, hasher);
     feature_indexes_pair = matcher->getGlobalFeatures();
     class_filter = boost::make_shared<FeatureExactFilter>(
         feature_indexes_pair->getClassIndexes(),

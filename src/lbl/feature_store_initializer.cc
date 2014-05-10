@@ -18,18 +18,10 @@ namespace oxlm {
 FeatureStoreInitializer::FeatureStoreInitializer(
     const ModelData& config,
     const boost::shared_ptr<Corpus>& corpus,
-    const boost::shared_ptr<WordToClassIndex>& index)
-    : config(config), index(index) {
-  if (!config.hash_space || config.filter_contexts) {
-    int context_width = config.ngram_order - 1;
-    boost::shared_ptr<ContextProcessor> processor =
-        boost::make_shared<ContextProcessor>(corpus, context_width);
-    hasher = boost::make_shared<FeatureContextHasher>(
-        corpus, index, processor, config.feature_context_size);
-    matcher = boost::make_shared<FeatureMatcher>(
-        corpus, index, processor, hasher);
-  }
-}
+    const boost::shared_ptr<WordToClassIndex>& index,
+    const boost::shared_ptr<FeatureContextHasher>& hasher,
+    const boost::shared_ptr<FeatureMatcher>& matcher)
+    : config(config), index(index), hasher(hasher), matcher(matcher) {}
 
 void FeatureStoreInitializer::initialize(
     boost::shared_ptr<GlobalFeatureStore>& U,

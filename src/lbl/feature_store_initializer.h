@@ -18,7 +18,9 @@ class FeatureStoreInitializer {
   FeatureStoreInitializer(
       const ModelData& config,
       const boost::shared_ptr<Corpus>& corpus,
-      const boost::shared_ptr<WordToClassIndex>& index);
+      const boost::shared_ptr<WordToClassIndex>& index,
+      const boost::shared_ptr<FeatureContextHasher>& hasher,
+      const boost::shared_ptr<FeatureMatcher>& matcher);
 
   void initialize(
       boost::shared_ptr<GlobalFeatureStore>& U,

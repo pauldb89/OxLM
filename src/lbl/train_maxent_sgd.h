@@ -90,12 +90,24 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
   boost::shared_ptr<WordToClassIndex> index =
       boost::make_shared<WordToClassIndex>(classes);
 
+  boost::shared_ptr<ContextProcessor> processor;
+  boost::shared_ptr<FeatureContextHasher> hasher;
+  boost::shared_ptr<FeatureMatcher> matcher;
+  if (!config.hash_space || config.filter_contexts) {
+    processor = boost::make_shared<ContextProcessor>(
+        training_corpus, context_width);
+    hasher = boost::make_shared<FeatureContextHasher>(
+        training_corpus, index, processor, config.feature_context_size);
+    matcher = boost::make_shared<FeatureMatcher>(
+        training_corpus, index, processor, hasher);
+  }
   if (config.hash_space > 0 && config.count_collisions) {
-    CollisionCounter counter(training_corpus, index, config);
+    CollisionCounter counter(training_corpus, index, hasher, matcher, config);
     counter.count();
   }
 
-  FeatureStoreInitializer initializer(config, training_corpus, index);
+  FeatureStoreInitializer initializer(
+      config, training_corpus, index, hasher, matcher);
 
   boost::shared_ptr<FactoredMaxentNLM> model;
   if (config.model_input_file.size()) {

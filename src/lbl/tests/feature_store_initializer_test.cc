@@ -20,16 +20,24 @@ class FeatureStoreInitializerTest : public testing::Test {
 
     corpus = boost::make_shared<Corpus>();
     index = boost::make_shared<WordToClassIndex>(classes);
+    boost::shared_ptr<ContextProcessor> processor =
+        boost::make_shared<ContextProcessor>(corpus, 2);
+    hasher = boost::make_shared<FeatureContextHasher>(
+        corpus, index, processor, 2);
+    matcher = boost::make_shared<FeatureMatcher>(
+        corpus, index, processor, hasher);
   }
 
   ModelData config;
   boost::shared_ptr<Corpus> corpus;
   boost::shared_ptr<WordToClassIndex> index;
+  boost::shared_ptr<FeatureContextHasher> hasher;
+  boost::shared_ptr<FeatureMatcher> matcher;
 };
 
 TEST_F(FeatureStoreInitializerTest, TestUnconstrainedGlobal) {
   config.sparse_features = false;
-  FeatureStoreInitializer initializer(config, corpus, index);
+  FeatureStoreInitializer initializer(config, corpus, index, hasher, matcher);
 
   boost::shared_ptr<GlobalFeatureStore> U;
   vector<boost::shared_ptr<GlobalFeatureStore>> V;
@@ -41,7 +49,7 @@ TEST_F(FeatureStoreInitializerTest, TestUnconstrainedGlobal) {
 
 TEST_F(FeatureStoreInitializerTest, TestUnconstrainedMinibatch) {
   config.sparse_features = false;
-  FeatureStoreInitializer initializer(config, corpus, index);
+  FeatureStoreInitializer initializer(config, corpus, index, hasher, matcher);
 
   boost::shared_ptr<MinibatchFeatureStore> U;
   vector<boost::shared_ptr<MinibatchFeatureStore>> V;
@@ -54,7 +62,7 @@ TEST_F(FeatureStoreInitializerTest, TestUnconstrainedMinibatch) {
 
 TEST_F(FeatureStoreInitializerTest, TestSparseGlobal) {
   config.sparse_features = true;
-  FeatureStoreInitializer initializer(config, corpus, index);
+  FeatureStoreInitializer initializer(config, corpus, index, hasher, matcher);
 
   boost::shared_ptr<GlobalFeatureStore> U;
   vector<boost::shared_ptr<GlobalFeatureStore>> V;
@@ -66,7 +74,7 @@ TEST_F(FeatureStoreInitializerTest, TestSparseGlobal) {
 
 TEST_F(FeatureStoreInitializerTest, TestSparseMinibatch) {
   config.sparse_features = true;
-  FeatureStoreInitializer initializer(config, corpus, index);
+  FeatureStoreInitializer initializer(config, corpus, index, hasher, matcher);
 
   boost::shared_ptr<MinibatchFeatureStore> U;
   vector<boost::shared_ptr<MinibatchFeatureStore>> V;
@@ -79,7 +87,7 @@ TEST_F(FeatureStoreInitializerTest, TestSparseMinibatch) {
 
 TEST_F(FeatureStoreInitializerTest, TestCollisionGlobal) {
   config.hash_space = 1000000;
-  FeatureStoreInitializer initializer(config, corpus, index);
+  FeatureStoreInitializer initializer(config, corpus, index, hasher, matcher);
 
   boost::shared_ptr<GlobalFeatureStore> U;
   vector<boost::shared_ptr<GlobalFeatureStore>> V;
@@ -91,7 +99,7 @@ TEST_F(FeatureStoreInitializerTest, TestCollisionGlobal) {
 
 TEST_F(FeatureStoreInitializerTest, TestCollisionMinibatch) {
   config.hash_space = 1000000;
-  FeatureStoreInitializer initializer(config, corpus, index);
+  FeatureStoreInitializer initializer(config, corpus, index, hasher, matcher);
 
   boost::shared_ptr<MinibatchFeatureStore> U;
   vector<boost::shared_ptr<MinibatchFeatureStore>> V;
