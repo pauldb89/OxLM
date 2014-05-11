@@ -7,13 +7,13 @@ namespace oxlm {
 ClassHashSpaceDecider::ClassHashSpaceDecider(
     const boost::shared_ptr<WordToClassIndex>& index, int hash_space)
     : classHashSpaces(index->getNumClasses()) {
-  int sum = 0;
+  double sum = 0;
   for (int i = 0; i < index->getNumClasses(); ++i) {
-    sum += index->getClassSize(i);
+    sum += pow(index->getClassSize(i), 0.333);
   }
 
   for (int i = 0; i < index->getNumClasses(); ++i) {
-    classHashSpaces[i] = (Real(index->getClassSize(i)) / sum) * hash_space;
+    classHashSpaces[i] = pow(index->getClassSize(i), 0.333) / sum * hash_space;
   }
 }
 

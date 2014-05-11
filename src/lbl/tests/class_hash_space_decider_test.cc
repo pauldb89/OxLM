@@ -11,11 +11,11 @@ TEST(ClassHashSpaceDeciderTest, TestBasic) {
   boost::shared_ptr<WordToClassIndex> index =
       boost::make_shared<WordToClassIndex>(classes);
   ClassHashSpaceDecider decider(index, 1000);
-  EXPECT_EQ(200, decider.getHashSpace(0));
-  EXPECT_EQ(200, decider.getHashSpace(1));
-  EXPECT_EQ(100, decider.getHashSpace(2));
-  EXPECT_EQ(200, decider.getHashSpace(3));
-  EXPECT_EQ(300, decider.getHashSpace(4));
+  EXPECT_EQ(202, decider.getHashSpace(0));
+  EXPECT_EQ(202, decider.getHashSpace(1));
+  EXPECT_EQ(160, decider.getHashSpace(2));
+  EXPECT_EQ(202, decider.getHashSpace(3));
+  EXPECT_EQ(231, decider.getHashSpace(4));
 }
 
 } // namespace oxlm

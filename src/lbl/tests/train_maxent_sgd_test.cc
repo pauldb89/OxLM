@@ -41,7 +41,7 @@ TEST_F(TestSGD, TestTrainMaxentSGDCollisions) {
   boost::shared_ptr<Corpus> test_corpus =
       readCorpus(config.test_file, model->label_set());
   double log_pp = perplexity(model, test_corpus);
-  EXPECT_NEAR(83.6499782, exp(-log_pp / test_corpus->size()), EPS);
+  EXPECT_NEAR(83.49600096, exp(-log_pp / test_corpus->size()), EPS);
 }
 
 } // namespace oxlm
