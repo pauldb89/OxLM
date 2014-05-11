@@ -3,9 +3,9 @@
 #include <unordered_set>
 
 #include "lbl/config.h"
-#include "lbl/feature_context.h"
 #include "lbl/feature_context_hasher.h"
 #include "lbl/feature_matcher.h"
+#include "lbl/ngram_query.h"
 #include "lbl/utils.h"
 #include "lbl/word_to_class_index.h"
 
@@ -28,8 +28,8 @@ class CollisionCounter {
   boost::shared_ptr<WordToClassIndex> index;
   boost::shared_ptr<FeatureContextHasher> hasher;
   boost::shared_ptr<FeatureMatcher> matcher;
-  unordered_set<FeatureContext> observedClassContexts;
-  vector<unordered_set<FeatureContext>> observedWordContexts;
+  unordered_set<NGramQuery> observedClassQueries;
+  vector<unordered_set<NGramQuery>> observedWordQueries;
   unordered_set<int> observedClassKeys;
   vector<unordered_set<int>> observedWordKeys;
 };
