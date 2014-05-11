@@ -44,6 +44,9 @@ find_package(OpenMP QUIET)
 # Cdec
 find_package(Cdec QUIET)
 
+# Git
+find_package(Git REQUIRED)
+
 #############################################
 # Hackery courtesy of Karl Moritz
 #############################################
@@ -88,6 +91,11 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -O3")
 # vectors.
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+
+# Produce a header file defining a constant with the current revision hash.
+add_custom_command(OUTPUT ${PROJECT_SOURCE_DIR}/utils/git_revision.h
+    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_MODULE_PATH}/GitRevision.cmake)
+add_custom_target(git_revision DEPENDS ${PROJECT_SOURCE_DIR}/utils/git_revision.h)
 
 add_subdirectory(cg)
 add_subdirectory(experimental/kmh)

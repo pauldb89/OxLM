@@ -56,6 +56,7 @@ endif(CDEC_FOUND)
 set(EXECUTABLES train_factored_sgd train_maxent_sgd)
 foreach(f ${EXECUTABLES})
  add_executable(${f} ${f}.cc)
+ add_dependencies(${f} git_revision)
  target_link_libraries(${f} lbl)
 endforeach(f)
 
