@@ -7,4 +7,4 @@ oxlm.*
 *so
 train*sgd
 train_melbl
-src/utils/git_revision.h
+git_revision.cc
