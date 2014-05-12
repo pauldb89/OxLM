@@ -6,11 +6,11 @@ namespace oxlm {
 
 TEST(ProcessIdentifierTest, TestBasic) {
   ProcessIdentifier process_identifier("ProcessIdentifierTest");
-  int ret1 = process_identifier.getId();
-  int ret2 = process_identifier.getId();
-  int ret3 = process_identifier.getId();
+  int ret1 = process_identifier.reserveId();
+  int ret2 = process_identifier.reserveId();
+  int ret3 = process_identifier.reserveId();
   process_identifier.freeId(1);
-  int ret4 = process_identifier.getId();
+  int ret4 = process_identifier.reserveId();
 
   // Clean up before checks.
   process_identifier.freeId(0);
@@ -30,7 +30,7 @@ TEST(ProcessIdentifierTest, TestMultithreaded) {
     ProcessIdentifier process_identifier("ProcessIdentifierTest");
     for (int i = 0; i < 100; ++i) {
       #pragma omp critical
-      process_ids.push_back(process_identifier.getId());
+      process_ids.push_back(process_identifier.reserveId());
     }
 
     // Clean up before checks. Wait for the first part to finish.

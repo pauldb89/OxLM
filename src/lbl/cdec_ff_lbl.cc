@@ -75,7 +75,9 @@ class FF_LBLLM : public FeatureFunction {
     // approach would not require us to save the n-gram cache to disk after
     // every MIRA iteration.
     if (cacheQueries) {
-      processId = processIdentifier.getId();
+      processId = processIdentifier.reserveId();
+      cerr << "Reserved id " << processId
+           << " at time " << Clock::to_time_t(GetTime()) << endl;
       cacheFile = filename + "." + to_string(processId) + ".cache.bin";
       if (boost::filesystem::exists(cacheFile)) {
         ifstream f(cacheFile);
@@ -84,6 +86,8 @@ class FF_LBLLM : public FeatureFunction {
         ia >> cache;
         cerr << "Finished loading " << cache.size()
              << " n-gram probabilities..." << endl;
+      } else {
+        cerr << "Cache file not found..." << endl;
       }
     }
 
@@ -348,6 +352,8 @@ class FF_LBLLM : public FeatureFunction {
            << " n-gram probabilities..." << endl;
 
       processIdentifier.freeId(processId);
+      cerr << "Freed id " << processId
+           << " at time " << Clock::to_time_t(GetTime()) << endl;
     }
   }
 

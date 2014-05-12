@@ -13,7 +13,7 @@ ProcessIdentifier::ProcessIdentifier(const char* segment_name) {
   mutex = segment.find_or_construct<SharedMutex>("Mutex")();
 }
 
-int ProcessIdentifier::getId() {
+int ProcessIdentifier::reserveId() {
   ip::scoped_lock<SharedMutex> lock(*mutex);
 
   int process_id;

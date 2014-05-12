@@ -22,7 +22,7 @@ class ProcessIdentifier {
  public:
   ProcessIdentifier(const char* segment_name);
 
-  int getId();
+  int reserveId();
 
   void freeId(int process_id);
 
