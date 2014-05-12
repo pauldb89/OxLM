@@ -5,6 +5,7 @@
 #include <boost/serialization/serialization.hpp>
 
 #include "lbl/ngram_query.h"
+#include "lbl/utils.h"
 #include "utils/serialization_helpers.h"
 
 using namespace std;
@@ -13,9 +14,9 @@ namespace oxlm {
 
 class QueryCache {
  public:
-  pair<double, bool> get(const NGramQuery& query) const;
+  pair<Real, bool> get(const NGramQuery& query) const;
 
-  void put(const NGramQuery& query, double value);
+  void put(const NGramQuery& query, Real value);
 
   size_t size() const;
 
@@ -29,7 +30,9 @@ class QueryCache {
     ar & cache;
   }
 
-  unordered_map<NGramQuery, double> cache;
+ public:
+  hash<NGramQuery> hashFunction;
+  unordered_map<size_t, Real> cache;
 };
 
 } // namespace oxlm

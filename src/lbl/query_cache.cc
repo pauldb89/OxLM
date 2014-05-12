@@ -2,13 +2,13 @@
 
 namespace oxlm {
 
-pair<double, bool> QueryCache::get(const NGramQuery& query) const {
-  auto it = cache.find(query);
-  return it == cache.end() ? make_pair(0.0, false) : make_pair(it->second, true);
+pair<Real, bool> QueryCache::get(const NGramQuery& query) const {
+  auto it = cache.find(hashFunction(query));
+  return it == cache.end() ? make_pair(Real(0), false) : make_pair(it->second, true);
 }
 
-void QueryCache::put(const NGramQuery& query, double value) {
-  cache[query] = value;
+void QueryCache::put(const NGramQuery& query, Real value) {
+  cache[hashFunction(query)] = value;
 }
 
 size_t QueryCache::size() const {
