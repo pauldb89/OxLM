@@ -68,7 +68,7 @@ int main(int argc, char **argv) {
     ("diagonal-contexts", "Use diagonal context matrices (usually faster).")
     ("sparse-features", value<bool>()->default_value(true),
         "Only define maximum entropy feature functions for observed contexts")
-    ("hash-space", value<int>()->default_value(0),
+    ("hash-space", value<Real>()->default_value(0),
         "The size of the space in which the maxent features are mapped to "
         "(in millions).")
     ("filter-contexts", value<bool>()->default_value(false),
@@ -125,7 +125,7 @@ int main(int argc, char **argv) {
   config.diagonal_contexts = vm.count("diagonal-contexts");
   config.sparse_features = vm["sparse-features"].as<bool>();
   config.random_weights = vm["random-weights"].as<bool>();
-  config.hash_space = vm["hash-space"].as<int>() * 1000000;
+  config.hash_space = vm["hash-space"].as<Real>() * 1000000;
   config.filter_contexts = vm["filter-contexts"].as<bool>();
   config.count_collisions = vm["count-collisions"].as<bool>();
 
