@@ -4,10 +4,11 @@
 
 add_library(lbl SHARED
   class_context_extractor.cc
-  class_hash_space_decider.cc
+  class_context_keyer.cc
   collision_counter.cc
   collision_global_feature_store.cc
   collision_minibatch_feature_store.cc
+  collision_space.cc
   config.cc
   context_processor.cc
   factored_maxent_nlm.cc
@@ -38,6 +39,7 @@ add_library(lbl SHARED
   unconstrained_feature_store.cc
   utils.cc
   word_context_extractor.cc
+  word_context_keyer.cc
   word_to_class_index.cc
 )
 

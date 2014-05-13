@@ -7,27 +7,20 @@ namespace oxlm {
 CollisionGlobalFeatureStore::CollisionGlobalFeatureStore() {}
 
 CollisionGlobalFeatureStore::CollisionGlobalFeatureStore(
-    const CollisionGlobalFeatureStore& other) {
-  deepCopy(other);
-}
-
-CollisionGlobalFeatureStore::CollisionGlobalFeatureStore(
-    int vector_size, int hash_space, int feature_context_size,
+    int vector_size, int hash_space_size, int feature_context_size,
+    const boost::shared_ptr<CollisionSpace>& space,
+    const boost::shared_ptr<FeatureContextKeyer>& keyer,
     const boost::shared_ptr<FeatureFilter>& filter)
-    : vectorSize(vector_size), hashSpace(hash_space),
-      generator(feature_context_size), keyer(hash_space), filter(filter) {
-  assert(vectorSize <= hashSpace);
-  featureWeights = new Real[hashSpace];
-  VectorRealMap featureWeightsMap(featureWeights, hashSpace);
-  featureWeightsMap = VectorReal::Zero(hashSpace);
-}
+    : vectorSize(vector_size), hashSpaceSize(hash_space_size),
+      generator(feature_context_size), keyer(keyer), filter(filter),
+      space(space) {}
 
 VectorReal CollisionGlobalFeatureStore::get(const vector<int>& context) const {
   VectorReal result = VectorReal::Zero(vectorSize);
   for (const auto& feature_context: generator.getFeatureContexts(context)) {
-    int key = keyer.getKey(feature_context);
+    int key = keyer->getKey(feature_context);
     for (int i: filter->getIndexes(feature_context)) {
-      result(i) += featureWeights[(key + i) % hashSpace];
+      result(i) += space->featureWeights[(key + i) % hashSpaceSize];
     }
   }
 
@@ -40,7 +33,7 @@ void CollisionGlobalFeatureStore::l2GradientUpdate(
       CollisionMinibatchFeatureStore::cast(base_store);
 
   for (const auto& entry: store->featureWeights) {
-    featureWeights[entry.first] -= sigma * featureWeights[entry.first];
+    space->featureWeights[entry.first] -= sigma * space->featureWeights[entry.first];
   }
 }
 
@@ -52,7 +45,7 @@ Real CollisionGlobalFeatureStore::l2Objective(
 
   Real result = 0;
   for (const auto& entry: store->featureWeights) {
-    result += featureWeights[entry.first] * featureWeights[entry.first];
+    result += space->featureWeights[entry.first] * space->featureWeights[entry.first];
   }
   return sigma * result;
 }
@@ -63,7 +56,7 @@ void CollisionGlobalFeatureStore::updateSquared(
       CollisionMinibatchFeatureStore::cast(base_store);
 
   for (const auto& entry: store->featureWeights) {
-    featureWeights[entry.first] += entry.second * entry.second;
+    space->featureWeights[entry.first] += entry.second * entry.second;
   }
 }
 
@@ -78,13 +71,13 @@ void CollisionGlobalFeatureStore::updateAdaGrad(
 
   CwiseAdagradUpdateOp<Real> op(step_size);
   for (const auto& entry: gradient_store->featureWeights) {
-    featureWeights[entry.first] -=
-        op(entry.second, adagrad_store->featureWeights[entry.first]);
+    space->featureWeights[entry.first] -=
+        op(entry.second, adagrad_store->space->featureWeights[entry.first]);
   }
 }
 
 size_t CollisionGlobalFeatureStore::size() const {
-  return hashSpace;
+  return hashSpaceSize;
 }
 
 boost::shared_ptr<CollisionGlobalFeatureStore> CollisionGlobalFeatureStore::cast(
@@ -97,41 +90,12 @@ boost::shared_ptr<CollisionGlobalFeatureStore> CollisionGlobalFeatureStore::cast
 
 bool CollisionGlobalFeatureStore::operator==(
     const CollisionGlobalFeatureStore& other) const {
-  if (vectorSize != other.vectorSize ||
-      hashSpace != other.hashSpace ||
-      !(keyer == other.keyer)) {
-    return false;
-  }
-
-  for (int i = 0; i < hashSpace; ++i) {
-    if (featureWeights[i] != other.featureWeights[i]) {
-      return false;
-    }
-  }
-
-  return true;
+  return vectorSize == other.vectorSize
+      && hashSpaceSize == other.hashSpaceSize
+      && *space == *other.space;
 }
 
-CollisionGlobalFeatureStore& CollisionGlobalFeatureStore::operator=(
-    const CollisionGlobalFeatureStore& other) {
-  deepCopy(other);
-  return *this;
-}
-
-CollisionGlobalFeatureStore::~CollisionGlobalFeatureStore() {
-  delete[] featureWeights;
-}
-
-void CollisionGlobalFeatureStore::deepCopy(
-    const CollisionGlobalFeatureStore& other) {
-  vectorSize = other.vectorSize;
-  hashSpace = other.hashSpace;
-  generator = other.generator;
-  keyer = other.keyer;
-  filter = other.filter;
-  featureWeights = new Real[hashSpace];
-  memcpy(featureWeights, other.featureWeights, hashSpace * sizeof(Real));
-}
+CollisionGlobalFeatureStore::~CollisionGlobalFeatureStore() {}
 
 } // namespace oxlm
 

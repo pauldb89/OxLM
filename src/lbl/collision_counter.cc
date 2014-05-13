@@ -3,13 +3,13 @@
 #include <boost/make_shared.hpp>
 
 #include "lbl/class_context_extractor.h"
-#include "lbl/class_hash_space_decider.h"
+#include "lbl/class_context_keyer.h"
 #include "lbl/context_processor.h"
 #include "lbl/feature_context_generator.h"
-#include "lbl/feature_context_keyer.h"
 #include "lbl/feature_exact_filter.h"
 #include "lbl/feature_no_op_filter.h"
 #include "lbl/word_context_extractor.h"
+#include "lbl/word_context_keyer.h"
 
 namespace oxlm {
 
@@ -25,7 +25,7 @@ CollisionCounter::CollisionCounter(
   boost::shared_ptr<ContextProcessor> processor =
       boost::make_shared<ContextProcessor>(corpus, config.ngram_order - 1);
   FeatureContextGenerator generator(config.feature_context_size);
-  FeatureContextKeyer class_keyer(config.hash_space);
+  ClassContextKeyer class_keyer(config.hash_space);
 
   GlobalFeatureIndexesPairPtr feature_indexes_pair;
   boost::shared_ptr<FeatureFilter> class_filter;
@@ -39,11 +39,10 @@ CollisionCounter::CollisionCounter(
         index->getNumClasses());
   }
 
-  ClassHashSpaceDecider decider(index, config.hash_space);
-  vector<FeatureContextKeyer> word_keyers(index->getNumClasses());
+  vector<WordContextKeyer> word_keyers(index->getNumClasses());
   vector<boost::shared_ptr<FeatureFilter>> word_filters(index->getNumClasses());
   for (int i = 0; i < index->getNumClasses(); ++i) {
-    word_keyers[i] = FeatureContextKeyer(decider.getHashSpace(i));
+    word_keyers[i] = WordContextKeyer(i, config.hash_space);
     if (config.filter_contexts) {
       word_filters[i] = boost::make_shared<FeatureExactFilter>(
           feature_indexes_pair->getWordIndexes(i),
@@ -56,7 +55,6 @@ CollisionCounter::CollisionCounter(
 
   for (size_t i = 0; i < corpus->size(); ++i) {
     int class_id = index->getClass(corpus->at(i));
-    int class_hash_space = decider.getHashSpace(class_id);
     vector<int> context = processor->extract(i);
     vector<FeatureContext> feature_contexts =
         generator.getFeatureContexts(context);
@@ -74,7 +72,7 @@ CollisionCounter::CollisionCounter(
         // NGramQuery abuse: [w_{n}, c_n, w_{n-1}, ...]; c_n is not explicit.
         observedWordQueries[class_id]
             .insert(NGramQuery(index, feature_context.data));
-        observedWordKeys[class_id].insert((key + index) % class_hash_space);
+        observedWordKeys[class_id].insert((key + index) % config.hash_space);
       }
     }
   }

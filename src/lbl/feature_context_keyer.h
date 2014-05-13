@@ -1,29 +1,22 @@
 #pragma once
 
+#include <boost/serialization/serialization.hpp>
+
 #include "lbl/feature_context.h"
 
 namespace oxlm {
 
 class FeatureContextKeyer {
  public:
-  FeatureContextKeyer();
+  virtual int getKey(const FeatureContext& feature_context) const = 0;
 
-  FeatureContextKeyer(int hash_space);
-
-  int getKey(const FeatureContext& feature_context) const;
-
-  bool operator==(const FeatureContextKeyer& other) const;
+  virtual ~FeatureContextKeyer();
 
  private:
   friend class boost::serialization::access;
 
   template<class Archive>
-  void serialize(Archive& ar, const unsigned int version) {
-    ar & hashSpace;
-  }
-
-  int hashSpace;
-  hash<FeatureContext> hash_function;
+  void serialize(Archive& ar, const unsigned int version) {}
 };
 
 } // namespace oxlm

@@ -3,15 +3,17 @@
 #include <boost/make_shared.hpp>
 
 #include "lbl/class_context_extractor.h"
-#include "lbl/class_hash_space_decider.h"
+#include "lbl/class_context_keyer.h"
 #include "lbl/collision_global_feature_store.h"
 #include "lbl/collision_minibatch_feature_store.h"
+#include "lbl/collision_space.h"
 #include "lbl/feature_exact_filter.h"
 #include "lbl/feature_no_op_filter.h"
 #include "lbl/sparse_global_feature_store.h"
 #include "lbl/sparse_minibatch_feature_store.h"
 #include "lbl/unconstrained_feature_store.h"
 #include "lbl/word_context_extractor.h"
+#include "lbl/word_context_keyer.h"
 
 namespace oxlm {
 
@@ -39,8 +41,15 @@ void FeatureStoreInitializer::initialize(
     }
     U = boost::make_shared<CollisionGlobalFeatureStore>(
         index->getNumClasses(), config.hash_space,
-        config.feature_context_size, filter);
-    ClassHashSpaceDecider decider(index, config.hash_space);
+        config.feature_context_size,
+        boost::make_shared<CollisionSpace>(config.hash_space),
+        boost::make_shared<ClassContextKeyer>(config.hash_space),
+        filter);
+
+    // All CollisionGlobalFeatureStores used for word prediction shared the same
+    // underlying collision space.
+    boost::shared_ptr<CollisionSpace> space =
+        boost::make_shared<CollisionSpace>(config.hash_space);
     V.resize(index->getNumClasses());
     for (int i = 0; i < index->getNumClasses(); ++i) {
       if (config.filter_contexts) {
@@ -52,8 +61,9 @@ void FeatureStoreInitializer::initialize(
       }
 
       V[i] = boost::make_shared<CollisionGlobalFeatureStore>(
-          index->getClassSize(i), decider.getHashSpace(i),
-          config.feature_context_size, filter);
+          index->getClassSize(i), config.hash_space,
+          config.feature_context_size, space,
+          boost::make_shared<WordContextKeyer>(i, config.hash_space), filter);
     }
   } else if (config.sparse_features) {
     auto feature_indexes_pair = matcher->getGlobalFeatures();
@@ -103,21 +113,15 @@ void FeatureStoreInitializer::initialize(
         index->getNumClasses(),
         config.hash_space,
         config.feature_context_size,
+        boost::make_shared<ClassContextKeyer>(config.hash_space),
         filter);
-    ClassHashSpaceDecider decider(index, config.hash_space);
     V.resize(index->getNumClasses());
     for (int i = 0; i < index->getNumClasses(); ++i) {
-      if (config.filter_contexts) {
-        filter = boost::make_shared<FeatureExactFilter>(
-            feature_indexes_pair->getWordIndexes(i),
-            boost::make_shared<WordContextExtractor>(i, hasher));
-      } else {
-        filter = boost::make_shared<FeatureNoOpFilter>(index->getClassSize(i));
-      }
       V[i] = boost::make_shared<CollisionMinibatchFeatureStore>(
           index->getClassSize(i),
-          decider.getHashSpace(i),
+          config.hash_space,
           config.feature_context_size,
+          boost::make_shared<WordContextKeyer>(i, config.hash_space),
           filter);
     }
   } else if (config.sparse_features) {

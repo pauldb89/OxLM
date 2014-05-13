@@ -4,6 +4,7 @@
 
 #include "lbl/archive_export.h"
 #include "lbl/collision_minibatch_feature_store.h"
+#include "lbl/collision_space.h"
 #include "lbl/feature_context_generator.h"
 #include "lbl/feature_context_keyer.h"
 #include "lbl/global_feature_store.h"
@@ -14,10 +15,10 @@ class CollisionGlobalFeatureStore : public GlobalFeatureStore {
  public:
   CollisionGlobalFeatureStore();
 
-  CollisionGlobalFeatureStore(const CollisionGlobalFeatureStore& other);
-
   CollisionGlobalFeatureStore(
-      int vector_size, int hash_space, int feature_context_size,
+      int vector_size, int hash_space_size, int feature_context_size,
+      const boost::shared_ptr<CollisionSpace>& space,
+      const boost::shared_ptr<FeatureContextKeyer>& keyer,
       const boost::shared_ptr<FeatureFilter>& filter);
 
   virtual VectorReal get(const vector<int>& context) const;
@@ -43,9 +44,6 @@ class CollisionGlobalFeatureStore : public GlobalFeatureStore {
 
   bool operator==(const CollisionGlobalFeatureStore& other) const;
 
-  virtual CollisionGlobalFeatureStore& operator=(
-      const CollisionGlobalFeatureStore& other);
-
   virtual ~CollisionGlobalFeatureStore();
 
  private:
@@ -54,39 +52,22 @@ class CollisionGlobalFeatureStore : public GlobalFeatureStore {
   friend class boost::serialization::access;
 
   template<class Archive>
-  void save(Archive& ar, const unsigned int version) const {
+  void serialize(Archive& ar, const unsigned int version) {
     ar & boost::serialization::base_object<GlobalFeatureStore>(*this);
 
-    ar << boost::serialization::base_object<FeatureStore>(*this);
-    ar << vectorSize;
-    ar << hashSpace;
-    ar << generator;
-    ar << keyer;
-    ar << filter;
-
-    ar << boost::serialization::make_array(featureWeights, hashSpace);
+    ar & vectorSize;
+    ar & hashSpaceSize;
+    ar & generator;
+    ar & keyer;
+    ar & filter;
+    ar & space;
   }
 
-  template<class Archive>
-  void load(Archive& ar, const unsigned int version) {
-    ar >> boost::serialization::base_object<GlobalFeatureStore>(*this);
-
-    ar >> vectorSize;
-    ar >> hashSpace;
-    ar >> generator;
-    ar >> keyer;
-    ar >> filter;
-
-    featureWeights = new Real[hashSpace];
-    ar >> boost::serialization::make_array(featureWeights, hashSpace);
-  }
-
-  BOOST_SERIALIZATION_SPLIT_MEMBER();
-
-  int vectorSize, hashSpace;
+  int vectorSize, hashSpaceSize;
   FeatureContextGenerator generator;
-  FeatureContextKeyer keyer;
+  boost::shared_ptr<FeatureContextKeyer> keyer;
   boost::shared_ptr<FeatureFilter> filter;
+  boost::shared_ptr<CollisionSpace> space;
   Real* featureWeights;
 };
 

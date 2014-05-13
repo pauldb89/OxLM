@@ -4,16 +4,16 @@ namespace oxlm {
 
 CollisionMinibatchFeatureStore::CollisionMinibatchFeatureStore(
     int vector_size, int hash_space, int feature_context_size,
+    const boost::shared_ptr<FeatureContextKeyer>& keyer,
     const boost::shared_ptr<FeatureFilter>& filter)
     : vectorSize(vector_size), hashSpace(hash_space),
-      generator(feature_context_size), keyer(hash_space),
-      filter(filter) {}
+      generator(feature_context_size), keyer(keyer), filter(filter) {}
 
 VectorReal CollisionMinibatchFeatureStore::get(
     const vector<int>& context) const {
   VectorReal result = VectorReal::Zero(vectorSize);
   for (const auto& feature_context: generator.getFeatureContexts(context)) {
-    int key = keyer.getKey(feature_context);
+    int key = keyer->getKey(feature_context);
     for (int i: filter->getIndexes(feature_context)) {
       auto it = featureWeights.find((key + i) % hashSpace);
       if (it != featureWeights.end()) {
@@ -28,7 +28,7 @@ VectorReal CollisionMinibatchFeatureStore::get(
 void CollisionMinibatchFeatureStore::update(
     const vector<int>& context, const VectorReal& values) {
   for (const auto& feature_context: generator.getFeatureContexts(context)) {
-    int key = keyer.getKey(feature_context);
+    int key = keyer->getKey(feature_context);
     for (int i: filter->getIndexes(feature_context)) {
       featureWeights[(key + i) % hashSpace] += values(i);
     }

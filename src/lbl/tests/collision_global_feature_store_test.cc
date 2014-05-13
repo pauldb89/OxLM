@@ -5,6 +5,7 @@
 #include <boost/make_shared.hpp>
 #include <boost/serialization/shared_ptr.hpp>
 
+#include "lbl/class_context_keyer.h"
 #include "lbl/collision_global_feature_store.h"
 #include "lbl/feature_no_op_filter.h"
 #include "utils/constants.h"
@@ -18,16 +19,23 @@ class CollisionGlobalFeatureStoreTest : public testing::Test {
  protected:
   void SetUp() {
     int vector_size = 3;
+    int hash_space = 10;
+    boost::shared_ptr<CollisionSpace> space =
+        boost::make_shared<CollisionSpace>(hash_space);
     boost::shared_ptr<FeatureNoOpFilter> filter =
         boost::make_shared<FeatureNoOpFilter>(vector_size);
-    CollisionMinibatchFeatureStore g_store(vector_size, 10, 3, filter);
+    boost::shared_ptr<ClassContextKeyer> keyer =
+        boost::make_shared<ClassContextKeyer>(hash_space);
+    CollisionMinibatchFeatureStore g_store(
+        vector_size, hash_space, 3, keyer, filter);
 
     context = {1, 2, 3};
     VectorReal values(3);
     values << 4, 2, 5;
     g_store.update(context, values);
 
-    store = CollisionGlobalFeatureStore(vector_size, 10, 3, filter);
+    store = CollisionGlobalFeatureStore(
+        vector_size, hash_space, 3, space, keyer, filter);
     gradient_store = boost::make_shared<CollisionMinibatchFeatureStore>(
         g_store);
   }

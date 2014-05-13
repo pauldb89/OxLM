@@ -13,7 +13,8 @@ class CollisionMinibatchFeatureStore : public MinibatchFeatureStore {
  public:
   CollisionMinibatchFeatureStore(
       int vector_size, int hash_space, int feature_context_size,
-      const boost::shared_ptr<FeatureFilter>& fiter);
+      const boost::shared_ptr<FeatureContextKeyer>& keyer,
+      const boost::shared_ptr<FeatureFilter>& filter);
 
   virtual VectorReal get(const vector<int>& context) const;
 
@@ -35,7 +36,7 @@ class CollisionMinibatchFeatureStore : public MinibatchFeatureStore {
 
   int vectorSize, hashSpace;
   FeatureContextGenerator generator;
-  FeatureContextKeyer keyer;
+  boost::shared_ptr<FeatureContextKeyer> keyer;
   boost::shared_ptr<FeatureFilter> filter;
   unordered_map<int, Real> featureWeights;
 };

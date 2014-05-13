@@ -1,6 +1,6 @@
 set(TESTS
     class_context_extractor_test
-    class_hash_space_decider_test
+    class_context_keyer_test
     collision_counter_test
     collision_global_feature_store_test
     collision_minibatch_feature_store_test
@@ -8,7 +8,6 @@ set(TESTS
     feature_context_test
     feature_context_generator_test
     feature_context_hasher_test
-    feature_context_keyer_test
     feature_exact_filter_test
     feature_matcher_test
     feature_no_op_filter_test
@@ -27,6 +26,7 @@ set(TESTS
     unconstrained_feature_store_test
     utils_test
     word_context_extractor_test
+    word_context_keyer_test
     word_to_class_index_test)
 
 foreach(test ${TESTS})
