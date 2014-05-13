@@ -86,19 +86,39 @@ void FeatureStoreInitializer::initialize(
     vector<boost::shared_ptr<MinibatchFeatureStore>>& V,
     const vector<int>& minibatch_indices) const {
   if (config.hash_space) {
+    // It's fine to use the global feature indexes here because the stores are
+    // not constructed based on these indices. At filtering time, we just want
+    // to know which feature indexes match which contexts.
+    GlobalFeatureIndexesPairPtr feature_indexes_pair;
+    boost::shared_ptr<FeatureFilter> filter;
+    if (config.filter_contexts) {
+      feature_indexes_pair = matcher->getGlobalFeatures();
+      filter = boost::make_shared<FeatureExactFilter>(
+          feature_indexes_pair->getClassIndexes(),
+          boost::make_shared<ClassContextExtractor>(hasher));
+    } else {
+      filter = boost::make_shared<FeatureNoOpFilter>(index->getNumClasses());
+    }
     U = boost::make_shared<CollisionMinibatchFeatureStore>(
         index->getNumClasses(),
         config.hash_space,
         config.feature_context_size,
-        boost::make_shared<FeatureNoOpFilter>(index->getNumClasses()));
+        filter);
+    ClassHashSpaceDecider decider(index, config.hash_space);
     V.resize(index->getNumClasses());
     for (int i = 0; i < index->getNumClasses(); ++i) {
-      ClassHashSpaceDecider decider(index, config.hash_space);
+      if (config.filter_contexts) {
+        filter = boost::make_shared<FeatureExactFilter>(
+            feature_indexes_pair->getWordIndexes(i),
+            boost::make_shared<WordContextExtractor>(i, hasher));
+      } else {
+        filter = boost::make_shared<FeatureNoOpFilter>(index->getClassSize(i));
+      }
       V[i] = boost::make_shared<CollisionMinibatchFeatureStore>(
           index->getClassSize(i),
           decider.getHashSpace(i),
           config.feature_context_size,
-          boost::make_shared<FeatureNoOpFilter>(index->getClassSize(i)));
+          filter);
     }
   } else if (config.sparse_features) {
     auto feature_indexes_pair = matcher->getMinibatchFeatures(minibatch_indices);
