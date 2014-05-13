@@ -25,7 +25,7 @@ TEST(CollisionCounterTest, TestBasic) {
       boost::make_shared<FeatureMatcher>(corpus, index, processor, hasher);
   CollisionCounter counter(corpus, index, hasher, matcher, config);
 
-  EXPECT_EQ(11, counter.count());
+  EXPECT_EQ(15, counter.count());
 }
 
 } // namespace oxlm

@@ -117,6 +117,13 @@ void FeatureStoreInitializer::initialize(
         filter);
     V.resize(index->getNumClasses());
     for (int i = 0; i < index->getNumClasses(); ++i) {
+      if (config.filter_contexts) {
+        filter = boost::make_shared<FeatureExactFilter>(
+            feature_indexes_pair->getWordIndexes(i),
+            boost::make_shared<WordContextExtractor>(i, hasher));
+      } else {
+        filter = boost::make_shared<FeatureNoOpFilter>(index->getClassSize(i));
+      }
       V[i] = boost::make_shared<CollisionMinibatchFeatureStore>(
           index->getClassSize(i),
           config.hash_space,

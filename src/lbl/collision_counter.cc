@@ -72,7 +72,7 @@ CollisionCounter::CollisionCounter(
         // NGramQuery abuse: [w_{n}, c_n, w_{n-1}, ...]; c_n is not explicit.
         observedWordQueries[class_id]
             .insert(NGramQuery(index, feature_context.data));
-        observedWordKeys[class_id].insert((key + index) % config.hash_space);
+        observedWordKeys.insert((key + index) % config.hash_space);
       }
     }
   }
@@ -86,12 +86,11 @@ int CollisionCounter::count() const {
   cout << "Ratio (for classes): "
        << 100.0 * class_collisions / class_contexts << "%" << endl;
 
-  int word_contexts = 0, word_collisions = 0;
+  int word_contexts = 0;
   for (int i = 0; i < index->getNumClasses(); ++i) {
     word_contexts += observedWordQueries[i].size();
-    word_collisions +=
-        observedWordQueries[i].size() - observedWordKeys[i].size();
   }
+  int word_collisions = word_contexts - observedWordKeys.size();
   cout << "Observed word contexts: " << word_contexts << endl;
   cout << "Word collisions: " << word_collisions << endl;
   cout << "Ratio (for words): "

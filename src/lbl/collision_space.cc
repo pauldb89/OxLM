@@ -1,5 +1,7 @@
 #include "lbl/collision_space.h"
 
+#include "utils/constants.h"
+
 namespace oxlm {
 
 CollisionSpace::CollisionSpace() {}
