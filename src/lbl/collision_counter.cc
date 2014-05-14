@@ -20,8 +20,7 @@ CollisionCounter::CollisionCounter(
     const boost::shared_ptr<FeatureMatcher>& matcher,
     const ModelData& config)
     : corpus(corpus), index(index), hasher(hasher), matcher(matcher),
-      config(config), observedWordQueries(index->getNumClasses()),
-      observedWordKeys(index->getNumClasses()) {
+      config(config), observedWordQueries(index->getNumClasses()) {
   boost::shared_ptr<ContextProcessor> processor =
       boost::make_shared<ContextProcessor>(corpus, config.ngram_order - 1);
   FeatureContextGenerator generator(config.feature_context_size);
@@ -64,7 +63,7 @@ CollisionCounter::CollisionCounter(
       for (int index: class_filter->getIndexes(feature_context)) {
         // NGramQuery abuse: [c_n, w_{n-1}, ...]
         observedClassQueries.insert(NGramQuery(index, feature_context.data));
-        observedClassKeys.insert((key + index) % config.hash_space);
+        observedKeys.insert((key + index) % config.hash_space);
       }
 
       key = word_keyers[class_id].getKey(feature_context);
@@ -72,32 +71,18 @@ CollisionCounter::CollisionCounter(
         // NGramQuery abuse: [w_{n}, c_n, w_{n-1}, ...]; c_n is not explicit.
         observedWordQueries[class_id]
             .insert(NGramQuery(index, feature_context.data));
-        observedWordKeys.insert((key + index) % config.hash_space);
+        observedKeys.insert((key + index) % config.hash_space);
       }
     }
   }
 }
 
 int CollisionCounter::count() const {
-  int class_contexts = observedClassQueries.size();
-  int class_collisions = class_contexts - observedClassKeys.size();
-  cout << "Observed class contexts: " << class_contexts << endl;
-  cout << "Class collisions: " << class_collisions << endl;
-  cout << "Ratio (for classes): "
-       << 100.0 * class_collisions / class_contexts << "%" << endl;
-
-  int word_contexts = 0;
+  int contexts = observedClassQueries.size();
   for (int i = 0; i < index->getNumClasses(); ++i) {
-    word_contexts += observedWordQueries[i].size();
+    contexts += observedWordQueries[i].size();
   }
-  int word_collisions = word_contexts - observedWordKeys.size();
-  cout << "Observed word contexts: " << word_contexts << endl;
-  cout << "Word collisions: " << word_collisions << endl;
-  cout << "Ratio (for words): "
-       << 100.0 * word_collisions / word_contexts << "%" << endl;
-
-  int contexts = class_contexts + word_contexts;
-  int collisions = class_collisions + word_collisions;
+  int collisions = contexts - observedKeys.size();
   cout << "Observed contexts: " << contexts << endl;
   cout << "Collisions: " << collisions << endl;
   cout << "Overall ratio: " << 100.0 * collisions / contexts << "%" << endl;

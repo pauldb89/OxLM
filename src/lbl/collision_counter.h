@@ -30,7 +30,7 @@ class CollisionCounter {
   boost::shared_ptr<FeatureMatcher> matcher;
   unordered_set<NGramQuery> observedClassQueries;
   vector<unordered_set<NGramQuery>> observedWordQueries;
-  unordered_set<int> observedClassKeys, observedWordKeys;
+  unordered_set<int> observedKeys;
 };
 
 } // namespace oxlm

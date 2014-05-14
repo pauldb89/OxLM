@@ -29,6 +29,9 @@ void FeatureStoreInitializer::initialize(
     boost::shared_ptr<GlobalFeatureStore>& U,
     vector<boost::shared_ptr<GlobalFeatureStore>>& V) const {
   if (config.hash_space) {
+    // Share collision space among all stores (class + word specific).
+    boost::shared_ptr<CollisionSpace> space =
+        boost::make_shared<CollisionSpace>(config.hash_space);
     GlobalFeatureIndexesPairPtr feature_indexes_pair;
     boost::shared_ptr<FeatureFilter> filter;
     if (config.filter_contexts) {
@@ -41,15 +44,10 @@ void FeatureStoreInitializer::initialize(
     }
     U = boost::make_shared<CollisionGlobalFeatureStore>(
         index->getNumClasses(), config.hash_space,
-        config.feature_context_size,
-        boost::make_shared<CollisionSpace>(config.hash_space),
+        config.feature_context_size, space,
         boost::make_shared<ClassContextKeyer>(config.hash_space),
         filter);
 
-    // All CollisionGlobalFeatureStores used for word prediction shared the same
-    // underlying collision space.
-    boost::shared_ptr<CollisionSpace> space =
-        boost::make_shared<CollisionSpace>(config.hash_space);
     V.resize(index->getNumClasses());
     for (int i = 0; i < index->getNumClasses(); ++i) {
       if (config.filter_contexts) {
