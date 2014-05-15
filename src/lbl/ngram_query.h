@@ -35,12 +35,25 @@ struct NGramQuery {
 
 namespace std {
 
-template<> struct hash<oxlm::NGramQuery> {
+template<> class hash<oxlm::NGramQuery> {
+ public:
+  hash<oxlm::NGramQuery>(int seed = 0) : seed(seed) {}
+
   inline size_t operator()(const oxlm::NGramQuery query) const {
     vector<int> data(1, query.word);
     data.insert(data.end(), query.context.begin(), query.context.end());
     return oxlm::MurmurHash(data);
   }
+
+ private:
+  friend class boost::serialization::access;
+
+  template<class Archive>
+  void serialize(Archive& ar, const unsigned int version) {
+    ar & seed;
+  }
+
+  int seed;
 };
 
 } // namespace std

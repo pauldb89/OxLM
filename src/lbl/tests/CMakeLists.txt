@@ -1,4 +1,5 @@
 set(TESTS
+    bloom_filter_test
     class_context_extractor_test
     class_context_keyer_test
     collision_counter_test

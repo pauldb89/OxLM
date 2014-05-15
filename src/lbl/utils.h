@@ -66,9 +66,9 @@ Time GetTime();
 
 double GetDuration(const Time& start_time, const Time& stop_time);
 
-inline size_t MurmurHash(const vector<int>& data) {
+inline size_t MurmurHash(const vector<int>& data, int seed = 0) {
   size_t result[2] = {0, 0};
-  MurmurHash3_x64_128(data.data(), data.size() * sizeof(int), 0, result);
+  MurmurHash3_x64_128(data.data(), data.size() * sizeof(int), seed, result);
   return result[0];
 }
 
