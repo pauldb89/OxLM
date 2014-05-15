@@ -17,6 +17,9 @@ TEST(ClassContextKeyerTest, TestBasic) {
   EXPECT_EQ(4, keyer.getKey(context));
   context = {1, 2, 3};
   EXPECT_EQ(73, keyer.getKey(context));
+
+  NGramQuery expected_prediction(3, context);
+  EXPECT_EQ(expected_prediction, keyer.getPrediction(3, context));
 }
 
 TEST(ClassContextKeyerTest, TestSerialization) {

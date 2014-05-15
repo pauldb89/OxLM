@@ -41,7 +41,8 @@ CollisionCounter::CollisionCounter(
   vector<WordContextKeyer> word_keyers(index->getNumClasses());
   vector<boost::shared_ptr<FeatureFilter>> word_filters(index->getNumClasses());
   for (int i = 0; i < index->getNumClasses(); ++i) {
-    word_keyers[i] = WordContextKeyer(i, config.hash_space);
+    word_keyers[i] = WordContextKeyer(
+        i, index->getNumWords(), config.hash_space);
     if (config.filter_contexts) {
       word_filters[i] = boost::make_shared<FeatureExactFilter>(
           feature_indexes_pair->getWordIndexes(i),

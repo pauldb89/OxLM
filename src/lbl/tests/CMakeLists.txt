@@ -6,6 +6,7 @@ set(TESTS
     collision_global_feature_store_test
     collision_minibatch_feature_store_test
     context_processor_test
+    feature_approximate_filter_test
     feature_context_test
     feature_context_generator_test
     feature_context_hasher_test

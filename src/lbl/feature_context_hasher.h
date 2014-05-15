@@ -44,6 +44,8 @@ class FeatureContextHasher {
 
   int getWordContextId(int class_id, const FeatureContext& feature_context) const;
 
+  int getNumContexts() const;
+
   int getNumClassContexts() const;
 
   int getNumWordContexts(int class_id) const;

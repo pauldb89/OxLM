@@ -11,6 +11,7 @@ ModelData::ModelData()
       mixture(false), lbfgs(false), lbfgs_vectors(0), test_tokens(0),
       gnorm_threshold(0), eta(0), multinomial_step_size(0),
       sparse_features(false), random_weights(false), hash_space(0),
-      count_collisions(false), filter_contexts(false) {}
+      count_collisions(false), filter_contexts(false),
+      filter_error_rate(0) {}
 
 } // namespace oxlm

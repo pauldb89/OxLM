@@ -42,7 +42,11 @@ template<> class hash<oxlm::NGramQuery> {
   inline size_t operator()(const oxlm::NGramQuery query) const {
     vector<int> data(1, query.word);
     data.insert(data.end(), query.context.begin(), query.context.end());
-    return oxlm::MurmurHash(data);
+    return oxlm::MurmurHash(data, seed);
+  }
+
+  bool operator==(const hash<oxlm::NGramQuery>& other) const {
+    return seed == other.seed;
   }
 
  private:

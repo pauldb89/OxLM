@@ -29,6 +29,7 @@ TEST(FeatureContextHasherTest, TestLongerHistory) {
   EXPECT_EQ(1, word_context_ids[1]);
   EXPECT_EQ(2, word_context_ids[2]);
 
+  EXPECT_EQ(36, hasher.getNumContexts());
   EXPECT_EQ(18, hasher.getNumClassContexts());
   EXPECT_EQ(3, hasher.getNumWordContexts(0));
   EXPECT_EQ(6, hasher.getNumWordContexts(1));

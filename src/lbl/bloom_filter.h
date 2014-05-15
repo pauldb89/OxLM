@@ -13,6 +13,8 @@ namespace oxlm {
 template<class T>
 class BloomFilter {
  public:
+  BloomFilter() {}
+
   BloomFilter(int num_items, int min_frequency, Real error_rate) :
       minFrequency(min_frequency), errorRate(error_rate) {
     bucketSize = ceil(log2(minFrequency + 1));
@@ -54,6 +56,15 @@ class BloomFilter {
     }
 
     return true;
+  }
+
+  bool operator==(const BloomFilter<T>& other) const {
+    return numBuckets == other.numBuckets
+        && bucketSize == other.bucketSize
+        && minFrequency == other.minFrequency
+        && errorRate == other.errorRate
+        && hashes == other.hashes
+        && bits == other.bits;
   }
 
  private:

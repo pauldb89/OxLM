@@ -15,6 +15,8 @@ class WordToClassIndex {
 
   WordToClassIndex(const vector<int>& class_markers);
 
+  int getNumWords() const;
+
   int getNumClasses() const;
 
   int getClass(int word_id) const;

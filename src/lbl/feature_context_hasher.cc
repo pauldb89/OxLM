@@ -67,6 +67,14 @@ int FeatureContextHasher::getWordContextId(
   return it == wordContextIdsMap[class_id].end() ? -1 : it->second;
 }
 
+int FeatureContextHasher::getNumContexts() const {
+  int num_contexts = classContextIdsMap.size();
+  for (size_t i = 0; i < wordContextIdsMap.size(); ++i) {
+    num_contexts += wordContextIdsMap[i].size();
+  }
+  return num_contexts;
+}
+
 int FeatureContextHasher::getNumClassContexts() const {
   return classContextIdsMap.size();
 }

@@ -11,6 +11,11 @@ int ClassContextKeyer::getKey(const FeatureContext& feature_context) const {
   return hash_function(feature_context) % hashSpace;
 }
 
+NGramQuery ClassContextKeyer::getPrediction(
+    int candidate, const FeatureContext& feature_context) const {
+  return NGramQuery(candidate, feature_context.data);
+}
+
 bool ClassContextKeyer::operator==(const ClassContextKeyer& other) const {
   return hashSpace == other.hashSpace;
 }

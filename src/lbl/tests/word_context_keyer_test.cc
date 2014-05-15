@@ -10,18 +10,22 @@ namespace ar = boost::archive;
 namespace oxlm {
 
 TEST(WordContextKeyerTest, TestBasic) {
-  WordContextKeyer keyer(13, 100);
+  WordContextKeyer keyer(13, 1000, 100);
   vector<int> context = {1};
-  EXPECT_EQ(97, keyer.getKey(context));
+  EXPECT_EQ(21, keyer.getKey(context));
   context = {1, 2};
-  EXPECT_EQ(17, keyer.getKey(context));
+  EXPECT_EQ(35, keyer.getKey(context));
   context = {1, 2, 3};
-  EXPECT_EQ(32, keyer.getKey(context));
+  EXPECT_EQ(11, keyer.getKey(context));
+
+  vector<int> expected_context = {1013, 1, 2, 3};
+  NGramQuery expected_prediction(5, expected_context);
+  EXPECT_EQ(expected_prediction, keyer.getPrediction(5, context));
 }
 
 TEST(WordContextKeyerTest, TestSerialization) {
   boost::shared_ptr<FeatureContextKeyer> keyer_ptr =
-      boost::make_shared<WordContextKeyer>(13, 100);
+      boost::make_shared<WordContextKeyer>(13, 1000, 100);
 
   stringstream stream(ios_base::binary | ios_base::out | ios_base::in);
   ar::binary_oarchive oar(stream, ar::no_header);

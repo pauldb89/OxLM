@@ -2,11 +2,13 @@
 
 #include <boost/make_shared.hpp>
 
+#include "lbl/bloom_filter.h"
 #include "lbl/class_context_extractor.h"
 #include "lbl/class_context_keyer.h"
 #include "lbl/collision_global_feature_store.h"
 #include "lbl/collision_minibatch_feature_store.h"
 #include "lbl/collision_space.h"
+#include "lbl/feature_approximate_filter.h"
 #include "lbl/feature_exact_filter.h"
 #include "lbl/feature_no_op_filter.h"
 #include "lbl/sparse_global_feature_store.h"
@@ -32,36 +34,50 @@ void FeatureStoreInitializer::initialize(
     // Share collision space among all stores (class + word specific).
     boost::shared_ptr<CollisionSpace> space =
         boost::make_shared<CollisionSpace>(config.hash_space);
+    boost::shared_ptr<FeatureContextKeyer> keyer =
+        boost::make_shared<ClassContextKeyer>(config.hash_space);
     GlobalFeatureIndexesPairPtr feature_indexes_pair;
+    boost::shared_ptr<BloomFilter<NGramQuery>> bloom_filter;
     boost::shared_ptr<FeatureFilter> filter;
     if (config.filter_contexts) {
-      feature_indexes_pair = matcher->getGlobalFeatures();
-      filter = boost::make_shared<FeatureExactFilter>(
-          feature_indexes_pair->getClassIndexes(),
-          boost::make_shared<ClassContextExtractor>(hasher));
+      if (config.filter_error_rate > 0) {
+        bloom_filter = boost::make_shared<BloomFilter<NGramQuery>>(
+            hasher->getNumContexts(), 1, config.filter_error_rate);
+        filter = boost::make_shared<FeatureApproximateFilter>(
+            index->getNumClasses(), keyer, bloom_filter);
+      } else {
+        feature_indexes_pair = matcher->getGlobalFeatures();
+        filter = boost::make_shared<FeatureExactFilter>(
+            feature_indexes_pair->getClassIndexes(),
+            boost::make_shared<ClassContextExtractor>(hasher));
+      }
     } else {
       filter = boost::make_shared<FeatureNoOpFilter>(index->getNumClasses());
     }
     U = boost::make_shared<CollisionGlobalFeatureStore>(
         index->getNumClasses(), config.hash_space,
-        config.feature_context_size, space,
-        boost::make_shared<ClassContextKeyer>(config.hash_space),
-        filter);
+        config.feature_context_size, space, keyer, filter);
 
     V.resize(index->getNumClasses());
     for (int i = 0; i < index->getNumClasses(); ++i) {
+      keyer = boost::make_shared<WordContextKeyer>(
+          i, index->getNumWords(), config.hash_space);
       if (config.filter_contexts) {
-        filter = boost::make_shared<FeatureExactFilter>(
-          feature_indexes_pair->getWordIndexes(i),
-          boost::make_shared<WordContextExtractor>(i, hasher));
+        if (config.filter_error_rate > 0) {
+          filter = boost::make_shared<FeatureApproximateFilter>(
+              index->getClassSize(i), keyer, bloom_filter);
+        } else {
+          filter = boost::make_shared<FeatureExactFilter>(
+            feature_indexes_pair->getWordIndexes(i),
+            boost::make_shared<WordContextExtractor>(i, hasher));
+        }
       } else {
         filter = boost::make_shared<FeatureNoOpFilter>(index->getClassSize(i));
       }
 
       V[i] = boost::make_shared<CollisionGlobalFeatureStore>(
           index->getClassSize(i), config.hash_space,
-          config.feature_context_size, space,
-          boost::make_shared<WordContextKeyer>(i, config.hash_space), filter);
+          config.feature_context_size, space, keyer, filter);
     }
   } else if (config.sparse_features) {
     auto feature_indexes_pair = matcher->getGlobalFeatures();
@@ -94,40 +110,51 @@ void FeatureStoreInitializer::initialize(
     vector<boost::shared_ptr<MinibatchFeatureStore>>& V,
     const vector<int>& minibatch_indices) const {
   if (config.hash_space) {
+    boost::shared_ptr<FeatureContextKeyer> keyer =
+        boost::make_shared<ClassContextKeyer>(config.hash_space);
     // It's fine to use the global feature indexes here because the stores are
     // not constructed based on these indices. At filtering time, we just want
     // to know which feature indexes match which contexts.
     GlobalFeatureIndexesPairPtr feature_indexes_pair;
+    boost::shared_ptr<BloomFilter<NGramQuery>> bloom_filter;
     boost::shared_ptr<FeatureFilter> filter;
     if (config.filter_contexts) {
-      feature_indexes_pair = matcher->getGlobalFeatures();
-      filter = boost::make_shared<FeatureExactFilter>(
-          feature_indexes_pair->getClassIndexes(),
-          boost::make_shared<ClassContextExtractor>(hasher));
+      if (config.filter_error_rate > 0) {
+        bloom_filter = boost::make_shared<BloomFilter<NGramQuery>>(
+            hasher->getNumContexts(), 1, config.filter_error_rate);
+        filter = boost::make_shared<FeatureApproximateFilter>(
+            index->getNumClasses(), keyer, bloom_filter);
+      } else {
+        feature_indexes_pair = matcher->getGlobalFeatures();
+        filter = boost::make_shared<FeatureExactFilter>(
+            feature_indexes_pair->getClassIndexes(),
+            boost::make_shared<ClassContextExtractor>(hasher));
+      }
     } else {
       filter = boost::make_shared<FeatureNoOpFilter>(index->getNumClasses());
     }
     U = boost::make_shared<CollisionMinibatchFeatureStore>(
-        index->getNumClasses(),
-        config.hash_space,
-        config.feature_context_size,
-        boost::make_shared<ClassContextKeyer>(config.hash_space),
-        filter);
+        index->getNumClasses(), config.hash_space, config.feature_context_size,
+        keyer, filter);
     V.resize(index->getNumClasses());
     for (int i = 0; i < index->getNumClasses(); ++i) {
+      keyer = boost::make_shared<WordContextKeyer>(
+          i, index->getNumWords(), config.hash_space);
       if (config.filter_contexts) {
-        filter = boost::make_shared<FeatureExactFilter>(
-            feature_indexes_pair->getWordIndexes(i),
-            boost::make_shared<WordContextExtractor>(i, hasher));
+        if (config.filter_error_rate) {
+          filter = boost::make_shared<FeatureApproximateFilter>(
+              index->getClassSize(i), keyer, bloom_filter);
+        } else {
+          filter = boost::make_shared<FeatureExactFilter>(
+              feature_indexes_pair->getWordIndexes(i),
+              boost::make_shared<WordContextExtractor>(i, hasher));
+        }
       } else {
         filter = boost::make_shared<FeatureNoOpFilter>(index->getClassSize(i));
       }
       V[i] = boost::make_shared<CollisionMinibatchFeatureStore>(
-          index->getClassSize(i),
-          config.hash_space,
-          config.feature_context_size,
-          boost::make_shared<WordContextKeyer>(i, config.hash_space),
-          filter);
+          index->getClassSize(i), config.hash_space,
+          config.feature_context_size, keyer, filter);
     }
   } else if (config.sparse_features) {
     auto feature_indexes_pair = matcher->getMinibatchFeatures(minibatch_indices);

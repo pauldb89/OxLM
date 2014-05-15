@@ -10,9 +10,12 @@ class WordContextKeyer : public FeatureContextKeyer {
  public:
   WordContextKeyer();
 
-  WordContextKeyer(int class_id, int hash_space);
+  WordContextKeyer(int class_id, int num_words, int hash_space_size);
 
   virtual int getKey(const FeatureContext& feature_context) const;
+
+  virtual NGramQuery getPrediction(
+      int candidate, const FeatureContext& feature_context) const;
 
   bool operator==(const WordContextKeyer& other) const;
 
@@ -25,10 +28,11 @@ class WordContextKeyer : public FeatureContextKeyer {
   void serialize(Archive& ar, const unsigned int version) {
     ar & boost::serialization::base_object<FeatureContextKeyer>(*this);
     ar & classId;
-    ar & hashSpace;
+    ar & numWords;
+    ar & hashSpaceSize;
   }
 
-  int classId, hashSpace;
+  int classId, numWords, hashSpaceSize;
   hash<NGramQuery> hash_function;
 };
 

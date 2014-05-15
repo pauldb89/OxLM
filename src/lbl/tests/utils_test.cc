@@ -56,7 +56,8 @@ TEST(UtilsTest, TestSigmoid) {
 
 TEST(UtilsTest, TestMurmurHash) {
   vector<int> data = {0};
-  EXPECT_EQ(14961230494313510588ULL, MurmurHash(data));
+  EXPECT_EQ(14961230494313510588ULL, MurmurHash(data, 0));
+  EXPECT_EQ(4464299780005672250ULL, MurmurHash(data, 1));
 
   data = {1};
   EXPECT_EQ(9841952836289088254ULL, MurmurHash(data));

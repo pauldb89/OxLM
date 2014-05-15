@@ -13,6 +13,7 @@ add_library(lbl SHARED
   context_processor.cc
   factored_maxent_nlm.cc
   factored_nlm.cc
+  feature_approximate_filter.cc
   feature_context.cc
   feature_context_extractor.cc
   feature_context_generator.cc

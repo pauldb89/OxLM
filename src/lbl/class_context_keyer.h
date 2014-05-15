@@ -13,6 +13,9 @@ class ClassContextKeyer : public FeatureContextKeyer {
 
   virtual int getKey(const FeatureContext& feature_context) const;
 
+  virtual NGramQuery getPrediction(
+      int candidate, const FeatureContext& feature_context) const;
+
   bool operator==(const ClassContextKeyer& other) const;
 
   virtual ~ClassContextKeyer();
