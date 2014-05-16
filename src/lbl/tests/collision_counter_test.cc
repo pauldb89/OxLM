@@ -23,7 +23,8 @@ TEST(CollisionCounterTest, TestBasic) {
           corpus, index, processor, config.feature_context_size);
   boost::shared_ptr<FeatureMatcher> matcher =
       boost::make_shared<FeatureMatcher>(corpus, index, processor, hasher);
-  CollisionCounter counter(corpus, index, hasher, matcher, config);
+  boost::shared_ptr<BloomFilterPopulator> populator;
+  CollisionCounter counter(corpus, index, hasher, matcher, populator, config);
 
   EXPECT_EQ(33, counter.count());
 }

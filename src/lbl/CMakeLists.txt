@@ -3,6 +3,7 @@
 #############################################
 
 add_library(lbl SHARED
+  bloom_filter_populator.cc
   class_context_extractor.cc
   class_context_keyer.cc
   collision_counter.cc

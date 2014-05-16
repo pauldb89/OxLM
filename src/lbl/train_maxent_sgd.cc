@@ -153,6 +153,7 @@ int main(int argc, char **argv) {
   cerr << "# sparse features = " << config.sparse_features << endl;
   cerr << "# hash space = " << config.hash_space << endl;
   cerr << "# filter contexts = " << config.filter_contexts << endl;
+  cerr << "# filter error rate = " << config.filter_error_rate << endl;
   cerr << "################################" << endl;
 
   learn(config);

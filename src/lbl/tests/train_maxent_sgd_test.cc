@@ -70,7 +70,7 @@ TEST_F(TestSGD, TestTrainMaxentSGDApproximateFiltering) {
   boost::shared_ptr<Corpus> test_corpus =
       readCorpus(config.test_file, model->label_set());
   double log_pp = perplexity(model, test_corpus);
-  EXPECT_NEAR(81.852037660, exp(-log_pp / test_corpus->size()), EPS);
+  EXPECT_NEAR(101.818369814, exp(-log_pp / test_corpus->size()), EPS);
 }
 
 } // namespace oxlm

@@ -77,7 +77,7 @@ struct ModelData {
   int         hash_space;
   bool        count_collisions;
   bool        filter_contexts;
-  bool        filter_error_rate;
+  float       filter_error_rate;
 
   friend class boost::serialization::access;
   template<class Archive>

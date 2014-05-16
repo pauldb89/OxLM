@@ -22,6 +22,7 @@
 
 // Local
 #include "corpus/corpus.h"
+#include "lbl/bloom_filter_populator.h"
 #include "lbl/collision_counter.h"
 #include "lbl/context_processor.h"
 #include "lbl/feature_context.h"
@@ -93,21 +94,28 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
   boost::shared_ptr<ContextProcessor> processor;
   boost::shared_ptr<FeatureContextHasher> hasher;
   boost::shared_ptr<FeatureMatcher> matcher;
+  boost::shared_ptr<BloomFilterPopulator> populator;
   if (!config.hash_space || config.filter_contexts) {
     processor = boost::make_shared<ContextProcessor>(
         training_corpus, context_width);
     hasher = boost::make_shared<FeatureContextHasher>(
         training_corpus, index, processor, config.feature_context_size);
-    matcher = boost::make_shared<FeatureMatcher>(
-        training_corpus, index, processor, hasher);
+    if (!config.filter_contexts || config.filter_error_rate == 0) {
+      matcher = boost::make_shared<FeatureMatcher>(
+          training_corpus, index, processor, hasher);
+    } else {
+      populator = boost::make_shared<BloomFilterPopulator>(
+          training_corpus, index, hasher, config);
+    }
   }
   if (config.hash_space > 0 && config.count_collisions) {
-    CollisionCounter counter(training_corpus, index, hasher, matcher, config);
+    CollisionCounter counter(
+        training_corpus, index, hasher, matcher, populator, config);
     counter.count();
   }
 
   FeatureStoreInitializer initializer(
-      config, training_corpus, index, hasher, matcher);
+      config, training_corpus, index, hasher, matcher, populator);
 
   boost::shared_ptr<FactoredMaxentNLM> model;
   if (config.model_input_file.size()) {
