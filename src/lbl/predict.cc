@@ -39,6 +39,10 @@ int main(int argc, char** argv) {
       context.push_back(model->label_id(word));
     }
 
+    // Context need to be reversed.
+    // (i.e. in the ukrainian parliament => parliament ukrainian the in)
+    reverse(context.begin(), context.end());
+
     for (int word_id = 0; word_id < model->labels(); ++word_id) {
       cout << model->label_str(word_id) << " ";
       for (int context_word: context) {
