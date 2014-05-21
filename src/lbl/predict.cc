@@ -34,7 +34,6 @@ int main(int argc, char** argv) {
     istringstream sin(line);
     string word;
     vector<int> context;
-    double sum = 0;
     while (sin >> word) {
       context.push_back(model->label_id(word));
     }
@@ -43,16 +42,24 @@ int main(int argc, char** argv) {
     // (i.e. in the ukrainian parliament => parliament ukrainian the in)
     reverse(context.begin(), context.end());
 
+    vector<pair<double, int>> outcomes;
     for (int word_id = 0; word_id < model->labels(); ++word_id) {
-      cout << model->label_str(word_id) << " ";
-      for (int context_word: context) {
-        cout << model->label_str(context_word) << " ";
-      }
-      double prob = exp(model->log_prob(word_id, context, true, true));
-      cout << prob << endl;
-      sum += prob;
+      outcomes.push_back(make_pair(
+          exp(model->log_prob(word_id, context, true, true)), word_id));
     }
 
+    sort(outcomes.begin(), outcomes.end());
+
+    double sum = 0;
+    for (const auto& outcome: outcomes) {
+      for (int i = context.size() - 1; i >= 0; --i) {
+        cout << model->label_str(context[i]) << " ";
+      }
+      cout << model->label_str(outcome.second) << " " << outcome.first << endl;
+      sum += outcome.first;
+    }
+
+    cout << "sum: " << sum << endl;
     cout << "====================" << endl;
     assert(fabs(1 - sum) < 1e-5);
   }

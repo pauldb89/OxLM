@@ -21,7 +21,7 @@ Real FactoredMaxentNLM::log_prob(
   VectorReal prediction_vector = VectorReal::Zero(config.word_representation_size);
   int width = config.ngram_order-1;
   assert(static_cast<int>(context.size()) <= width);
-  for (int i = 0; i < width; i++) {
+  for (int i = 0; i < context.size(); i++) {
     if (m_diagonal) {
       prediction_vector += C.at(i).asDiagonal() * Q.row(context.at(i)).transpose();
     } else {
