@@ -26,7 +26,8 @@ void evaluateModel(
     int minibatch_counter, Real& pp, Real& best_pp);
 
 boost::shared_ptr<FactoredNLM> loadModel(
-    const string& input_file, const boost::shared_ptr<Corpus>& test_corpus);
+    const string& input_file,
+    const boost::shared_ptr<Corpus>& test_corpus = boost::shared_ptr<Corpus>());
 
 vector<int> scatterMinibatch(int start, int end, const vector<int>& indices);
 
@@ -38,8 +39,9 @@ void frequencyBinning(
     const string& training_file, int num_classes,
     vector<int>& classes, Dict& dict, VectorReal& class_bias);
 
-int convert(const string& file, Dict& dict);
+int convert(const string& file, Dict& dict, bool convert_unknowns);
 
-boost::shared_ptr<Corpus> readCorpus(const string& file, Dict& dict);
+boost::shared_ptr<Corpus> readCorpus(
+    const string& file, Dict& dict, bool convert_unknowns = false);
 
 } // namespace oxlm

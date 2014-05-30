@@ -244,18 +244,24 @@ void frequencyBinning(
   in.close();
 }
 
-int convert(const string& token, Dict& dict) {
+int convert(const string& token, Dict& dict, bool convert_unknowns) {
   int w = dict.Convert(token, true);
   if (w < 0) {
-    cerr << token << " " << w << endl;
-    assert(!"Unknown word found in test corpus.");
+    if (convert_unknowns) {
+      w = dict.Convert("<unk>", true);
+      assert(w >= 0);
+    } else {
+      cerr << token << " " << w << endl;
+      assert(!"Unknown word found in test corpus.");
+    }
   }
   return w;
 }
 
-boost::shared_ptr<Corpus> readCorpus(const string& filename, Dict& dict) {
+boost::shared_ptr<Corpus> readCorpus(
+    const string& filename, Dict& dict, bool convert_unknowns) {
   boost::shared_ptr<Corpus> corpus = boost::make_shared<Corpus>();
-  int end_id = convert("</s>", dict);
+  int end_id = convert("</s>", dict, convert_unknowns);
 
   ifstream in(filename);
   string line;
@@ -263,7 +269,7 @@ boost::shared_ptr<Corpus> readCorpus(const string& filename, Dict& dict) {
     stringstream line_stream(line);
     string token;
     while (line_stream >> token) {
-      corpus->push_back(convert(token, dict));
+      corpus->push_back(convert(token, dict, convert_unknowns));
     }
     corpus->push_back(end_id);
   }
