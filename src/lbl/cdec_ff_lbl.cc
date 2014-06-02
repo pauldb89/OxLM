@@ -212,10 +212,8 @@ class FF_LBLLM : public FeatureFunction {
 
   // first = prob, second = unk
   inline SimplePair LookupProbForBufferContents(int i) const {
-    if (buffer_[i] == kUNKNOWN)
-      return SimplePair(0.0, 1.0);
     double p = WordProb(buffer_[i], &buffer_[i+1]);
-    return SimplePair(p, 0.0);
+    return SimplePair(p, buffer_[i] == kUNKNOWN);
   }
 
   inline SimplePair ProbNoRemnant(int i, int len) const {
@@ -236,17 +234,6 @@ class FF_LBLLM : public FeatureFunction {
       --i;
     }
     return sum;
-  }
-
-  SimplePair EstimateProb(const vector<WordID>& phrase) const {
-    cerr << "EstimateProb(&phrase): ";
-    int len = phrase.size();
-    buffer_.resize(len + 1);
-    buffer_[len] = kNONE;
-    int i = len - 1;
-    for (int j = 0; j < len; ++j,--i)
-      buffer_[i] = phrase[j];
-    return ProbNoRemnant(len - 1, len);
   }
 
   //Vocab_None is (unsigned)-1 in srilm, same as kNONE. in srilm (-1), or that SRILM otherwise interprets -1 as a terminator and not a word

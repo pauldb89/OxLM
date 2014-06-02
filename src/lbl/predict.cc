@@ -28,6 +28,8 @@ int main(int argc, char** argv) {
   boost::shared_ptr<FactoredNLM> model = loadModel(
       vm["model"].as<string>(), boost::shared_ptr<Corpus>());
 
+  int kUNKNOWN = model->label_id("<unk>");
+
   string line;
   ifstream in(vm["contexts"].as<string>());
   while (getline(in, line)) {
@@ -41,6 +43,7 @@ int main(int argc, char** argv) {
     // Context need to be reversed.
     // (i.e. in the ukrainian parliament => parliament ukrainian the in)
     reverse(context.begin(), context.end());
+    context.resize(4, kUNKNOWN);
 
     vector<pair<double, int>> outcomes;
     for (int word_id = 0; word_id < model->labels(); ++word_id) {
