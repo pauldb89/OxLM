@@ -32,7 +32,18 @@ set(TESTS
     word_context_keyer_test
     word_to_class_index_test)
 
+set(LIBRARIES lbl)
+
+if(CDEC_FOUND AND CDEC_LIBRARIES_FOUND)
+  set(TESTS ${TESTS}
+      cdec_lbl_mapper_test
+      cdec_rule_converter_test
+      cdec_state_converter_test
+      lbl_features_test)
+  set(LIBRARIES ${LIBRARIES} cdec_ff_lbl ${CDEC_LIBRARIES})
+endif(CDEC_FOUND AND CDEC_LIBRARIES_FOUND)
+
 foreach(test ${TESTS})
     add_test(${test})
-    target_link_libraries(${test} lbl)
+    target_link_libraries(${test} ${LIBRARIES})
 endforeach(test)

@@ -49,7 +49,12 @@ target_link_libraries(lbl murmurhash)
 
 if(CDEC_FOUND)
   include_directories(cdec_ff_lbl PRIVATE ${CDEC_INCLUDE_DIRS})
-  add_library(cdec_ff_lbl SHARED cdec_ff_lbl.cc)
+  add_library(cdec_ff_lbl SHARED
+      cdec_ff_lbl.cc
+      cdec_lbl_mapper.cc
+      cdec_rule_converter.cc
+      cdec_state_converter.cc
+      lbl_features.cc)
   target_link_libraries(cdec_ff_lbl lbl)
 endif(CDEC_FOUND)
 

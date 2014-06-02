@@ -7,12 +7,15 @@
 #include <boost/filesystem.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/program_options.hpp>
-#include <boost/serialization/vector.hpp>
 #include <boost/shared_ptr.hpp>
 
 #include "corpus/corpus.h"
+#include "lbl/cdec_lbl_mapper.h"
+#include "lbl/cdec_rule_converter.h"
+#include "lbl/cdec_state_converter.h"
 #include "lbl/factored_nlm.h"
 #include "lbl/factored_maxent_nlm.h"
+#include "lbl/lbl_features.h"
 #include "lbl/process_identifier.h"
 #include "lbl/query_cache.h"
 
@@ -21,49 +24,19 @@
 #include "hg.h"
 #include "sentence_metadata.h"
 
-#define kORDER 5
-
 using namespace std;
 using namespace oxlm;
 namespace po = boost::program_options;
 
-void ParseOptions(
-    const string& input, string& filename, string& feature_name,
-    bool& cache_queries) {
-  po::options_description options("LBL language model options");
-  options.add_options()
-      ("file,f", po::value<string>()->required(),
-          "File containing serialized language model")
-      ("name,n", po::value<string>()->default_value("LBLLM"),
-          "Feature name")
-      ("cache-queries", "Whether should cache n-gram probabilities.");
-
-  po::variables_map vm;
-  vector<string> args;
-  boost::split(args, input, boost::is_any_of(" "));
-  po::store(po::command_line_parser(args).options(options).run(), vm);
-  po::notify(vm);
-
-  filename = vm["file"].as<string>();
-  feature_name = vm["name"].as<string>();
-  cache_queries = vm.count("cache-queries");
-}
-
-struct SimplePair {
-  SimplePair() : first(), second() {}
-  SimplePair(double x, double y) : first(x), second(y) {}
-  SimplePair& operator+=(const SimplePair& o) { first += o.first; second += o.second; return *this; }
-  double first;
-  double second;
-};
+namespace oxlm {
 
 class FF_LBLLM : public FeatureFunction {
  public:
   FF_LBLLM(
       const string& filename, const string& feature_name,
-      const bool& cache_queries)
+      bool cache_queries)
       : fid(FD::Convert(feature_name)),
-        fid_oov(FD::Convert(feature_name + "_OOV")),
+        fidOOV(FD::Convert(feature_name + "_OOV")),
         processIdentifier("FF_LBLLM"),
         cacheQueries(cache_queries), cacheHits(0), totalHits(0) {
     loadLanguageModel(filename);
@@ -91,58 +64,68 @@ class FF_LBLLM : public FeatureFunction {
       }
     }
 
-    cerr << "Initializing map contents (map size=" << dict.max() << ")\n";
-    for (int i = 1; i < dict.max(); ++i)
-      AddToWordMap(i);
-    cerr << "Done.\n";
-    ss_off = OrderToStateSize(kORDER)-1;  // offset of "state size" member
-    FeatureFunction::SetStateSize(OrderToStateSize(kORDER));
-    kSTART = dict.Convert("<s>");
-    kSTOP = dict.Convert("</s>");
-    kUNKNOWN = dict.Convert("<unk>");
-    kNONE = -1;
-    kSTAR = dict.Convert("<{STAR}>");
-    last_id = 0;
+    contextWidth = lm->config.ngram_order - 1;
+    // For each state, we store at most contextWidth word ids to the left and
+    // to the right and a kSTAR separator. The last bit represents the actual
+    // size of the state.
+    int max_state_size = (2 * contextWidth + 1) * sizeof(int) + 1;
+    FeatureFunction::SetStateSize(max_state_size);
+
+    mapper = boost::make_shared<CdecLBLMapper>(lm->label_set());
+    stateConverter = boost::make_shared<CdecStateConverter>(max_state_size - 1);
+    ruleConverter = boost::make_shared<CdecRuleConverter>(mapper, stateConverter);
+
+    kSTART = lm->label_id("<s>");
+    kSTOP = lm->label_id("</s>");
+    kUNKNOWN = lm->label_id("<unk>");
+    kSTAR = lm->label_id("<{STAR}>");
   }
 
   virtual void PrepareForInput(const SentenceMetadata& smeta) {
-    unsigned id = smeta.GetSentenceID();
-    if (last_id > id) {
-      cerr << "last_id = " << last_id << " but id = " << id << endl;
-      abort();
-    }
-    last_id = id;
     lm->clear_cache();
   }
 
-  inline void AddToWordMap(const WordID lbl_id) {
-    const unsigned cdec_id = TD::Convert(dict.Convert(lbl_id));
-    assert(cdec_id > 0);
-    if (cdec_id >= cdec2lbl.size())
-      cdec2lbl.resize(cdec_id + 1);
-    cdec2lbl[cdec_id] = lbl_id;
-  }
-
  protected:
-  void TraversalFeaturesImpl(const SentenceMetadata&,
-                             const HG::Edge& edge,
-                             const vector<const void*>& ant_states,
-                             SparseVector<double>* features,
-                             SparseVector<double>* estimated_features,
-                             void* state) const {
-    SimplePair ft = LookupWords(*edge.rule_, ant_states, state);
-    if (ft.first) features->set_value(fid, ft.first);
-    if (ft.second) features->set_value(fid_oov, ft.second);
-    ft = EstimateProb(state);
-    if (ft.first) estimated_features->set_value(fid, ft.first);
-    if (ft.second) estimated_features->set_value(fid_oov, ft.second);
+  virtual void TraversalFeaturesImpl(
+      const SentenceMetadata& smeta, const HG::Edge& edge,
+      const vector<const void*>& prev_states, SparseVector<double>* features,
+      SparseVector<double>* estimated_features, void* next_state) const {
+    vector<int> symbols = ruleConverter->convertTargetSide(
+        edge.rule_->e(), prev_states);
+
+    LBLFeatures exact_scores = scoreFullContexts(symbols);
+    if (exact_scores.LMScore) {
+      features->set_value(fid, exact_scores.LMScore);
+    }
+    if (exact_scores.OOVScore) {
+      features->set_value(fidOOV, exact_scores.OOVScore);
+    }
+
+    constructNextState(symbols, next_state);
+    symbols = stateConverter->convert(next_state);
+
+    LBLFeatures estimated_scores = estimateScore(symbols);
+    if (estimated_scores.LMScore) {
+      estimated_features->set_value(fid, estimated_scores.LMScore);
+    }
+    if (estimated_scores.OOVScore) {
+      estimated_features->set_value(fidOOV, estimated_scores.OOVScore);
+    }
   }
 
-  void FinalTraversalFeatures(const void* ant_state,
-                              SparseVector<double>* features) const {
-    const SimplePair ft = FinalTraversalCost(ant_state);
-    if (ft.first) features->set_value(fid, ft.first);
-    if (ft.second) features->set_value(fid_oov, ft.second);
+  virtual void FinalTraversalFeatures(
+      const void* prev_state, SparseVector<double>* features) const {
+    vector<int> symbols = stateConverter->convert(prev_state);
+    symbols.insert(symbols.begin(), kSTART);
+    symbols.push_back(kSTOP);
+
+    LBLFeatures final_scores = estimateScore(symbols);
+    if (final_scores.LMScore) {
+      features->set_value(fid, final_scores.LMScore);
+    }
+    if (final_scores.OOVScore) {
+      features->set_value(fidOOV, final_scores.OOVScore);
+    }
   }
 
  private:
@@ -156,42 +139,40 @@ class FF_LBLLM : public FeatureFunction {
     }
     boost::archive::binary_iarchive ia(ifile);
     ia >> lm;
-    dict = lm->label_set();
     Time stop_time = GetTime();
     cerr << "Reading language model took " << GetDuration(start_time, stop_time)
          << " seconds..." << endl;
   }
 
-  // returns the lbl equivalent of a cdec word or kUNKNOWN
-  inline unsigned ConvertCdec(unsigned w) const {
-    int res = 0;
-    if (w < cdec2lbl.size())
-      res = cdec2lbl[w];
-    if (res) return res; else return kUNKNOWN;
+  LBLFeatures scoreFullContexts(const vector<int>& symbols) const {
+    LBLFeatures ret;
+    int last_star = -1;
+    for (size_t i = 0; i < symbols.size(); ++i) {
+      if (symbols[i] == kSTAR) {
+        last_star = i;
+      } else if (i - last_star > contextWidth) {
+        ret += scoreContext(symbols, i);
+      }
+    }
+
+    return ret;
   }
 
-  inline int StateSize(const void* state) const {
-    return *(static_cast<const char*>(state) + ss_off);
-  }
-
-  inline void SetStateSize(int size, void* state) const {
-    *(static_cast<char*>(state) + ss_off) = size;
-  }
-
-  inline double WordProb(WordID word, const WordID* history) const {
-    vector<WordID> context;
-    for (int i = 0; i < kORDER - 1 && history && (*history != kNONE); ++i) {
-      context.push_back(*history++);
+  LBLFeatures scoreContext(const vector<int>& symbols, int position) const {
+    int word = symbols[position];
+    vector<int> context;
+    for (int i = 1; i <= contextWidth && position - i >= 0; ++i) {
+      assert(symbols[position - i] != kSTAR);
+      context.push_back(symbols[position - i]);
     }
 
     if (!context.empty() && context.back() == kSTART) {
-      context.resize(kORDER - 1, kSTART);
+      context.resize(contextWidth, kSTART);
     } else {
-      context.resize(kORDER - 1, kUNKNOWN);
+      context.resize(contextWidth, kUNKNOWN);
     }
 
     double score;
-
     if (!cacheQueries) {
       score = lm->log_prob(word, context, true, true);
     } else {
@@ -207,157 +188,66 @@ class FF_LBLLM : public FeatureFunction {
       }
     }
 
-    return score;
+    return LBLFeatures(score, word == kUNKNOWN);
   }
 
-  // first = prob, second = unk
-  inline SimplePair LookupProbForBufferContents(int i) const {
-    double p = WordProb(buffer_[i], &buffer_[i+1]);
-    return SimplePair(p, buffer_[i] == kUNKNOWN);
-  }
-
-  inline SimplePair ProbNoRemnant(int i, int len) const {
-    int edge = len;
-    bool flag = true;
-    SimplePair sum;
-    while (i >= 0) {
-      if (buffer_[i] == kSTAR) {
-        edge = i;
-        flag = false;
-      } else if (buffer_[i] <= 0) {
-        edge = i;
-        flag = true;
-      } else {
-        if ((edge-i >= kORDER) || (flag && !(i == (len-1) && buffer_[i] == kSTART)))
-          sum += LookupProbForBufferContents(i);
+  void constructNextState(const vector<int>& symbols, void* state) const {
+    vector<int> next_state;
+    for (size_t i = 0; i < symbols.size() && i < contextWidth; ++i) {
+      if (symbols[i] == kSTAR) {
+        break;
       }
-      --i;
+      next_state.push_back(symbols[i]);
     }
-    return sum;
-  }
 
-  //Vocab_None is (unsigned)-1 in srilm, same as kNONE. in srilm (-1), or that SRILM otherwise interprets -1 as a terminator and not a word
-  SimplePair EstimateProb(const void* state) const {
-    //cerr << "EstimateProb(*state): ";
-    int len = StateSize(state);
-    //  << "residual len: " << len << endl;
-    buffer_.resize(len + 1);
-    buffer_[len] = kNONE;
-    const int* astate = reinterpret_cast<const WordID*>(state);
-    int i = len - 1;
-    for (int j = 0; j < len; ++j,--i) {
-      buffer_[i] = astate[j];
-    }
-    return ProbNoRemnant(len - 1, len);
-  }
+    if (next_state.size() < symbols.size()) {
+      next_state.push_back(kSTAR);
 
-  // for <s> (n-1 left words) and (n-1 right words) </s>
-  SimplePair FinalTraversalCost(const void* state) const {
-    //cerr << "FinalTraversalCost(*state): ";
-    int slen = StateSize(state);
-    int len = slen + 2;
-    // cerr << "residual len: " << len << endl;
-    buffer_.resize(len + 1);
-    buffer_[len] = kNONE;
-    buffer_[len-1] = kSTART;
-    const int* astate = reinterpret_cast<const WordID*>(state);
-    int i = len - 2;
-    for (int j = 0; j < slen; ++j,--i)
-      buffer_[i] = astate[j];
-    buffer_[i] = kSTOP;
-    assert(i == 0);
-    //cerr << "FINAL: ";
-    return ProbNoRemnant(len - 1, len);
-  }
+      int last_star = -1;
+      for (size_t i = 0; i < symbols.size(); ++i) {
+        if (symbols[i] == kSTAR) {
+          last_star = i;
+        }
+      }
 
-  //NOTE: this is where the scoring of words happens (heuristic happens in EstimateProb)
-  SimplePair LookupWords(const TRule& rule, const vector<const void*>& ant_states, void* vstate) const {
-    //cerr << "LookupWords(*vstate=" << vstate << ")";
-    int len = rule.ELength() - rule.Arity();
-    for (unsigned i = 0; i < ant_states.size(); ++i)
-      len += StateSize(ant_states[i]);
-    buffer_.resize(len + 1);
-    buffer_[len] = kNONE;
-    int i = len - 1;
-    const vector<WordID>& e = rule.e();
-    for (unsigned j = 0; j < e.size(); ++j) {
-      if (e[j] < 1) {
-        const int* astate = reinterpret_cast<const int*>(ant_states[-e[j]]);
-        int slen = StateSize(astate);
-        for (int k = 0; k < slen; ++k)
-          buffer_[i--] = astate[k];
-      } else {
-        buffer_[i--] = ConvertCdec(e[j]);
+      size_t i = max(last_star + 1, static_cast<int>(symbols.size() - contextWidth));
+      while (i < symbols.size()) {
+        next_state.push_back(symbols[i]);
+        ++i;
       }
     }
 
-    SimplePair sum;
-    int* remnant = reinterpret_cast<int*>(vstate);
-    int j = 0;
-    i = len - 1;
-    int edge = len;
+    stateConverter->convert(next_state, state);
+  }
 
-    while (i >= 0) {
-      if (buffer_[i] == kSTAR) {
-        edge = i;
-      } else if (edge-i >= kORDER) {
-        //cerr << "X: ";
-        sum += LookupProbForBufferContents(i);
-      } else if (edge == len && remnant) {
-        remnant[j++] = buffer_[i];
+  LBLFeatures estimateScore(const vector<int>& symbols) const {
+    LBLFeatures ret = scoreFullContexts(symbols);
+
+    for (size_t i = 0; i < symbols.size() && i < contextWidth; ++i) {
+      if (symbols[i] == kSTAR) {
+        break;
       }
-      --i;
-    }
-    if (!remnant) return sum;
 
-    if (edge != len || len >= kORDER) {
-      remnant[j++] = kSTAR;
-      if (kORDER-1 < edge) edge = kORDER-1;
-      for (int i = edge-1; i >= 0; --i)
-        remnant[j++] = buffer_[i];
+      if (symbols[i] != kSTART) {
+        ret += scoreContext(symbols, i);
+      }
     }
 
-    SetStateSize(j, vstate);
-    return sum;
+    return ret;
   }
 
-  static int OrderToStateSize(int order) {
-    return order>1 ?
-      ((order-1) * 2 + 1) * sizeof(WordID) + 1
-      : 0;
-  }
-
-  virtual ~FF_LBLLM() {
-    if (cacheQueries) {
-      cerr << "Cache hit ratio: " << Real(cacheHits) / totalHits << endl;
-
-      ofstream f(cacheFile);
-      boost::archive::binary_oarchive ia(f);
-      cerr << "Saving n-gram probability cache to " << cacheFile << endl;
-      ia << cache;
-      cerr << "Finished saving " << cache.size()
-           << " n-gram probabilities..." << endl;
-
-      processIdentifier.freeId(processId);
-      cerr << "Freed id " << processId
-           << " at time " << Clock::to_time_t(GetTime()) << endl;
-    }
-  }
-
-  oxlm::Dict dict;
-  mutable vector<WordID> buffer_;
-  int ss_off;
-  WordID kSTART;
-  WordID kSTOP;
-  WordID kUNKNOWN;
-  WordID kNONE;
-  WordID kSTAR;
-  const int fid;
-  const int fid_oov;
-  vector<int> cdec2lbl;
-  unsigned last_id;
-
+  int fid;
+  int fidOOV;
+  int contextWidth;
   boost::shared_ptr<FactoredNLM> lm;
+  boost::shared_ptr<CdecLBLMapper> mapper;
+  boost::shared_ptr<CdecRuleConverter> ruleConverter;
+  boost::shared_ptr<CdecStateConverter> stateConverter;
+
+  int kSTART;
+  int kSTOP;
+  int kUNKNOWN;
+  int kSTAR;
 
   ProcessIdentifier processIdentifier;
   int processId;
@@ -367,6 +257,30 @@ class FF_LBLLM : public FeatureFunction {
   mutable QueryCache cache;
   mutable int cacheHits, totalHits;
 };
+
+} // namespace oxlm
+
+void ParseOptions(
+    const string& input, string& filename, string& feature_name,
+    bool& cache_queries) {
+  po::options_description options("LBL language model options");
+  options.add_options()
+      ("file,f", po::value<string>()->required(),
+          "File containing serialized language model")
+      ("name,n", po::value<string>()->default_value("LBLLM"),
+          "Feature name")
+      ("cache-queries", "Whether should cache n-gram probabilities.");
+
+  po::variables_map vm;
+  vector<string> args;
+  boost::split(args, input, boost::is_any_of(" "));
+  po::store(po::command_line_parser(args).options(options).run(), vm);
+  po::notify(vm);
+
+  filename = vm["file"].as<string>();
+  feature_name = vm["name"].as<string>();
+  cache_queries = vm.count("cache-queries");
+}
 
 extern "C" FeatureFunction* create_ff(const string& str) {
   string filename, feature_name;
