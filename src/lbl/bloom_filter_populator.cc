@@ -14,6 +14,9 @@ BloomFilterPopulator::BloomFilterPopulator(
     const boost::shared_ptr<WordToClassIndex>& index,
     const boost::shared_ptr<FeatureContextHasher>& hasher,
     const ModelData& config) {
+  // This is only an underestimate of the number of distinct n-grams in the
+  // training data (feature contexts do not include the predict word) =>
+  // #(feature_contexts) < #(ngrams).
   bloomFilter = boost::make_shared<BloomFilter<NGramQuery>>(
       hasher->getNumContexts(), 1, config.filter_error_rate);
 

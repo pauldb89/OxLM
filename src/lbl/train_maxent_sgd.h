@@ -100,12 +100,15 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
         training_corpus, context_width);
     hasher = boost::make_shared<FeatureContextHasher>(
         training_corpus, index, processor, config.feature_context_size);
+    cerr << "Done constructing the feature context hasher..." << endl;
     if (!config.filter_contexts || config.filter_error_rate == 0) {
       matcher = boost::make_shared<FeatureMatcher>(
           training_corpus, index, processor, hasher);
+      cerr << "Done constructing the feature context matcher..." << endl;
     } else {
       populator = boost::make_shared<BloomFilterPopulator>(
           training_corpus, index, hasher, config);
+      cerr << "Done constructing the Bloom filter..." << endl;
     }
   }
   if (config.hash_space > 0 && config.count_collisions) {
@@ -128,6 +131,7 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
     model = boost::make_shared<FactoredMaxentNLM>(
         config, dict, index, initializer);
     model->FB = class_bias;
+    cerr << "Done constructing the model..." << endl;
   }
 
   vector<int> training_indices(training_corpus->size());
