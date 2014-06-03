@@ -71,9 +71,9 @@ int main(int argc, char **argv) {
     ("hash-space", value<Real>()->default_value(0),
         "The size of the space in which the maxent features are mapped to "
         "(in millions).")
-    ("filter-contexts", value<bool>()->default_value(false),
+    ("filter-contexts", value<bool>()->default_value(true),
         "Prevent false contexts from being hashed.")
-    ("filter-error-rate", value<Real>()->default_value(0),
+    ("filter-error-rate", value<Real>()->default_value(0.01),
         "Error rate for filtering false contexts (in bloom filter)")
     ("count-collisions", value<bool>()->default_value(true),
         "Print collision statistics (leads to a memory usage spike)")
