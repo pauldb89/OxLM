@@ -15,10 +15,7 @@ int WordContextKeyer::getKey(const FeatureContext& feature_context) const {
 
 NGramQuery WordContextKeyer::getPrediction(
     int candidate, const FeatureContext& feature_context) const {
-  vector<int> context(1, numWords + classId);
-  context.insert(
-      context.end(), feature_context.data.begin(), feature_context.data.end());
-  return NGramQuery(candidate, context);
+  return NGramQuery(candidate, classId, feature_context.data);
 }
 
 bool WordContextKeyer::operator==(const WordContextKeyer& other) const {

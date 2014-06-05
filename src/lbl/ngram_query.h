@@ -16,9 +16,12 @@ struct NGramQuery {
 
   NGramQuery(int word, const vector<int>& context);
 
+  NGramQuery(int word, int class_id, const vector<int>& context);
+
   bool operator==(const NGramQuery& other) const;
 
   int word;
+  int classId;
   vector<int> context;
 
  private:
@@ -26,7 +29,9 @@ struct NGramQuery {
 
   template<class Archive>
   void serialize(Archive& ar, const unsigned int version) {
-    ar & word & context;
+    ar & word;
+    ar & classId;
+    ar & context;
   }
 };
 
@@ -40,7 +45,9 @@ template<> class hash<oxlm::NGramQuery> {
   hash<oxlm::NGramQuery>(int seed = 0) : seed(seed) {}
 
   inline size_t operator()(const oxlm::NGramQuery query) const {
-    vector<int> data(1, query.word);
+    vector<int> data;
+    data.push_back(query.word);
+    data.push_back(query.classId);
     data.insert(data.end(), query.context.begin(), query.context.end());
     return oxlm::MurmurHash(data, seed);
   }

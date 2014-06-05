@@ -70,6 +70,7 @@ CollisionCounter::CollisionCounter(
     }
   }
 
+  auto start_time = GetTime();
   for (size_t i = 0; i < corpus->size(); ++i) {
     int class_id = index->getClass(corpus->at(i));
     vector<int> context = processor->extract(i);
@@ -79,20 +80,20 @@ CollisionCounter::CollisionCounter(
     for (const FeatureContext& feature_context: feature_contexts) {
       int key = class_keyer->getKey(feature_context);
       for (int index: class_filter->getIndexes(feature_context)) {
-        // NGramQuery abuse: [c_n, w_{n-1}, ...]
         observedClassQueries.insert(NGramQuery(index, feature_context.data));
         observedKeys.insert((key + index) % config.hash_space);
       }
 
       key = word_keyers[class_id]->getKey(feature_context);
       for (int index: word_filters[class_id]->getIndexes(feature_context)) {
-        // NGramQuery abuse: [w_{n}, c_n, w_{n-1}, ...]; c_n is not explicit.
         observedWordQueries[class_id]
-            .insert(NGramQuery(index, feature_context.data));
+            .insert(NGramQuery(index, class_id, feature_context.data));
         observedKeys.insert((key + index) % config.hash_space);
       }
     }
   }
+  cout << "Counting collisions took " << GetDuration(start_time, GetTime())
+       << " seconds..." << endl;
 }
 
 int CollisionCounter::count() const {

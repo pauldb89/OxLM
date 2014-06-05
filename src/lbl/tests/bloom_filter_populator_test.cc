@@ -53,31 +53,31 @@ TEST(BloomFilterPopulatorTest, TestBasic) {
   EXPECT_FALSE(bloom_filter->contains(NGramQuery(1, context)));
 
   // Word checks.
-  context = {5, 0};
-  EXPECT_TRUE(bloom_filter->contains(NGramQuery(0, context)));
-  context = {5, 0, 0};
-  EXPECT_TRUE(bloom_filter->contains(NGramQuery(0, context)));
-  context = {6, 2};
-  EXPECT_TRUE(bloom_filter->contains(NGramQuery(0, context)));
-  context = {6, 2, 0};
-  EXPECT_TRUE(bloom_filter->contains(NGramQuery(0, context)));
-  context = {6, 2};
-  EXPECT_TRUE(bloom_filter->contains(NGramQuery(0, context)));
-  context = {6, 3, 2};
-  EXPECT_TRUE(bloom_filter->contains(NGramQuery(0, context)));
-  context = {4, 3};
-  EXPECT_TRUE(bloom_filter->contains(NGramQuery(1, context)));
-  context = {4, 3, 3};
-  EXPECT_TRUE(bloom_filter->contains(NGramQuery(1, context)));
-  context = {5, 2};
-  EXPECT_TRUE(bloom_filter->contains(NGramQuery(0, context)));
-  context = {5, 2, 0};
-  EXPECT_TRUE(bloom_filter->contains(NGramQuery(0, context)));
+  context = {0};
+  EXPECT_TRUE(bloom_filter->contains(NGramQuery(0, 1, context)));
+  context = {0, 0};
+  EXPECT_TRUE(bloom_filter->contains(NGramQuery(0, 1, context)));
+  context = {2};
+  EXPECT_TRUE(bloom_filter->contains(NGramQuery(0, 2, context)));
+  context = {2, 0};
+  EXPECT_TRUE(bloom_filter->contains(NGramQuery(0, 2, context)));
+  context = {2};
+  EXPECT_TRUE(bloom_filter->contains(NGramQuery(0, 2, context)));
+  context = {3, 2};
+  EXPECT_TRUE(bloom_filter->contains(NGramQuery(0, 2, context)));
+  context = {3};
+  EXPECT_TRUE(bloom_filter->contains(NGramQuery(1, 0, context)));
+  context = {3, 3};
+  EXPECT_TRUE(bloom_filter->contains(NGramQuery(1, 0, context)));
+  context = {2};
+  EXPECT_TRUE(bloom_filter->contains(NGramQuery(0, 1, context)));
+  context = {2, 0};
+  EXPECT_TRUE(bloom_filter->contains(NGramQuery(0, 1, context)));
 
-  context = {5, 1};
-  EXPECT_FALSE(bloom_filter->contains(NGramQuery(0, context)));
-  context = {5, 1, 3};
-  EXPECT_FALSE(bloom_filter->contains(NGramQuery(0, context)));
+  context = {1};
+  EXPECT_FALSE(bloom_filter->contains(NGramQuery(0, 1, context)));
+  context = {1, 3};
+  EXPECT_FALSE(bloom_filter->contains(NGramQuery(0, 1, context)));
 }
 
 } // namespace oxlm

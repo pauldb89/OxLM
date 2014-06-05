@@ -41,7 +41,7 @@ TEST_F(TestSGD, TestTrainMaxentSGDCollisions) {
   boost::shared_ptr<Corpus> test_corpus =
       readCorpus(config.test_file, model->label_set());
   double log_pp = perplexity(model, test_corpus);
-  EXPECT_NEAR(81.8520376, exp(-log_pp / test_corpus->size()), EPS);
+  EXPECT_NEAR(81.7574124603, exp(-log_pp / test_corpus->size()), EPS);
 }
 
 TEST_F(TestSGD, TestTrainMaxentSGDExactFiltering) {
@@ -55,7 +55,7 @@ TEST_F(TestSGD, TestTrainMaxentSGDExactFiltering) {
   boost::shared_ptr<Corpus> test_corpus =
       readCorpus(config.test_file, model->label_set());
   double log_pp = perplexity(model, test_corpus);
-  EXPECT_NEAR(102.4481653, exp(-log_pp / test_corpus->size()), EPS);
+  EXPECT_NEAR(102.12200837, exp(-log_pp / test_corpus->size()), EPS);
 }
 
 TEST_F(TestSGD, TestTrainMaxentSGDApproximateFiltering) {
@@ -70,7 +70,7 @@ TEST_F(TestSGD, TestTrainMaxentSGDApproximateFiltering) {
   boost::shared_ptr<Corpus> test_corpus =
       readCorpus(config.test_file, model->label_set());
   double log_pp = perplexity(model, test_corpus);
-  EXPECT_NEAR(101.818369814, exp(-log_pp / test_corpus->size()), EPS);
+  EXPECT_NEAR(101.481420438, exp(-log_pp / test_corpus->size()), EPS);
 }
 
 } // namespace oxlm
