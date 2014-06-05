@@ -22,10 +22,14 @@ class FeatureStoreInitializerTest : public testing::Test {
     index = boost::make_shared<WordToClassIndex>(classes);
     boost::shared_ptr<ContextProcessor> processor =
         boost::make_shared<ContextProcessor>(corpus, 2);
+    boost::shared_ptr<FeatureContextGenerator> generator =
+        boost::make_shared<FeatureContextGenerator>(2);
+    boost::shared_ptr<NGramFilter> filter =
+        boost::make_shared<NGramFilter>(corpus, index, processor, generator);
     hasher = boost::make_shared<FeatureContextHasher>(
-        corpus, index, processor, 2);
+        corpus, index, processor, generator, filter);
     matcher = boost::make_shared<FeatureMatcher>(
-        corpus, index, processor, hasher);
+        corpus, index, processor, generator, filter, hasher);
   }
 
   ModelData config;

@@ -6,15 +6,28 @@
 
 namespace oxlm {
 
-TEST(FeatureContextHasherTest, TestLongerHistory) {
-  vector<int> data = {2, 3, 4, 5, 6, 1};
-  vector<int> classes = {0, 2, 4, 7};
-  boost::shared_ptr<Corpus> corpus = boost::make_shared<Corpus>(data);
-  boost::shared_ptr<WordToClassIndex> index =
-      boost::make_shared<WordToClassIndex>(classes);
-  boost::shared_ptr<ContextProcessor> processor =
-      boost::make_shared<ContextProcessor>(corpus, 5, 0, 1);
-  FeatureContextHasher hasher(corpus, index, processor, 3);
+class FeatureContextHasherTest : public testing::Test {
+ protected:
+  void SetUp() {
+    vector<int> data = {2, 3, 4, 5, 6, 1};
+    vector<int> classes = {0, 2, 4, 7};
+    corpus = boost::make_shared<Corpus>(data);
+    index = boost::make_shared<WordToClassIndex>(classes);
+    processor = boost::make_shared<ContextProcessor>(corpus, 5, 0, 1);
+    generator = boost::make_shared<FeatureContextGenerator>(3);
+    filter = boost::make_shared<NGramFilter>(
+        corpus, index, processor, generator);
+  }
+
+  boost::shared_ptr<Corpus> corpus;
+  boost::shared_ptr<WordToClassIndex> index;
+  boost::shared_ptr<ContextProcessor> processor;
+  boost::shared_ptr<FeatureContextGenerator> generator;
+  boost::shared_ptr<NGramFilter> filter;
+};
+
+TEST_F(FeatureContextHasherTest, TestLongerHistory) {
+  FeatureContextHasher hasher(corpus, index, processor, generator, filter);
 
   vector<int> history = {6, 5, 4, 3, 2};
   vector<int> class_context_ids = hasher.getClassContextIds(history);
@@ -36,15 +49,8 @@ TEST(FeatureContextHasherTest, TestLongerHistory) {
   EXPECT_EQ(9, hasher.getNumWordContexts(2));
 }
 
-TEST(FeatureContextHasherTest, TestShorterHistory) {
-  vector<int> classes = {0, 2, 4, 7};
-  vector<int> data = {2, 3, 4, 5, 6, 1};
-  boost::shared_ptr<Corpus> corpus = boost::make_shared<Corpus>(data);
-  boost::shared_ptr<WordToClassIndex> index =
-      boost::make_shared<WordToClassIndex>(classes);
-  boost::shared_ptr<ContextProcessor> processor =
-      boost::make_shared<ContextProcessor>(corpus, 3, 0, 1);
-  FeatureContextHasher hasher(corpus, index, processor, 5);
+TEST_F(FeatureContextHasherTest, TestShorterHistory) {
+  FeatureContextHasher hasher(corpus, index, processor, generator, filter);
 
   vector<int> history = {6, 5, 4};
   vector<int> class_context_ids = hasher.getClassContextIds(history);

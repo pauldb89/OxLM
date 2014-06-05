@@ -78,6 +78,7 @@ struct ModelData {
   bool        count_collisions;
   bool        filter_contexts;
   float       filter_error_rate;
+  int         max_ngrams;
 
   friend class boost::serialization::access;
   template<class Archive>
@@ -117,6 +118,7 @@ struct ModelData {
     ar & count_collisions;
     ar & filter_contexts;
     ar & filter_error_rate;
+    ar & max_ngrams;
   }
 };
 

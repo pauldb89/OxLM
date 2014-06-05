@@ -10,25 +10,40 @@ FeatureContextHasher::FeatureContextHasher(
     const boost::shared_ptr<Corpus>& corpus,
     const boost::shared_ptr<WordToClassIndex>& index,
     const boost::shared_ptr<ContextProcessor>& processor,
-    size_t feature_context_size)
-    : index(index), wordContextIdsMap(index->getNumClasses()) {
-  generator = boost::make_shared<FeatureContextGenerator>(feature_context_size);
+    const boost::shared_ptr<FeatureContextGenerator>& generator,
+    const boost::shared_ptr<NGramFilter>& filter)
+    : index(index), generator(generator),
+      wordContextIdsMap(index->getNumClasses()) {
   for (size_t i = 0; i < corpus->size(); ++i) {
-    int class_id = index->getClass(corpus->at(i));
+    int word_id = corpus->at(i);
+    int class_id = index->getClass(word_id);
     vector<int> context = processor->extract(i);
-    for (const auto& feature_context: generator->getFeatureContexts(context)) {
+
+    vector<FeatureContext> feature_contexts =
+        generator->getFeatureContexts(context);
+
+    // Map feature context to id if at least one n-gram having that context is
+    // within the topmost max_ngrams ngrams.
+    feature_contexts = filter->filter(word_id, class_id, feature_contexts);
+    for (const FeatureContext& feature_context: feature_contexts) {
+      size_t context_hash = hashFunction(feature_context);
       classContextIdsMap.insert(make_pair(
-          feature_context, classContextIdsMap.size()));
+          context_hash, classContextIdsMap.size()));
       wordContextIdsMap[class_id].insert(make_pair(
-          feature_context, wordContextIdsMap[class_id].size()));
+          context_hash, wordContextIdsMap[class_id].size()));
     }
   }
 }
 
 vector<int> FeatureContextHasher::getClassContextIds(
     const vector<int>& context) const {
+  return getClassContextIds(generator->getFeatureContexts(context));
+}
+
+vector<int> FeatureContextHasher::getClassContextIds(
+    const vector<FeatureContext>& feature_contexts) const {
   vector<int> class_context_ids;
-  for (const auto& feature_context: generator->getFeatureContexts(context)) {
+  for (const auto& feature_context: feature_contexts) {
     // Feature contexts for the test set are not guaranteed to exist in the
     // hash. Unobserved contexts are skipped.
     int class_context_id = getClassContextId(feature_context);
@@ -42,8 +57,13 @@ vector<int> FeatureContextHasher::getClassContextIds(
 
 vector<int> FeatureContextHasher::getWordContextIds(
     int class_id, const vector<WordId>& context) const {
+  return getWordContextIds(class_id, generator->getFeatureContexts(context));
+}
+
+vector<int> FeatureContextHasher::getWordContextIds(
+    int class_id, const vector<FeatureContext>& feature_contexts) const {
   vector<int> word_context_ids;
-  for (const auto& feature_context: generator->getFeatureContexts(context)) {
+  for (const auto& feature_context: feature_contexts) {
     // Feature contexts for the test set are not guaranteed to exist in the
     // hash. Unobserved contexts are skipped.
     int word_context_id = getWordContextId(class_id, feature_context);
@@ -57,13 +77,15 @@ vector<int> FeatureContextHasher::getWordContextIds(
 
 int FeatureContextHasher::getClassContextId(
     const FeatureContext& feature_context) const {
-  auto it = classContextIdsMap.find(feature_context);
+  size_t context_hash = hashFunction(feature_context);
+  auto it = classContextIdsMap.find(context_hash);
   return it == classContextIdsMap.end() ? -1 : it->second;
 }
 
 int FeatureContextHasher::getWordContextId(
     int class_id, const FeatureContext& feature_context) const {
-  auto it = wordContextIdsMap[class_id].find(feature_context);
+  size_t context_hash = hashFunction(feature_context);
+  auto it = wordContextIdsMap[class_id].find(context_hash);
   return it == wordContextIdsMap[class_id].end() ? -1 : it->second;
 }
 

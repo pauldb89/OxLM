@@ -11,6 +11,7 @@
 #include "lbl/feature_context_hasher.h"
 #include "lbl/global_feature_indexes_pair.h"
 #include "lbl/minibatch_feature_indexes_pair.h"
+#include "lbl/ngram_filter.h"
 #include "lbl/word_to_class_index.h"
 
 using namespace std;
@@ -23,6 +24,8 @@ class FeatureMatcher {
       const boost::shared_ptr<Corpus>& corpus,
       const boost::shared_ptr<WordToClassIndex>& index,
       const boost::shared_ptr<ContextProcessor>& processor,
+      const boost::shared_ptr<FeatureContextGenerator>& generator,
+      const boost::shared_ptr<NGramFilter>& filter,
       const boost::shared_ptr<FeatureContextHasher>& hasher);
 
   GlobalFeatureIndexesPairPtr getGlobalFeatures() const;
@@ -34,6 +37,8 @@ class FeatureMatcher {
   boost::shared_ptr<Corpus> corpus;
   boost::shared_ptr<WordToClassIndex> index;
   boost::shared_ptr<ContextProcessor> processor;
+  boost::shared_ptr<NGramFilter> filter;
+  boost::shared_ptr<FeatureContextGenerator> generator;
   boost::shared_ptr<FeatureContextHasher> hasher;
   GlobalFeatureIndexesPairPtr feature_indexes;
 };

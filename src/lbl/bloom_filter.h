@@ -17,9 +17,11 @@ class BloomFilter {
 
   BloomFilter(int num_items, int min_frequency, Real error_rate) :
       minFrequency(min_frequency), errorRate(error_rate) {
+    cout << "Creating Bloom Filter for " << num_items << " contexts..." << endl;
     bucketSize = ceil(log2(minFrequency + 1));
 
     numBuckets = -num_items * log(errorRate) / (log(2) * log(2));
+    cout << "Bloom Filter size: " << numBuckets << " buckets..." << endl;
     int num_hashes = round(numBuckets * log(2) / num_items);
     for (int i = 0; i < num_hashes; ++i) {
       hashes.push_back(hash<T>(i));

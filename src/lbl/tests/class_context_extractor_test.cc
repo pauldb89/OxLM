@@ -18,8 +18,13 @@ class ClassContextExtractorTest : public testing::Test {
         boost::make_shared<WordToClassIndex>(classes);
     boost::shared_ptr<ContextProcessor> processor =
         boost::make_shared<ContextProcessor>(corpus, 2);
+    boost::shared_ptr<FeatureContextGenerator> generator =
+        boost::make_shared<FeatureContextGenerator>(2);
+    boost::shared_ptr<NGramFilter> filter =
+        boost::make_shared<NGramFilter>(corpus, index, processor, generator);
     boost::shared_ptr<FeatureContextHasher> hasher =
-        boost::make_shared<FeatureContextHasher>(corpus, index, processor, 2);
+        boost::make_shared<FeatureContextHasher>(
+            corpus, index, processor, generator, filter);
     extractor = ClassContextExtractor(hasher);
   }
 

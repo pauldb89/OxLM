@@ -31,6 +31,7 @@
 #include "lbl/factored_maxent_nlm.h"
 #include "lbl/log_add.h"
 #include "lbl/model_utils.h"
+#include "lbl/ngram_filter.h"
 #include "lbl/operators.h"
 #include "lbl/unconstrained_feature_store.h"
 #include "lbl/utils.h"
@@ -91,19 +92,25 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
   boost::shared_ptr<WordToClassIndex> index =
       boost::make_shared<WordToClassIndex>(classes);
 
-  boost::shared_ptr<ContextProcessor> processor;
   boost::shared_ptr<FeatureContextHasher> hasher;
   boost::shared_ptr<FeatureMatcher> matcher;
   boost::shared_ptr<BloomFilterPopulator> populator;
   if (!config.hash_space || config.filter_contexts) {
-    processor = boost::make_shared<ContextProcessor>(
-        training_corpus, context_width);
+    boost::shared_ptr<ContextProcessor> processor =
+        boost::make_shared<ContextProcessor>(training_corpus, context_width);
+    boost::shared_ptr<FeatureContextGenerator> generator =
+        boost::make_shared<FeatureContextGenerator>(
+            config.feature_context_size);
+    boost::shared_ptr<NGramFilter> ngram_filter =
+        boost::make_shared<NGramFilter>(
+            training_corpus, index, processor, generator, config.max_ngrams);
+
     hasher = boost::make_shared<FeatureContextHasher>(
-        training_corpus, index, processor, config.feature_context_size);
+        training_corpus, index, processor, generator, ngram_filter);
     cerr << "Done constructing the feature context hasher..." << endl;
     if (!config.filter_contexts || config.filter_error_rate == 0) {
       matcher = boost::make_shared<FeatureMatcher>(
-          training_corpus, index, processor, hasher);
+          training_corpus, index, processor, generator, ngram_filter, hasher);
       cerr << "Done constructing the feature context matcher..." << endl;
     } else {
       populator = boost::make_shared<BloomFilterPopulator>(

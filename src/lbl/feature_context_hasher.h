@@ -7,6 +7,7 @@
 #include "lbl/context_processor.h"
 #include "lbl/feature_context.h"
 #include "lbl/feature_context_generator.h"
+#include "lbl/ngram_filter.h"
 #include "lbl/utils.h"
 #include "lbl/word_to_class_index.h"
 #include "utils/serialization_helpers.h"
@@ -14,9 +15,6 @@
 using namespace std;
 
 namespace oxlm {
-
-typedef unordered_map<FeatureContext, int, hash<FeatureContext>>
-    FeatureContextHash;
 
 /**
  * Given a context of words [w_{n-1}, w_{n-2}, ...] generates all the feature
@@ -33,12 +31,19 @@ class FeatureContextHasher {
       const boost::shared_ptr<Corpus>& corpus,
       const boost::shared_ptr<WordToClassIndex>& index,
       const boost::shared_ptr<ContextProcessor>& processor,
-      size_t feature_context_size);
+      const boost::shared_ptr<FeatureContextGenerator>& generator,
+      const boost::shared_ptr<NGramFilter>& filter);
 
   // Unobserved contexts are skipped.
   vector<int> getClassContextIds(const vector<int>& context) const;
 
+  vector<int> getClassContextIds(
+      const vector<FeatureContext>& feature_contexts) const;
+
   vector<int> getWordContextIds(int class_id, const vector<int>& context) const;
+
+  vector<int> getWordContextIds(
+      int class_id, const vector<FeatureContext>& feature_contexts) const;
 
   int getClassContextId(const FeatureContext& feature_context) const;
 
@@ -65,9 +70,9 @@ private:
 
   boost::shared_ptr<WordToClassIndex> index;
   boost::shared_ptr<FeatureContextGenerator> generator;
-
-  FeatureContextHash classContextIdsMap;
-  vector<FeatureContextHash> wordContextIdsMap;
+  hash<FeatureContext> hashFunction;
+  unordered_map<size_t, int> classContextIdsMap;
+  vector<unordered_map<size_t, int>> wordContextIdsMap;
 };
 
 } // namespace oxlm

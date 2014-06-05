@@ -18,6 +18,7 @@ set(TESTS
     global_feature_indexes_pair_test
     minibatch_feature_indexes_pair_test
     model_utils_test
+    ngram_filter_test
     ngram_query_test
     operators_test
     process_identifier_test

@@ -30,8 +30,13 @@ class FeatureExactFilterTest : public testing::Test {
         boost::make_shared<WordToClassIndex>(classes);
     boost::shared_ptr<ContextProcessor> processor =
         boost::make_shared<ContextProcessor>(corpus, 1);
+    boost::shared_ptr<FeatureContextGenerator> generator =
+        boost::make_shared<FeatureContextGenerator>(1);
+    boost::shared_ptr<NGramFilter> ngram_filter =
+        boost::make_shared<NGramFilter>(corpus, index, processor, generator);
     boost::shared_ptr<FeatureContextHasher> hasher =
-        boost::make_shared<FeatureContextHasher>(corpus, index, processor, 1);
+        boost::make_shared<FeatureContextHasher>(
+            corpus, index, processor, generator, ngram_filter);
     boost::shared_ptr<ClassContextExtractor> extractor =
         boost::make_shared<ClassContextExtractor>(hasher);
     filter = boost::make_shared<FeatureExactFilter>(feature_indexes, extractor);

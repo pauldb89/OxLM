@@ -18,11 +18,16 @@ TEST(CollisionCounterTest, TestBasic) {
   config.hash_space = 100;
   boost::shared_ptr<ContextProcessor> processor =
       boost::make_shared<ContextProcessor>(corpus, config.ngram_order - 1);
+  boost::shared_ptr<FeatureContextGenerator> generator =
+      boost::make_shared<FeatureContextGenerator>(config.feature_context_size);
+  boost::shared_ptr<NGramFilter> filter =
+      boost::make_shared<NGramFilter>(corpus, index, processor, generator);
   boost::shared_ptr<FeatureContextHasher> hasher =
       boost::make_shared<FeatureContextHasher>(
-          corpus, index, processor, config.feature_context_size);
+          corpus, index, processor, generator, filter);
   boost::shared_ptr<FeatureMatcher> matcher =
-      boost::make_shared<FeatureMatcher>(corpus, index, processor, hasher);
+      boost::make_shared<FeatureMatcher>(
+          corpus, index, processor, generator, filter, hasher);
   boost::shared_ptr<BloomFilterPopulator> populator;
   CollisionCounter counter(corpus, index, hasher, matcher, populator, config);
 

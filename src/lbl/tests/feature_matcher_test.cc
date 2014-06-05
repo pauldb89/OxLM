@@ -17,10 +17,14 @@ class FeatureMatcherTest : public testing::Test {
         boost::make_shared<WordToClassIndex>(class_markers);
     boost::shared_ptr<ContextProcessor> processor =
         boost::make_shared<ContextProcessor>(corpus, 2, 0, 1);
+    boost::shared_ptr<FeatureContextGenerator> generator =
+        boost::make_shared<FeatureContextGenerator>(2);
+    boost::shared_ptr<NGramFilter> filter =
+        boost::make_shared<NGramFilter>(corpus, index, processor, generator);
     hasher = boost::make_shared<FeatureContextHasher>(
-        corpus, index, processor, 2);
+        corpus, index, processor, generator, filter);
     feature_matcher = boost::make_shared<FeatureMatcher>(
-        corpus, index, processor, hasher);
+        corpus, index, processor, generator, filter, hasher);
   }
 
   void checkFeatureContexts(

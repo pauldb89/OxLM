@@ -8,8 +8,11 @@ FeatureMatcher::FeatureMatcher(
     const boost::shared_ptr<Corpus>& corpus,
     const boost::shared_ptr<WordToClassIndex>& index,
     const boost::shared_ptr<ContextProcessor>& processor,
+    const boost::shared_ptr<FeatureContextGenerator>& generator,
+    const boost::shared_ptr<NGramFilter>& filter,
     const boost::shared_ptr<FeatureContextHasher>& hasher)
-    : corpus(corpus), index(index), processor(processor), hasher(hasher) {
+    : corpus(corpus), index(index), processor(processor), generator(generator),
+      filter(filter), hasher(hasher) {
   feature_indexes = boost::make_shared<GlobalFeatureIndexesPair>(index, hasher);
   for (size_t i = 0; i < corpus->size(); ++i) {
     int word_id = corpus->at(i);
@@ -17,12 +20,17 @@ FeatureMatcher::FeatureMatcher(
     int word_class_id = index->getWordIndexInClass(word_id);
     vector<WordId> context = processor->extract(i);
 
-    for (int class_context_id: hasher->getClassContextIds(context)) {
-      feature_indexes->addClassIndex(class_context_id, class_id);
+    vector<FeatureContext> feature_contexts =
+        generator->getFeatureContexts(context);
+    // Add feature indexes only for the topmost max_ngrams ngrams.
+    feature_contexts = filter->filter(word_id, class_id, feature_contexts);
+
+    for (int context_id: hasher->getClassContextIds(feature_contexts)) {
+      feature_indexes->addClassIndex(context_id, class_id);
     }
 
-    for (int word_context_id: hasher->getWordContextIds(class_id, context)) {
-      feature_indexes->addWordIndex(class_id, word_context_id, word_class_id);
+    for (int context_id: hasher->getWordContextIds(class_id, feature_contexts)) {
+      feature_indexes->addWordIndex(class_id, context_id, word_class_id);
     }
   }
 }
@@ -42,17 +50,21 @@ MinibatchFeatureIndexesPairPtr FeatureMatcher::getMinibatchFeatures(
     int word_class_id = index->getWordIndexInClass(word_id);
     vector<WordId> context = processor->extract(i);
 
-    for (int class_context_id: hasher->getClassContextIds(context)) {
+    vector<FeatureContext> feature_contexts =
+        generator->getFeatureContexts(context);
+    // Add feature indexes only for the topmost max_ngrams ngrams.
+    feature_contexts = filter->filter(word_id, class_id, feature_contexts);
+
+    for (int context_id: hasher->getClassContextIds(feature_contexts)) {
       minibatch_feature_indexes->setClassIndexes(
-          class_context_id,
-          feature_indexes->getClassFeatures(class_context_id));
+          context_id, feature_indexes->getClassFeatures(context_id));
     }
 
-    for (int word_context_id: hasher->getWordContextIds(class_id, context)) {
+    for (int context_id: hasher->getWordContextIds(class_id, feature_contexts)) {
       minibatch_feature_indexes->setWordIndexes(
           class_id,
-          word_context_id,
-          feature_indexes->getWordFeatures(class_id, word_context_id));
+          context_id,
+          feature_indexes->getWordFeatures(class_id, context_id));
     }
   }
 
