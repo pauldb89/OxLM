@@ -94,7 +94,7 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
   boost::shared_ptr<WordToClassIndex> index =
       boost::make_shared<WordToClassIndex>(classes);
 
-  boost::shared_ptr<FeatureContextHasher> hasher;
+  boost::shared_ptr<FeatureContextMapper> mapper;
   boost::shared_ptr<FeatureMatcher> matcher;
   boost::shared_ptr<BloomFilterPopulator> populator;
   if (!config.hash_space || config.filter_contexts) {
@@ -108,27 +108,27 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
             training_corpus, index, processor, generator, config.max_ngrams);
     cout << "Done creating the n-gram filter..." << endl;
 
-    hasher = boost::make_shared<FeatureContextHasher>(
+    mapper = boost::make_shared<FeatureContextMapper>(
         training_corpus, index, processor, generator, ngram_filter);
-    cout << "Done constructing the feature context hasher..." << endl;
+    cout << "Done constructing the feature context mapper..." << endl;
     if (!config.filter_contexts || config.filter_error_rate == 0) {
       matcher = boost::make_shared<FeatureMatcher>(
-          training_corpus, index, processor, generator, ngram_filter, hasher);
+          training_corpus, index, processor, generator, ngram_filter, mapper);
       cout << "Done constructing the feature context matcher..." << endl;
     } else {
       populator = boost::make_shared<BloomFilterPopulator>(
-          training_corpus, index, hasher, config);
+          training_corpus, index, mapper, config);
       cout << "Done constructing the Bloom filter..." << endl;
     }
   }
   if (config.hash_space > 0 && config.count_collisions) {
     CollisionCounter counter(
-        training_corpus, index, hasher, matcher, populator, config);
+        training_corpus, index, mapper, matcher, populator, config);
     counter.count();
   }
 
   FeatureStoreInitializer initializer(
-      config, training_corpus, index, hasher, matcher, populator);
+      config, training_corpus, index, mapper, matcher, populator);
 
   boost::shared_ptr<FactoredMaxentNLM> model;
   if (config.model_input_file.size()) {

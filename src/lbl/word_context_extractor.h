@@ -4,7 +4,7 @@
 
 #include "lbl/archive_export.h"
 #include "lbl/feature_context_extractor.h"
-#include "lbl/feature_context_hasher.h"
+#include "lbl/feature_context_mapper.h"
 
 namespace oxlm {
 
@@ -13,7 +13,7 @@ class WordContextExtractor : public FeatureContextExtractor {
   WordContextExtractor();
 
   WordContextExtractor(
-      int class_id, const boost::shared_ptr<FeatureContextHasher>& hasher);
+      int class_id, const boost::shared_ptr<FeatureContextMapper>& mapper);
 
   virtual vector<int> getFeatureContextIds(const vector<int>& context) const;
 
@@ -30,11 +30,11 @@ class WordContextExtractor : public FeatureContextExtractor {
   void serialize(Archive& ar, const unsigned int version) {
     ar & boost::serialization::base_object<FeatureContextExtractor>(*this);
     ar & classId;
-    ar & hasher;
+    ar & mapper;
   }
 
   int classId;
-  boost::shared_ptr<FeatureContextHasher> hasher;
+  boost::shared_ptr<FeatureContextMapper> mapper;
 };
 
 } // namespace oxlm

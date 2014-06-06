@@ -176,7 +176,7 @@ class FF_LBLLM : public FeatureFunction {
     if (!cacheQueries) {
       score = lm->log_prob(word, context, true, true);
     } else {
-      NGramQuery query(word, context);
+      NGram query(word, context);
       ++totalHits;
       pair<double, bool> ret = cache.get(query);
       if (ret.second) {

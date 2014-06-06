@@ -22,15 +22,15 @@ class WordContextExtractorTest : public testing::Test {
         boost::make_shared<FeatureContextGenerator>(2);
     boost::shared_ptr<NGramFilter> filter =
         boost::make_shared<NGramFilter>(corpus, index, processor, generator);
-    hasher = boost::make_shared<FeatureContextHasher>(
+    mapper = boost::make_shared<FeatureContextMapper>(
         corpus, index, processor, generator, filter);
   }
 
-  boost::shared_ptr<FeatureContextHasher> hasher;
+  boost::shared_ptr<FeatureContextMapper> mapper;
 };
 
 TEST_F(WordContextExtractorTest, TestBasic) {
-  WordContextExtractor extractor(0, hasher);
+  WordContextExtractor extractor(0, mapper);
   vector<int> context = {3};
   FeatureContext feature_context(context);
   vector<int> expected_feature_ids = {0};
@@ -42,7 +42,7 @@ TEST_F(WordContextExtractorTest, TestBasic) {
   EXPECT_EQ(expected_feature_ids, extractor.getFeatureContextIds(context));
   EXPECT_EQ(1, extractor.getFeatureContextId(feature_context));
 
-  extractor = WordContextExtractor(1, hasher);
+  extractor = WordContextExtractor(1, mapper);
   context = {0};
   feature_context = FeatureContext(context);
   expected_feature_ids = {0};
@@ -69,7 +69,7 @@ TEST_F(WordContextExtractorTest, TestBasic) {
   EXPECT_EQ(expected_feature_ids, extractor.getFeatureContextIds(context));
   EXPECT_EQ(4, extractor.getFeatureContextId(feature_context));
 
-  extractor = WordContextExtractor(2, hasher);
+  extractor = WordContextExtractor(2, mapper);
   context = {2};
   feature_context = FeatureContext(context);
   expected_feature_ids = {0};
@@ -84,7 +84,7 @@ TEST_F(WordContextExtractorTest, TestBasic) {
 
 TEST_F(WordContextExtractorTest, TestSerialization) {
   boost::shared_ptr<FeatureContextExtractor> extractor_ptr =
-      boost::make_shared<WordContextExtractor>(0, hasher);
+      boost::make_shared<WordContextExtractor>(0, mapper);
   boost::shared_ptr<FeatureContextExtractor> extractor_copy_ptr;
 
   stringstream stream(ios_base::binary | ios_base::out | ios_base::in);

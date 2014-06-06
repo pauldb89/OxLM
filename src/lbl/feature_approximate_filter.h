@@ -4,9 +4,9 @@
 
 #include "lbl/archive_export.h"
 #include "lbl/bloom_filter.h"
-#include "lbl/feature_context_keyer.h"
+#include "lbl/feature_context_hasher.h"
 #include "lbl/feature_filter.h"
-#include "lbl/ngram_query.h"
+#include "lbl/ngram.h"
 
 namespace oxlm {
 
@@ -15,8 +15,8 @@ class FeatureApproximateFilter : public FeatureFilter {
   FeatureApproximateFilter();
 
   FeatureApproximateFilter(
-      int num_candidates, const boost::shared_ptr<FeatureContextKeyer>& keyer,
-      const boost::shared_ptr<BloomFilter<NGramQuery>>& bloom_filter);
+      int num_candidates, const boost::shared_ptr<FeatureContextHasher>& hasher,
+      const boost::shared_ptr<BloomFilter<NGram>>& bloom_filter);
 
   virtual vector<int> getIndexes(const FeatureContext& feature_context) const;
 
@@ -31,13 +31,13 @@ class FeatureApproximateFilter : public FeatureFilter {
   void serialize(Archive& ar, const unsigned int version) {
     ar & boost::serialization::base_object<FeatureFilter>(*this);
     ar & numCandidates;
-    ar & keyer;
+    ar & hasher;
     ar & bloomFilter;
   }
 
   int numCandidates;
-  boost::shared_ptr<FeatureContextKeyer> keyer;
-  boost::shared_ptr<BloomFilter<NGramQuery>> bloomFilter;
+  boost::shared_ptr<FeatureContextHasher> hasher;
+  boost::shared_ptr<BloomFilter<NGram>> bloomFilter;
 };
 
 } // namespace oxlm

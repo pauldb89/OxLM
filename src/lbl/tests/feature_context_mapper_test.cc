@@ -2,11 +2,11 @@
 
 #include <boost/make_shared.hpp>
 
-#include "lbl/feature_context_hasher.h"
+#include "lbl/feature_context_mapper.h"
 
 namespace oxlm {
 
-class FeatureContextHasherTest : public testing::Test {
+class FeatureContextMapperTest : public testing::Test {
  protected:
   void SetUp() {
     vector<int> data = {2, 3, 4, 5, 6, 1};
@@ -26,40 +26,40 @@ class FeatureContextHasherTest : public testing::Test {
   boost::shared_ptr<NGramFilter> filter;
 };
 
-TEST_F(FeatureContextHasherTest, TestLongerHistory) {
-  FeatureContextHasher hasher(corpus, index, processor, generator, filter);
+TEST_F(FeatureContextMapperTest, TestLongerHistory) {
+  FeatureContextMapper mapper(corpus, index, processor, generator, filter);
 
   vector<int> history = {6, 5, 4, 3, 2};
-  vector<int> class_context_ids = hasher.getClassContextIds(history);
+  vector<int> class_context_ids = mapper.getClassContextIds(history);
   EXPECT_EQ(3, class_context_ids.size());
   EXPECT_EQ(15, class_context_ids[0]);
   EXPECT_EQ(16, class_context_ids[1]);
   EXPECT_EQ(17, class_context_ids[2]);
 
-  vector<int> word_context_ids = hasher.getWordContextIds(0, history);
+  vector<int> word_context_ids = mapper.getWordContextIds(0, history);
   EXPECT_EQ(3, word_context_ids.size());
   EXPECT_EQ(0, word_context_ids[0]);
   EXPECT_EQ(1, word_context_ids[1]);
   EXPECT_EQ(2, word_context_ids[2]);
 
-  EXPECT_EQ(36, hasher.getNumContexts());
-  EXPECT_EQ(18, hasher.getNumClassContexts());
-  EXPECT_EQ(3, hasher.getNumWordContexts(0));
-  EXPECT_EQ(6, hasher.getNumWordContexts(1));
-  EXPECT_EQ(9, hasher.getNumWordContexts(2));
+  EXPECT_EQ(36, mapper.getNumContexts());
+  EXPECT_EQ(18, mapper.getNumClassContexts());
+  EXPECT_EQ(3, mapper.getNumWordContexts(0));
+  EXPECT_EQ(6, mapper.getNumWordContexts(1));
+  EXPECT_EQ(9, mapper.getNumWordContexts(2));
 }
 
-TEST_F(FeatureContextHasherTest, TestShorterHistory) {
-  FeatureContextHasher hasher(corpus, index, processor, generator, filter);
+TEST_F(FeatureContextMapperTest, TestShorterHistory) {
+  FeatureContextMapper mapper(corpus, index, processor, generator, filter);
 
   vector<int> history = {6, 5, 4};
-  vector<int> class_context_ids = hasher.getClassContextIds(history);
+  vector<int> class_context_ids = mapper.getClassContextIds(history);
   EXPECT_EQ(3, class_context_ids.size());
   EXPECT_EQ(15, class_context_ids[0]);
   EXPECT_EQ(16, class_context_ids[1]);
   EXPECT_EQ(17, class_context_ids[2]);
 
-  vector<int> word_context_ids = hasher.getWordContextIds(0, history);
+  vector<int> word_context_ids = mapper.getWordContextIds(0, history);
   EXPECT_EQ(3, word_context_ids.size());
   EXPECT_EQ(0, word_context_ids[0]);
   EXPECT_EQ(1, word_context_ids[1]);

@@ -4,7 +4,7 @@
 
 #include "lbl/class_context_extractor.h"
 #include "lbl/context_processor.h"
-#include "lbl/feature_context_hasher.h"
+#include "lbl/feature_context_mapper.h"
 #include "lbl/feature_exact_filter.h"
 #include "lbl/word_to_class_index.h"
 
@@ -34,11 +34,11 @@ class FeatureExactFilterTest : public testing::Test {
         boost::make_shared<FeatureContextGenerator>(1);
     boost::shared_ptr<NGramFilter> ngram_filter =
         boost::make_shared<NGramFilter>(corpus, index, processor, generator);
-    boost::shared_ptr<FeatureContextHasher> hasher =
-        boost::make_shared<FeatureContextHasher>(
+    boost::shared_ptr<FeatureContextMapper> mapper =
+        boost::make_shared<FeatureContextMapper>(
             corpus, index, processor, generator, ngram_filter);
     boost::shared_ptr<ClassContextExtractor> extractor =
-        boost::make_shared<ClassContextExtractor>(hasher);
+        boost::make_shared<ClassContextExtractor>(mapper);
     filter = boost::make_shared<FeatureExactFilter>(feature_indexes, extractor);
   }
 

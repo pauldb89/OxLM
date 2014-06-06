@@ -18,10 +18,10 @@ TEST(GlobalFeatureIndexesPairTest, TestBasic) {
       boost::make_shared<FeatureContextGenerator>(2);
   boost::shared_ptr<NGramFilter> filter =
       boost::make_shared<NGramFilter>(corpus, index, processor, generator);
-  boost::shared_ptr<FeatureContextHasher> hasher =
-      boost::make_shared<FeatureContextHasher>(
+  boost::shared_ptr<FeatureContextMapper> mapper =
+      boost::make_shared<FeatureContextMapper>(
           corpus, index, processor, generator, filter);
-  GlobalFeatureIndexesPair indexes_pair(index, hasher);
+  GlobalFeatureIndexesPair indexes_pair(index, mapper);
 
   EXPECT_EQ(7, indexes_pair.getClassIndexes()->size());
   EXPECT_EQ(2, indexes_pair.getWordIndexes(0)->size());

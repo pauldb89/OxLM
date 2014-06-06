@@ -8,7 +8,7 @@
 
 #include "lbl/context_processor.h"
 #include "lbl/feature_context.h"
-#include "lbl/feature_context_hasher.h"
+#include "lbl/feature_context_mapper.h"
 #include "lbl/global_feature_indexes_pair.h"
 #include "lbl/minibatch_feature_indexes_pair.h"
 #include "lbl/ngram_filter.h"
@@ -26,7 +26,7 @@ class FeatureMatcher {
       const boost::shared_ptr<ContextProcessor>& processor,
       const boost::shared_ptr<FeatureContextGenerator>& generator,
       const boost::shared_ptr<NGramFilter>& filter,
-      const boost::shared_ptr<FeatureContextHasher>& hasher);
+      const boost::shared_ptr<FeatureContextMapper>& mapper);
 
   GlobalFeatureIndexesPairPtr getGlobalFeatures() const;
 
@@ -39,7 +39,7 @@ class FeatureMatcher {
   boost::shared_ptr<ContextProcessor> processor;
   boost::shared_ptr<NGramFilter> filter;
   boost::shared_ptr<FeatureContextGenerator> generator;
-  boost::shared_ptr<FeatureContextHasher> hasher;
+  boost::shared_ptr<FeatureContextMapper> mapper;
   GlobalFeatureIndexesPairPtr feature_indexes;
 };
 

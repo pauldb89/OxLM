@@ -35,11 +35,11 @@ class SparseGlobalFeatureStoreTest : public ::testing::Test {
         boost::make_shared<FeatureContextGenerator>(1);
     boost::shared_ptr<NGramFilter> filter =
         boost::make_shared<NGramFilter>(corpus, index, processor, generator);
-    boost::shared_ptr<FeatureContextHasher> hasher =
-        boost::make_shared<FeatureContextHasher>(
+    boost::shared_ptr<FeatureContextMapper> mapper =
+        boost::make_shared<FeatureContextMapper>(
             corpus, index, processor, generator, filter);
     boost::shared_ptr<FeatureContextExtractor> extractor =
-        boost::make_shared<ClassContextExtractor>(hasher);
+        boost::make_shared<ClassContextExtractor>(mapper);
 
     store = SparseGlobalFeatureStore(5, 4, extractor);
     SparseMinibatchFeatureStore g_store(5, extractor);

@@ -10,7 +10,7 @@
 
 #include "lbl/class_context_extractor.h"
 #include "lbl/context_processor.h"
-#include "lbl/feature_context_hasher.h"
+#include "lbl/feature_context_mapper.h"
 #include "lbl/unconstrained_feature_store.h"
 #include "lbl/word_to_class_index.h"
 #include "utils/constants.h"
@@ -36,10 +36,10 @@ class UnconstrainedFeatureStoreTest : public ::testing::Test {
         boost::make_shared<FeatureContextGenerator>(1);
     boost::shared_ptr<NGramFilter> filter =
         boost::make_shared<NGramFilter>(corpus, index, processor, generator);
-    boost::shared_ptr<FeatureContextHasher> hasher =
-        boost::make_shared<FeatureContextHasher>(
+    boost::shared_ptr<FeatureContextMapper> mapper =
+        boost::make_shared<FeatureContextMapper>(
             corpus, index, processor, generator, filter);
-    extractor = boost::make_shared<ClassContextExtractor>(hasher);
+    extractor = boost::make_shared<ClassContextExtractor>(mapper);
 
     store = UnconstrainedFeatureStore(3, extractor);
     gradient_store =

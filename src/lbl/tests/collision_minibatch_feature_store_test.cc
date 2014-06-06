@@ -2,7 +2,7 @@
 
 #include <boost/make_shared.hpp>
 
-#include "lbl/class_context_keyer.h"
+#include "lbl/class_context_hasher.h"
 #include "lbl/collision_minibatch_feature_store.h"
 #include "lbl/feature_no_op_filter.h"
 #include "utils/constants.h"
@@ -15,16 +15,16 @@ class CollisionMinibatchFeatureStoreTest : public testing::Test {
   void SetUp() {
     int vector_size = 3;
     int hash_space = 10;
-    boost::shared_ptr<ClassContextKeyer> keyer =
-        boost::make_shared<ClassContextKeyer>(hash_space);
+    boost::shared_ptr<ClassContextHasher> hasher =
+        boost::make_shared<ClassContextHasher>(hash_space);
     boost::shared_ptr<FeatureNoOpFilter> filter =
         boost::make_shared<FeatureNoOpFilter>(vector_size);
 
     store = boost::make_shared<CollisionMinibatchFeatureStore>(
-        vector_size, hash_space, 3, keyer, filter);
+        vector_size, hash_space, 3, hasher, filter);
 
     g_store = boost::make_shared<CollisionMinibatchFeatureStore>(
-        vector_size, hash_space, 3, keyer, filter);
+        vector_size, hash_space, 3, hasher, filter);
 
     context = {1, 2, 3};
     VectorReal values(3);

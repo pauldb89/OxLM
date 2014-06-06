@@ -3,7 +3,7 @@
 #include <set>
 
 #include "lbl/feature_context_generator.h"
-#include "lbl/feature_context_keyer.h"
+#include "lbl/feature_context_hasher.h"
 #include "lbl/feature_filter.h"
 #include "lbl/minibatch_feature_store.h"
 
@@ -13,7 +13,7 @@ class CollisionMinibatchFeatureStore : public MinibatchFeatureStore {
  public:
   CollisionMinibatchFeatureStore(
       int vector_size, int hash_space, int feature_context_size,
-      const boost::shared_ptr<FeatureContextKeyer>& keyer,
+      const boost::shared_ptr<FeatureContextHasher>& hasher,
       const boost::shared_ptr<FeatureFilter>& filter);
 
   virtual VectorReal get(const vector<int>& context) const;
@@ -36,7 +36,7 @@ class CollisionMinibatchFeatureStore : public MinibatchFeatureStore {
 
   int vectorSize, hashSpace;
   FeatureContextGenerator generator;
-  boost::shared_ptr<FeatureContextKeyer> keyer;
+  boost::shared_ptr<FeatureContextHasher> hasher;
   boost::shared_ptr<FeatureFilter> filter;
   unordered_map<int, Real> featureWeights;
 };

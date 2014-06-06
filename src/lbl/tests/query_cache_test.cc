@@ -14,7 +14,7 @@ TEST(QueryCacheTest, TestBasic) {
   EXPECT_EQ(0, cache.size());
 
   vector<int> context = {2, 3, 4, 5};
-  NGramQuery query(1, context);
+  NGram query(1, context);
   EXPECT_EQ(make_pair(Real(0.0), false), cache.get(query));
 
   cache.put(query, 0.5);
@@ -29,7 +29,7 @@ TEST(QueryCacheTest, TestBasic) {
 TEST(QueryCacheTest, TestSerialization) {
   QueryCache cache;
   vector<int> context = {2, 3, 4, 5};
-  NGramQuery query(1, context);
+  NGram query(1, context);
   cache.put(query, 0.5);
 
   stringstream stream(ios_base::binary | ios_base::out | ios_base::in);

@@ -5,7 +5,7 @@
 add_library(lbl SHARED
   bloom_filter_populator.cc
   class_context_extractor.cc
-  class_context_keyer.cc
+  class_context_hasher.cc
   collision_counter.cc
   collision_global_feature_store.cc
   collision_minibatch_feature_store.cc
@@ -18,8 +18,8 @@ add_library(lbl SHARED
   feature_context.cc
   feature_context_extractor.cc
   feature_context_generator.cc
+  feature_context_mapper.cc
   feature_context_hasher.cc
-  feature_context_keyer.cc
   feature_exact_filter.cc
   feature_filter.cc
   feature_no_op_filter.cc
@@ -31,8 +31,8 @@ add_library(lbl SHARED
   minibatch_feature_indexes_pair.cc
   minibatch_feature_store.cc
   model_utils.cc
+  ngram.cc
   ngram_filter.cc
-  ngram_query.cc
   nlm.cc
   nlm_approximate_z.cc
   process_identifier.cc
@@ -42,7 +42,7 @@ add_library(lbl SHARED
   unconstrained_feature_store.cc
   utils.cc
   word_context_extractor.cc
-  word_context_keyer.cc
+  word_context_hasher.cc
   word_to_class_index.cc
 )
 

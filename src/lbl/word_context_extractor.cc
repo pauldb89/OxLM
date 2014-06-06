@@ -5,21 +5,21 @@ namespace oxlm {
 WordContextExtractor::WordContextExtractor() {}
 
 WordContextExtractor::WordContextExtractor(
-    int class_id, const boost::shared_ptr<FeatureContextHasher>& hasher)
-    : classId(class_id), hasher(hasher) {}
+    int class_id, const boost::shared_ptr<FeatureContextMapper>& mapper)
+    : classId(class_id), mapper(mapper) {}
 
 vector<int> WordContextExtractor::getFeatureContextIds(
     const vector<int>& context) const {
-  return hasher->getWordContextIds(classId, context);
+  return mapper->getWordContextIds(classId, context);
 }
 
 int WordContextExtractor::getFeatureContextId(
     const FeatureContext& feature_context) const {
-  return hasher->getWordContextId(classId, feature_context);
+  return mapper->getWordContextId(classId, feature_context);
 }
 
 bool WordContextExtractor::operator==(const WordContextExtractor& other) const {
-  return classId == other.classId && *hasher == *other.hasher;
+  return classId == other.classId && *mapper == *other.mapper;
 }
 
 WordContextExtractor::~WordContextExtractor() {}

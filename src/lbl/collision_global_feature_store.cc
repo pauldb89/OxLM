@@ -9,16 +9,16 @@ CollisionGlobalFeatureStore::CollisionGlobalFeatureStore() {}
 CollisionGlobalFeatureStore::CollisionGlobalFeatureStore(
     int vector_size, int hash_space_size, int feature_context_size,
     const boost::shared_ptr<CollisionSpace>& space,
-    const boost::shared_ptr<FeatureContextKeyer>& keyer,
+    const boost::shared_ptr<FeatureContextHasher>& hasher,
     const boost::shared_ptr<FeatureFilter>& filter)
     : vectorSize(vector_size), hashSpaceSize(hash_space_size),
-      generator(feature_context_size), keyer(keyer), filter(filter),
+      generator(feature_context_size), hasher(hasher), filter(filter),
       space(space) {}
 
 VectorReal CollisionGlobalFeatureStore::get(const vector<int>& context) const {
   VectorReal result = VectorReal::Zero(vectorSize);
   for (const auto& feature_context: generator.getFeatureContexts(context)) {
-    int key = keyer->getKey(feature_context);
+    int key = hasher->getKey(feature_context);
     for (int i: filter->getIndexes(feature_context)) {
       result(i) += space->featureWeights[(key + i) % hashSpaceSize];
     }

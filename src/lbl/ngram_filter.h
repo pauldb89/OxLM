@@ -2,7 +2,7 @@
 
 #include "lbl/context_processor.h"
 #include "lbl/feature_context_generator.h"
-#include "lbl/ngram_query.h"
+#include "lbl/ngram.h"
 #include "lbl/word_to_class_index.h"
 
 namespace oxlm {
@@ -22,7 +22,7 @@ class NGramFilter {
 
  private:
   int maxNGrams;
-  hash<NGramQuery> hashFunction;
+  hash<NGram> hashFunction;
   unordered_map<size_t, int> ngramFrequencies;
 };
 

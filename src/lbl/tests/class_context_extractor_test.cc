@@ -22,10 +22,10 @@ class ClassContextExtractorTest : public testing::Test {
         boost::make_shared<FeatureContextGenerator>(2);
     boost::shared_ptr<NGramFilter> filter =
         boost::make_shared<NGramFilter>(corpus, index, processor, generator);
-    boost::shared_ptr<FeatureContextHasher> hasher =
-        boost::make_shared<FeatureContextHasher>(
+    boost::shared_ptr<FeatureContextMapper> mapper =
+        boost::make_shared<FeatureContextMapper>(
             corpus, index, processor, generator, filter);
-    extractor = ClassContextExtractor(hasher);
+    extractor = ClassContextExtractor(mapper);
   }
 
   ClassContextExtractor extractor;

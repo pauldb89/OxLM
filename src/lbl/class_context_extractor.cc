@@ -5,22 +5,22 @@ namespace oxlm {
 ClassContextExtractor::ClassContextExtractor() {}
 
 ClassContextExtractor::ClassContextExtractor(
-    const boost::shared_ptr<FeatureContextHasher>& hasher)
-    : hasher(hasher) {}
+    const boost::shared_ptr<FeatureContextMapper>& mapper)
+    : mapper(mapper) {}
 
 vector<int> ClassContextExtractor::getFeatureContextIds(
     const vector<int>& context) const {
-  return hasher->getClassContextIds(context);
+  return mapper->getClassContextIds(context);
 }
 
 int ClassContextExtractor::getFeatureContextId(
     const FeatureContext& feature_context) const {
-  return hasher->getClassContextId(feature_context);
+  return mapper->getClassContextId(feature_context);
 }
 
 bool ClassContextExtractor::operator==(
     const ClassContextExtractor& other) const {
-  return *hasher == *other.hasher;
+  return *mapper == *other.mapper;
 }
 
 ClassContextExtractor::~ClassContextExtractor() {}

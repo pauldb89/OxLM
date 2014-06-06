@@ -2,7 +2,7 @@ set(TESTS
     bloom_filter_populator_test
     bloom_filter_test
     class_context_extractor_test
-    class_context_keyer_test
+    class_context_hasher_test
     collision_counter_test
     collision_global_feature_store_test
     collision_minibatch_feature_store_test
@@ -10,7 +10,7 @@ set(TESTS
     feature_approximate_filter_test
     feature_context_test
     feature_context_generator_test
-    feature_context_hasher_test
+    feature_context_mapper_test
     feature_exact_filter_test
     feature_matcher_test
     feature_no_op_filter_test
@@ -18,8 +18,8 @@ set(TESTS
     global_feature_indexes_pair_test
     minibatch_feature_indexes_pair_test
     model_utils_test
+    ngram_test
     ngram_filter_test
-    ngram_query_test
     operators_test
     process_identifier_test
     query_cache_test
@@ -30,7 +30,7 @@ set(TESTS
     unconstrained_feature_store_test
     utils_test
     word_context_extractor_test
-    word_context_keyer_test
+    word_context_hasher_test
     word_to_class_index_test)
 
 set(LIBRARIES lbl)

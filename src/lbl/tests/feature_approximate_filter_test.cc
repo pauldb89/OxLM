@@ -2,7 +2,7 @@
 
 #include <boost/make_shared.hpp>
 
-#include "lbl/class_context_keyer.h"
+#include "lbl/class_context_hasher.h"
 #include "lbl/feature_approximate_filter.h"
 
 namespace ar = boost::archive;
@@ -12,22 +12,22 @@ namespace oxlm {
 class FeatureApproximateFilterTest : public testing::Test {
  protected:
   void SetUp() {
-    keyer = boost::make_shared<ClassContextKeyer>(1000);
-    bloomFilter = boost::make_shared<BloomFilter<NGramQuery>>(10, 1, 0.01);
+    hasher = boost::make_shared<ClassContextHasher>(1000);
+    bloomFilter = boost::make_shared<BloomFilter<NGram>>(10, 1, 0.01);
 
     vector<int> context = {1, 2};
-    bloomFilter->increment(NGramQuery(1, context));
-    bloomFilter->increment(NGramQuery(3, context));
+    bloomFilter->increment(NGram(1, context));
+    bloomFilter->increment(NGram(3, context));
     context = {1, 5};
-    bloomFilter->increment(NGramQuery(2, context));
+    bloomFilter->increment(NGram(2, context));
   }
 
-  boost::shared_ptr<FeatureContextKeyer> keyer;
-  boost::shared_ptr<BloomFilter<NGramQuery>> bloomFilter;
+  boost::shared_ptr<FeatureContextHasher> hasher;
+  boost::shared_ptr<BloomFilter<NGram>> bloomFilter;
 };
 
 TEST_F(FeatureApproximateFilterTest, TestBasic) {
-  FeatureApproximateFilter filter(5, keyer, bloomFilter);
+  FeatureApproximateFilter filter(5, hasher, bloomFilter);
   vector<int> context = {1, 2};
   vector<int> expected_indexes = {1, 3};
   EXPECT_EQ(expected_indexes, filter.getIndexes(context));
@@ -38,7 +38,7 @@ TEST_F(FeatureApproximateFilterTest, TestBasic) {
 
 TEST_F(FeatureApproximateFilterTest, TestSerialization) {
   boost::shared_ptr<FeatureFilter> filter_ptr =
-      boost::make_shared<FeatureApproximateFilter>(5, keyer, bloomFilter);
+      boost::make_shared<FeatureApproximateFilter>(5, hasher, bloomFilter);
 
   stringstream stream(ios_base::binary | ios_base::in | ios_base::out);
   ar::binary_oarchive oar(stream, ar::no_header);

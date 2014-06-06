@@ -21,10 +21,10 @@ class FeatureMatcherTest : public testing::Test {
         boost::make_shared<FeatureContextGenerator>(2);
     boost::shared_ptr<NGramFilter> filter =
         boost::make_shared<NGramFilter>(corpus, index, processor, generator);
-    hasher = boost::make_shared<FeatureContextHasher>(
+    mapper = boost::make_shared<FeatureContextMapper>(
         corpus, index, processor, generator, filter);
     feature_matcher = boost::make_shared<FeatureMatcher>(
-        corpus, index, processor, generator, filter, hasher);
+        corpus, index, processor, generator, filter, mapper);
   }
 
   void checkFeatureContexts(
@@ -51,7 +51,7 @@ class FeatureMatcherTest : public testing::Test {
     }
   }
 
-  boost::shared_ptr<FeatureContextHasher> hasher;
+  boost::shared_ptr<FeatureContextMapper> mapper;
   boost::shared_ptr<FeatureMatcher> feature_matcher;
 };
 
@@ -63,49 +63,49 @@ TEST_F(FeatureMatcherTest, TestGlobal) {
   GlobalFeatureIndexesPtr feature_indexes = feature_indexes_pair->getClassIndexes();
   EXPECT_EQ(8, feature_indexes->size());
   history = {0, 0};
-  class_context_ids = hasher->getClassContextIds(history);
+  class_context_ids = mapper->getClassContextIds(history);
   checkFeatureContexts(feature_indexes, class_context_ids, 1);
   history = {2, 0};
-  class_context_ids = hasher->getClassContextIds(history);
+  class_context_ids = mapper->getClassContextIds(history);
   checkFeatureContexts(feature_indexes, class_context_ids, 2);
   history = {3, 2};
-  class_context_ids = hasher->getClassContextIds(history);
+  class_context_ids = mapper->getClassContextIds(history);
   checkFeatureContexts(feature_indexes, class_context_ids, 2);
   history = {3, 3};
-  class_context_ids = hasher->getClassContextIds(history);
+  class_context_ids = mapper->getClassContextIds(history);
   checkFeatureContexts(feature_indexes, class_context_ids, 0);
   history = {0, 0};
-  class_context_ids = hasher->getClassContextIds(history);
+  class_context_ids = mapper->getClassContextIds(history);
   checkFeatureContexts(feature_indexes, class_context_ids, 2);
   history = {3, 0};
-  class_context_ids = hasher->getClassContextIds(history);
+  class_context_ids = mapper->getClassContextIds(history);
   checkFeatureContexts(feature_indexes, class_context_ids, 1);
 
   feature_indexes = feature_indexes_pair->getWordIndexes(0);
   EXPECT_EQ(2, feature_indexes->size());
   history = {3, 3};
-  word_context_ids = hasher->getWordContextIds(0, history);
+  word_context_ids = mapper->getWordContextIds(0, history);
   checkFeatureContexts(feature_indexes, word_context_ids, 1);
 
   feature_indexes = feature_indexes_pair->getWordIndexes(1);
   EXPECT_EQ(4, feature_indexes->size());
   history = {0, 0};
-  word_context_ids = hasher->getWordContextIds(1, history);
+  word_context_ids = mapper->getWordContextIds(1, history);
   checkFeatureContexts(feature_indexes, word_context_ids, 0);
   history = {3, 0};
-  word_context_ids = hasher->getWordContextIds(1, history);
+  word_context_ids = mapper->getWordContextIds(1, history);
   checkFeatureContexts(feature_indexes, word_context_ids, 0);
 
   feature_indexes = feature_indexes_pair->getWordIndexes(2);
   EXPECT_EQ(6, feature_indexes->size());
   history = {2, 0};
-  word_context_ids = hasher->getWordContextIds(2, history);
+  word_context_ids = mapper->getWordContextIds(2, history);
   checkFeatureContexts(feature_indexes, word_context_ids, 0);
   history = {3, 2};
-  word_context_ids = hasher->getWordContextIds(2, history);
+  word_context_ids = mapper->getWordContextIds(2, history);
   checkFeatureContexts(feature_indexes, word_context_ids, 0);
   history = {0, 0};
-  word_context_ids = hasher->getWordContextIds(2, history);
+  word_context_ids = mapper->getWordContextIds(2, history);
   checkFeatureContexts(feature_indexes, word_context_ids, 0);
 }
 
@@ -120,10 +120,10 @@ TEST_F(FeatureMatcherTest, TestSubset) {
       feature_indexes_pair->getClassIndexes();
   EXPECT_EQ(4, feature_indexes->size());
   history = {2, 0};
-  class_context_ids = hasher->getClassContextIds(history);
+  class_context_ids = mapper->getClassContextIds(history);
   checkFeatureContexts(feature_indexes, class_context_ids, 2);
   history = {0, 0};
-  class_context_ids = hasher->getClassContextIds(history);
+  class_context_ids = mapper->getClassContextIds(history);
   // The starting 2 (belonging to class 1) is not explicitly selected, but it
   // follows the context [0, 0].
   checkFeatureContexts(feature_indexes, class_context_ids, 1);
@@ -138,10 +138,10 @@ TEST_F(FeatureMatcherTest, TestSubset) {
   feature_indexes = feature_indexes_pair->getWordIndexes(2);
   EXPECT_EQ(4, feature_indexes->size());
   history = {0, 0};
-  word_context_ids = hasher->getWordContextIds(2, history);
+  word_context_ids = mapper->getWordContextIds(2, history);
   checkFeatureContexts(feature_indexes, word_context_ids, 0);
   history = {2, 0};
-  word_context_ids = hasher->getWordContextIds(2, history);
+  word_context_ids = mapper->getWordContextIds(2, history);
   checkFeatureContexts(feature_indexes, word_context_ids, 0);
 }
 

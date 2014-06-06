@@ -22,66 +22,66 @@ TEST(BloomFilterPopulatorTest, TestBasic) {
       boost::make_shared<FeatureContextGenerator>(config.feature_context_size);
   boost::shared_ptr<NGramFilter> filter =
       boost::make_shared<NGramFilter>(corpus, index, processor, generator);
-  boost::shared_ptr<FeatureContextHasher> hasher =
-      boost::make_shared<FeatureContextHasher>(
+  boost::shared_ptr<FeatureContextMapper> mapper =
+      boost::make_shared<FeatureContextMapper>(
           corpus, index, processor, generator, filter);
-  BloomFilterPopulator populator(corpus, index, hasher, config);
+  BloomFilterPopulator populator(corpus, index, mapper, config);
 
-  boost::shared_ptr<BloomFilter<NGramQuery>> bloom_filter = populator.get();
+  boost::shared_ptr<BloomFilter<NGram>> bloom_filter = populator.get();
 
   // Class checks.
   vector<int> context = {0};
-  EXPECT_TRUE(bloom_filter->contains(NGramQuery(1, context)));
+  EXPECT_TRUE(bloom_filter->contains(NGram(1, context)));
   context = {0, 0};
-  EXPECT_TRUE(bloom_filter->contains(NGramQuery(1, context)));
+  EXPECT_TRUE(bloom_filter->contains(NGram(1, context)));
   context = {2};
-  EXPECT_TRUE(bloom_filter->contains(NGramQuery(2, context)));
+  EXPECT_TRUE(bloom_filter->contains(NGram(2, context)));
   context = {2, 0};
-  EXPECT_TRUE(bloom_filter->contains(NGramQuery(2, context)));
+  EXPECT_TRUE(bloom_filter->contains(NGram(2, context)));
   context = {3};
-  EXPECT_TRUE(bloom_filter->contains(NGramQuery(2, context)));
+  EXPECT_TRUE(bloom_filter->contains(NGram(2, context)));
   context = {3, 2};
-  EXPECT_TRUE(bloom_filter->contains(NGramQuery(2, context)));
+  EXPECT_TRUE(bloom_filter->contains(NGram(2, context)));
   context = {3};
-  EXPECT_TRUE(bloom_filter->contains(NGramQuery(0, context)));
+  EXPECT_TRUE(bloom_filter->contains(NGram(0, context)));
   context = {3, 3};
-  EXPECT_TRUE(bloom_filter->contains(NGramQuery(0, context)));
+  EXPECT_TRUE(bloom_filter->contains(NGram(0, context)));
   context = {2};
-  EXPECT_TRUE(bloom_filter->contains(NGramQuery(1, context)));
+  EXPECT_TRUE(bloom_filter->contains(NGram(1, context)));
   context = {2, 0};
-  EXPECT_TRUE(bloom_filter->contains(NGramQuery(1, context)));
+  EXPECT_TRUE(bloom_filter->contains(NGram(1, context)));
 
   context = {1};
-  EXPECT_FALSE(bloom_filter->contains(NGramQuery(1, context)));
+  EXPECT_FALSE(bloom_filter->contains(NGram(1, context)));
   context = {1, 3};
-  EXPECT_FALSE(bloom_filter->contains(NGramQuery(1, context)));
+  EXPECT_FALSE(bloom_filter->contains(NGram(1, context)));
 
   // Word checks.
   context = {0};
-  EXPECT_TRUE(bloom_filter->contains(NGramQuery(0, 1, context)));
+  EXPECT_TRUE(bloom_filter->contains(NGram(0, 1, context)));
   context = {0, 0};
-  EXPECT_TRUE(bloom_filter->contains(NGramQuery(0, 1, context)));
+  EXPECT_TRUE(bloom_filter->contains(NGram(0, 1, context)));
   context = {2};
-  EXPECT_TRUE(bloom_filter->contains(NGramQuery(0, 2, context)));
+  EXPECT_TRUE(bloom_filter->contains(NGram(0, 2, context)));
   context = {2, 0};
-  EXPECT_TRUE(bloom_filter->contains(NGramQuery(0, 2, context)));
+  EXPECT_TRUE(bloom_filter->contains(NGram(0, 2, context)));
   context = {2};
-  EXPECT_TRUE(bloom_filter->contains(NGramQuery(0, 2, context)));
+  EXPECT_TRUE(bloom_filter->contains(NGram(0, 2, context)));
   context = {3, 2};
-  EXPECT_TRUE(bloom_filter->contains(NGramQuery(0, 2, context)));
+  EXPECT_TRUE(bloom_filter->contains(NGram(0, 2, context)));
   context = {3};
-  EXPECT_TRUE(bloom_filter->contains(NGramQuery(1, 0, context)));
+  EXPECT_TRUE(bloom_filter->contains(NGram(1, 0, context)));
   context = {3, 3};
-  EXPECT_TRUE(bloom_filter->contains(NGramQuery(1, 0, context)));
+  EXPECT_TRUE(bloom_filter->contains(NGram(1, 0, context)));
   context = {2};
-  EXPECT_TRUE(bloom_filter->contains(NGramQuery(0, 1, context)));
+  EXPECT_TRUE(bloom_filter->contains(NGram(0, 1, context)));
   context = {2, 0};
-  EXPECT_TRUE(bloom_filter->contains(NGramQuery(0, 1, context)));
+  EXPECT_TRUE(bloom_filter->contains(NGram(0, 1, context)));
 
   context = {1};
-  EXPECT_FALSE(bloom_filter->contains(NGramQuery(0, 1, context)));
+  EXPECT_FALSE(bloom_filter->contains(NGram(0, 1, context)));
   context = {1, 3};
-  EXPECT_FALSE(bloom_filter->contains(NGramQuery(0, 1, context)));
+  EXPECT_FALSE(bloom_filter->contains(NGram(0, 1, context)));
 }
 
 } // namespace oxlm
