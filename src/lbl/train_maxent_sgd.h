@@ -73,7 +73,7 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
   vector<int> classes;
   VectorReal class_bias;
   if (config.class_file.size()) {
-    cerr << "--class-file set, ignoring --classes." << endl;
+    cout << "--class-file set, ignoring --classes." << endl;
     loadClassesFromFile(
         config.class_file, config.training_file, classes, dict, class_bias);
     config.classes = classes.size() - 1;
@@ -85,8 +85,10 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
 
 
   training_corpus = readCorpus(config.training_file, dict);
+  cout << "Done reading the training data..." << endl;
   if (config.test_file.size()) {
     test_corpus = readCorpus(config.test_file, dict);
+    cout << "Done reading the test data..." << endl;
   }
   int context_width = config.ngram_order - 1;
   boost::shared_ptr<WordToClassIndex> index =
@@ -104,18 +106,19 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
     boost::shared_ptr<NGramFilter> ngram_filter =
         boost::make_shared<NGramFilter>(
             training_corpus, index, processor, generator, config.max_ngrams);
+    cout << "Done creating the n-gram filter..." << endl;
 
     hasher = boost::make_shared<FeatureContextHasher>(
         training_corpus, index, processor, generator, ngram_filter);
-    cerr << "Done constructing the feature context hasher..." << endl;
+    cout << "Done constructing the feature context hasher..." << endl;
     if (!config.filter_contexts || config.filter_error_rate == 0) {
       matcher = boost::make_shared<FeatureMatcher>(
           training_corpus, index, processor, generator, ngram_filter, hasher);
-      cerr << "Done constructing the feature context matcher..." << endl;
+      cout << "Done constructing the feature context matcher..." << endl;
     } else {
       populator = boost::make_shared<BloomFilterPopulator>(
           training_corpus, index, hasher, config);
-      cerr << "Done constructing the Bloom filter..." << endl;
+      cout << "Done constructing the Bloom filter..." << endl;
     }
   }
   if (config.hash_space > 0 && config.count_collisions) {
@@ -138,7 +141,7 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
     model = boost::make_shared<FactoredMaxentNLM>(
         config, dict, index, initializer);
     model->FB = class_bias;
-    cerr << "Done constructing the model..." << endl;
+    cout << "Done constructing the model..." << endl;
   }
 
   vector<int> training_indices(training_corpus->size());

@@ -169,7 +169,7 @@ void loadClassesFromFile(
     class_bias(i) = log(class_freqs.at(i)) - log(total_mass);
   }
 
-  cerr << "Read " << dict.size() << " types in "
+  cout << "Read " << dict.size() << " types in "
        << classes.size() - 1 << " classes with an average of "
        << dict.size() / float(classes.size() - 1) << " types per bin." << endl;
 
@@ -238,7 +238,7 @@ void frequencyBinning(
   assert(classes.size() == num_classes + 1);
   class_bias.array() -= log(num_eos_tokens + num_tokens);
 
-  cerr << "Binned " << dict.size() << " types in "
+  cout << "Binned " << dict.size() << " types in "
        << classes.size() - 1 << " classes with an average of "
        << dict.size() / float(classes.size() - 1) << " types per bin." << endl;
   in.close();
@@ -251,7 +251,7 @@ int convert(const string& token, Dict& dict, bool convert_unknowns) {
       w = dict.Convert("<unk>", true);
       assert(w >= 0);
     } else {
-      cerr << token << " " << w << endl;
+      cout << token << " " << w << endl;
       assert(!"Unknown word found in test corpus.");
     }
   }
