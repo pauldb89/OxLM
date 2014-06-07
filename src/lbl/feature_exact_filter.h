@@ -29,11 +29,11 @@ class FeatureExactFilter : public FeatureFilter {
   template<class Archive>
   void serialize(Archive& ar, const unsigned int version) {
     ar & boost::serialization::base_object<FeatureFilter>(*this);
-    ar & feature_indexes;
+    ar & featureIndexes;
     ar & extractor;
   }
 
-  GlobalFeatureIndexesPtr feature_indexes;
+  GlobalFeatureIndexesPtr featureIndexes;
   boost::shared_ptr<FeatureContextExtractor> extractor;
 };
 

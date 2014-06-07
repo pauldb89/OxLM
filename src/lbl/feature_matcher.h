@@ -37,10 +37,9 @@ class FeatureMatcher {
   boost::shared_ptr<Corpus> corpus;
   boost::shared_ptr<WordToClassIndex> index;
   boost::shared_ptr<ContextProcessor> processor;
-  boost::shared_ptr<NGramFilter> filter;
   boost::shared_ptr<FeatureContextGenerator> generator;
   boost::shared_ptr<FeatureContextMapper> mapper;
-  GlobalFeatureIndexesPairPtr feature_indexes;
+  GlobalFeatureIndexesPairPtr featureIndexes;
 };
 
 } // namespace oxlm

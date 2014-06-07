@@ -12,8 +12,8 @@ FeatureMatcher::FeatureMatcher(
     const boost::shared_ptr<NGramFilter>& filter,
     const boost::shared_ptr<FeatureContextMapper>& mapper)
     : corpus(corpus), index(index), processor(processor), generator(generator),
-      filter(filter), mapper(mapper) {
-  feature_indexes = boost::make_shared<GlobalFeatureIndexesPair>(index, mapper);
+      mapper(mapper) {
+  featureIndexes = boost::make_shared<GlobalFeatureIndexesPair>(index, mapper);
   for (size_t i = 0; i < corpus->size(); ++i) {
     int word_id = corpus->at(i);
     int class_id = index->getClass(word_id);
@@ -26,17 +26,17 @@ FeatureMatcher::FeatureMatcher(
     feature_contexts = filter->filter(word_id, class_id, feature_contexts);
 
     for (int context_id: mapper->getClassContextIds(feature_contexts)) {
-      feature_indexes->addClassIndex(context_id, class_id);
+      featureIndexes->addClassIndex(context_id, class_id);
     }
 
     for (int context_id: mapper->getWordContextIds(class_id, feature_contexts)) {
-      feature_indexes->addWordIndex(class_id, context_id, word_class_id);
+      featureIndexes->addWordIndex(class_id, context_id, word_class_id);
     }
   }
 }
 
 GlobalFeatureIndexesPairPtr FeatureMatcher::getGlobalFeatures() const {
-  return feature_indexes;
+  return featureIndexes;
 }
 
 MinibatchFeatureIndexesPairPtr FeatureMatcher::getMinibatchFeatures(
@@ -52,19 +52,17 @@ MinibatchFeatureIndexesPairPtr FeatureMatcher::getMinibatchFeatures(
 
     vector<FeatureContext> feature_contexts =
         generator->getFeatureContexts(context);
-    // Add feature indexes only for the topmost max_ngrams ngrams.
-    feature_contexts = filter->filter(word_id, class_id, feature_contexts);
 
     for (int context_id: mapper->getClassContextIds(feature_contexts)) {
       minibatch_feature_indexes->setClassIndexes(
-          context_id, feature_indexes->getClassFeatures(context_id));
+          context_id, featureIndexes->getClassFeatures(context_id));
     }
 
     for (int context_id: mapper->getWordContextIds(class_id, feature_contexts)) {
       minibatch_feature_indexes->setWordIndexes(
           class_id,
           context_id,
-          feature_indexes->getWordFeatures(class_id, context_id));
+          featureIndexes->getWordFeatures(class_id, context_id));
     }
   }
 

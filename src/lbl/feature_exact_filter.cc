@@ -7,7 +7,7 @@ FeatureExactFilter::FeatureExactFilter() {}
 FeatureExactFilter::FeatureExactFilter(
     const GlobalFeatureIndexesPtr& feature_indexes,
     const boost::shared_ptr<FeatureContextExtractor>& extractor)
-    : feature_indexes(feature_indexes), extractor(extractor) {}
+    : featureIndexes(feature_indexes), extractor(extractor) {}
 
 vector<int> FeatureExactFilter::getIndexes(
     const FeatureContext& feature_context) const {
@@ -15,7 +15,7 @@ vector<int> FeatureExactFilter::getIndexes(
   if (feature_context_id == -1) {
     return vector<int>();
   } else {
-    return (*feature_indexes)[feature_context_id];
+    return featureIndexes->at(feature_context_id);
   }
 }
 
