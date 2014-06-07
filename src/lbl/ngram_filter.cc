@@ -24,6 +24,9 @@ NGramFilter::NGramFilter(
     }
   }
 
+  cout << "Total number of n-grams: " << ngramFrequencies.size()
+       << "..." << endl;
+
   vector<pair<int, size_t>> ngrams;
   for (const auto& ngram_frequency: ngramFrequencies) {
     ngrams.push_back(make_pair(ngram_frequency.second, ngram_frequency.first));

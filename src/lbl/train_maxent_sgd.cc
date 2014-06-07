@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
         "(in millions).")
     ("filter-contexts", value<bool>()->default_value(true),
         "Prevent false contexts from being hashed.")
-    ("filter-error-rate", value<Real>()->default_value(0.01),
+    ("filter-error-rate", value<Real>()->default_value(0),
         "Error rate for filtering false contexts (in bloom filter)")
     ("count-collisions", value<bool>()->default_value(true),
         "Print collision statistics (leads to a memory usage spike)")
