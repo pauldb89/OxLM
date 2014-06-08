@@ -60,8 +60,8 @@ void saveModel(
 
 void evaluateModel(
     const ModelData& config, const boost::shared_ptr<FactoredNLM>& model,
-    const boost::shared_ptr<Corpus>& test_corpus,
-    int minibatch_counter, Real& pp, Real& best_pp) {
+    const boost::shared_ptr<Corpus>& test_corpus, int minibatch_counter,
+    const Time& iteration_start, Real& pp, Real& best_pp) {
   if (test_corpus != nullptr) {
     #pragma omp master
     pp = 0.0;
@@ -80,8 +80,10 @@ void evaluateModel(
     #pragma omp master
     {
       pp = exp(-pp / test_corpus->size());
-      cout << "\tMinibatch " << minibatch_counter
-           << ", Test Perplexity = " << pp << endl;
+      auto iteration_time = GetDuration(iteration_start, GetTime());
+      cout << "\tMinibatch " << minibatch_counter << ", "
+           << "Time: " << iteration_time << " seconds, "
+           << "Test Perplexity = " << pp << endl;
 
       if (pp < best_pp) {
         best_pp = pp;

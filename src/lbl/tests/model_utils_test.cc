@@ -44,7 +44,7 @@ TEST_F(ModelUtilsTest, TestEvaluateModel) {
   boost::shared_ptr<FactoredNLM> model =
       boost::make_shared<FactoredNLM>(config, dict, index);
 
-  evaluateModel(config, model, corpus, 0, pp, best_pp);
+  evaluateModel(config, model, corpus, 0, GetTime(), pp, best_pp);
   EXPECT_NEAR(6, pp, EPS);
   EXPECT_NEAR(6, best_pp, EPS);
 }

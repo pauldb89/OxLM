@@ -225,13 +225,15 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
 
         if ((minibatch_counter % 100 == 0 && minibatch_counter <= 1000) ||
             minibatch_counter % 1000 == 0) {
-          evaluateModel(config, model, test_corpus, minibatch_counter, pp, best_pp);
+          evaluateModel(config, model, test_corpus, minibatch_counter,
+                        iteration_start, pp, best_pp);
         }
 
         start += minibatch_size;
       }
 
-      evaluateModel(config, model, test_corpus, minibatch_counter, pp, best_pp);
+      evaluateModel(config, model, test_corpus, minibatch_counter,
+                    iteration_start, pp, best_pp);
 
       Real iteration_time = GetDuration(iteration_start, GetTime());
       #pragma omp master
