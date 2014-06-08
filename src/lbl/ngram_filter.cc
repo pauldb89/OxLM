@@ -30,7 +30,8 @@ NGramFilter::NGramFilter(
   vector<pair<int, size_t>> ngrams;
   for (const auto& ngram_frequency: ngramFrequencies) {
     if (ngram_frequency.second >= min_ngram_freq) {
-      ngrams.push_back(make_pair(ngram_frequency.second, ngram_frequency.first));
+      ngrams.push_back(make_pair(
+          ngram_frequency.second, ngram_frequency.first));
     }
   }
 
@@ -41,9 +42,11 @@ NGramFilter::NGramFilter(
     partial_sort(ngrams.begin(), ngrams.begin() + max_ngrams, ngrams.end(),
         greater<pair<int, size_t>>());
     ngrams.resize(max_ngrams);
+    cout << "n-gram minimum frequency " << ngrams.back().first << "..." << endl;
+  } else {
+    cout << "n-gran minimum frequency" << min_ngram_freq << endl;
   }
 
-  cout << "n-gram minimum frequency " << ngrams.back().first << "..." << endl;
 
   ngramFrequencies.clear();
   for (const auto& ngram: ngrams) {
