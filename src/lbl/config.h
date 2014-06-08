@@ -79,6 +79,7 @@ struct ModelData {
   bool        filter_contexts;
   float       filter_error_rate;
   int         max_ngrams;
+  int         min_ngram_freq;
 
   friend class boost::serialization::access;
   template<class Archive>
@@ -119,6 +120,7 @@ struct ModelData {
     ar & filter_contexts;
     ar & filter_error_rate;
     ar & max_ngrams;
+    ar & min_ngram_freq;
   }
 };
 

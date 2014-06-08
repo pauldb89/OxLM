@@ -12,6 +12,6 @@ ModelData::ModelData()
       gnorm_threshold(0), eta(0), multinomial_step_size(0),
       sparse_features(false), random_weights(false), hash_space(0),
       count_collisions(false), filter_contexts(false),
-      filter_error_rate(0), max_ngrams(0) {}
+      filter_error_rate(0), max_ngrams(0), min_ngram_freq(0) {}
 
 } // namespace oxlm

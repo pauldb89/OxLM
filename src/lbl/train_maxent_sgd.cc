@@ -68,6 +68,8 @@ int main(int argc, char **argv) {
     ("diagonal-contexts", "Use diagonal context matrices (usually faster).")
     ("max-ngrams", value<int>()->default_value(0),
         "Define maxent features only for the most frequent max-ngrams ngrams.")
+    ("min-ngram-freq", value<int>()->default_value(1),
+        "Define maxent features only for n-grams above this frequency.")
     ("sparse-features", value<bool>()->default_value(true),
         "Only define maximum entropy feature functions for observed contexts")
     ("hash-space", value<Real>()->default_value(0),
@@ -129,6 +131,8 @@ int main(int argc, char **argv) {
   config.diagonal_contexts = vm.count("diagonal-contexts");
 
   config.max_ngrams = vm["max-ngrams"].as<int>();
+  config.min_ngram_freq = vm["min-ngram-freq"].as<int>();
+
   config.sparse_features = vm["sparse-features"].as<bool>();
   config.random_weights = vm["random-weights"].as<bool>();
   config.hash_space = vm["hash-space"].as<Real>() * 1000000;
@@ -155,6 +159,7 @@ int main(int argc, char **argv) {
   cerr << "# threads = " << config.threads << endl;
   cerr << "# classes = " << config.classes << endl;
   cerr << "# max-ngrams = " << config.max_ngrams << endl;
+  cerr << "# min-ngram-freq = " << config.min_ngram_freq << endl;
   cerr << "# sparse features = " << config.sparse_features << endl;
   cerr << "# hash space = " << config.hash_space << endl;
   cerr << "# filter contexts = " << config.filter_contexts << endl;

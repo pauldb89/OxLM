@@ -105,7 +105,8 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
             config.feature_context_size);
     boost::shared_ptr<NGramFilter> ngram_filter =
         boost::make_shared<NGramFilter>(
-            training_corpus, index, processor, generator, config.max_ngrams);
+            training_corpus, index, processor, generator,
+            config.max_ngrams, config.min_ngram_freq);
     cout << "Done creating the n-gram filter..." << endl;
 
     mapper = boost::make_shared<FeatureContextMapper>(

@@ -7,9 +7,9 @@ NGramFilter::NGramFilter(
     const boost::shared_ptr<WordToClassIndex>& index,
     const boost::shared_ptr<ContextProcessor>& processor,
     const boost::shared_ptr<FeatureContextGenerator>& generator,
-    int max_ngrams)
-    : maxNGrams(max_ngrams) {
-  if (maxNGrams == 0) {
+    int max_ngrams, int min_ngram_freq) {
+  enabled = max_ngrams > 0 || min_ngram_freq > 1;
+  if (!enabled) {
     return;
   }
 
@@ -29,10 +29,15 @@ NGramFilter::NGramFilter(
 
   vector<pair<int, size_t>> ngrams;
   for (const auto& ngram_frequency: ngramFrequencies) {
-    ngrams.push_back(make_pair(ngram_frequency.second, ngram_frequency.first));
+    if (ngram_frequency.second >= min_ngram_freq) {
+      ngrams.push_back(make_pair(ngram_frequency.second, ngram_frequency.first));
+    }
   }
 
-  if (ngrams.size() > max_ngrams) {
+  cout << "Number of n-grams above minimum frequency threshold: "
+       << ngrams.size() << endl;
+
+  if (max_ngrams != 0 && ngrams.size() > max_ngrams) {
     partial_sort(ngrams.begin(), ngrams.begin() + max_ngrams, ngrams.end(),
         greater<pair<int, size_t>>());
     ngrams.resize(max_ngrams);
@@ -49,7 +54,7 @@ NGramFilter::NGramFilter(
 vector<FeatureContext> NGramFilter::filter(
     int word_id, int class_id,
     const vector<FeatureContext>& feature_contexts) const {
-  if (maxNGrams == 0) {
+  if (!enabled) {
     return feature_contexts;
   }
 

@@ -14,14 +14,14 @@ class NGramFilter {
       const boost::shared_ptr<WordToClassIndex>& index,
       const boost::shared_ptr<ContextProcessor>& processor,
       const boost::shared_ptr<FeatureContextGenerator>& generator,
-      int max_ngrams = 0);
+      int max_ngrams = 0, int min_ngram_freq = 1);
 
   vector<FeatureContext> filter(
       int word_id, int class_id,
       const vector<FeatureContext>& feature_contexts) const;
 
  private:
-  int maxNGrams;
+  bool enabled;
   hash<NGram> hashFunction;
   unordered_map<size_t, int> ngramFrequencies;
 };

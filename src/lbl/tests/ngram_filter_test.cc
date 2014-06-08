@@ -23,8 +23,33 @@ class NGramFilterTest : public testing::Test {
   boost::shared_ptr<FeatureContextGenerator> generator;
 };
 
-TEST_F(NGramFilterTest, TestFilter) {
-  NGramFilter filter(corpus, index, processor, generator, 4);
+TEST_F(NGramFilterTest, TestFilterMaxCount) {
+  NGramFilter filter(corpus, index, processor, generator, 3);
+
+  vector<int> context = {2};
+  FeatureContext feature_context(context);
+  vector<FeatureContext> feature_contexts = {feature_context};
+  EXPECT_EQ(0, filter.filter(2, 1, feature_contexts).size());
+  EXPECT_EQ(1, filter.filter(3, 2, feature_contexts).size());
+  EXPECT_EQ(0, filter.filter(4, 2, feature_contexts).size());
+
+  context = {3};
+  feature_context = FeatureContext(context);
+  feature_contexts = {feature_context};
+  EXPECT_EQ(1, filter.filter(2, 1, feature_contexts).size());
+  EXPECT_EQ(1, filter.filter(3, 2, feature_contexts).size());
+  EXPECT_EQ(0, filter.filter(4, 2, feature_contexts).size());
+
+  context = {4};
+  feature_context = FeatureContext(context);
+  feature_contexts = {feature_context};
+  EXPECT_EQ(0, filter.filter(2, 1, feature_contexts).size());
+  EXPECT_EQ(0, filter.filter(3, 2, feature_contexts).size());
+  EXPECT_EQ(0, filter.filter(4, 2, feature_contexts).size());
+}
+
+TEST_F(NGramFilterTest, TestFilterMinFreq) {
+  NGramFilter filter(corpus, index, processor, generator, 0, 2);
 
   vector<int> context = {2};
   FeatureContext feature_context(context);
@@ -48,7 +73,7 @@ TEST_F(NGramFilterTest, TestFilter) {
   EXPECT_EQ(0, filter.filter(4, 2, feature_contexts).size());
 }
 
-TEST_F(NGramFilterTest, TestNoFilter) {
+TEST_F(NGramFilterTest, TestDisabled) {
   NGramFilter filter(corpus, index, processor, generator);
 
   vector<int> context = {2};
