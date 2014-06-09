@@ -44,7 +44,7 @@ NGramFilter::NGramFilter(
     ngrams.resize(max_ngrams);
     cout << "n-gram minimum frequency " << ngrams.back().first << "..." << endl;
   } else {
-    cout << "n-gran minimum frequency" << min_ngram_freq << endl;
+    cout << "n-gran minimum frequency " << min_ngram_freq << endl;
   }
 
 
