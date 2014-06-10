@@ -110,6 +110,7 @@ int main(int argc, char **argv) {
   config.instances = vm["instances"].as<int>();
   config.ngram_order = vm["order"].as<int>();
   config.feature_context_size = vm["feature-context-size"].as<int>();
+
   if (vm.count("model-in")) {
     config.model_input_file = vm["model-in"].as<string>();
   }
@@ -119,52 +120,59 @@ int main(int argc, char **argv) {
       config.model_output_file += "." + string(GIT_REVISION);
     }
   }
+  if (vm.count("class-file")) {
+    config.class_file = vm["class-file"].as<string>();
+  }
+
   config.l2_lbl = vm["lambda-lbl"].as<float>();
   config.l2_maxent = vm["lambda-maxent"].as<float>();
   config.word_representation_size = vm["word-width"].as<int>();
   config.threads = vm["threads"].as<int>();
   config.step_size = vm["step-size"].as<float>();
   config.classes = vm["classes"].as<int>();
-  config.class_file = vm["class-file"].as<string>();
   config.randomise = vm.count("randomise");
   config.reclass = vm.count("reclass");
   config.diagonal_contexts = vm.count("diagonal-contexts");
+  config.random_weights = vm["random-weights"].as<bool>();
 
   config.max_ngrams = vm["max-ngrams"].as<int>();
   config.min_ngram_freq = vm["min-ngram-freq"].as<int>();
 
   config.sparse_features = vm["sparse-features"].as<bool>();
-  config.random_weights = vm["random-weights"].as<bool>();
   config.hash_space = vm["hash-space"].as<Real>() * 1000000;
   config.filter_contexts = vm["filter-contexts"].as<bool>();
   config.filter_error_rate = vm["filter-error-rate"].as<Real>();
   config.count_collisions = vm["count-collisions"].as<bool>();
 
-  cerr << "################################" << endl;
-  cerr << "# Config Summary" << endl;
-  cerr << "# order = " << config.ngram_order << endl;
-  cerr << "# feature-context-size = " << config.feature_context_size << endl;
+  cout << "################################" << endl;
+  if (strlen(GIT_REVISION) > 0) {
+    cout << "# Git revision: " << GIT_REVISION << endl;
+  }
+  cout << "# Config Summary" << endl;
+  cout << "# order = " << config.ngram_order << endl;
+  cout << "# feature context size = " << config.feature_context_size << endl;
+  cout << "# diagonal contexts = " << config.diagonal_contexts << endl;
   if (config.model_input_file.size()) {
-    cerr << "# model-in = " << config.model_input_file << endl;
+    cout << "# model-in = " << config.model_input_file << endl;
   }
   if (config.model_output_file.size()) {
-    cerr << "# model-out = " << config.model_output_file << endl;
+    cout << "# model-out = " << config.model_output_file << endl;
   }
-  cerr << "# input = " << config.training_file << endl;
-  cerr << "# minibatch-size = " << config.minibatch_size << endl;
-  cerr << "# lambda LBL = " << config.l2_lbl << endl;
-  cerr << "# lambda maxent = " << config.l2_maxent << endl;
-  cerr << "# step size = " << config.step_size << endl;
-  cerr << "# iterations = " << config.iterations << endl;
-  cerr << "# threads = " << config.threads << endl;
-  cerr << "# classes = " << config.classes << endl;
-  cerr << "# max-ngrams = " << config.max_ngrams << endl;
-  cerr << "# min-ngram-freq = " << config.min_ngram_freq << endl;
-  cerr << "# sparse features = " << config.sparse_features << endl;
-  cerr << "# hash space = " << config.hash_space << endl;
-  cerr << "# filter contexts = " << config.filter_contexts << endl;
-  cerr << "# filter error rate = " << config.filter_error_rate << endl;
-  cerr << "################################" << endl;
+  cout << "# input = " << config.training_file << endl;
+  cout << "# minibatch size = " << config.minibatch_size << endl;
+  cout << "# lambda LBL = " << config.l2_lbl << endl;
+  cout << "# lambda maxent = " << config.l2_maxent << endl;
+  cout << "# step size = " << config.step_size << endl;
+  cout << "# iterations = " << config.iterations << endl;
+  cout << "# threads = " << config.threads << endl;
+  cout << "# classes = " << config.classes << endl;
+  cout << "# max n-grams = " << config.max_ngrams << endl;
+  cout << "# min n-gram frequency = " << config.min_ngram_freq << endl;
+  cout << "# sparse features = " << config.sparse_features << endl;
+  cout << "# hash space = " << config.hash_space << endl;
+  cout << "# filter contexts = " << config.filter_contexts << endl;
+  cout << "# filter error rate = " << config.filter_error_rate << endl;
+  cout << "################################" << endl;
 
   learn(config);
 

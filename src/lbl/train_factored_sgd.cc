@@ -84,6 +84,7 @@ int main(int argc, char **argv) {
   config.minibatch_size = vm["minibatch-size"].as<int>();
   config.instances = vm["instances"].as<int>();
   config.ngram_order = vm["order"].as<int>();
+
   if (vm.count("model-in")) {
     config.model_input_file = vm["model-in"].as<string>();
   }
@@ -93,34 +94,41 @@ int main(int argc, char **argv) {
       config.model_output_file += "." + string(GIT_REVISION);
     }
   }
+  if (vm.count("class-file")) {
+    config.class_file = vm["class-file"].as<string>();
+  }
+
   config.l2_lbl = vm["lambda-lbl"].as<float>();
   config.word_representation_size = vm["word-width"].as<int>();
   config.threads = vm["threads"].as<int>();
   config.step_size = vm["step-size"].as<float>();
   config.classes = vm["classes"].as<int>();
-  config.class_file = vm["class-file"].as<string>();
   config.randomise = vm.count("randomise");
   config.reclass = vm.count("reclass");
   config.diagonal_contexts = vm.count("diagonal-contexts");
   config.random_weights = vm["random-weights"].as<bool>();
 
-  cerr << "################################" << endl;
-  cerr << "# Config Summary" << endl;
-  cerr << "# order = " << config.ngram_order << endl;
+  cout << "################################" << endl;
+  if (strlen(GIT_REVISION) > 0) {
+    cout << "# Git revision: " << GIT_REVISION << endl;
+  }
+  cout << "# Config Summary" << endl;
+  cout << "# order = " << config.ngram_order << endl;
+  cout << "# diagonal contexts = " << config.diagonal_contexts << endl;
   if (config.model_input_file.size()) {
-    cerr << "# model-in = " << config.model_input_file << endl;
+    cout << "# model-in = " << config.model_input_file << endl;
   }
   if (config.model_output_file.size()) {
-    cerr << "# model-out = " << config.model_output_file << endl;
+    cout << "# model-out = " << config.model_output_file << endl;
   }
-  cerr << "# input = " << config.training_file << endl;
-  cerr << "# minibatch-size = " << config.minibatch_size << endl;
-  cerr << "# lambda = " << config.l2_lbl << endl;
-  cerr << "# step size = " << config.step_size << endl;
-  cerr << "# iterations = " << config.iterations << endl;
-  cerr << "# threads = " << config.threads << endl;
-  cerr << "# classes = " << config.classes << endl;
-  cerr << "################################" << endl;
+  cout << "# input = " << config.training_file << endl;
+  cout << "# minibatch size = " << config.minibatch_size << endl;
+  cout << "# lambda = " << config.l2_lbl << endl;
+  cout << "# step size = " << config.step_size << endl;
+  cout << "# iterations = " << config.iterations << endl;
+  cout << "# threads = " << config.threads << endl;
+  cout << "# classes = " << config.classes << endl;
+  cout << "################################" << endl;
 
   learn(config);
 
