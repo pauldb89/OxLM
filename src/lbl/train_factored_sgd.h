@@ -63,7 +63,7 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
   vector<int> classes;
   VectorReal class_bias;
   if (config.class_file.size()) {
-    cerr << "--class-file set, ignoring --classes." << endl;
+    cout << "--class-file set, ignoring --classes." << endl;
     loadClassesFromFile(
         config.class_file, config.training_file, classes, dict, class_bias);
     config.classes = classes.size() - 1;
@@ -73,8 +73,10 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
   }
 
   training_corpus = readCorpus(config.training_file, dict);
+  cout << "Done reading the training data..." << endl;
   if (config.test_file.size()) {
     test_corpus = readCorpus(config.test_file, dict);
+    cout << "Done reading the test data..." << endl;
   }
 
   boost::shared_ptr<WordToClassIndex> index =

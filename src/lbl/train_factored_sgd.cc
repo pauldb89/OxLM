@@ -114,6 +114,7 @@ int main(int argc, char **argv) {
   }
   cout << "# Config Summary" << endl;
   cout << "# order = " << config.ngram_order << endl;
+  cout << "# word_width = " << config.word_representation_size << endl;
   cout << "# diagonal contexts = " << config.diagonal_contexts << endl;
   if (config.model_input_file.size()) {
     cout << "# model-in = " << config.model_input_file << endl;
