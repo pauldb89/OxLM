@@ -1,5 +1,9 @@
 #pragma once
 
+#include <boost/shared_ptr.hpp>
+
+#include "corpus/corpus.h"
+#include "lbl/config.h"
 #include "lbl/global_weights.h"
 #include "lbl/global_factored_weights.h"
 #include "lbl/global_factored_maxent_weights.h"
@@ -15,6 +19,8 @@ namespace oxlm {
 template<class GlobalWeights, class MinibatchWeights, class Metadata>
 class Model {
  public:
+  Model(const ModelData& config);
+
   void learn();
 
   void computeGradient() const;
@@ -24,12 +30,10 @@ class Model {
   void evaluate();
 
  private:
-  GlobalWeights weights;
-  Metadata metadata;
+  ModelData config;
+  Dict dict;
+  boost::shared_ptr<Metadata> metadata;
+  boost::shared_ptr<GlobalWeights> weights;
 };
-
-class NLM : public Model<GlobalWeights, MinibatchWeights, Metadata> {};
-class FactoredNLM : public Model<GlobalFactoredWeights, MinibatchFactoredWeights, FactoredMetadata> {};
-class FactoredMaxentNLM : public Model<GlobalFactoredMaxentWeights, MinibatchFactoredMaxentWeights, FactoredMaxentMetadata> {};
 
 } // namespace oxlm

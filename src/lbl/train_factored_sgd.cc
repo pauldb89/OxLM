@@ -3,15 +3,10 @@
 
 #include "lbl/train_factored_sgd.h"
 
-static const char *REVISION = "$Rev: 247 $";
-
 using namespace boost::program_options;
 
 
 int main(int argc, char **argv) {
-  cout << "Online noise contrastive estimation for log-bilinear models: Copyright 2013 Phil Blunsom, "
-       << REVISION << '\n' << endl;
-
   ///////////////////////////////////////////////////////////////////////////////////////
   // Command line processing
   variables_map vm;
@@ -21,8 +16,8 @@ int main(int argc, char **argv) {
   cmdline_specific.add_options()
     ("help,h", "print help message")
     ("config,c", value<string>(),
-        "config file specifying additional command line options")
-    ;
+        "config file specifying additional command line options");
+
   options_description generic("Allowed options");
   generic.add_options()
     ("input,i", value<string>()->default_value("data.txt"),
