@@ -10,7 +10,7 @@ namespace oxlm {
 
 class FactoredMetadata : public Metadata {
  public:
-  FactoredMetadata(const ModelData& config, Dict& dict);
+  FactoredMetadata(ModelData& config, Dict& dict);
 
   void initialize(const boost::shared_ptr<Corpus>& corpus);
 

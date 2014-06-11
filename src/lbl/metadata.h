@@ -15,7 +15,7 @@ class Metadata {
   void initialize(const boost::shared_ptr<Corpus>& corpus);
 
  protected:
-  const ModelData& config;
+  ModelData config;
 };
 
 } // namespace oxlm

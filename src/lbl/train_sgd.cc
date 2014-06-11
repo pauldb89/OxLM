@@ -1,9 +1,8 @@
 #include <boost/program_options.hpp>
 
-#include "lbl/global_weights.h"
 #include "lbl/metadata.h"
-#include "lbl/minibatch_weights.h"
 #include "lbl/model.h"
+#include "lbl/weights.h"
 #include "utils/git_revision.h"
 
 using namespace boost::program_options;
@@ -114,7 +113,7 @@ int main(int argc, char** argv) {
   cout << "# threads = " << config.threads << endl;
   cout << "################################" << endl;
 
-  Model<GlobalWeights, MinibatchWeights, Metadata> model(config);
+  Model<Weights, Weights, Metadata> model(config);
   model.learn();
 
   return 0;

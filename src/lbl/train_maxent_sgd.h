@@ -229,7 +229,7 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
 
       Real step_size = config.step_size;
 
-      for (size_t start=0; start < training_corpus->size() && (int)start < config.instances; ++minibatch_counter) {
+      for (size_t start=0; start < training_corpus->size(); ++minibatch_counter) {
         size_t end = min(training_corpus->size(), start + minibatch_size);
 
         #pragma omp master

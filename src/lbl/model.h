@@ -4,26 +4,22 @@
 
 #include "corpus/corpus.h"
 #include "lbl/config.h"
-#include "lbl/global_weights.h"
-#include "lbl/global_factored_weights.h"
-#include "lbl/global_factored_maxent_weights.h"
-#include "lbl/minibatch_weights.h"
-#include "lbl/minibatch_factored_weights.h"
-#include "lbl/minibatch_factored_maxent_weights.h"
-#include "lbl/metadata.h"
-#include "lbl/factored_metadata.h"
-#include "lbl/factored_maxent_metadata.h"
+#include "lbl/utils.h"
 
 namespace oxlm {
 
 template<class GlobalWeights, class MinibatchWeights, class Metadata>
 class Model {
  public:
-  Model(const ModelData& config);
+  Model(ModelData& config);
 
   void learn();
 
-  void computeGradient() const;
+  void computeGradient(
+      const boost::shared_ptr<Corpus>& corpus,
+      const vector<int>& indices,
+      boost::shared_ptr<MinibatchWeights>& gradient,
+      Real& objective) const;
 
   void regularize();
 

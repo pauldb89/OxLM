@@ -16,6 +16,7 @@ add_library(lbl SHARED
   factored_nlm.cc
   factored_maxent_metadata.cc
   factored_metadata.cc
+  factored_weights.cc
   feature_approximate_filter.cc
   feature_context.cc
   feature_context_extractor.cc
@@ -29,16 +30,12 @@ add_library(lbl SHARED
   feature_store.cc
   feature_store_initializer.cc
   global_factored_maxent_weights.cc
-  global_factored_weights.cc
   global_feature_indexes_pair.cc
   global_feature_store.cc
-  global_weights.cc
   metadata.cc
   minibatch_factored_maxent_weights.cc
-  minibatch_factored_weights.cc
   minibatch_feature_indexes_pair.cc
   minibatch_feature_store.cc
-  minibatch_weights.cc
   model.cc
   model_utils.cc
   ngram.cc
@@ -51,6 +48,7 @@ add_library(lbl SHARED
   sparse_minibatch_feature_store.cc
   unconstrained_feature_store.cc
   utils.cc
+  weights.cc
   word_context_extractor.cc
   word_context_hasher.cc
   word_to_class_index.cc

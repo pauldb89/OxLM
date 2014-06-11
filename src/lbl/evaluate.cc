@@ -25,7 +25,7 @@ int main(int argc, char** argv) {
   Dict dict = model->label_set();
   int eos = dict.Convert("</s>");
   boost::shared_ptr<Corpus> test_corpus =
-      readCorpus(vm["test"].as<string>(), dict, true);
+      readCorpus(vm["test"].as<string>(), dict, true, true);
 
   double total = 0;
   ModelData config = model->config;

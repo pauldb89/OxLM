@@ -246,11 +246,13 @@ void frequencyBinning(
   in.close();
 }
 
-int convert(const string& token, Dict& dict, bool convert_unknowns) {
-  int w = dict.Convert(token, true);
+int convert(
+    const string& token, Dict& dict,
+    bool immutable_dict, bool convert_unknowns) {
+  int w = dict.Convert(token, immutable_dict);
   if (w < 0) {
     if (convert_unknowns) {
-      w = dict.Convert("<unk>", true);
+      w = dict.Convert("<unk>", immutable_dict);
       assert(w >= 0);
     } else {
       cout << token << " " << w << endl;
@@ -261,9 +263,10 @@ int convert(const string& token, Dict& dict, bool convert_unknowns) {
 }
 
 boost::shared_ptr<Corpus> readCorpus(
-    const string& filename, Dict& dict, bool convert_unknowns) {
+    const string& filename, Dict& dict,
+    bool immutable_dict, bool convert_unknowns) {
   boost::shared_ptr<Corpus> corpus = boost::make_shared<Corpus>();
-  int end_id = convert("</s>", dict, convert_unknowns);
+  int end_id = convert("</s>", dict, immutable_dict, convert_unknowns);
 
   ifstream in(filename);
   string line;
@@ -271,7 +274,7 @@ boost::shared_ptr<Corpus> readCorpus(
     stringstream line_stream(line);
     string token;
     while (line_stream >> token) {
-      corpus->push_back(convert(token, dict, convert_unknowns));
+      corpus->push_back(convert(token, dict, immutable_dict, convert_unknowns));
     }
     corpus->push_back(end_id);
   }

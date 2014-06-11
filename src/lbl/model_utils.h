@@ -39,9 +39,12 @@ void frequencyBinning(
     const string& training_file, int num_classes,
     vector<int>& classes, Dict& dict, VectorReal& class_bias);
 
-int convert(const string& file, Dict& dict, bool convert_unknowns);
+int convert(
+    const string& file, Dict& dict,
+    bool immutable_dict, bool convert_unknowns);
 
 boost::shared_ptr<Corpus> readCorpus(
-    const string& file, Dict& dict, bool convert_unknowns = false);
+    const string& file, Dict& dict,
+    bool immutable_dict = true, bool convert_unknowns = false);
 
 } // namespace oxlm

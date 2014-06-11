@@ -38,8 +38,6 @@ int main(int argc, char **argv) {
         "number of passes through the data")
     ("minibatch-size", value<int>()->default_value(100),
         "number of sentences per minibatch")
-    ("instances", value<int>()->default_value(std::numeric_limits<int>::max()),
-        "training instances per iteration")
     ("order,n", value<int>()->default_value(5),
         "ngram order")
     ("feature-context-size", value<int>()->default_value(5),
@@ -107,7 +105,6 @@ int main(int argc, char **argv) {
   }
   config.iterations = vm["iterations"].as<int>();
   config.minibatch_size = vm["minibatch-size"].as<int>();
-  config.instances = vm["instances"].as<int>();
   config.ngram_order = vm["order"].as<int>();
   config.feature_context_size = vm["feature-context-size"].as<int>();
 

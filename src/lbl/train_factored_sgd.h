@@ -168,7 +168,7 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
       TrainingInstances training_instances;
       Real step_size = config.step_size;
 
-      for (size_t start=0; start < training_corpus->size() && (int)start < config.instances; ++minibatch_counter) {
+      for (size_t start=0; start < training_corpus->size(); ++minibatch_counter) {
         size_t end = min(training_corpus->size(), start + minibatch_size);
 
         #pragma omp master
@@ -310,6 +310,7 @@ Real sgd_gradient(
     //for (int x=0; x<word_width; ++x)
     //  prediction_vectors.row(instance)(x) *= (prediction_vectors.row(instance)(x) > 0 ? 1 : 0.01); // rectifier
 
+    // num_classes x word_width   1 x word_width
     VectorReal class_conditional_scores = model->F * prediction_vectors.row(instance).transpose() + model->FB;
     VectorReal word_conditional_scores  = model->class_R(c) * prediction_vectors.row(instance).transpose() + model->class_B(c);
 

@@ -3,7 +3,9 @@
 namespace oxlm {
 
 GlobalFactoredMaxentWeights::GlobalFactoredMaxentWeights(
-    const boost::shared_ptr<FactoredMaxentMetadata>& metadata)
-    : GlobalFactoredWeights(metadata) {}
+    const ModelData& config,
+    const boost::shared_ptr<FactoredMaxentMetadata>& metadata,
+    bool model_weights)
+    : FactoredWeights(config, metadata, model_weights) {}
 
 } // namespace oxlm

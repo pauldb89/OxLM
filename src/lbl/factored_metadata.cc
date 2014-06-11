@@ -6,7 +6,7 @@
 
 namespace oxlm {
 
-FactoredMetadata::FactoredMetadata(const ModelData& config, Dict& dict)
+FactoredMetadata::FactoredMetadata(ModelData& config, Dict& dict)
     : Metadata(config, dict) {
   vector<int> classes;
   if (config.class_file.size()) {
@@ -17,6 +17,7 @@ FactoredMetadata::FactoredMetadata(const ModelData& config, Dict& dict)
         config.training_file, config.classes, classes, dict, classBias);
   }
 
+  config.vocab_size = dict.size();
   index = boost::make_shared<WordToClassIndex>(classes);
 }
 

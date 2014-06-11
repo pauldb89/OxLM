@@ -11,7 +11,7 @@ namespace oxlm {
 
 class FactoredMaxentMetadata : public FactoredMetadata {
  public:
-  FactoredMaxentMetadata(const ModelData& config, Dict& dict);
+  FactoredMaxentMetadata(ModelData& config, Dict& dict);
 
   void initialize(const boost::shared_ptr<Corpus>& corpus);
 
