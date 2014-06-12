@@ -29,12 +29,10 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
   boost::shared_ptr<Corpus> training_corpus =
       readCorpus(config.training_file, dict, immutable_dict);
   config.vocab_size = dict.size();
-  cout << "Done reading training corpus..." << endl;
 
   boost::shared_ptr<Corpus> test_corpus;
   if (config.test_file.size()) {
     test_corpus = readCorpus(config.test_file, dict);
-    cout << "Done reading test corpus..." << endl;
   }
 
   metadata->initialize(training_corpus);
@@ -78,7 +76,7 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
 
         computeGradient(training_corpus, minibatch, gradient, objective);
 
-        #pragma critical
+        #pragma omp critical
         {
           global_gradient->update(gradient);
           global_objective += objective;
@@ -97,11 +95,11 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
 
         // Wait for master thread to update model.
         #pragma omp barrier
-        if ((minibatch_counter % 100 == 0 && minibatch_counter <= 1000) ||
-            minibatch_counter % 1000 == 0) {
+        // if ((minibatch_counter % 100 == 0 && minibatch_counter <= 1000) ||
+        //    minibatch_counter % 1000 == 0) {
           evaluate(test_corpus, iteration_start, minibatch_counter,
                    perplexity, best_perplexity);
-        }
+        //}
 
         ++minibatch_counter;
         start = end;
@@ -109,11 +107,11 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
 
       evaluate(test_corpus, iteration_start, minibatch_counter,
                perplexity, best_perplexity);
-      #pragma master
+      #pragma omp master
       {
         Real iteration_time = GetDuration(iteration_start, GetTime());
         cout << "Iteration: " << iter << ", "
-             << "Time: " << iteration_time << "seconds, "
+             << "Time: " << iteration_time << " seconds, "
              << "Objective: " << global_objective / training_corpus->size()
              << endl;
         cout << endl;
@@ -161,6 +159,10 @@ Real Model<GlobalWeights, MinibatchWeights, Metadata>::computePerplexity(
   int context_width = config.ngram_order - 1;
   boost::shared_ptr<ContextProcessor> processor =
       boost::make_shared<ContextProcessor>(test_corpus, context_width);
+
+  #pragma omp master
+  cout << "Calculating perplexity for " << test_corpus->size()
+       << " tokens..." << endl;
 
   int tokens = 1;
   size_t thread_num = omp_get_thread_num();

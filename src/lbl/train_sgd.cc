@@ -25,12 +25,8 @@ int main(int argc, char** argv) {
         "number of passes through the data")
     ("minibatch-size", value<int>()->default_value(10000),
         "number of sentences per minibatch")
-    ("instances", value<int>()->default_value(std::numeric_limits<int>::max()),
-        "training instances per iteration")
     ("order,n", value<int>()->default_value(4),
         "ngram order")
-    ("model-in,m", value<string>(),
-        "initial model")
     ("model-out,o", value<string>(),
         "base filename of model output files")
     ("lambda-lbl,r", value<float>()->default_value(7.0),
@@ -56,7 +52,6 @@ int main(int argc, char** argv) {
     store(parse_config_file(config, cmdline_options), vm);
   }
   notify(vm);
-  ///////////////////////////////////////////////////////////////////////////////////////
 
   if (vm.count("help")) {
     cout << cmdline_options << "\n";
@@ -70,7 +65,6 @@ int main(int argc, char** argv) {
   }
   config.iterations = vm["iterations"].as<int>();
   config.minibatch_size = vm["minibatch-size"].as<int>();
-  config.instances = vm["instances"].as<int>();
   config.ngram_order = vm["order"].as<int>();
 
   if (vm.count("model-in")) {

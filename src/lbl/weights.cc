@@ -158,9 +158,9 @@ void Weights::getContextGradient(
     }
 
     if (config.diagonal_contexts) {
-      gradient->C[j] = context_vectors[j] * weighted_representations.transpose();
-    } else {
       gradient->C[j] = context_vectors[j].cwiseProduct(weighted_representations).rowwise().sum();
+    } else {
+      gradient->C[j] = context_vectors[j] * weighted_representations.transpose();
     }
   }
 }
