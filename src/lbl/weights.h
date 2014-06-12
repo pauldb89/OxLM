@@ -46,6 +46,18 @@ class Weights {
       const MatrixReal& weighted_representations,
       boost::shared_ptr<Weights>& gradient) const;
 
+  void update(const boost::shared_ptr<Weights>& gradient);
+
+  void updateSquared(const boost::shared_ptr<Weights>& global_gradient);
+
+  void updateAdaGrad(
+      const boost::shared_ptr<Weights>& global_gradient,
+      const boost::shared_ptr<Weights>& adagrad);
+
+  Real regularizerUpdate(Real minibatch_factor);
+
+  Real predict(int word_id, const vector<int>& context) const;
+
   void clear();
 
   virtual ~Weights();

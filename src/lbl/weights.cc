@@ -5,6 +5,7 @@
 #include <boost/make_shared.hpp>
 
 #include "lbl/context_processor.h"
+#include "lbl/operators.h"
 
 namespace oxlm {
 
@@ -164,7 +165,42 @@ void Weights::getContextGradient(
   }
 }
 
+void Weights::update(const boost::shared_ptr<Weights>& gradient) {
+  W += gradient->W;
+}
+
+void Weights::updateSquared(const boost::shared_ptr<Weights>& global_gradient) {
+  W.array() += global_gradient->W.array().square();
+}
+
+void Weights::updateAdaGrad(
+    const boost::shared_ptr<Weights>& global_gradient,
+    const boost::shared_ptr<Weights>& adagrad) {
+  W -= global_gradient->W.binaryExpr(
+      adagrad->W, CwiseAdagradUpdateOp<Real>(config.step_size));
+}
+
+Real Weights::regularizerUpdate(Real minibatch_factor) {
+  Real sigma = minibatch_factor * config.step_size * config.l2_lbl;
+  W -= W * sigma;
+  return 0.5 * minibatch_factor * config.l2_lbl * W.array().square().sum();
+}
+
+Real Weights::predict(int word_id, const vector<int>& context) const {
+  int context_width = config.ngram_order - 1;
+  int word_width = config.word_representation_size;
+
+  VectorReal prediction_vector = VectorReal::Zero(word_width);
+  for (int i = 0; i < context_width; ++i) {
+    prediction_vector += getContextProduct(i, Q.col(context[i]));
+  }
+
+  VectorReal word_probs = logSoftMax(R.transpose() * prediction_vector + B);
+  return word_probs(word_id);
+}
+
 void Weights::clear() {
+  W.setZero();
 }
 
 Weights::~Weights() {
