@@ -1,6 +1,8 @@
 #include "lbl/model.h"
 
 #include <boost/make_shared.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/serialization/shared_ptr.hpp>
 
 #include "lbl/factored_metadata.h"
 #include "lbl/factored_maxent_metadata.h"
@@ -11,7 +13,6 @@
 #include "lbl/model_utils.h"
 #include "lbl/weights.h"
 #include "utils/conditional_omp.h"
-
 
 namespace oxlm {
 
@@ -29,10 +30,12 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
   boost::shared_ptr<Corpus> training_corpus =
       readCorpus(config.training_file, dict, immutable_dict);
   config.vocab_size = dict.size();
+  cout << "Done reading training corpus..." << endl;
 
   boost::shared_ptr<Corpus> test_corpus;
   if (config.test_file.size()) {
     test_corpus = readCorpus(config.test_file, dict);
+    cout << "Done reading test corpus..." << endl;
   }
 
   metadata->initialize(training_corpus);
@@ -223,6 +226,16 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::evaluate(
 
 template<class GlobalWeights, class MinibatchWeights, class Metadata>
 void Model<GlobalWeights, MinibatchWeights, Metadata>::save() const {
+  if (config.model_output_file.size()) {
+    cout << "Writing model to " << config.model_output_file << "..." << endl;
+    ofstream fout(config.model_output_file);
+    boost::archive::binary_oarchive oar(fout);
+    oar << config;
+    oar << dict;
+    oar << weights;
+    oar << metadata;
+    cout << "Done..." << endl;
+  }
 }
 
 template class Model<Weights, Weights, Metadata>;

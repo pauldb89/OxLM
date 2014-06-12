@@ -1,5 +1,7 @@
 #pragma once
 
+#include <boost/serialization/serialization.hpp>
+
 #include "lbl/metadata.h"
 #include "lbl/utils.h"
 
@@ -12,6 +14,8 @@ typedef Eigen::Map<VectorReal> WeightsType;
 
 class Weights {
  public:
+  Weights();
+
   Weights(
       const ModelData& config,
       const boost::shared_ptr<Metadata>& metadata,
@@ -61,6 +65,28 @@ class Weights {
   void clear();
 
   virtual ~Weights();
+
+ private:
+  friend class boost::serialization::access;
+
+  template<class Archive>
+  void save(Archive& ar, const unsigned int version) const {
+    ar << config;
+    ar << metadata;
+    ar << size;
+    ar << boost::serialization::make_array(data, size);
+  }
+
+  template<class Archive>
+  void load(Archive& ar, const unsigned int version) {
+    ar >> config;
+    ar >> metadata;
+    ar >> size;
+    data = new Real[size];
+    ar >> boost::serialization::make_array(data, size);
+  }
+
+  BOOST_SERIALIZATION_SPLIT_MEMBER();
 
  protected:
   ModelData config;

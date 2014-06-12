@@ -9,6 +9,8 @@
 
 namespace oxlm {
 
+Weights::Weights() : Q(0, 0, 0), R(0, 0, 0), B(0, 0), W(0, 0) {}
+
 Weights::Weights(
     const ModelData& config,
     const boost::shared_ptr<Metadata>& metadata,
