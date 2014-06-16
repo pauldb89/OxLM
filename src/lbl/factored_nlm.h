@@ -19,6 +19,7 @@ class FactoredNLM: public NLM {
       const ModelData& config, const Dict& labels,
       const boost::shared_ptr<WordToClassIndex>& index);
 
+/*
   Eigen::Block<WordVectorsType> class_R(const int c);
 
   const Eigen::Block<const WordVectorsType> class_R(const int c) const;
@@ -28,6 +29,7 @@ class FactoredNLM: public NLM {
   const Eigen::VectorBlock<const WeightsType> class_B(const int c) const;
 
   int get_class(const WordId& w) const;
+*/
 
   virtual void l2GradientUpdate(Real minibatch_factor);
 
@@ -53,6 +55,7 @@ class FactoredNLM: public NLM {
 
     ar << index;
 
+    /*
     int F_rows=F.rows(), F_cols=F.cols();
     ar << F_rows << F_cols;
     ar << boost::serialization::make_array(F.data(), F_rows*F_cols);
@@ -60,6 +63,7 @@ class FactoredNLM: public NLM {
     int FB_len=FB.rows();
     ar << FB_len;
     ar << boost::serialization::make_array(FB.data(), FB_len);
+    */
   }
 
   template<class Archive>
@@ -68,6 +72,7 @@ class FactoredNLM: public NLM {
 
     ar >> index;
 
+    /*
     int F_rows=0, F_cols=0;
     ar >> F_rows >> F_cols;
     F = MatrixReal(F_rows, F_cols);
@@ -77,13 +82,14 @@ class FactoredNLM: public NLM {
     ar >> FB_len;
     FB = VectorReal(FB_len);
     ar >> boost::serialization::make_array(FB.data(), FB_len);
+    */
   }
   BOOST_SERIALIZATION_SPLIT_MEMBER();
 
  public:
   boost::shared_ptr<WordToClassIndex> index;
-  MatrixReal F;
-  VectorReal FB;
+  // MatrixReal F;
+  // VectorReal FB;
 
  protected:
   mutable unordered_map<pair<int,Words>, Real> m_context_class_cache;

@@ -9,8 +9,12 @@ class GlobalFactoredMaxentWeights : public FactoredWeights {
  public:
   GlobalFactoredMaxentWeights(
       const ModelData& config,
+      const boost::shared_ptr<FactoredMaxentMetadata>& metadata);
+
+  GlobalFactoredMaxentWeights(
+      const ModelData& config,
       const boost::shared_ptr<FactoredMaxentMetadata>& metadata,
-      bool model_weights = false);
+      const boost::shared_ptr<Corpus>& training_corpus);
 };
 
 } // namespace oxlm

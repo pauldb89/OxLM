@@ -2,7 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
-#include <iterator>
+#include <iomanip>
 #include <iterator>
 #include <cstring>
 #include <functional>
@@ -49,9 +49,10 @@ Real sgd_gradient(const boost::shared_ptr<FactoredNLM>& model,
                   WordVectorsType& g_R,
                   WordVectorsType& g_Q,
                   ContextTransformsType& g_C,
-                  WeightsType& g_B,
+                  WeightsType& g_B
+                  /*
                   MatrixReal & g_F,
-                  VectorReal & g_FB);
+                  VectorReal & g_FB*/);
 
 boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
   boost::shared_ptr<Corpus> training_corpus, test_corpus;
@@ -60,7 +61,8 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
   WordId end_id = dict.Convert("</s>");
 
   // Read classe from file or bin words according to freqeuncy.
-  vector<int> classes;
+  vector<int> classes = {0, 2};
+  /*
   VectorReal class_bias;
   if (config.class_file.size()) {
     cout << "--class-file set, ignoring --classes." << endl;
@@ -71,11 +73,12 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
     frequencyBinning(
         config.training_file, config.classes, classes, dict, class_bias);
   }
+  */
 
-  training_corpus = readCorpus(config.training_file, dict);
+  training_corpus = readCorpus(config.training_file, dict, false);
   cout << "Done reading the training data..." << endl;
   if (config.test_file.size()) {
-    test_corpus = readCorpus(config.test_file, dict);
+    test_corpus = readCorpus(config.test_file, dict, true, true);
     cout << "Done reading the test data..." << endl;
   }
 
@@ -87,8 +90,9 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
     model = loadModel(config.model_input_file, test_corpus);
   } else {
     model = boost::make_shared<FactoredNLM>(config, dict, index);
-    model->FB = class_bias;
+    // model->FB = class_bias;
   }
+
 
   vector<int> training_indices(training_corpus->size());
   model->unigram = VectorReal::Zero(model->labels());
@@ -104,13 +108,15 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
   Real av_f = 0;
   Real pp = 0, best_pp = numeric_limits<Real>::infinity();
 
+  /*
   MatrixReal global_gradientF(model->F.rows(), model->F.cols());
   VectorReal global_gradientFB(model->FB.size());
   MatrixReal adaGradF = MatrixReal::Zero(model->F.rows(), model->F.cols());
   VectorReal adaGradFB = VectorReal::Zero(model->FB.size());
+  */
 
   omp_set_num_threads(config.threads);
-  #pragma omp parallel shared(global_gradient, global_gradientF)
+  #pragma omp parallel shared(global_gradient)
   {
     //////////////////////////////////////////////
     // setup the gradient matrices
@@ -123,18 +129,17 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
     int Q_size = R_size;
     int C_size = config.diagonal_contexts ? word_width : word_width*word_width;
     int B_size = num_words;
-    int M_size = context_width;
 
-    assert((R_size+Q_size+context_width*C_size+B_size+M_size) == model->num_weights());
+    assert((R_size+Q_size+context_width*C_size+B_size) == model->num_weights());
 
     Real* gradient_data = new Real[model->num_weights()];
     WeightsType gradient(gradient_data, model->num_weights());
 
-    WordVectorsType g_R(gradient_data, num_words, word_width);
-    WordVectorsType g_Q(gradient_data+R_size, num_words, word_width);
+    WordVectorsType g_Q(gradient_data, num_words, word_width);
+    WordVectorsType g_R(gradient_data + Q_size, num_words, word_width);
 
     ContextTransformsType g_C;
-    Real* ptr = gradient_data+2*R_size;
+    Real* ptr = gradient_data + R_size + Q_size;
     for (int i=0; i<context_width; i++) {
       if (config.diagonal_contexts) {
         g_C.push_back(ContextTransformType(ptr, word_width, 1));
@@ -145,9 +150,10 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
     }
 
     WeightsType g_B(ptr, B_size);
-    WeightsType g_M(ptr+B_size, M_size);
+    /*
     MatrixReal g_F(num_classes, word_width);
     VectorReal g_FB(num_classes);
+    */
     //////////////////////////////////////////////
 
     size_t minibatch_counter = 1;
@@ -174,13 +180,17 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
         #pragma omp master
         {
           global_gradient.setZero();
+          /*
           global_gradientF.setZero();
           global_gradientFB.setZero();
+          */
         }
 
         gradient.setZero();
+        /*
         g_F.setZero();
         g_FB.setZero();
+        */
 
         // Wait for global gradients to be cleared before updating them with
         // data from this minibatch.
@@ -188,13 +198,29 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
         vector<int> training_instances =
             scatterMinibatch(start, end, training_indices);
         Real f = sgd_gradient(model, training_corpus, training_instances, index,
-                              g_R, g_Q, g_C, g_B, g_F, g_FB);
+                              g_R, g_Q, g_C, g_B/*, g_F, g_FB*/);
+
+        /*
+        cout << "norm: " << gradient.norm() << endl;
+        cout << "Q:" << endl;
+        cout << g_Q << endl;
+        cout << "R:" << endl;
+        cout << g_R << endl;
+        for (int i = 0; i < context_width; ++i) {
+          cout << "C " << i << ":" << endl;
+          cout << g_C[i] << endl;
+        }
+        cout << "B:" << endl;
+        cout << g_B << endl;
+        */
 
         #pragma omp critical
         {
           global_gradient += gradient;
+          /*
           global_gradientF += g_F;
           global_gradientFB += g_FB;
+          */
           av_f += f;
         }
 
@@ -206,13 +232,14 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
           adaGrad.array() += global_gradient.array().square();
           model->W -= global_gradient.binaryExpr(
               adaGrad, CwiseAdagradUpdateOp<Real>(step_size));
-
+          /*
           adaGradF.array() += global_gradientF.array().square();
           model->F -= global_gradientF.binaryExpr(
               adaGradF, CwiseAdagradUpdateOp<Real>(step_size));
           adaGradFB.array() += global_gradientFB.array().square();
           model->FB -= global_gradientFB.binaryExpr(
               adaGradFB, CwiseAdagradUpdateOp<Real>(step_size));
+          */
 
           // regularisation
           if (config.l2_lbl > 0) {
@@ -247,8 +274,10 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
 
         if (iteration >= 1 && config.reclass) {
           model->reclass(training_corpus, test_corpus);
+          /*
           adaGradF = MatrixReal::Zero(model->F.rows(), model->F.cols());
           adaGradFB = VectorReal::Zero(model->FB.size());
+          */
           adaGrad = VectorReal::Zero(model->num_weights());
         }
       }
@@ -266,8 +295,8 @@ Real sgd_gradient(
     const TrainingInstances &training_instances,
     const boost::shared_ptr<WordToClassIndex>& index,
     WordVectorsType& g_R, WordVectorsType& g_Q,
-    ContextTransformsType& g_C, WeightsType& g_B,
-    MatrixReal& g_F, VectorReal& g_FB) {
+    ContextTransformsType& g_C, WeightsType& g_B
+    /*MatrixReal& g_F, VectorReal& g_FB*/) {
   Real f=0;
   WordId start_id = model->label_set().Convert("<s>");
   WordId end_id = model->label_set().Convert("</s>");
@@ -286,6 +315,7 @@ Real sgd_gradient(
       context_vectors[i].row(instance) = model->Q.row(contexts[instance][i]);
     }
   }
+
   MatrixReal prediction_vectors = MatrixReal::Zero(instances, word_width);
   for (int i=0; i<context_width; ++i)
     prediction_vectors += model->context_product(i, context_vectors.at(i));
@@ -295,49 +325,54 @@ Real sgd_gradient(
   // the weighted sum of word representations
   MatrixReal weightedRepresentations = MatrixReal::Zero(instances, word_width);
 
+  MatrixReal word_probs = MatrixReal::Zero(instances, model->labels());
   // calculate the function and gradient for each ngram
 //  clock_t iteration_start = clock();
   for (int instance=0; instance < instances; instance++) {
     int w_i = training_instances.at(instance);
     WordId w = training_corpus->at(w_i);
-    int c = index->getClass(w);
-    int c_start = index->getClassMarker(c);
-    int c_size = index->getClassSize(c);
-    int word_index = index->getWordIndexInClass(w);
+    // int c = index->getClass(w);
+    // int c_start = index->getClassMarker(c);
+    // int c_size = index->getClassSize(c);
+    // int word_index = index->getWordIndexInClass(w);
 
     // a simple sigmoid non-linearity
-    prediction_vectors.row(instance) = (1.0 + (-prediction_vectors.row(instance)).array().exp()).inverse(); // sigmoid
+    // prediction_vectors.row(instance) = (1.0 + (-prediction_vectors.row(instance)).array().exp()).inverse(); // sigmoid
+    prediction_vectors.row(instance) = sigmoid(prediction_vectors.row(instance));
     //for (int x=0; x<word_width; ++x)
     //  prediction_vectors.row(instance)(x) *= (prediction_vectors.row(instance)(x) > 0 ? 1 : 0.01); // rectifier
 
     // num_classes x word_width   1 x word_width
-    VectorReal class_conditional_scores = model->F * prediction_vectors.row(instance).transpose() + model->FB;
-    VectorReal word_conditional_scores  = model->class_R(c) * prediction_vectors.row(instance).transpose() + model->class_B(c);
-
-    ArrayReal class_conditional_log_probs = logSoftMax(class_conditional_scores);
+    // VectorReal class_conditional_scores = model->F * prediction_vectors.row(instance).transpose() + model->FB;
+    VectorReal word_conditional_scores  = model->R * prediction_vectors.row(instance).transpose() + model->B;
+    // ArrayReal class_conditional_log_probs = logSoftMax(class_conditional_scores);
     ArrayReal word_conditional_log_probs  = logSoftMax(word_conditional_scores);
 
-    VectorReal class_conditional_probs = class_conditional_log_probs.exp();
+    // VectorReal class_conditional_probs = class_conditional_log_probs.exp();
     VectorReal word_conditional_probs  = word_conditional_log_probs.exp();
+    word_probs.row(instance) = word_conditional_probs;
 
-    weightedRepresentations.row(instance) -= (model->F.row(c) - class_conditional_probs.transpose() * model->F);
-    weightedRepresentations.row(instance) -= (model->R.row(w) - word_conditional_probs.transpose() * model->class_R(c));
+    // weightedRepresentations.row(instance) -= (model->F.row(c) - class_conditional_probs.transpose() * model->F);
+    weightedRepresentations.row(instance) -= (model->R.row(w) - word_conditional_probs.transpose() * model->R);
 
-    assert(isfinite(class_conditional_log_probs(c)));
-    assert(isfinite(word_conditional_log_probs(word_index)));
-    f -= (class_conditional_log_probs(c) + word_conditional_log_probs(w-c_start));
+    // assert(isfinite(class_conditional_log_probs(c)));
+    assert(isfinite(word_conditional_log_probs(w)));
+    // f -= (class_conditional_log_probs(c) + word_conditional_log_probs(w-c_start));
+    f -= word_conditional_log_probs(w);
 
     // do the gradient updates:
     //   data contributions:
-    g_F.row(c) -= prediction_vectors.row(instance).transpose();
+    // g_F.row(c) -= prediction_vectors.row(instance).transpose();
     g_R.row(w) -= prediction_vectors.row(instance).transpose();
-    g_FB(c)    -= 1.0;
+    // g_FB(c)    -= 1.0;
     g_B(w)     -= 1.0;
     //   model contributions:
-    g_R.block(c_start, 0, c_size, g_R.cols()) += word_conditional_probs * prediction_vectors.row(instance);
-    g_F += class_conditional_probs * prediction_vectors.row(instance);
-    g_FB += class_conditional_probs;
-    g_B.segment(c_start, c_size) += word_conditional_probs;
+    g_R += word_conditional_probs * prediction_vectors.row(instance);
+    // g_R.block(c_start, 0, c_size, g_R.cols()) += word_conditional_probs * prediction_vectors.row(instance);
+    // g_F += class_conditional_probs * prediction_vectors.row(instance);
+    // g_FB += class_conditional_probs;
+    // g_B.segment(c_start, c_size) += word_conditional_probs;
+    g_B += word_conditional_probs;
 
     // a simple sigmoid non-linearity
     weightedRepresentations.row(instance).array() *=
@@ -345,6 +380,7 @@ Real sgd_gradient(
     //for (int x=0; x<word_width; ++x)
     //  weightedRepresentations.row(instance)(x) *= (prediction_vectors.row(instance)(x) > 0 ? 1 : 0.01); // rectifier
   }
+
 //  clock_t iteration_time = clock() - iteration_start;
 
 //  clock_t context_start = clock();

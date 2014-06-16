@@ -4,9 +4,14 @@ namespace oxlm {
 
 MinibatchFactoredMaxentWeights::MinibatchFactoredMaxentWeights(
     const ModelData& config,
+    const boost::shared_ptr<FactoredMaxentMetadata>& metadata)
+    : FactoredWeights(config, metadata) {}
+
+MinibatchFactoredMaxentWeights::MinibatchFactoredMaxentWeights(
+    const ModelData& config,
     const boost::shared_ptr<FactoredMaxentMetadata>& metadata,
-    bool model_weights)
-    : FactoredWeights(config, metadata, model_weights) {}
+    const boost::shared_ptr<Corpus>& training_corpus)
+    : FactoredWeights(config, metadata, training_corpus) {}
 
 void MinibatchFactoredMaxentWeights::clear() {
 }

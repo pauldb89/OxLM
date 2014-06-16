@@ -38,9 +38,7 @@ int main(int argc, char** argv) {
     ("step-size", value<float>()->default_value(0.05),
         "SGD batch stepsize, it is normalised by the number of minibatches.")
     ("randomise", "visit the training tokens in random order")
-    ("diagonal-contexts", "Use diagonal context matrices (usually faster).")
-    ("random-weights", value<bool>()->default_value(true),
-        "Initialize the weights randomly");
+    ("diagonal-contexts", "Use diagonal context matrices (usually faster).");
   options_description config_options, cmdline_options;
   config_options.add(generic);
   cmdline_options.add(generic).add(cmdline_specific);
@@ -83,7 +81,6 @@ int main(int argc, char** argv) {
   config.step_size = vm["step-size"].as<float>();
   config.randomise = vm.count("randomise");
   config.diagonal_contexts = vm.count("diagonal-contexts");
-  config.random_weights = vm["random-weights"].as<bool>();
 
   cout << "################################" << endl;
   if (strlen(GIT_REVISION) > 0) {

@@ -9,8 +9,12 @@ class FactoredWeights : public Weights {
  public:
   FactoredWeights(
       const ModelData& config,
+      const boost::shared_ptr<FactoredMetadata>& metadata);
+
+  FactoredWeights(
+      const ModelData& config,
       const boost::shared_ptr<FactoredMetadata>& metadata,
-      bool model_weights = false);
+      const boost::shared_ptr<Corpus>& training_corpus);
 };
 
 } // namespace oxlm

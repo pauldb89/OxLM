@@ -18,37 +18,26 @@ class Weights {
 
   Weights(
       const ModelData& config,
+      const boost::shared_ptr<Metadata>& metadata);
+
+  Weights(
+      const ModelData& config,
       const boost::shared_ptr<Metadata>& metadata,
-      bool model_weights = false);
+      const boost::shared_ptr<Corpus>& training_corpus);
 
-  void getContextVectors(
+  boost::shared_ptr<Weights> getGradient(
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices,
-      vector<vector<int>>& contexts,
-      vector<MatrixReal>& context_vectors) const;
-
-  MatrixReal getPredictionVectors(
-      const vector<int>& indices,
-      const vector<MatrixReal>& context_vectors) const;
-
-  MatrixReal getContextProduct(
-      int index, const MatrixReal& representations) const;
-
-  void getGradient(
-      const boost::shared_ptr<Corpus>& corpus,
-      const vector<int>& indices,
-      const vector<vector<int>>& contexts,
-      const vector<MatrixReal>& context_vectors,
-      const MatrixReal& prediction_vectors,
-      boost::shared_ptr<Weights>& gradient,
       Real& objective) const;
 
-  void getContextGradient(
+  Real getObjective(
+      const boost::shared_ptr<Corpus>& corpus,
+      const vector<int>& indices) const;
+
+  void checkGradient(
+      const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices,
-      const vector<vector<int>>& contexts,
-      const vector<MatrixReal>& context_vectors,
-      const MatrixReal& weighted_representations,
-      boost::shared_ptr<Weights>& gradient) const;
+      const boost::shared_ptr<Weights>& gradient);
 
   void update(const boost::shared_ptr<Weights>& gradient);
 
@@ -65,6 +54,57 @@ class Weights {
   void clear();
 
   virtual ~Weights();
+
+ protected:
+  void allocate();
+
+  Real getObjective(
+      const boost::shared_ptr<Corpus>& corpus,
+      const vector<int>& indices,
+      vector<vector<int>>& contexts,
+      vector<MatrixReal>& context_vectors,
+      MatrixReal& prediction_vectors,
+      MatrixReal& word_probs) const;
+
+  void getContextVectors(
+      const boost::shared_ptr<Corpus>& corpus,
+      const vector<int>& indices,
+      vector<vector<int>>& contexts,
+      vector<MatrixReal>& context_vectors) const;
+
+  MatrixReal getPredictionVectors(
+      const vector<int>& indices,
+      const vector<MatrixReal>& context_vectors) const;
+
+  MatrixReal getContextProduct(
+      int index, const MatrixReal& representations,
+      bool transpose = false) const;
+
+  MatrixReal getProbabilities(
+      const vector<int>& indices,
+      const MatrixReal& prediction_vectors) const;
+
+  MatrixReal getWeightedRepresentations(
+      const boost::shared_ptr<Corpus>& corpus,
+      const vector<int>& indices,
+      const MatrixReal& prediction_vectors,
+      const MatrixReal& word_probs) const;
+
+  boost::shared_ptr<Weights> getFullGradient(
+      const boost::shared_ptr<Corpus>& corpus,
+      const vector<int>& indices,
+      const vector<vector<int>>& contexts,
+      const vector<MatrixReal>& context_vectors,
+      const MatrixReal& prediction_vectors,
+      const MatrixReal& weighted_representations,
+      MatrixReal& word_probs) const;
+
+  void getContextGradient(
+      const vector<int>& indices,
+      const vector<vector<int>>& contexts,
+      const vector<MatrixReal>& context_vectors,
+      const MatrixReal& weighted_representations,
+      boost::shared_ptr<Weights>& gradient) const;
 
  private:
   friend class boost::serialization::access;

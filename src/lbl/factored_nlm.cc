@@ -11,6 +11,7 @@ FactoredNLM::FactoredNLM(
     const ModelData& config, const Dict& labels,
     const boost::shared_ptr<WordToClassIndex>& index)
     : NLM(config, labels, config.diagonal_contexts), index(index) {
+  /*
   F = MatrixReal::Zero(
       index->getNumClasses(), config.word_representation_size);
   FB = VectorReal::Zero(index->getNumClasses());
@@ -26,8 +27,10 @@ FactoredNLM::FactoredNLM(
       }
     }
   }
+  */
 }
 
+/*
 Eigen::Block<WordVectorsType> FactoredNLM::class_R(const int c) {
   return R.block(index->getClassMarker(c), 0, index->getClassSize(c), R.cols());
 }
@@ -49,20 +52,25 @@ const Eigen::VectorBlock<const WeightsType> FactoredNLM::class_B(
 int FactoredNLM::get_class(const WordId& w) const {
   return index->getClass(w);
 }
+*/
 
 void FactoredNLM::l2GradientUpdate(Real minibatch_factor) {
   NLM::l2GradientUpdate(minibatch_factor);
 
   double sigma = minibatch_factor * config.step_size * config.l2_lbl;
+  /*
   F -= F * sigma;
   FB -= FB * sigma;
+  */
 }
 
 Real FactoredNLM::l2Objective(Real minibatch_factor) const {
   Real result = NLM::l2Objective(minibatch_factor);
   Real factor = 0.5 * minibatch_factor * config.l2_lbl;
+  /*
   result += factor * F.array().square().sum();
   result += factor * FB.array().square().sum();
+  */
   return result;
 }
 
@@ -146,11 +154,12 @@ Real FactoredNLM::log_prob(
     }
   }
 
-  int c = get_class(w);
+  //int c = get_class(w);
   // a simple non-linearity
   if (non_linear)
     prediction_vector = sigmoid(prediction_vector);
 
+  /*
   // log p(c | context)
   Real class_log_prob = 0;
   pair<unordered_map<Words, Real, container_hash<Words> >::iterator, bool> context_cache_result;
@@ -169,19 +178,21 @@ Real FactoredNLM::log_prob(
       context_cache_result.first->second = c_log_z;
     }
   }
+  */
 
   // log p(w | c, context)
   Real word_log_prob = 0;
   pair<unordered_map<pair<int,Words>, Real>::iterator, bool> class_context_cache_result;
   if (cache) {
-    class_context_cache_result = m_context_class_cache.insert(make_pair(make_pair(c,context),0));
+    // class_context_cache_result = m_context_class_cache.insert(make_pair(make_pair(c,context),0));
   }
   if (cache && !class_context_cache_result.second) {
     word_log_prob = R.row(w)*prediction_vector + B(w) - class_context_cache_result.first->second;
   } else {
-    int word_index = index->getWordIndexInClass(w);
+    //int word_index = index->getWordIndexInClass(w);
+    int word_index = w;
     Real w_log_z = 0;
-    VectorReal word_probs = logSoftMax(class_R(c)*prediction_vector + class_B(c), w_log_z);
+    VectorReal word_probs = logSoftMax(R*prediction_vector +B, w_log_z);
     word_log_prob = word_probs(word_index);
     assert(isfinite(word_log_prob));
     if (cache) {
@@ -189,7 +200,7 @@ Real FactoredNLM::log_prob(
     }
   }
 
-  return class_log_prob + word_log_prob;
+  return /* class_log_prob + */ word_log_prob;
 }
 
 void FactoredNLM::clear_cache() {

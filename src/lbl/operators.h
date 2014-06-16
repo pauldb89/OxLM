@@ -18,17 +18,6 @@ struct CwiseSetValueOp {
 };
 
 template<class Scalar>
-struct CwiseDenominatorOp {
-  CwiseDenominatorOp(Scalar eps) : eps(eps) {}
-
-  const Scalar operator()(const Scalar& x) const {
-    return fabs(x) < eps ? 1.0 : 1.0 / x;
-  }
-
-  Scalar eps;
-};
-
-template<class Scalar>
 struct CwiseAdagradUpdateOp {
   CwiseAdagradUpdateOp(const Scalar& step_size) :
       step_size(step_size), eps(EPS * EPS) {}

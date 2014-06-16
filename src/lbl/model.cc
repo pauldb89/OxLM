@@ -1,5 +1,7 @@
 #include "lbl/model.h"
 
+#include <iomanip>
+
 #include <boost/make_shared.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/serialization/shared_ptr.hpp>
@@ -11,6 +13,7 @@
 #include "lbl/metadata.h"
 #include "lbl/minibatch_factored_maxent_weights.h"
 #include "lbl/model_utils.h"
+#include "lbl/operators.h"
 #include "lbl/weights.h"
 #include "utils/conditional_omp.h"
 
@@ -39,12 +42,14 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
   }
 
   metadata->initialize(training_corpus);
-  weights = boost::make_shared<GlobalWeights>(config, metadata, true);
+  weights = boost::make_shared<GlobalWeights>(
+      config, metadata, training_corpus);
 
   vector<int> indices(training_corpus->size());
   iota(indices.begin(), indices.end(), 0);
 
-  Real perplexity = 0, best_perplexity = 0, global_objective = 0;
+  Real best_perplexity = numeric_limits<Real>::infinity();
+  Real global_objective = 0, test_objective = 0;
   boost::shared_ptr<MinibatchWeights> global_gradient =
       boost::make_shared<MinibatchWeights>(config, metadata);
   boost::shared_ptr<GlobalWeights> adagrad =
@@ -65,6 +70,8 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
         }
         global_objective = 0;
       }
+      // Wait until the master threads finishes shuffling the indices.
+      #pragma omp barrier
 
       size_t start = 0;
       while (start < training_corpus->size()) {
@@ -74,10 +81,9 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
         global_gradient->clear();
 
         vector<int> minibatch = scatterMinibatch(start, end, indices);
-        boost::shared_ptr<MinibatchWeights> gradient;
         Real objective;
-
-        computeGradient(training_corpus, minibatch, gradient, objective);
+        boost::shared_ptr<MinibatchWeights> gradient =
+            weights->getGradient(training_corpus, minibatch, objective);
 
         #pragma omp critical
         {
@@ -98,18 +104,20 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
 
         // Wait for master thread to update model.
         #pragma omp barrier
-        // if ((minibatch_counter % 100 == 0 && minibatch_counter <= 1000) ||
-        //    minibatch_counter % 1000 == 0) {
+        if ((minibatch_counter % 100 == 0 && minibatch_counter <= 1000) ||
+            minibatch_counter % 1000 == 0) {
+          cout << endl;
           evaluate(test_corpus, iteration_start, minibatch_counter,
-                   perplexity, best_perplexity);
-        //}
+                   test_objective, best_perplexity);
+        }
 
         ++minibatch_counter;
         start = end;
       }
 
+      cout << endl;
       evaluate(test_corpus, iteration_start, minibatch_counter,
-               perplexity, best_perplexity);
+               test_objective, best_perplexity);
       #pragma omp master
       {
         Real iteration_time = GetDuration(iteration_start, GetTime());
@@ -121,24 +129,8 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
       }
     }
   }
-}
 
-template<class GlobalWeights, class MinibatchWeights, class Metadata>
-void Model<GlobalWeights, MinibatchWeights, Metadata>::computeGradient(
-    const boost::shared_ptr<Corpus>& corpus,
-    const vector<int>& indices,
-    boost::shared_ptr<MinibatchWeights>& gradient,
-    Real& objective) const {
-  vector<vector<int>> contexts;
-  vector<MatrixReal> context_vectors;
-  weights->getContextVectors(corpus, indices, contexts, context_vectors);
-
-  MatrixReal prediction_vectors =
-      weights->getPredictionVectors(indices, context_vectors);
-
-  weights->getGradient(
-      corpus, indices, contexts, context_vectors, prediction_vectors,
-      gradient, objective);
+  cout << "Overall minimum perplexity: " << best_perplexity << endl;
 }
 
 template<class GlobalWeights, class MinibatchWeights, class Metadata>
@@ -156,58 +148,35 @@ Real Model<GlobalWeights, MinibatchWeights, Metadata>::regularize(
 }
 
 template<class GlobalWeights, class MinibatchWeights, class Metadata>
-Real Model<GlobalWeights, MinibatchWeights, Metadata>::computePerplexity(
-    const boost::shared_ptr<Corpus>& test_corpus) const {
-  Real perplexity = 0;
-  int context_width = config.ngram_order - 1;
-  boost::shared_ptr<ContextProcessor> processor =
-      boost::make_shared<ContextProcessor>(test_corpus, context_width);
-
-  #pragma omp master
-  cout << "Calculating perplexity for " << test_corpus->size()
-       << " tokens..." << endl;
-
-  int tokens = 1;
-  size_t thread_num = omp_get_thread_num();
-  size_t num_threads = omp_get_num_threads();
-  for (size_t i = thread_num; i < test_corpus->size(); i += num_threads) {
-    vector<int> context = processor->extract(i);
-    perplexity += weights->predict(test_corpus->at(i), context);
-
-    #pragma omp master
-    if (tokens % 10000 == 0) {
-      cout << ".";
-      cout.flush();
-    }
-
-    ++tokens;
-  }
-
-  return perplexity;
-}
-
-template<class GlobalWeights, class MinibatchWeights, class Metadata>
 void Model<GlobalWeights, MinibatchWeights, Metadata>::evaluate(
     const boost::shared_ptr<Corpus>& test_corpus, const Time& iteration_start,
-    int minibatch_counter, Real& perplexity, Real& best_perplexity) const {
+    int minibatch_counter, Real& objective, Real& best_perplexity) const {
   if (test_corpus != nullptr) {
     #pragma omp master
-    perplexity = 0;
+    {
+      cout << "Calculating perplexity for " << test_corpus->size()
+           << " tokens..." << endl;
+      objective = 0;
+    }
 
     // Each thread must wait until the perplexity is set to 0.
     // Otherwise, partial results might get overwritten.
     #pragma omp barrier
 
-    Real local_perplexity = computePerplexity(test_corpus);
+    vector<int> indices(test_corpus->size());
+    iota(indices.begin(), indices.end(), 0);
+    vector<int> minibatch = scatterMinibatch(0, indices.size(), indices);
+
+    Real local_objective = weights->getObjective(test_corpus, minibatch);
     #pragma omp critical
-    perplexity += local_perplexity;
+    objective += local_objective;
 
     // Wait for all the threads to compute the perplexity for their slice of
     // test data.
     #pragma omp barrier
     #pragma omp master
     {
-      perplexity = exp(-perplexity / test_corpus->size());
+      Real perplexity = exp(objective / test_corpus->size());
       Real iteration_time = GetDuration(iteration_start, GetTime());
       cout << "\tMinibatch " << minibatch_counter << ", "
            << "Time: " << GetDuration(iteration_start, GetTime()) << " seconds, "
