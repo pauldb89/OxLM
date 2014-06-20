@@ -54,6 +54,15 @@ TEST(UtilsTest, TestSigmoid) {
   EXPECT_MATRIX_NEAR(expected_w, w, EPS);
 }
 
+TEST(UtilsTest, TestSigmoidDerivative) {
+  VectorReal v(5);
+  v << 0.5, 1, 0, 0.3, 0.8;
+  ArrayReal w = sigmoidDerivative(v);
+  ArrayReal expected_w(5);
+  expected_w << 0.25, 0, 0, 0.21, 0.16;
+  EXPECT_MATRIX_NEAR(expected_w, w, EPS);
+}
+
 TEST(UtilsTest, TestMurmurHash) {
   vector<int> data = {0};
   EXPECT_EQ(14961230494313510588ULL, MurmurHash(data, 0));

@@ -1,12 +1,12 @@
 #include "lbl/weights.h"
 
-#include <iomanip>
 #include <random>
 
 #include <boost/make_shared.hpp>
 
 #include "lbl/context_processor.h"
 #include "lbl/operators.h"
+#include "utils/constants.h"
 
 namespace oxlm {
 
@@ -158,7 +158,7 @@ MatrixReal Weights::getProbabilities(
     const vector<int>& indices, const MatrixReal& prediction_vectors) const {
   MatrixReal word_probs = R.transpose() * prediction_vectors + B * MatrixReal::Ones(1, indices.size());
   for (size_t i = 0; i < indices.size(); ++i) {
-    word_probs.col(i) = logSoftMax(word_probs.col(i)).array().exp();
+    word_probs.col(i) = softMax(word_probs.col(i));
   }
 
   return word_probs;
@@ -176,8 +176,7 @@ MatrixReal Weights::getWeightedRepresentations(
   }
 
   // Sigmoid derivative.
-  weighted_representations.array() *=
-      prediction_vectors.array() * (1 - prediction_vectors.array());
+  weighted_representations.array() *= sigmoidDerivative(prediction_vectors);
 
   return weighted_representations;
 }
@@ -211,7 +210,7 @@ void Weights::getContextGradient(
     const vector<vector<int>>& contexts,
     const vector<MatrixReal>& context_vectors,
     const MatrixReal& weighted_representations,
-    boost::shared_ptr<Weights>& gradient) const {
+    const boost::shared_ptr<Weights>& gradient) const {
   int context_width = config.ngram_order - 1;
   int word_width = config.word_representation_size;
   MatrixReal context_gradients = MatrixReal::Zero(word_width, indices.size());
@@ -229,41 +228,33 @@ void Weights::getContextGradient(
   }
 }
 
-void Weights::checkGradient(
+bool Weights::checkGradient(
     const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& indices,
     const boost::shared_ptr<Weights>& gradient) {
-  double eps = 1e-4;
+  Real EPS = 1e-4;
   vector<vector<int>> contexts;
   vector<MatrixReal> context_vectors;
   MatrixReal prediction_vectors;
   MatrixReal word_probs;
 
   for (int i = 0; i < size; ++i) {
-    Real objective_plus = 0;
-    Real objective_minus = 0;
+    W(i) += EPS;
+    Real objective_plus = getObjective(corpus, indices);
+    W(i) -= EPS;
 
-    W(i) += eps;
-    getContextVectors(corpus, indices, contexts, context_vectors);
-    prediction_vectors = getPredictionVectors(indices, context_vectors);
-    word_probs = getProbabilities(indices, prediction_vectors);
-    for (size_t j = 0; j < indices.size(); ++j) {
-      objective_plus -= log(word_probs(corpus->at(indices[j]), j));
+    W(i) -= EPS;
+    Real objective_minus = getObjective(corpus, indices);
+    W(i) += EPS;
+
+    double est_gradient = (objective_plus - objective_minus) / (2 * EPS);
+    if (fabs(gradient->W(i) - est_gradient) > EPS) {
+      cout << i << " " << gradient->W(i) << " " << est_gradient << endl;
+      return false;
     }
-    W(i) -= eps;
-
-    W(i) -= eps;
-    getContextVectors(corpus, indices, contexts, context_vectors);
-    prediction_vectors = getPredictionVectors(indices, context_vectors);
-    word_probs = getProbabilities(indices, prediction_vectors);
-    for (size_t j = 0; j < indices.size(); ++j) {
-      objective_minus -= log(word_probs(corpus->at(indices[j]), j));
-    }
-    W(i) += eps;
-
-    double est_gradient = (objective_plus - objective_minus) / (2 * eps);
-    assert(fabs(gradient->W(i) - est_gradient) <= eps);
   }
+
+  return true;
 }
 
 Real Weights::getObjective(

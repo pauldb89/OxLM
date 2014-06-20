@@ -16,7 +16,7 @@ using namespace chrono;
 
 namespace oxlm {
 
-typedef double Real;
+typedef float Real;
 
 typedef int            WordId;
 typedef vector<WordId> Sentence;
@@ -31,6 +31,7 @@ typedef Eigen::Matrix<Real, Eigen::Dynamic, Eigen::Dynamic> MatrixReal;
 typedef Eigen::Matrix<Real, Eigen::Dynamic, 1>              VectorReal;
 typedef Eigen::Map<VectorReal>                              VectorRealMap;
 typedef Eigen::Array<Real, Eigen::Dynamic, 1>               ArrayReal;
+typedef Eigen::Array<Real, Eigen::Dynamic, Eigen::Dynamic>  Array2DReal;
 typedef Eigen::SparseVector<Real>                           SparseVectorReal;
 
 typedef high_resolution_clock Clock;
@@ -58,6 +59,10 @@ inline VectorReal logSoftMax(const VectorReal& v, Real& log_z) {
 
 inline VectorReal sigmoid(const VectorReal& v) {
   return (1.0 + (-v).array().exp()).inverse();
+}
+
+inline Array2DReal sigmoidDerivative(const MatrixReal& v) {
+  return v.array() * (1 - v.array());
 }
 
 // Helper functions for time measurement.

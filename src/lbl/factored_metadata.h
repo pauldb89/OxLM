@@ -12,7 +12,15 @@ class FactoredMetadata : public Metadata {
  public:
   FactoredMetadata(ModelData& config, Dict& dict);
 
+  FactoredMetadata(
+      const ModelData& config, Dict& dict,
+      const boost::shared_ptr<WordToClassIndex>& index);
+
   void initialize(const boost::shared_ptr<Corpus>& corpus);
+
+  boost::shared_ptr<WordToClassIndex> getIndex() const;
+
+  VectorReal getClassBias() const;
 
  protected:
   VectorReal classBias;

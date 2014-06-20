@@ -187,9 +187,8 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
     int Q_size = R_size;
     int C_size = config.diagonal_contexts ? word_width : word_width*word_width;
     int B_size = num_words;
-    int M_size = context_width;
 
-    assert((R_size+Q_size+context_width*C_size+B_size+M_size) == model->num_weights());
+    assert((R_size+Q_size+context_width*C_size+B_size) == model->num_weights());
 
     Real* gradient_data = new Real[model->num_weights()];
     WeightsType gradient(gradient_data, model->num_weights());
@@ -209,7 +208,6 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
     }
 
     WeightsType g_B(ptr, B_size);
-    WeightsType g_M(ptr+B_size, M_size);
     /*
     MatrixReal g_F(num_classes, word_width);
     VectorReal g_FB(num_classes);

@@ -208,7 +208,7 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::save() const {
 }
 
 template class Model<Weights, Weights, Metadata>;
-// template class Model<FactoredWeights, FactoredWeights, FactoredMetadata>;
+template class Model<FactoredWeights, FactoredWeights, FactoredMetadata>;
 // template class Model<GlobalFactoredMaxentWeights, MinibatchFactoredMaxentWeights, FactoredMaxentMetadata>;
 
 } // namespace oxlm

@@ -127,7 +127,6 @@ class NLM {
   WordVectorsType       Q;
   WeightsType           B;
   WeightsType           W;
-  WeightsType           M;
   VectorReal            unigram;
 
  protected:

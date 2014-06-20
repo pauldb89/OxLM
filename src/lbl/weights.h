@@ -30,11 +30,11 @@ class Weights {
       const vector<int>& indices,
       Real& objective) const;
 
-  Real getObjective(
+  virtual Real getObjective(
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices) const;
 
-  void checkGradient(
+  bool checkGradient(
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices,
       const boost::shared_ptr<Weights>& gradient);
@@ -56,8 +56,6 @@ class Weights {
   virtual ~Weights();
 
  protected:
-  void allocate();
-
   Real getObjective(
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices,
@@ -104,9 +102,11 @@ class Weights {
       const vector<vector<int>>& contexts,
       const vector<MatrixReal>& context_vectors,
       const MatrixReal& weighted_representations,
-      boost::shared_ptr<Weights>& gradient) const;
+      const boost::shared_ptr<Weights>& gradient) const;
 
  private:
+  void allocate();
+
   friend class boost::serialization::access;
 
   template<class Archive>
@@ -132,14 +132,15 @@ class Weights {
   ModelData config;
   boost::shared_ptr<Metadata> metadata;
 
-  int size;
-  Real* data;
-
   ContextTransformsType C;
   WordVectorsType       Q;
   WordVectorsType       R;
   WeightsType           B;
   WeightsType           W;
+
+ private:
+  int size;
+  Real* data;
 };
 
 } // namespace oxlm

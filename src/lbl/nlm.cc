@@ -20,11 +20,11 @@ static std::mt19937 linear_model_rng(static_cast<unsigned> (time(0)));
 static uniform_01<> linear_model_uniform_dist;
 
 NLM::NLM()
-    : R(0,0,0), Q(0,0,0), B(0,0), W(0,0), M(0,0),
+    : R(0,0,0), Q(0,0,0), B(0,0), W(0,0), 
       m_diagonal(false), m_data_size(0), m_data(NULL) {}
 
 NLM::NLM(const NLM& model)
-    : config(model.config), R(0, 0, 0), Q(0, 0, 0), B(0, 0), W(0, 0), M(0, 0),
+    : config(model.config), R(0, 0, 0), Q(0, 0, 0), B(0, 0), W(0, 0),
       m_labels(model.m_labels), m_diagonal(model.m_diagonal),
       unigram(model.unigram), m_data_size(m_data_size) {
   m_data = new Real[m_data_size];
@@ -33,7 +33,7 @@ NLM::NLM(const NLM& model)
 }
 
 NLM::NLM(const ModelData& config, const Dict& labels, bool diagonal)
-    : config(config), R(0,0,0), Q(0,0,0), B(0,0), W(0,0), M(0,0),
+    : config(config), R(0,0,0), Q(0,0,0), B(0,0), W(0,0), 
       m_labels(labels), m_diagonal(diagonal) {
   init(config, config.random_weights);
 }
@@ -58,8 +58,8 @@ void NLM::initWeights(const ModelData& config, bool random_weights) {
   //else            C_size = word_width*word_width;
 
   new (&W) WeightsType(m_data, m_data_size);
-  new (&Q) WordVectorsType(m_data, num_context_words, word_width);
-  new (&R) WordVectorsType(m_data + Q_size, num_output_words, word_width);
+  new (&R) WordVectorsType(m_data, num_output_words, word_width);
+  new (&Q) WordVectorsType(m_data+R_size, num_context_words, word_width);
 
   C.clear();
   Real* ptr = m_data+R_size+Q_size;
@@ -67,48 +67,38 @@ void NLM::initWeights(const ModelData& config, bool random_weights) {
     if (m_diagonal) C.push_back(ContextTransformType(ptr, word_width, 1));
     else            C.push_back(ContextTransformType(ptr, word_width, word_width));
     ptr += C_size;
+    //     C.back().setIdentity();
+    //      C.back().setZero();
   }
 
   new (&B) WeightsType(ptr, num_output_words);
 
   if (random_weights) {
+    //    W.setRandom() /= 10;
     std::mt19937 gen(1);
     std::normal_distribution<Real> gaussian(0,0.1);
-
-    for (int i = 0; i < num_context_words; ++i) {
-      for (int j = 0; j < word_width; ++j) {
-        Q(i, j) = gaussian(gen);
-      }
-    }
-
-    for (int i = 0; i < num_output_words; ++i) {
-      for (int j = 0; j < word_width; ++j) {
-        R(i, j) = gaussian(gen);
-      }
-    }
-
-    for (int k = 0; k < context_width; ++k) {
-      if (m_diagonal) {
-        for (int i = 0; i < word_width; ++i) {
-          C[k](i) = gaussian(gen);
-        }
-      } else {
-        for (int i = 0; i < word_width; ++i) {
-          for (int j = 0; j < word_width; ++j) {
-            C[k](i, j) = gaussian(gen);
-          }
-        }
-      }
-    }
-
-    for (int i = 0; i < num_output_words; ++i) {
-      B(i) = gaussian(gen);
+    for (int i = 0; i < m_data_size; ++i) {
+      W(i) = gaussian(gen);
     }
   } else {
     W.setZero();
   }
 
-  #pragma omp master
+  //R.setOnes();
+  //R.setZero();
+  //R.setIdentity();
+  //Q.setOnes();
+  //Q.setIdentity();
+  //Q.setZero();
+  //B.setOnes();
+  //    R << 0,0,0,1 , 0,0,1,0 , 0,1,0,0 , 1,0,0,0;
+  //    R << 0,0 , 0,0 , 0,1 , 1,0;
+  //    Q << 0,0,0,1 , 0,0,1,0 , 0,1,0,0 , 1,0,0,0;
+  //    Q << 1,1 , 1,1 , 1,1 , 1,1;
+
+  //  assert(ptr+num_output_words == m_data+m_data_size);
+
+#pragma omp master
   if (true) {
     cerr << "===============================" << endl;
     cerr << " Created a NLM: "   << endl;

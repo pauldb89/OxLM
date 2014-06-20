@@ -2,13 +2,12 @@
 
 #include <boost/make_shared.hpp>
 
-#include "lbl/weights.h"
+#include "lbl/factored_weights.h"
 #include "utils/constants.h"
-#include "utils/testing.h"
 
 namespace oxlm {
 
-class TestWeights : public testing::Test {
+class FactoredWeightsTest : public testing::Test {
  protected:
   void SetUp() {
     config.word_representation_size = 3;
@@ -16,47 +15,40 @@ class TestWeights : public testing::Test {
     config.ngram_order = 3;
 
     vector<int> data = {2, 3, 4, 1};
+    vector<int> classes = {0, 2, 4, 5};
     corpus = boost::make_shared<Corpus>(data);
+    index = boost::make_shared<WordToClassIndex>(classes);
+    metadata = boost::make_shared<FactoredMetadata>(config, dict, index);
   }
 
   ModelData config;
-  boost::shared_ptr<Metadata> metadata;
+  Dict dict;
+  boost::shared_ptr<WordToClassIndex> index;
+  boost::shared_ptr<FactoredMetadata> metadata;
   boost::shared_ptr<Corpus> corpus;
 };
 
-TEST_F(TestWeights, TestGradientCheck) {
-  Weights weights(config, metadata, corpus);
+TEST_F(FactoredWeightsTest, TestCheckGradient) {
+  FactoredWeights weights(config, metadata, corpus);
   vector<int> indices = {0, 1, 2, 3};
   Real objective;
-  boost::shared_ptr<Weights> gradient =
+  boost::shared_ptr<FactoredWeights> gradient =
       weights.getGradient(corpus, indices, objective);
 
-  EXPECT_NEAR(6.0826482, objective, EPS);
+  EXPECT_NEAR(6.25879136, objective, EPS);
   EXPECT_TRUE(weights.checkGradient(corpus, indices, gradient));
 }
 
-TEST_F(TestWeights, TestGradientCheckDiagonal) {
+TEST_F(FactoredWeightsTest, TestCheckGradientDiagonal) {
   config.diagonal_contexts = true;
-
-  Weights weights(config, metadata, corpus);
+  FactoredWeights weights(config, metadata, corpus);
   vector<int> indices = {0, 1, 2, 3};
   Real objective;
-  boost::shared_ptr<Weights> gradient =
+  boost::shared_ptr<FactoredWeights> gradient =
       weights.getGradient(corpus, indices, objective);
 
-  EXPECT_NEAR(6.012124939, objective, EPS);
+  EXPECT_NEAR(6.25521610, objective, EPS);
   EXPECT_TRUE(weights.checkGradient(corpus, indices, gradient));
-}
-
-TEST_F(TestWeights, TestGetObjective) {
-  Weights weights(config, metadata, corpus);
-  vector<int> indices = {0, 1, 2, 3};
-  EXPECT_NEAR(6.0826482, weights.getObjective(corpus, indices), EPS);
-}
-
-TEST_F(TestWeights, TestClear) {
-  Weights weights(config, metadata, corpus);
-  weights.clear();
 }
 
 } // namespace oxlm
