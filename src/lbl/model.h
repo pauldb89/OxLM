@@ -27,6 +27,8 @@ class Model {
 
   void save() const;
 
+  Dict getDict() const;
+
  private:
   ModelData config;
   Dict dict;

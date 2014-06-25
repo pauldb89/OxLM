@@ -29,7 +29,8 @@ class FactoredWeights : public Weights {
   bool checkGradient(
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices,
-      const boost::shared_ptr<FactoredWeights>& gradient);
+      const boost::shared_ptr<FactoredWeights>& gradient,
+      double eps);
 
   void update(const boost::shared_ptr<FactoredWeights>& gradient);
 
@@ -85,6 +86,37 @@ class FactoredWeights : public Weights {
 
  private:
   void allocate();
+
+  void setModelParameters();
+
+  friend class boost::serialization::access;
+
+  template<class Archive>
+  void save(Archive& ar, const unsigned int version) const {
+    ar << boost::serialization::base_object<const Weights>(*this);
+
+    ar << metadata;
+    ar << index;
+
+    ar << size;
+    ar << boost::serialization::make_array(data, size);
+  }
+
+  template<class Archive>
+  void load(Archive& ar, const unsigned int version) {
+    ar >> boost::serialization::base_object<Weights>(*this);
+
+    ar >> metadata;
+    ar >> index;
+
+    ar >> size;
+    data = new Real[size];
+    ar >> boost::serialization::make_array(data, size);
+
+    setModelParameters();
+  }
+
+  BOOST_SERIALIZATION_SPLIT_MEMBER();
 
  protected:
   boost::shared_ptr<FactoredMetadata> metadata;

@@ -37,7 +37,8 @@ class Weights {
   bool checkGradient(
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices,
-      const boost::shared_ptr<Weights>& gradient);
+      const boost::shared_ptr<Weights>& gradient,
+      double eps);
 
   void update(const boost::shared_ptr<Weights>& gradient);
 
@@ -107,6 +108,8 @@ class Weights {
  private:
   void allocate();
 
+  void setModelParameters();
+
   friend class boost::serialization::access;
 
   template<class Archive>
@@ -124,6 +127,8 @@ class Weights {
     ar >> size;
     data = new Real[size];
     ar >> boost::serialization::make_array(data, size);
+
+    setModelParameters();
   }
 
   BOOST_SERIALIZATION_SPLIT_MEMBER();

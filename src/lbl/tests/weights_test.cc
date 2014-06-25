@@ -32,7 +32,14 @@ TEST_F(TestWeights, TestGradientCheck) {
       weights.getGradient(corpus, indices, objective);
 
   EXPECT_NEAR(6.0826482, objective, EPS);
-  EXPECT_TRUE(weights.checkGradient(corpus, indices, gradient));
+  // In truth, using float for model parameters instead of double seriously
+  // degrades the gradient computation, but has no negative effect on the
+  // performance of the model and gives a 2x speed up and reduces memory by 2x.
+  //
+  // If you suspect there might be something off with the gradient, change
+  // typedef Real to double and set a lower accepted error (e.g. 1e-5) when
+  // checking the gradient.
+  EXPECT_TRUE(weights.checkGradient(corpus, indices, gradient, 1e-3));
 }
 
 TEST_F(TestWeights, TestGradientCheckDiagonal) {
@@ -44,19 +51,10 @@ TEST_F(TestWeights, TestGradientCheckDiagonal) {
   boost::shared_ptr<Weights> gradient =
       weights.getGradient(corpus, indices, objective);
 
-  EXPECT_NEAR(6.012124939, objective, EPS);
-  EXPECT_TRUE(weights.checkGradient(corpus, indices, gradient));
-}
-
-TEST_F(TestWeights, TestGetObjective) {
-  Weights weights(config, metadata, corpus);
-  vector<int> indices = {0, 1, 2, 3};
-  EXPECT_NEAR(6.0826482, weights.getObjective(corpus, indices), EPS);
-}
-
-TEST_F(TestWeights, TestClear) {
-  Weights weights(config, metadata, corpus);
-  weights.clear();
+  EXPECT_NEAR(6.084939479, objective, EPS);
+  // See the comment above if you suspect the gradient is not computed
+  // correctly.
+  EXPECT_TRUE(weights.checkGradient(corpus, indices, gradient, 1e-3));
 }
 
 } // namespace oxlm

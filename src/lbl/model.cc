@@ -115,7 +115,6 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
         start = end;
       }
 
-      cout << endl;
       evaluate(test_corpus, iteration_start, minibatch_counter,
                test_objective, best_perplexity);
       #pragma omp master
@@ -205,6 +204,11 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::save() const {
     oar << metadata;
     cout << "Done..." << endl;
   }
+}
+
+template<class GlobalWeights, class MinibatchWeights, class Metadata>
+Dict Model<GlobalWeights, MinibatchWeights, Metadata>::getDict() const {
+  return dict;
 }
 
 template class Model<Weights, Weights, Metadata>;

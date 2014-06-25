@@ -6,7 +6,6 @@
 
 #include "lbl/context_processor.h"
 #include "lbl/operators.h"
-#include "utils/constants.h"
 
 namespace oxlm {
 
@@ -62,6 +61,20 @@ void Weights::allocate() {
 
   size = Q_size + R_size + context_width * C_size + B_size;
   data = new Real[size];
+
+  setModelParameters();
+}
+
+void Weights::setModelParameters() {
+  int num_context_words = config.vocab_size;
+  int num_output_words = config.vocab_size;
+  int word_width = config.word_representation_size;
+  int context_width = config.ngram_order - 1;
+
+  int Q_size = word_width * num_context_words;
+  int R_size = word_width * num_output_words;
+  int C_size = config.diagonal_contexts ? word_width : word_width * word_width;
+  int B_size = num_output_words;
 
   new (&W) WeightsType(data, size);
   W.setZero();
@@ -231,24 +244,24 @@ void Weights::getContextGradient(
 bool Weights::checkGradient(
     const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& indices,
-    const boost::shared_ptr<Weights>& gradient) {
-  Real EPS = 1e-4;
+    const boost::shared_ptr<Weights>& gradient,
+    double eps) {
   vector<vector<int>> contexts;
   vector<MatrixReal> context_vectors;
   MatrixReal prediction_vectors;
   MatrixReal word_probs;
 
   for (int i = 0; i < size; ++i) {
-    W(i) += EPS;
+    W(i) += eps;
     Real objective_plus = getObjective(corpus, indices);
-    W(i) -= EPS;
+    W(i) -= eps;
 
-    W(i) -= EPS;
+    W(i) -= eps;
     Real objective_minus = getObjective(corpus, indices);
-    W(i) += EPS;
+    W(i) += eps;
 
-    double est_gradient = (objective_plus - objective_minus) / (2 * EPS);
-    if (fabs(gradient->W(i) - est_gradient) > EPS) {
+    double est_gradient = (objective_plus - objective_minus) / (2 * eps);
+    if (fabs(gradient->W(i) - est_gradient) > eps) {
       cout << i << " " << gradient->W(i) << " " << est_gradient << endl;
       return false;
     }

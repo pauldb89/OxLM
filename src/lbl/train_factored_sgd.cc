@@ -1,17 +1,14 @@
-#include <boost/program_options/parsers.hpp>
-#include <boost/program_options/variables_map.hpp>
+#include <boost/program_options.hpp>
 
-#include "lbl/train_factored_sgd.h"
+#include "lbl/factored_metadata.h"
+#include "lbl/factored_weights.h"
+#include "lbl/model.h"
+#include "utils/git_revision.h"
 
 using namespace boost::program_options;
+using namespace oxlm;
 
-
-int main(int argc, char **argv) {
-  ///////////////////////////////////////////////////////////////////////////////////////
-  // Command line processing
-  variables_map vm;
-
-  // Command line processing
+int main(int argc, char** argv) {
   options_description cmdline_specific("Command line specific options");
   cmdline_specific.add_options()
     ("help,h", "print help message")
@@ -30,8 +27,6 @@ int main(int argc, char **argv) {
         "number of sentences per minibatch")
     ("order,n", value<int>()->default_value(4),
         "ngram order")
-    ("model-in,m", value<string>(),
-        "initial model")
     ("model-out,o", value<string>(),
         "base filename of model output files")
     ("lambda-lbl,r", value<float>()->default_value(7.0),
@@ -42,26 +37,24 @@ int main(int argc, char **argv) {
         "number of worker threads.")
     ("step-size", value<float>()->default_value(0.05),
         "SGD batch stepsize, it is normalised by the number of minibatches.")
-    ("classes", value<int>()->default_value(100),
-        "number of classes for factored output.")
-    ("class-file", value<string>(),
-        "file containing word to class mappings in the format <class> <word> <frequence>.")
     ("randomise", "visit the training tokens in random order")
-    ("reclass", "reallocate word classes after the first epoch.")
     ("diagonal-contexts", "Use diagonal context matrices (usually faster).")
-    ("random-weights", value<bool>()->default_value(true),
-        "Initialize the weights randomly");
+    ("classes", value<int>()->default_value(100),
+        "Number of classes for factored output using frequency binning.")
+    ("class-file", value<string>(),
+        "File containing word to class mappings in the format "
+        "<class> <word> <frequence>.");
   options_description config_options, cmdline_options;
   config_options.add(generic);
   cmdline_options.add(generic).add(cmdline_specific);
 
+  variables_map vm;
   store(parse_command_line(argc, argv, cmdline_options), vm);
   if (vm.count("config") > 0) {
     ifstream config(vm["config"].as<string>().c_str());
     store(parse_config_file(config, cmdline_options), vm);
   }
   notify(vm);
-  ///////////////////////////////////////////////////////////////////////////////////////
 
   if (vm.count("help")) {
     cout << cmdline_options << "\n";
@@ -86,19 +79,18 @@ int main(int argc, char **argv) {
       config.model_output_file += "." + string(GIT_REVISION);
     }
   }
-  if (vm.count("class-file")) {
-    config.class_file = vm["class-file"].as<string>();
-  }
 
   config.l2_lbl = vm["lambda-lbl"].as<float>();
   config.word_representation_size = vm["word-width"].as<int>();
   config.threads = vm["threads"].as<int>();
   config.step_size = vm["step-size"].as<float>();
-  config.classes = vm["classes"].as<int>();
   config.randomise = vm.count("randomise");
-  config.reclass = vm.count("reclass");
   config.diagonal_contexts = vm.count("diagonal-contexts");
-  config.random_weights = vm["random-weights"].as<bool>();
+
+  config.classes = vm["classes"].as<int>();
+  if (vm.count("class-file")) {
+    config.class_file = vm["class-file"].as<string>();
+  }
 
   cout << "################################" << endl;
   if (strlen(GIT_REVISION) > 0) {
@@ -120,10 +112,10 @@ int main(int argc, char **argv) {
   cout << "# step size = " << config.step_size << endl;
   cout << "# iterations = " << config.iterations << endl;
   cout << "# threads = " << config.threads << endl;
-  cout << "# classes = " << config.classes << endl;
   cout << "################################" << endl;
 
-  learn(config);
+  Model<FactoredWeights, FactoredWeights, FactoredMetadata> model(config);
+  model.learn();
 
   return 0;
 }

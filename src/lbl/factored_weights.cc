@@ -5,7 +5,6 @@
 #include <boost/make_shared.hpp>
 
 #include "lbl/operators.h"
-#include "utils/constants.h"
 
 namespace oxlm {
 
@@ -44,6 +43,16 @@ void FactoredWeights::allocate() {
 
   size = S_size + T_size;
   data = new Real[size];
+
+  setModelParameters();
+}
+
+void FactoredWeights::setModelParameters() {
+  int num_classes = index->getNumClasses();
+  int word_width = config.word_representation_size;
+
+  int S_size = num_classes * word_width;
+  int T_size = num_classes;
 
   new (&FW) WeightsType(data, size);
   FW.setZero();
@@ -211,22 +220,23 @@ boost::shared_ptr<FactoredWeights> FactoredWeights::getFullGradient(
 bool FactoredWeights::checkGradient(
     const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& indices,
-    const boost::shared_ptr<FactoredWeights>& gradient) {
-  if (!Weights::checkGradient(corpus, indices, gradient)) {
+    const boost::shared_ptr<FactoredWeights>& gradient,
+    double eps) {
+  if (!Weights::checkGradient(corpus, indices, gradient, eps)) {
     return false;
   }
 
   for (int i = 0; i < size; ++i) {
-    FW(i) += EPS;
+    FW(i) += eps;
     Real objective_plus = getObjective(corpus, indices);
-    FW(i) -= EPS;
+    FW(i) -= eps;
 
-    FW(i) -= EPS;
+    FW(i) -= eps;
     Real objective_minus = getObjective(corpus, indices);
-    FW(i) += EPS;
+    FW(i) += eps;
 
-    double est_gradient = (objective_plus - objective_minus) / (2 * EPS);
-    if (fabs(gradient->FW(i) - est_gradient) > EPS) {
+    double est_gradient = (objective_plus - objective_minus) / (2 * eps);
+    if (fabs(gradient->FW(i) - est_gradient) > eps) {
       return false;
     }
   }
