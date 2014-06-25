@@ -25,8 +25,7 @@ BloomFilterPopulator::BloomFilterPopulator(
   ClassContextHasher class_hasher(config.hash_space);
   vector<WordContextHasher> word_hashers;
   for (int i = 0; i < index->getNumClasses(); ++i) {
-    word_hashers.push_back(WordContextHasher(
-        i, index->getNumWords(), config.hash_space));
+    word_hashers.push_back(WordContextHasher(i, config.hash_space));
   }
 
   for (size_t i = 0; i < corpus->size(); ++i) {

@@ -25,6 +25,13 @@ class Weights {
       const boost::shared_ptr<Metadata>& metadata,
       const boost::shared_ptr<Corpus>& training_corpus);
 
+  Weights(
+      const ModelData& config,
+      const boost::shared_ptr<Metadata>& metadata,
+      const vector<int>& minibatch_indices);
+
+  Weights(const Weights& other);
+
   boost::shared_ptr<Weights> getGradient(
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices,
@@ -48,11 +55,10 @@ class Weights {
       const boost::shared_ptr<Weights>& global_gradient,
       const boost::shared_ptr<Weights>& adagrad);
 
-  Real regularizerUpdate(Real minibatch_factor);
+  Real regularizerUpdate(
+      const boost::shared_ptr<Weights>& global_gradient, Real minibatch_factor);
 
   Real predict(int word_id, const vector<int>& context) const;
-
-  void clear();
 
   virtual ~Weights();
 

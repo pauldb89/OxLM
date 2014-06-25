@@ -10,13 +10,13 @@ namespace ar = boost::archive;
 namespace oxlm {
 
 TEST(WordContextHasherTest, TestBasic) {
-  WordContextHasher hasher(13, 1000, 100);
+  WordContextHasher hasher(13, 100);
   vector<int> context = {1};
   EXPECT_EQ(40, hasher.getKey(context));
   context = {1, 2};
-  EXPECT_EQ(6, hasher.getKey(context));
+  EXPECT_EQ(33, hasher.getKey(context));
   context = {1, 2, 3};
-  EXPECT_EQ(12, hasher.getKey(context));
+  EXPECT_EQ(18, hasher.getKey(context));
 
   vector<int> expected_context = {1, 2, 3};
   NGram expected_prediction(5, 13, expected_context);
@@ -25,7 +25,7 @@ TEST(WordContextHasherTest, TestBasic) {
 
 TEST(WordContextHasherTest, TestSerialization) {
   boost::shared_ptr<FeatureContextHasher> hasher_ptr =
-      boost::make_shared<WordContextHasher>(13, 1000, 100);
+      boost::make_shared<WordContextHasher>(13, 100);
 
   stringstream stream(ios_base::binary | ios_base::out | ios_base::in);
   ar::binary_oarchive oar(stream, ar::no_header);

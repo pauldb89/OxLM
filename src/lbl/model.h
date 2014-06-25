@@ -19,7 +19,9 @@ class Model {
       const boost::shared_ptr<MinibatchWeights>& global_gradient,
       const boost::shared_ptr<GlobalWeights>& adagrad);
 
-  Real regularize(Real minibatch_factor);
+  Real regularize(
+      const boost::shared_ptr<MinibatchWeights>& global_gradient,
+      Real minibatch_factor);
 
   void evaluate(
       const boost::shared_ptr<Corpus>& corpus, const Time& iteration_start,

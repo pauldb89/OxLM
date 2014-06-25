@@ -31,7 +31,7 @@ TEST(CollisionCounterTest, TestBasic) {
   boost::shared_ptr<BloomFilterPopulator> populator;
   CollisionCounter counter(corpus, index, mapper, matcher, populator, config);
 
-  EXPECT_EQ(31, counter.count());
+  EXPECT_EQ(33, counter.count());
 }
 
 } // namespace oxlm

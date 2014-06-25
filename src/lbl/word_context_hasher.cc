@@ -5,11 +5,14 @@ namespace oxlm {
 WordContextHasher::WordContextHasher() {}
 
 WordContextHasher::WordContextHasher(
-    int class_id, int num_words, int hash_space_size)
-    : classId(class_id), numWords(num_words), hashSpaceSize(hash_space_size) {}
+    int class_id, int hash_space_size)
+    : classId(class_id), hashSpaceSize(hash_space_size) {}
 
 int WordContextHasher::getKey(const FeatureContext& feature_context) const {
-  NGram query(numWords + classId, feature_context.data);
+  // Note: Here we pass the class_id as the n-gram's word_id.
+  // The goal is to produce a different hashcode for [context] and
+  // [class_id, context].
+  NGram query(classId, feature_context.data);
   return hash_function(query) % hashSpaceSize;
 }
 
@@ -19,9 +22,7 @@ NGram WordContextHasher::getPrediction(
 }
 
 bool WordContextHasher::operator==(const WordContextHasher& other) const {
-  return classId == other.classId
-      && numWords == other.numWords
-      && hashSpaceSize == other.hashSpaceSize;
+  return classId == other.classId && hashSpaceSize == other.hashSpaceSize;
 }
 
 WordContextHasher::~WordContextHasher() {}

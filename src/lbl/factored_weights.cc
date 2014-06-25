@@ -34,6 +34,22 @@ FactoredWeights::FactoredWeights(
   T = metadata->getClassBias();
 }
 
+FactoredWeights::FactoredWeights(
+    const ModelData& config,
+    const boost::shared_ptr<FactoredMetadata>& metadata,
+    const vector<int>& indices)
+    : Weights(config, metadata), metadata(metadata),
+      index(metadata->getIndex()), S(0, 0, 0), T(0, 0), FW(0, 0) {
+  allocate();
+}
+
+FactoredWeights::FactoredWeights(const FactoredWeights& other)
+    : Weights(other), metadata(other.metadata), index(other.index),
+      S(0, 0, 0), T(0, 0), FW(0, 0) {
+  allocate();
+  memcpy(data, other.data, size * sizeof(Real));
+}
+
 void FactoredWeights::allocate() {
   int num_classes = index->getNumClasses();
   int word_width = config.word_representation_size;
@@ -89,7 +105,7 @@ Real FactoredWeights::getObjective(
   getContextVectors(corpus, indices, contexts, context_vectors);
   prediction_vectors = getPredictionVectors(indices, context_vectors);
   getProbabilities(
-      corpus, indices, prediction_vectors, class_probs, word_probs);
+      corpus, indices, contexts, prediction_vectors, class_probs, word_probs);
 
   Real objective = 0;
   for (size_t i = 0; i < indices.size(); ++i) {
@@ -139,6 +155,7 @@ VectorReal FactoredWeights::classB(int class_id) const {
 void FactoredWeights::getProbabilities(
     const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& indices,
+    const vector<vector<int>>& contexts,
     const MatrixReal& prediction_vectors,
     MatrixReal& class_probs,
     vector<VectorReal>& word_probs) const {
@@ -264,19 +281,16 @@ void FactoredWeights::updateAdaGrad(
       adagrad->FW, CwiseAdagradUpdateOp<Real>(config.step_size));
 }
 
-Real FactoredWeights::regularizerUpdate(Real minibatch_factor) {
-  Real ret = Weights::regularizerUpdate(minibatch_factor);
+Real FactoredWeights::regularizerUpdate(
+    const boost::shared_ptr<FactoredWeights>& global_gradient,
+    Real minibatch_factor) {
+  Real ret = Weights::regularizerUpdate(global_gradient, minibatch_factor);
 
   Real sigma = minibatch_factor * config.step_size * config.l2_lbl;
   FW -= FW * sigma;
   ret += 0.5 * minibatch_factor * config.l2_lbl * FW.array().square().sum();
 
   return ret;
-}
-
-void FactoredWeights::clear() {
-  Weights::clear();
-  FW.setZero();
 }
 
 } // namespace oxlm

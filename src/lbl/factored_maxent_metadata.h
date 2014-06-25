@@ -15,6 +15,12 @@ class FactoredMaxentMetadata : public FactoredMetadata {
 
   void initialize(const boost::shared_ptr<Corpus>& corpus);
 
+  boost::shared_ptr<FeatureContextMapper> getMapper() const;
+
+  boost::shared_ptr<BloomFilterPopulator> getPopulator() const;
+
+  boost::shared_ptr<FeatureMatcher> getMatcher() const;
+
  protected:
   boost::shared_ptr<FeatureContextMapper> mapper;
   boost::shared_ptr<BloomFilterPopulator> populator;

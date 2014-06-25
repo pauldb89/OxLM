@@ -18,7 +18,6 @@ FactoredMaxentNLM::FactoredMaxentNLM(
 Real FactoredMaxentNLM::log_prob(
     const WordId w, const vector<WordId>& context,
     bool non_linear=false, bool cache=false) const {
-  /*
   VectorReal prediction_vector = VectorReal::Zero(config.word_representation_size);
   int width = config.ngram_order-1;
   assert(static_cast<int>(context.size()) <= width);
@@ -30,9 +29,10 @@ Real FactoredMaxentNLM::log_prob(
     }
   }
 
+  int c = index->getClass(w);
   int word_index = index->getWordIndexInClass(w);
   VectorReal class_feature_scores = U->get(context);
-  // VectorReal word_feature_scores = V[c]->get(context);
+  VectorReal word_feature_scores = V[c]->get(context);
 
   // a simple non-linearity
   if (non_linear) {
@@ -62,10 +62,10 @@ Real FactoredMaxentNLM::log_prob(
   if (cache) class_context_cache_result = m_context_class_cache.insert(make_pair(make_pair(c,context),0));
 
   if (cache && !class_context_cache_result.second) {
-    word_log_prob  = R.row(w)*prediction_vector + B(w) + word_feature_scores(word_index) - class_context_cache_result.first->second;
+    word_log_prob  = R.row(w) * prediction_vector + B(w) + word_feature_scores(word_index) - class_context_cache_result.first->second;
   } else {
     Real w_log_z = 0;
-    VectorReal word_probs = logSoftMax(R * prediction_vector + B + word_feature_scores, w_log_z);
+    VectorReal word_probs = logSoftMax(class_R(c) * prediction_vector + class_B(c) + word_feature_scores, w_log_z);
     word_log_prob = word_probs(word_index);
     assert(isfinite(word_log_prob));
     if (cache) {
@@ -74,7 +74,6 @@ Real FactoredMaxentNLM::log_prob(
   }
 
   return class_log_prob + word_log_prob;
-  */
 }
 
 void FactoredMaxentNLM::l2GradientUpdate(

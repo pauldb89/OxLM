@@ -4,15 +4,15 @@
 
 #include "lbl/model_utils.h"
 #include "lbl/train_maxent_sgd.h"
-#include "lbl/tests/test_sgd.h"
+#include "lbl/tests/sgd_test.h"
 #include "utils/constants.h"
 
 namespace oxlm {
 
-class ModelUtilsTest : public TestSGD {
+class ModelUtilsTest : public FactoredSGDTest {
  protected:
   void SetUp() {
-    TestSGD::SetUp();
+    FactoredSGDTest::SetUp();
 
     vector<string> words = {"<s>", "</s>", "anna", "has", "apples", "."};
     for (const string& word: words) {

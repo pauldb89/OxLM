@@ -1,12 +1,12 @@
 #include "gtest/gtest.h"
 
-#include "lbl/tests/test_sgd.h"
+#include "lbl/tests/sgd_test.h"
 #include "lbl/train_maxent_sgd.h"
 #include "utils/constants.h"
 
 namespace oxlm {
 
-TEST_F(TestSGD, TestTrainMaxentSGD) {
+TEST_F(FactoredSGDTest, TestTrainMaxentSGD) {
   config.l2_maxent = 2;
   config.feature_context_size = 3;
 
@@ -18,7 +18,7 @@ TEST_F(TestSGD, TestTrainMaxentSGD) {
   EXPECT_NEAR(87.922121, exp(-log_pp / test_corpus->size()), EPS);
 }
 
-TEST_F(TestSGD, TestTrainMaxentSGDSparseFeatures) {
+TEST_F(FactoredSGDTest, TestTrainMaxentSGDSparseFeatures) {
   config.l2_maxent = 0.1;
   config.feature_context_size = 3;
   config.sparse_features = true;
@@ -31,7 +31,7 @@ TEST_F(TestSGD, TestTrainMaxentSGDSparseFeatures) {
   EXPECT_NEAR(102.451838, exp(-log_pp / test_corpus->size()), EPS);
 }
 
-TEST_F(TestSGD, TestTrainMaxentSGDCollisions) {
+TEST_F(FactoredSGDTest, TestTrainMaxentSGDCollisions) {
   config.l2_maxent = 0.1;
   config.feature_context_size = 3;
   config.hash_space = 1000000;
@@ -41,10 +41,10 @@ TEST_F(TestSGD, TestTrainMaxentSGDCollisions) {
   boost::shared_ptr<Corpus> test_corpus =
       readCorpus(config.test_file, model->label_set());
   double log_pp = perplexity(model, test_corpus);
-  EXPECT_NEAR(81.7574124603, exp(-log_pp / test_corpus->size()), EPS);
+  EXPECT_NEAR(81.90352573, exp(-log_pp / test_corpus->size()), EPS);
 }
 
-TEST_F(TestSGD, TestTrainMaxentSGDExactFiltering) {
+TEST_F(FactoredSGDTest, TestTrainMaxentSGDExactFiltering) {
   config.l2_maxent = 0.1;
   config.feature_context_size = 3;
   config.hash_space = 1000000;
@@ -55,10 +55,10 @@ TEST_F(TestSGD, TestTrainMaxentSGDExactFiltering) {
   boost::shared_ptr<Corpus> test_corpus =
       readCorpus(config.test_file, model->label_set());
   double log_pp = perplexity(model, test_corpus);
-  EXPECT_NEAR(102.12200837, exp(-log_pp / test_corpus->size()), EPS);
+  EXPECT_NEAR(102.30738315, exp(-log_pp / test_corpus->size()), EPS);
 }
 
-TEST_F(TestSGD, TestTrainMaxentSGDApproximateFiltering) {
+TEST_F(FactoredSGDTest, TestTrainMaxentSGDApproximateFiltering) {
   config.l2_maxent = 0.1;
   config.feature_context_size = 3;
   config.hash_space = 1000000;
@@ -70,7 +70,7 @@ TEST_F(TestSGD, TestTrainMaxentSGDApproximateFiltering) {
   boost::shared_ptr<Corpus> test_corpus =
       readCorpus(config.test_file, model->label_set());
   double log_pp = perplexity(model, test_corpus);
-  EXPECT_NEAR(101.481420438, exp(-log_pp / test_corpus->size()), EPS);
+  EXPECT_NEAR(101.558270840, exp(-log_pp / test_corpus->size()), EPS);
 }
 
 } // namespace oxlm

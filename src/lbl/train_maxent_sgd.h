@@ -58,10 +58,8 @@ Real sgd_gradient(const boost::shared_ptr<FactoredMaxentNLM>& model,
                   WordVectorsType& g_Q,
                   ContextTransformsType& g_C,
                   WeightsType& g_B,
-                  /*
                   MatrixReal & g_F,
                   VectorReal & g_FB,
-                  */
                   const boost::shared_ptr<MinibatchFeatureStore>& g_U,
                   const vector<boost::shared_ptr<MinibatchFeatureStore>>& g_V);
 
@@ -143,7 +141,7 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
   } else {
     model = boost::make_shared<FactoredMaxentNLM>(
         config, dict, index, initializer);
-    // model->FB = class_bias;
+    model->FB = class_bias;
     cout << "Done constructing the model..." << endl;
   }
 
@@ -161,12 +159,10 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
   Real av_f = 0;
   Real pp = 0, best_pp = numeric_limits<Real>::infinity();
 
-  /*
   MatrixReal global_gradientF(model->F.rows(), model->F.cols());
   VectorReal global_gradientFB(model->FB.size());
   MatrixReal adaGradF = MatrixReal::Zero(model->F.rows(), model->F.cols());
   VectorReal adaGradFB = VectorReal::Zero(model->FB.size());
-  */
 
   boost::shared_ptr<MinibatchFeatureStore> global_gradientU;
   boost::shared_ptr<GlobalFeatureStore> adaGradU;
@@ -208,10 +204,8 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
     }
 
     WeightsType g_B(ptr, B_size);
-    /*
     MatrixReal g_F(num_classes, word_width);
     VectorReal g_FB(num_classes);
-    */
     boost::shared_ptr<MinibatchFeatureStore> g_U;
     vector<boost::shared_ptr<MinibatchFeatureStore>> g_V;
 
@@ -239,10 +233,8 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
         #pragma omp master
         {
           global_gradient.setZero();
-          /*
           global_gradientF.setZero();
           global_gradientFB.setZero();
-          */
 
           vector<int> minibatch_indices(end - start);
           copy(training_indices.begin() + start,
@@ -259,23 +251,19 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
             scatterMinibatch(start, end, training_indices);
 
         gradient.setZero();
-        /*
         g_F.setZero();
         g_FB.setZero();
-        */
         initializer.initialize(g_U, g_V, minibatch_thread_indices);
 
         Real f = sgd_gradient(
             model, training_corpus, minibatch_thread_indices, index,
-            g_R, g_Q, g_C, g_B,/* g_F, g_FB, */ g_U, g_V);
+            g_R, g_Q, g_C, g_B, g_F, g_FB, g_U, g_V);
 
         #pragma omp critical
         {
           global_gradient += gradient;
-          /*
           global_gradientF += g_F;
           global_gradientFB += g_FB;
-          */
           global_gradientU->update(g_U);
           for (int i = 0; i < num_classes; ++i) {
             global_gradientV[i]->update(g_V[i]);
@@ -289,10 +277,8 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
         #pragma omp master
         {
           adaGrad.array() += global_gradient.array().square();
-          /*
           adaGradF.array() += global_gradientF.array().square();
           adaGradFB.array() += global_gradientFB.array().square();
-          */
           adaGradU->updateSquared(global_gradientU);
           for (int i = 0; i < num_classes; ++i) {
             adaGradV[i]->updateSquared(global_gradientV[i]);
@@ -300,12 +286,10 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
 
           model->W -= global_gradient.binaryExpr(
               adaGrad, CwiseAdagradUpdateOp<Real>(step_size));
-          /*
           model->F -= global_gradientF.binaryExpr(
               adaGradF, CwiseAdagradUpdateOp<Real>(step_size));
           model->FB -= global_gradientFB.binaryExpr(
               adaGradFB, CwiseAdagradUpdateOp<Real>(step_size));
-          */
           model->U->updateAdaGrad(global_gradientU, adaGradU, step_size);
           for (int i = 0; i < num_classes; ++i) {
             model->V[i]->updateAdaGrad(global_gradientV[i], adaGradV[i], step_size);
@@ -344,10 +328,8 @@ boost::shared_ptr<FactoredNLM> learn(ModelData& config) {
 
         if (iteration >= 1 && config.reclass) {
           model->reclass(training_corpus, test_corpus);
-          /*
           adaGradF = MatrixReal::Zero(model->F.rows(), model->F.cols());
           adaGradFB = VectorReal::Zero(model->FB.size());
-          */
           adaGrad = VectorReal::Zero(model->num_weights());
         }
       }
@@ -367,14 +349,11 @@ Real sgd_gradient(const boost::shared_ptr<FactoredMaxentNLM>& model,
                   WordVectorsType& g_Q,
                   ContextTransformsType& g_C,
                   WeightsType& g_B,
-                  /*
                   MatrixReal& g_F,
                   VectorReal& g_FB,
-                  */
                   const boost::shared_ptr<MinibatchFeatureStore>& g_U,
                   const vector<boost::shared_ptr<MinibatchFeatureStore>>& g_V) {
   Real f=0;
-/*
   WordId start_id = model->label_set().Convert("<s>");
   WordId end_id = model->label_set().Convert("</s>");
   int word_width = model->config.word_representation_size;
@@ -458,7 +437,6 @@ Real sgd_gradient(const boost::shared_ptr<FactoredMaxentNLM>& model,
 
     model->context_gradient_update(g_C.at(i), context_vectors.at(i), weightedRepresentations);
   }
-  */
 
   return f;
 }

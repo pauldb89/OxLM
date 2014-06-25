@@ -47,4 +47,16 @@ void FactoredMaxentMetadata::initialize(
   }
 }
 
+boost::shared_ptr<FeatureContextMapper> FactoredMaxentMetadata::getMapper() const {
+  return mapper;
+}
+
+boost::shared_ptr<BloomFilterPopulator> FactoredMaxentMetadata::getPopulator() const {
+  return populator;
+}
+
+boost::shared_ptr<FeatureMatcher> FactoredMaxentMetadata::getMatcher() const {
+  return matcher;
+}
+
 } // namespace oxlm

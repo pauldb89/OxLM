@@ -10,7 +10,7 @@ class WordContextHasher : public FeatureContextHasher {
  public:
   WordContextHasher();
 
-  WordContextHasher(int class_id, int num_words, int hash_space_size);
+  WordContextHasher(int class_id, int hash_space_size);
 
   virtual int getKey(const FeatureContext& feature_context) const;
 
@@ -28,11 +28,10 @@ class WordContextHasher : public FeatureContextHasher {
   void serialize(Archive& ar, const unsigned int version) {
     ar & boost::serialization::base_object<FeatureContextHasher>(*this);
     ar & classId;
-    ar & numWords;
     ar & hashSpaceSize;
   }
 
-  int classId, numWords, hashSpaceSize;
+  int classId, hashSpaceSize;
   hash<NGram> hash_function;
 };
 

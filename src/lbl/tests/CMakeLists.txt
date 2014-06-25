@@ -27,8 +27,9 @@ set(TESTS
     query_cache_test
     sparse_global_feature_store_test
     sparse_minibatch_feature_store_test
-    train_maxent_sgd_test
     train_factored_sgd_test
+    train_maxent_sgd_test
+    train_sgd_test
     unconstrained_feature_store_test
     utils_test
     weights_test

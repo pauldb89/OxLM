@@ -13,10 +13,6 @@ WordToClassIndex::WordToClassIndex(const vector<int>& class_markers)
   }
 }
 
-int WordToClassIndex::getNumWords() const {
-  return wordToClass.size();
-}
-
 int WordToClassIndex::getNumClasses() const {
   return classMarkers.size() - 1;
 }

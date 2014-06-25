@@ -48,6 +48,22 @@ Weights::Weights(
   cout << "===============================" << endl;
 }
 
+Weights::Weights(
+    const ModelData& config,
+    const boost::shared_ptr<Metadata>& metadata,
+    const vector<int>& indices)
+    : config(config), metadata(metadata),
+      Q(0, 0, 0), R(0, 0, 0), B(0, 0), W(0, 0) {
+  allocate();
+}
+
+Weights::Weights(const Weights& other)
+    : config(other.config), metadata(other.metadata),
+      Q(0, 0, 0), R(0, 0, 0), B(0, 0), W(0, 0) {
+  allocate();
+  memcpy(data, other.data, size * sizeof(Real));
+}
+
 void Weights::allocate() {
   int num_context_words = config.vocab_size;
   int num_output_words = config.vocab_size;
@@ -314,7 +330,8 @@ void Weights::updateAdaGrad(
       adagrad->W, CwiseAdagradUpdateOp<Real>(config.step_size));
 }
 
-Real Weights::regularizerUpdate(Real minibatch_factor) {
+Real Weights::regularizerUpdate(
+    const boost::shared_ptr<Weights>& global_gradient, Real minibatch_factor) {
   Real sigma = minibatch_factor * config.step_size * config.l2_lbl;
   W -= W * sigma;
   return 0.5 * minibatch_factor * config.l2_lbl * W.array().square().sum();
@@ -331,10 +348,6 @@ Real Weights::predict(int word_id, const vector<int>& context) const {
 
   VectorReal word_probs = logSoftMax(R.transpose() * prediction_vector + B);
   return word_probs(word_id);
-}
-
-void Weights::clear() {
-  W.setZero();
 }
 
 Weights::~Weights() {

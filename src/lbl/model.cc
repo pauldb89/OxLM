@@ -50,8 +50,7 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
 
   Real best_perplexity = numeric_limits<Real>::infinity();
   Real global_objective = 0, test_objective = 0;
-  boost::shared_ptr<MinibatchWeights> global_gradient =
-      boost::make_shared<MinibatchWeights>(config, metadata);
+  boost::shared_ptr<MinibatchWeights> global_gradient;
   boost::shared_ptr<GlobalWeights> adagrad =
       boost::make_shared<GlobalWeights>(config, metadata);
 
@@ -78,7 +77,8 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
         size_t end = min(training_corpus->size(), start + minibatch_size);
 
         #pragma omp master
-        global_gradient->clear();
+        global_gradient = boost::make_shared<MinibatchWeights>(
+            config, metadata, indices);
 
         vector<int> minibatch = scatterMinibatch(start, end, indices);
         Real objective;
@@ -99,7 +99,7 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
 
           Real minibatch_factor =
               static_cast<Real>(end - start) / training_corpus->size();
-          global_objective += regularize(minibatch_factor);
+          global_objective += regularize(global_gradient, minibatch_factor);
         }
 
         // Wait for master thread to update model.
@@ -142,8 +142,9 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::update(
 
 template<class GlobalWeights, class MinibatchWeights, class Metadata>
 Real Model<GlobalWeights, MinibatchWeights, Metadata>::regularize(
+    const boost::shared_ptr<MinibatchWeights>& global_gradient,
     Real minibatch_factor) {
-  return weights->regularizerUpdate(minibatch_factor);
+  return weights->regularizerUpdate(global_gradient, minibatch_factor);
 }
 
 template<class GlobalWeights, class MinibatchWeights, class Metadata>
@@ -213,6 +214,6 @@ Dict Model<GlobalWeights, MinibatchWeights, Metadata>::getDict() const {
 
 template class Model<Weights, Weights, Metadata>;
 template class Model<FactoredWeights, FactoredWeights, FactoredMetadata>;
-// template class Model<GlobalFactoredMaxentWeights, MinibatchFactoredMaxentWeights, FactoredMaxentMetadata>;
+template class Model<GlobalFactoredMaxentWeights, MinibatchFactoredMaxentWeights, FactoredMaxentMetadata>;
 
 } // namespace oxlm

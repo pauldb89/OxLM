@@ -8,7 +8,7 @@
 
 namespace oxlm {
 
-class TestSGD : public ::testing::Test {
+class SGDTest : public ::testing::Test {
  protected:
   virtual void SetUp() {
     config.training_file = "training.txt";
@@ -20,13 +20,20 @@ class TestSGD : public ::testing::Test {
     config.word_representation_size = 100;
     config.threads = 1;
     config.step_size = 0.06;
-    config.class_file = "classes.txt";
   }
 
   // TODO: This method should be refactored together with all the other places
   // where we read test corpora from files.
 
   ModelData config;
+};
+
+class FactoredSGDTest : public SGDTest {
+ protected:
+  virtual void SetUp() {
+    SGDTest::SetUp();
+    config.class_file = "classes.txt";
+  }
 };
 
 } // namespace oxlm

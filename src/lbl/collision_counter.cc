@@ -54,7 +54,7 @@ CollisionCounter::CollisionCounter(
   vector<boost::shared_ptr<FeatureFilter>> word_filters(num_classes);
   for (int i = 0; i < num_classes; ++i) {
     word_hashers[i] = boost::make_shared<WordContextHasher>(
-        i, index->getNumWords(), config.hash_space);
+        i, config.hash_space);
     if (config.filter_contexts) {
       if (config.filter_error_rate > 0) {
         word_filters[i] = boost::make_shared<FeatureApproximateFilter>(

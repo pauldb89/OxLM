@@ -62,8 +62,7 @@ void FeatureStoreInitializer::initialize(
 
     V.resize(num_classes);
     for (int i = 0; i < num_classes; ++i) {
-      hasher = boost::make_shared<WordContextHasher>(
-          i, index->getNumWords(), config.hash_space);
+      hasher = boost::make_shared<WordContextHasher>(i, config.hash_space);
       if (config.filter_contexts) {
         if (config.filter_error_rate > 0) {
           filter = boost::make_shared<FeatureApproximateFilter>(
@@ -138,8 +137,7 @@ void FeatureStoreInitializer::initialize(
         hasher, filter);
     V.resize(num_classes);
     for (int i = 0; i < num_classes; ++i) {
-      hasher = boost::make_shared<WordContextHasher>(
-          i, index->getNumWords(), config.hash_space);
+      hasher = boost::make_shared<WordContextHasher>(i, config.hash_space);
       if (config.filter_contexts) {
         if (config.filter_error_rate) {
           filter = boost::make_shared<FeatureApproximateFilter>(

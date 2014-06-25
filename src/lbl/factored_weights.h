@@ -17,6 +17,13 @@ class FactoredWeights : public Weights {
       const boost::shared_ptr<FactoredMetadata>& metadata,
       const boost::shared_ptr<Corpus>& training_corpus);
 
+  FactoredWeights(
+      const ModelData& config,
+      const boost::shared_ptr<FactoredMetadata>& metadata,
+      const vector<int>& indices);
+
+  FactoredWeights(const FactoredWeights& other);
+
   boost::shared_ptr<FactoredWeights> getGradient(
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices,
@@ -40,9 +47,9 @@ class FactoredWeights : public Weights {
       const boost::shared_ptr<FactoredWeights>& global_gradient,
       const boost::shared_ptr<FactoredWeights>& adagrad);
 
-  Real regularizerUpdate(Real minibatch_factor);
-
-  void clear();
+  Real regularizerUpdate(
+      const boost::shared_ptr<FactoredWeights>& global_gradient,
+      Real minibatch_factor);
 
   virtual ~FactoredWeights();
 
@@ -60,9 +67,10 @@ class FactoredWeights : public Weights {
       MatrixReal& class_probs,
       vector<VectorReal>& word_probs) const;
 
-  void getProbabilities(
+  virtual void getProbabilities(
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices,
+      const vector<vector<int>>& contexts,
       const MatrixReal& prediction_vectors,
       MatrixReal& class_probs,
       vector<VectorReal>& word_probs) const;
