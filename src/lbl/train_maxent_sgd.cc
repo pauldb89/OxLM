@@ -1,53 +1,41 @@
-#include <boost/program_options/parsers.hpp>
-#include <boost/program_options/variables_map.hpp>
+#include <boost/program_options.hpp>
 
-#include "lbl/train_maxent_sgd.h"
+#include "lbl/factored_maxent_metadata.h"
+#include "lbl/global_factored_maxent_weights.h"
+#include "lbl/minibatch_factored_maxent_weights.h"
+#include "lbl/model.h"
+#include "utils/git_revision.h"
 
-static const char *REVISION = "$Rev: 247 $";
-
-// Namespaces
-using namespace boost;
 using namespace boost::program_options;
-using namespace std;
 using namespace oxlm;
-using namespace Eigen;
-
 
 int main(int argc, char **argv) {
-  cout << "Online noise contrastive estimation for log-bilinear models: Copyright 2013 Phil Blunsom, "
-       << REVISION << '\n' << endl;
-
-  ///////////////////////////////////////////////////////////////////////////////////////
-  // Command line processing
-  variables_map vm;
-
-  // Command line processing
   options_description cmdline_specific("Command line specific options");
   cmdline_specific.add_options()
     ("help,h", "print help message")
     ("config,c", value<string>(),
-        "config file specifying additional command line options")
-    ;
+        "Config file specifying additional command line options");
+
   options_description generic("Allowed options");
   generic.add_options()
-    ("input,i", value<string>()->default_value("data.txt"),
+    ("input,i", value<string>()->required(),
         "corpus of sentences, one per line")
     ("test-set", value<string>(),
-        "corpus of test sentences to be evaluated at each iteration")
+        "corpus of test sentences")
     ("iterations", value<int>()->default_value(10),
         "number of passes through the data")
     ("minibatch-size", value<int>()->default_value(100),
         "number of sentences per minibatch")
     ("order,n", value<int>()->default_value(5),
         "ngram order")
-    ("feature-context-size", value<int>()->default_value(5),
-        "size of the window for maximum entropy features")
     ("model-in,m", value<string>(),
         "initial model")
     ("model-out,o", value<string>(),
         "base filename of model output files")
     ("lambda-lbl,r", value<float>()->default_value(2.0),
         "LBL regularisation strength parameter")
+    ("feature-context-size", value<int>()->default_value(5),
+        "size of the window for maximum entropy features")
     ("lambda-maxent", value<float>()->default_value(2.0),
         "maxent regularisation strength parameter")
     ("word-width", value<int>()->default_value(100),
@@ -62,7 +50,6 @@ int main(int argc, char **argv) {
         "file containing word to class mappings in the format"
         "<class> <word> <frequence>.")
     ("randomise", "visit the training tokens in random order")
-    ("reclass", "reallocate word classes after the first epoch.")
     ("diagonal-contexts", "Use diagonal context matrices (usually faster).")
     ("max-ngrams", value<int>()->default_value(0),
         "Define maxent features only for the most frequent max-ngrams ngrams.")
@@ -78,25 +65,26 @@ int main(int argc, char **argv) {
     ("filter-error-rate", value<Real>()->default_value(0),
         "Error rate for filtering false contexts (in bloom filter)")
     ("count-collisions", value<bool>()->default_value(true),
-        "Print collision statistics (leads to a memory usage spike)")
-    ("random-weights", value<bool>()->default_value(true),
-        "Initialize the weights randomly.");
+        "Print collision statistics (leads to a memory usage spike)");
+
   options_description config_options, cmdline_options;
   config_options.add(generic);
   cmdline_options.add(generic).add(cmdline_specific);
 
+  variables_map vm;
   store(parse_command_line(argc, argv, cmdline_options), vm);
-  if (vm.count("config") > 0) {
+  if (vm.count("config")) {
     ifstream config(vm["config"].as<string>().c_str());
     store(parse_config_file(config, cmdline_options), vm);
   }
-  notify(vm);
-  ///////////////////////////////////////////////////////////////////////////////////////
 
   if (vm.count("help")) {
     cout << cmdline_options << "\n";
     return 1;
   }
+
+  notify(vm);
+
 
   ModelData config;
   config.training_file = vm["input"].as<string>();
@@ -130,7 +118,6 @@ int main(int argc, char **argv) {
   config.randomise = vm.count("randomise");
   config.reclass = vm.count("reclass");
   config.diagonal_contexts = vm.count("diagonal-contexts");
-  config.random_weights = vm["random-weights"].as<bool>();
 
   config.max_ngrams = vm["max-ngrams"].as<int>();
   config.min_ngram_freq = vm["min-ngram-freq"].as<int>();
@@ -172,7 +159,8 @@ int main(int argc, char **argv) {
   cout << "# filter error rate = " << config.filter_error_rate << endl;
   cout << "################################" << endl;
 
-  learn(config);
+  Model<GlobalFactoredMaxentWeights, MinibatchFactoredMaxentWeights, FactoredMaxentMetadata> model(config);
+  model.learn();
 
   return 0;
 }

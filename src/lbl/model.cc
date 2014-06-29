@@ -77,8 +77,16 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
         size_t end = min(training_corpus->size(), start + minibatch_size);
 
         #pragma omp master
-        global_gradient = boost::make_shared<MinibatchWeights>(
-            config, metadata, indices);
+        {
+          vector<int> minibatch(indices.begin() + start, indices.begin() + end);
+          global_gradient = boost::make_shared<MinibatchWeights>(
+              config, metadata, minibatch);
+        }
+
+        // Wait until the global gradient is reset to 0. Otherwise, some
+        // gradient updates may be ignored if the global gradient is reset
+        // afterwards.
+        #pragma omp barrier
 
         vector<int> minibatch = scatterMinibatch(start, end, indices);
         Real objective;
@@ -106,7 +114,6 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
         #pragma omp barrier
         if ((minibatch_counter % 100 == 0 && minibatch_counter <= 1000) ||
             minibatch_counter % 1000 == 0) {
-          cout << endl;
           evaluate(test_corpus, iteration_start, minibatch_counter,
                    test_objective, best_perplexity);
         }

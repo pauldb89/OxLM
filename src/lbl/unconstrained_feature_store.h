@@ -54,6 +54,12 @@ class UnconstrainedFeatureStore :
 
   bool operator==(const UnconstrainedFeatureStore& store) const;
 
+  virtual vector<pair<int, int>> getFeatureIndexes() const;
+
+  virtual void updateFeature(const pair<int, int>& index, Real value);
+
+  virtual Real getFeature(const pair<int, int>& index) const;
+
   virtual ~UnconstrainedFeatureStore();
 
  private:

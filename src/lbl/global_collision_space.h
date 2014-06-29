@@ -8,22 +8,22 @@
 
 namespace oxlm {
 
-class CollisionSpace {
+class GlobalCollisionSpace {
  public:
-  CollisionSpace();
+  GlobalCollisionSpace();
 
-  CollisionSpace(const CollisionSpace& other);
+  GlobalCollisionSpace(const GlobalCollisionSpace& other);
 
-  CollisionSpace(int hash_space_size);
+  GlobalCollisionSpace(int hash_space_size);
 
-  CollisionSpace& operator=(const CollisionSpace& other);
+  GlobalCollisionSpace& operator=(const GlobalCollisionSpace& other);
 
-  bool operator==(const CollisionSpace& other) const;
+  bool operator==(const GlobalCollisionSpace& other) const;
 
-  virtual ~CollisionSpace();
+  virtual ~GlobalCollisionSpace();
 
  private:
-  void deepCopy(const CollisionSpace& other);
+  void deepCopy(const GlobalCollisionSpace& other);
 
   friend class boost::serialization::access;
 

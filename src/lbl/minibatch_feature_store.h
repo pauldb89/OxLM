@@ -14,6 +14,8 @@ class MinibatchFeatureStore : virtual public FeatureStore {
 
   virtual void clear() = 0;
 
+  virtual Real getFeature(const pair<int, int>& index) const = 0;
+
   virtual ~MinibatchFeatureStore();
 };
 

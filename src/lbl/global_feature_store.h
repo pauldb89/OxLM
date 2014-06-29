@@ -23,6 +23,10 @@ class GlobalFeatureStore : virtual public FeatureStore {
       const boost::shared_ptr<GlobalFeatureStore>& base_adagrad_store,
       Real step_size) = 0;
 
+  virtual vector<pair<int, int>> getFeatureIndexes() const = 0;
+
+  virtual void updateFeature(const pair<int, int>& index, Real value) = 0;
+
   virtual ~GlobalFeatureStore();
 
  private:

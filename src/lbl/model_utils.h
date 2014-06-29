@@ -12,19 +12,6 @@
 
 namespace oxlm {
 
-Real perplexity(
-    const boost::shared_ptr<FactoredNLM>& model,
-    const boost::shared_ptr<Corpus>& test_corpus);
-
-void saveModel(
-    const string& output_file,
-    const boost::shared_ptr<FactoredNLM>& model);
-
-void evaluateModel(
-    const ModelData& config, const boost::shared_ptr<FactoredNLM>& model,
-    const boost::shared_ptr<Corpus>& test_corpus, int minibatch_counter,
-    const Time& iteration_start, Real& pp, Real& best_pp);
-
 boost::shared_ptr<FactoredNLM> loadModel(
     const string& input_file,
     const boost::shared_ptr<Corpus>& test_corpus = boost::shared_ptr<Corpus>());

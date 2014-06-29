@@ -20,12 +20,13 @@ class CollisionGlobalFeatureStoreTest : public testing::Test {
   void SetUp() {
     int vector_size = 3;
     int hash_space = 10;
-    boost::shared_ptr<CollisionSpace> space =
-        boost::make_shared<CollisionSpace>(hash_space);
+    boost::shared_ptr<GlobalCollisionSpace> space =
+        boost::make_shared<GlobalCollisionSpace>(hash_space);
     boost::shared_ptr<FeatureNoOpFilter> filter =
         boost::make_shared<FeatureNoOpFilter>(vector_size);
     boost::shared_ptr<ClassContextHasher> hasher =
         boost::make_shared<ClassContextHasher>(hash_space);
+
     CollisionMinibatchFeatureStore g_store(
         vector_size, hash_space, 3, hasher, filter);
 

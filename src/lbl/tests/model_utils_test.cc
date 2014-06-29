@@ -3,7 +3,6 @@
 #include <boost/make_shared.hpp>
 
 #include "lbl/model_utils.h"
-#include "lbl/train_maxent_sgd.h"
 #include "lbl/tests/sgd_test.h"
 #include "utils/constants.h"
 
@@ -22,32 +21,6 @@ class ModelUtilsTest : public FactoredSGDTest {
 
   Dict dict;
 };
-
-TEST_F(ModelUtilsTest, TestPerplexity) {
-  vector<int> classes = {0, 2, 4, 6};
-  vector<int> data = {2, 3, 4, 5, 1};
-  boost::shared_ptr<Corpus> corpus = boost::make_shared<Corpus>(data);
-  boost::shared_ptr<WordToClassIndex> index =
-      boost::make_shared<WordToClassIndex>(classes);
-  boost::shared_ptr<FactoredNLM> model =
-      boost::make_shared<FactoredNLM>(config, dict, index);
-  EXPECT_NEAR(-8.958797, perplexity(model, corpus), EPS);
-}
-
-TEST_F(ModelUtilsTest, TestEvaluateModel) {
-  Real pp = 0, best_pp = numeric_limits<Real>::infinity();
-  vector<int> classes = {0, 2, 4, 6};
-  vector<int> data = {2, 3, 4, 5, 1};
-  boost::shared_ptr<Corpus> corpus = boost::make_shared<Corpus>(data);
-  boost::shared_ptr<WordToClassIndex> index =
-      boost::make_shared<WordToClassIndex>(classes);
-  boost::shared_ptr<FactoredNLM> model =
-      boost::make_shared<FactoredNLM>(config, dict, index);
-
-  evaluateModel(config, model, corpus, 0, GetTime(), pp, best_pp);
-  EXPECT_NEAR(6, pp, EPS);
-  EXPECT_NEAR(6, best_pp, EPS);
-}
 
 TEST_F(ModelUtilsTest, TestScatterMinibatch) {
   vector<int> indices = {0, 1, 2, 3, 4, 5};
@@ -130,24 +103,6 @@ TEST_F(ModelUtilsTest, TestFrequnecyBinning) {
   EXPECT_NEAR(-2.021676685, class_bias(1), EPS);
   EXPECT_NEAR(-2.841139018, class_bias(2), EPS);
   EXPECT_NEAR(-3.035927343, class_bias(3), EPS);
-}
-
-TEST_F(ModelUtilsTest, TestSerializeModel) {
-  config.l2_maxent = 0.1;
-  config.feature_context_size = 3;
-  config.sparse_features = true;
-
-  boost::shared_ptr<FactoredNLM> model = learn(config);
-  config.test_file = "test.txt";
-  boost::shared_ptr<Corpus> test_corpus =
-      readCorpus(config.test_file, model->label_set());
-  double expected_perplexity = perplexity(model, test_corpus);
-
-  saveModel("model.bin", model);
-  boost::shared_ptr<FactoredNLM> model_copy =
-      loadModel("model.bin", test_corpus);
-
-  EXPECT_NEAR(expected_perplexity, perplexity(model_copy, test_corpus), EPS);
 }
 
 } // namespace oxlm

@@ -43,6 +43,12 @@ class GlobalFactoredMaxentWeights : public FactoredWeights {
       MatrixReal& class_probs,
       vector<VectorReal>& word_probs) const;
 
+  bool checkGradient(
+      const boost::shared_ptr<Corpus>& corpus,
+      const vector<int>& indices,
+      const boost::shared_ptr<MinibatchFactoredMaxentWeights>& gradient,
+      Real eps);
+
   void updateSquared(
       const boost::shared_ptr<MinibatchFactoredMaxentWeights>& global_gradient);
 
@@ -53,6 +59,14 @@ class GlobalFactoredMaxentWeights : public FactoredWeights {
   Real regularizerUpdate(
       const boost::shared_ptr<MinibatchFactoredMaxentWeights>& global_gradient,
       Real minibatch_factor);
+
+ protected:
+  bool checkGradientStore(
+      const boost::shared_ptr<Corpus>& corpus,
+      const vector<int>& indices,
+      const boost::shared_ptr<GlobalFeatureStore>& store,
+      const boost::shared_ptr<MinibatchFeatureStore>& gradient_store,
+      Real eps);
 
  private:
   void initialize();

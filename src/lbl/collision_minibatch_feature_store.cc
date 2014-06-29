@@ -52,6 +52,11 @@ void CollisionMinibatchFeatureStore::clear() {
   featureWeights.clear();
 }
 
+Real CollisionMinibatchFeatureStore::getFeature(const pair<int, int>& index) const {
+  auto it = featureWeights.find(index.first);
+  return it == featureWeights.end() ? 0 : it->second;
+}
+
 boost::shared_ptr<CollisionMinibatchFeatureStore> CollisionMinibatchFeatureStore::cast(
     const boost::shared_ptr<MinibatchFeatureStore>& base_store) {
   boost::shared_ptr<CollisionMinibatchFeatureStore> store =

@@ -77,8 +77,22 @@ void NLM::initWeights(const ModelData& config, bool random_weights) {
     //    W.setRandom() /= 10;
     std::mt19937 gen(1);
     std::normal_distribution<Real> gaussian(0,0.1);
-    for (int i = 0; i < m_data_size; ++i) {
-      W(i) = gaussian(gen);
+    for (int i = 0; i < Q.rows(); ++i) {
+      for (int j = 0; j < Q.cols(); ++j) {
+        Q(i, j) = gaussian(gen);
+      }
+    }
+    for (int i = 0; i < R.rows(); ++i) {
+      for (int j = 0; j < R.cols(); ++j) {
+        R(i, j) = gaussian(gen);
+      }
+    }
+    for (int k = 0; k < context_width; ++k) {
+      for (int i = 0; i < C[k].rows(); ++i) {
+        for (int j = 0; j < C[k].cols(); ++j) {
+          C[k](i, j) = gaussian(gen);
+        }
+      }
     }
   } else {
     W.setZero();

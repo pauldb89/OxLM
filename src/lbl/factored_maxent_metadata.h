@@ -13,6 +13,13 @@ class FactoredMaxentMetadata : public FactoredMetadata {
  public:
   FactoredMaxentMetadata(ModelData& config, Dict& dict);
 
+  FactoredMaxentMetadata(
+      const ModelData& config, Dict& dict,
+      const boost::shared_ptr<WordToClassIndex>& index,
+      const boost::shared_ptr<FeatureContextMapper>& mapper,
+      const boost::shared_ptr<BloomFilterPopulator>& populator,
+      const boost::shared_ptr<FeatureMatcher>& matcher);
+
   void initialize(const boost::shared_ptr<Corpus>& corpus);
 
   boost::shared_ptr<FeatureContextMapper> getMapper() const;

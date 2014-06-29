@@ -7,10 +7,10 @@
 #include "lbl/class_context_hasher.h"
 #include "lbl/collision_global_feature_store.h"
 #include "lbl/collision_minibatch_feature_store.h"
-#include "lbl/collision_space.h"
 #include "lbl/feature_approximate_filter.h"
 #include "lbl/feature_exact_filter.h"
 #include "lbl/feature_no_op_filter.h"
+#include "lbl/global_collision_space.h"
 #include "lbl/sparse_global_feature_store.h"
 #include "lbl/sparse_minibatch_feature_store.h"
 #include "lbl/unconstrained_feature_store.h"
@@ -35,8 +35,8 @@ void FeatureStoreInitializer::initialize(
   int num_classes = index->getNumClasses();
   if (config.hash_space) {
     // Share collision space among all stores (class + word specific).
-    boost::shared_ptr<CollisionSpace> space =
-        boost::make_shared<CollisionSpace>(config.hash_space);
+    boost::shared_ptr<GlobalCollisionSpace> space =
+        boost::make_shared<GlobalCollisionSpace>(config.hash_space);
     boost::shared_ptr<FeatureContextHasher> hasher =
         boost::make_shared<ClassContextHasher>(config.hash_space);
     GlobalFeatureIndexesPairPtr feature_indexes_pair;

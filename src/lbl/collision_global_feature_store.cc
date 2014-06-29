@@ -8,7 +8,7 @@ CollisionGlobalFeatureStore::CollisionGlobalFeatureStore() {}
 
 CollisionGlobalFeatureStore::CollisionGlobalFeatureStore(
     int vector_size, int hash_space_size, int feature_context_size,
-    const boost::shared_ptr<CollisionSpace>& space,
+    const boost::shared_ptr<GlobalCollisionSpace>& space,
     const boost::shared_ptr<FeatureContextHasher>& hasher,
     const boost::shared_ptr<FeatureFilter>& filter)
     : vectorSize(vector_size), hashSpaceSize(hash_space_size),
@@ -47,6 +47,7 @@ Real CollisionGlobalFeatureStore::l2Objective(
   for (const auto& entry: store->featureWeights) {
     result += space->featureWeights[entry.first] * space->featureWeights[entry.first];
   }
+
   return sigma * result;
 }
 
@@ -93,6 +94,21 @@ bool CollisionGlobalFeatureStore::operator==(
   return vectorSize == other.vectorSize
       && hashSpaceSize == other.hashSpaceSize
       && *space == *other.space;
+}
+
+vector<pair<int, int>> CollisionGlobalFeatureStore::getFeatureIndexes() const {
+  vector<pair<int, int>> feature_indexes;
+
+  for (size_t i = 0; i < hashSpaceSize; ++i) {
+    feature_indexes.push_back(make_pair(i, 0));
+  }
+
+  return feature_indexes;
+}
+
+void CollisionGlobalFeatureStore::updateFeature(
+    const pair<int, int>& index, Real value) {
+  space->featureWeights[index.first] += value;
 }
 
 CollisionGlobalFeatureStore::~CollisionGlobalFeatureStore() {}

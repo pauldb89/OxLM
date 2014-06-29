@@ -4,9 +4,9 @@
 
 #include "lbl/archive_export.h"
 #include "lbl/collision_minibatch_feature_store.h"
-#include "lbl/collision_space.h"
 #include "lbl/feature_context_generator.h"
 #include "lbl/feature_context_hasher.h"
+#include "lbl/global_collision_space.h"
 #include "lbl/global_feature_store.h"
 
 namespace oxlm {
@@ -17,7 +17,7 @@ class CollisionGlobalFeatureStore : public GlobalFeatureStore {
 
   CollisionGlobalFeatureStore(
       int vector_size, int hash_space_size, int feature_context_size,
-      const boost::shared_ptr<CollisionSpace>& space,
+      const boost::shared_ptr<GlobalCollisionSpace>& space,
       const boost::shared_ptr<FeatureContextHasher>& hasher,
       const boost::shared_ptr<FeatureFilter>& filter);
 
@@ -44,6 +44,10 @@ class CollisionGlobalFeatureStore : public GlobalFeatureStore {
 
   bool operator==(const CollisionGlobalFeatureStore& other) const;
 
+  virtual vector<pair<int, int>> getFeatureIndexes() const;
+
+  virtual void updateFeature(const pair<int, int>& index, Real value);
+
   virtual ~CollisionGlobalFeatureStore();
 
  private:
@@ -67,8 +71,7 @@ class CollisionGlobalFeatureStore : public GlobalFeatureStore {
   FeatureContextGenerator generator;
   boost::shared_ptr<FeatureContextHasher> hasher;
   boost::shared_ptr<FeatureFilter> filter;
-  boost::shared_ptr<CollisionSpace> space;
-  Real* featureWeights;
+  boost::shared_ptr<GlobalCollisionSpace> space;
 };
 
 } // namespace oxlm

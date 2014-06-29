@@ -1,5 +1,7 @@
 #include "lbl/global_factored_maxent_weights.h"
 
+#include <iomanip>
+
 #include <boost/make_shared.hpp>
 
 #include "lbl/bloom_filter.h"
@@ -43,8 +45,8 @@ void GlobalFactoredMaxentWeights::initialize() {
   boost::shared_ptr<FeatureMatcher> matcher = metadata->getMatcher();
 
   if (config.hash_space) {
-    boost::shared_ptr<CollisionSpace> space =
-        boost::make_shared<CollisionSpace>(config.hash_space);
+    boost::shared_ptr<GlobalCollisionSpace> space =
+        boost::make_shared<GlobalCollisionSpace>(config.hash_space);
     boost::shared_ptr<FeatureContextHasher> hasher =
         boost::make_shared<ClassContextHasher>(config.hash_space);
     GlobalFeatureIndexesPairPtr feature_indexes_pair;
@@ -64,6 +66,7 @@ void GlobalFactoredMaxentWeights::initialize() {
     } else {
       filter = boost::make_shared<FeatureNoOpFilter>(num_classes);
     }
+
     U = boost::make_shared<CollisionGlobalFeatureStore>(
         num_classes, config.hash_space, config.feature_context_size,
         space, hasher, filter);
@@ -186,6 +189,67 @@ boost::shared_ptr<MinibatchFactoredMaxentWeights> GlobalFactoredMaxentWeights::g
   return gradient;
 }
 
+bool GlobalFactoredMaxentWeights::checkGradient(
+    const boost::shared_ptr<Corpus>& corpus,
+    const vector<int>& indices,
+    const boost::shared_ptr<MinibatchFactoredMaxentWeights>& gradient,
+    Real eps) {
+  if (!FactoredWeights::checkGradient(corpus, indices, gradient, eps)) {
+    return false;
+  }
+
+  if (config.hash_space == 0) {
+    // If no hashing is used, check gradients individually.
+    if (!checkGradientStore(corpus, indices, U, gradient->U, eps)) {
+      return false;
+    }
+
+    for (size_t i = 0; i < V.size(); ++i) {
+      if (!checkGradientStore(corpus, indices, V[i], gradient->V[i], eps)) {
+        return false;
+      }
+    }
+  } else {
+    // Class and word features are hashed in the same global collision space, so
+    // we can only verify if the sum of gradients is correct.
+    boost::shared_ptr<MinibatchFeatureStore> gradient_sum = gradient->U;
+    for (size_t i = 0; i < V.size(); ++i) {
+      gradient_sum->update(gradient->V[i]);
+    }
+
+    if (!checkGradientStore(corpus, indices, U, gradient_sum, eps)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool GlobalFactoredMaxentWeights::checkGradientStore(
+    const boost::shared_ptr<Corpus>& corpus,
+    const vector<int>& indices,
+    const boost::shared_ptr<GlobalFeatureStore>& store,
+    const boost::shared_ptr<MinibatchFeatureStore>& gradient_store,
+    Real eps) {
+  vector<pair<int, int>> feature_indexes = store->getFeatureIndexes();
+  for (const auto& index: feature_indexes) {
+    store->updateFeature(index, eps);
+    Real objective_plus = getObjective(corpus, indices);
+    store->updateFeature(index, -eps);
+
+    store->updateFeature(index, -eps);
+    Real objective_minus = getObjective(corpus, indices);
+    store->updateFeature(index, eps);
+
+    double est_gradient = (objective_plus - objective_minus) / (2 * eps);
+    if (fabs(gradient_store->getFeature(index) - est_gradient) > eps) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 void GlobalFactoredMaxentWeights::updateSquared(
     const boost::shared_ptr<MinibatchFactoredMaxentWeights>& global_gradient) {
   FactoredWeights::updateSquared(global_gradient);
@@ -214,11 +278,12 @@ Real GlobalFactoredMaxentWeights::regularizerUpdate(
       global_gradient, minibatch_factor);
 
   Real sigma = minibatch_factor * config.step_size * config.l2_maxent;
+  Real factor = 0.5 * minibatch_factor * config.l2_maxent;
   U->l2GradientUpdate(global_gradient->U, sigma);
-  ret += U->l2Objective(global_gradient->U, sigma);
+  ret += U->l2Objective(global_gradient->U, factor);
   for (size_t i = 0; i < V.size(); ++i) {
     V[i]->l2GradientUpdate(global_gradient->V[i], sigma);
-    ret += V[i]->l2Objective(global_gradient->V[i], sigma);
+    ret += V[i]->l2Objective(global_gradient->V[i], factor);
   }
 
   return ret;

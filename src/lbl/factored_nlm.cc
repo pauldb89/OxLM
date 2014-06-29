@@ -16,11 +16,10 @@ FactoredNLM::FactoredNLM(
   FB = VectorReal::Zero(index->getNumClasses());
 
   if (config.random_weights) {
-    random_device rd;
-    std::mt19937 gen(rd());
+    std::mt19937 gen(1);
     std::normal_distribution<Real> gaussian(0,0.1);
     for (int i = 0; i < F.rows(); i++) {
-      FB(i) = gaussian(gen);
+      // FB(i) = gaussian(gen);
       for (int j = 0; j < F.cols(); j++) {
         F(i, j) = gaussian(gen);
       }

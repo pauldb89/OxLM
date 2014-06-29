@@ -110,6 +110,11 @@ void SparseMinibatchFeatureStore::update(
   it->second += values;
 }
 
+Real SparseMinibatchFeatureStore::getFeature(const pair<int, int>& index) const {
+  auto it = featureWeights.find(index.first);
+  return it == featureWeights.end() ? 0 : VectorReal(it->second)(index.second);
+}
+
 boost::shared_ptr<SparseMinibatchFeatureStore> SparseMinibatchFeatureStore::cast(
     const boost::shared_ptr<MinibatchFeatureStore>& base_store) {
   boost::shared_ptr<SparseMinibatchFeatureStore> store =

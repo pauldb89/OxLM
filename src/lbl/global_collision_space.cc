@@ -1,41 +1,41 @@
-#include "lbl/collision_space.h"
+#include "lbl/global_collision_space.h"
 
 #include "utils/constants.h"
 
 namespace oxlm {
 
-CollisionSpace::CollisionSpace() {}
+GlobalCollisionSpace::GlobalCollisionSpace() {}
 
-CollisionSpace::CollisionSpace(const CollisionSpace& other) {
+GlobalCollisionSpace::GlobalCollisionSpace(const GlobalCollisionSpace& other) {
   deepCopy(other);
 }
 
-CollisionSpace::CollisionSpace(int hash_space_size)
+GlobalCollisionSpace::GlobalCollisionSpace(int hash_space_size)
     : hashSpaceSize(hash_space_size) {
   featureWeights = new Real[hashSpaceSize];
   VectorRealMap featureWeightsMap(featureWeights, hashSpaceSize);
   featureWeightsMap = VectorReal::Zero(hashSpaceSize);
 }
 
-CollisionSpace& CollisionSpace::operator=(const CollisionSpace& other) {
+GlobalCollisionSpace& GlobalCollisionSpace::operator=(const GlobalCollisionSpace& other) {
   deepCopy(other);
   return *this;
 }
 
-bool CollisionSpace::operator==(const CollisionSpace& other) const {
+bool GlobalCollisionSpace::operator==(const GlobalCollisionSpace& other) const {
   if (hashSpaceSize != other.hashSpaceSize) {
     return true;
   }
 }
 
-void CollisionSpace::deepCopy(const CollisionSpace& other) {
+void GlobalCollisionSpace::deepCopy(const GlobalCollisionSpace& other) {
   hashSpaceSize = other.hashSpaceSize;
 
   featureWeights = new Real[hashSpaceSize];
   memcpy(featureWeights, other.featureWeights, hashSpaceSize * sizeof(Real));
 }
 
-CollisionSpace::~CollisionSpace() {
+GlobalCollisionSpace::~GlobalCollisionSpace() {
   delete featureWeights;
 }
 

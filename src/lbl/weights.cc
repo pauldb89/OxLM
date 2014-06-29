@@ -1,5 +1,6 @@
 #include "lbl/weights.h"
 
+#include <iomanip>
 #include <random>
 
 #include <boost/make_shared.hpp>

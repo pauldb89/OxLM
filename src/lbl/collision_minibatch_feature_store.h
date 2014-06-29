@@ -26,6 +26,8 @@ class CollisionMinibatchFeatureStore : public MinibatchFeatureStore {
 
   virtual void clear();
 
+  virtual Real getFeature(const pair<int, int>& index) const;
+
   static boost::shared_ptr<CollisionMinibatchFeatureStore> cast(
       const boost::shared_ptr<MinibatchFeatureStore>& base_minibatch_store);
 

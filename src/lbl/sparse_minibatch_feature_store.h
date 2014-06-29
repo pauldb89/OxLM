@@ -33,6 +33,8 @@ class SparseMinibatchFeatureStore : public MinibatchFeatureStore {
 
   virtual void clear();
 
+  virtual Real getFeature(const pair<int, int>& index) const;
+
   virtual size_t size() const;
 
   void hintFeatureIndex(int feature_context_id, int feature_index);

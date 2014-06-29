@@ -13,14 +13,14 @@ int main(int argc, char** argv) {
   cmdline_specific.add_options()
     ("help,h", "print help message")
     ("config,c", value<string>(),
-        "config file specifying additional command line options");
+        "Config file specifying additional command line options");
 
   options_description generic("Allowed options");
   generic.add_options()
-    ("input,i", value<string>()->default_value("data.txt"),
+    ("input,i", value<string>()->required(),
         "corpus of sentences, one per line")
     ("test-set", value<string>(),
-        "corpus of test sentences to be evaluated at each iteration")
+        "corpus of test sentences")
     ("iterations", value<int>()->default_value(10),
         "number of passes through the data")
     ("minibatch-size", value<int>()->default_value(10000),

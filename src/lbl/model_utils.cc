@@ -10,91 +10,6 @@
 
 namespace oxlm {
 
-Real perplexity(
-    const boost::shared_ptr<FactoredNLM>& model,
-    const boost::shared_ptr<Corpus>& test_corpus) {
-  Real p=0.0;
-
-  int context_width = model->config.ngram_order-1;
-  int tokens = 0;
-  WordId start_id = model->label_set().Lookup("<s>");
-  WordId end_id = model->label_set().Lookup("</s>");
-  boost::shared_ptr<ContextProcessor> processor =
-      boost::make_shared<ContextProcessor>(
-          test_corpus, context_width, start_id, end_id);
-
-  #pragma omp master
-  cout << "\tCalculating perplexity for " << test_corpus->size() << " tokens";
-
-  size_t thread_num = omp_get_thread_num();
-  size_t num_threads = omp_get_num_threads();
-  for (size_t s = thread_num; s < test_corpus->size(); s += num_threads) {
-    vector<WordId> context = processor->extract(s);
-    Real log_prob = model->log_prob(test_corpus->at(s), context, true, false);
-    p += log_prob;
-
-    #pragma omp master
-    if (tokens % 10000 == 0) {
-      cout << ".";
-      cout.flush();
-    }
-
-    tokens++;
-  }
-  #pragma omp master
-  cout << endl;
-
-  return p;
-}
-
-void saveModel(
-    const string& output_file, const boost::shared_ptr<FactoredNLM>& model) {
-  if (output_file.size()) {
-    cout << "Writing trained model to " << output_file << "..." << endl;
-    std::ofstream f(output_file);
-    boost::archive::binary_oarchive ar(f);
-    ar << model;
-    cout << "Done..." << endl;
-  }
-}
-
-void evaluateModel(
-    const ModelData& config, const boost::shared_ptr<FactoredNLM>& model,
-    const boost::shared_ptr<Corpus>& test_corpus, int minibatch_counter,
-    const Time& iteration_start, Real& pp, Real& best_pp) {
-  if (test_corpus != nullptr) {
-    #pragma omp master
-    pp = 0.0;
-
-    // Each thread must wait until the perplexity is set to 0.
-    // Otherwise, partial results might get overwritten.
-    #pragma omp barrier
-
-    Real local_pp = perplexity(model, test_corpus);
-    #pragma omp critical
-    pp += local_pp;
-
-    // Wait for all threads to compute the perplexity for their slice of
-    // test data.
-    #pragma omp barrier
-    #pragma omp master
-    {
-      pp = exp(-pp / test_corpus->size());
-      auto iteration_time = GetDuration(iteration_start, GetTime());
-      cout << "\tMinibatch " << minibatch_counter << ", "
-           << "Time: " << iteration_time << " seconds, "
-           << "Test Perplexity = " << pp << endl;
-
-      if (pp < best_pp) {
-        best_pp = pp;
-        saveModel(config.model_output_file, model);
-      }
-    }
-  } else {
-    saveModel(config.model_output_file, model);
-  }
-}
-
 boost::shared_ptr<FactoredNLM> loadModel(
     const string& input_file, const boost::shared_ptr<Corpus>& test_corpus) {
   boost::shared_ptr<FactoredNLM> model;
@@ -107,11 +22,6 @@ boost::shared_ptr<FactoredNLM> loadModel(
   boost::archive::binary_iarchive ar(f);
   ar >> model;
   cout << "Done..." << endl;
-
-  if (test_corpus != nullptr) {
-    cout << "Initial perplexity: "
-         << exp(-perplexity(model, test_corpus) / test_corpus->size()) << endl;
-  }
 
   return model;
 }

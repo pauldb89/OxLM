@@ -116,6 +116,27 @@ bool UnconstrainedFeatureStore::operator==(
   return true;
 }
 
+vector<pair<int, int>> UnconstrainedFeatureStore::getFeatureIndexes() const {
+  vector<pair<int, int>> feature_indexes;
+  for (const auto& entry: featureWeights) {
+    for (int i = 0; i < vectorSize; ++i) {
+      feature_indexes.push_back(make_pair(entry.first, i));
+    }
+  }
+
+  return feature_indexes;
+}
+
+void UnconstrainedFeatureStore::updateFeature(
+    const pair<int, int>& index, Real value) {
+  featureWeights[index.first](index.second) += value;
+}
+
+Real UnconstrainedFeatureStore::getFeature(const pair<int, int>& index) const {
+  auto it = featureWeights.find(index.first);
+  return it == featureWeights.end() ? 0 : it->second(index.second);
+}
+
 UnconstrainedFeatureStore::~UnconstrainedFeatureStore() {}
 
 void UnconstrainedFeatureStore::update(

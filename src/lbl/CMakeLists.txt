@@ -9,7 +9,6 @@ add_library(lbl SHARED
   collision_counter.cc
   collision_global_feature_store.cc
   collision_minibatch_feature_store.cc
-  collision_space.cc
   config.cc
   context_processor.cc
   factored_maxent_nlm.cc
@@ -29,6 +28,7 @@ add_library(lbl SHARED
   feature_matcher.cc
   feature_store.cc
   feature_store_initializer.cc
+  global_collision_space.cc
   global_factored_maxent_weights.cc
   global_feature_indexes_pair.cc
   global_feature_store.cc

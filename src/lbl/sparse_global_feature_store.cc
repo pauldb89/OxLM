@@ -122,6 +122,22 @@ bool SparseGlobalFeatureStore::operator==(
   return true;
 }
 
+vector<pair<int, int>> SparseGlobalFeatureStore::getFeatureIndexes() const {
+  vector<pair<int, int>> feature_indexes;
+  for (size_t i = 0; i < featureWeights.size(); ++i) {
+    for (SparseVectorReal::InnerIterator it(featureWeights[i]); it; ++it) {
+      feature_indexes.push_back(make_pair(i, it.index()));
+    }
+  }
+
+  return feature_indexes;
+}
+
+void SparseGlobalFeatureStore::updateFeature(
+    const pair<int, int>& index, Real value) {
+  featureWeights[index.first].coeffRef(index.second) += value;
+}
+
 SparseGlobalFeatureStore::~SparseGlobalFeatureStore() {}
 
 void SparseGlobalFeatureStore::update(
