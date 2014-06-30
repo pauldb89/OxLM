@@ -14,7 +14,8 @@ FactoredWeights::FactoredWeights(
     const ModelData& config,
     const boost::shared_ptr<FactoredMetadata>& metadata)
     : Weights(config, metadata), metadata(metadata),
-      index(metadata->getIndex()), S(0, 0, 0), T(0, 0), FW(0, 0) {
+      index(metadata->getIndex()), wordNormalizerCache(index->getNumClasses()),
+      S(0, 0, 0), T(0, 0), FW(0, 0) {
   allocate();
 }
 
@@ -23,7 +24,8 @@ FactoredWeights::FactoredWeights(
     const boost::shared_ptr<FactoredMetadata>& metadata,
     const boost::shared_ptr<Corpus>& training_corpus)
     : Weights(config, metadata, training_corpus), metadata(metadata),
-      index(metadata->getIndex()), S(0, 0, 0), T(0, 0), FW(0, 0) {
+      index(metadata->getIndex()), wordNormalizerCache(index->getNumClasses()),
+      S(0, 0, 0), T(0, 0), FW(0, 0) {
   allocate();
 
   // Initialize model weights randomly.
@@ -41,7 +43,8 @@ FactoredWeights::FactoredWeights(
     const boost::shared_ptr<FactoredMetadata>& metadata,
     const vector<int>& indices)
     : Weights(config, metadata), metadata(metadata),
-      index(metadata->getIndex()), S(0, 0, 0), T(0, 0), FW(0, 0) {
+      index(metadata->getIndex()), wordNormalizerCache(index->getNumClasses()),
+      S(0, 0, 0), T(0, 0), FW(0, 0) {
   allocate();
 }
 
@@ -300,9 +303,33 @@ Real FactoredWeights::predict(int word_id, const vector<int>& context) const {
   int word_class_id = index->getWordIndexInClass(word_id);
 
   VectorReal prediction_vector = getPredictionVector(context);
-  VectorReal class_probs = logSoftMax(S.transpose() * prediction_vector + T);
-  VectorReal word_probs = logSoftMax(classR(class_id).transpose() * prediction_vector + classB(class_id));
-  return class_probs(class_id) + word_probs(word_class_id);
+
+  Real class_prob;
+  auto it = normalizerCache.find(context);
+  if (it != normalizerCache.end()) {
+    class_prob = S.col(class_id).dot(prediction_vector) + T(class_id) - it->second;
+  } else {
+    VectorReal class_probs = logSoftMax(S.transpose() * prediction_vector + T, normalizerCache[context]);
+    class_prob = class_probs(class_id);
+  }
+
+  Real word_prob;
+  auto it2 = wordNormalizerCache[class_id].find(context);
+  if (it2 != wordNormalizerCache[class_id].end()) {
+    word_prob = R.col(word_id).dot(prediction_vector) + B(word_id) - it2->second;
+  } else {
+    VectorReal word_probs = logSoftMax(
+        classR(class_id).transpose() * prediction_vector + classB(class_id),
+        wordNormalizerCache[class_id][context]);
+    word_prob = word_probs(word_class_id);
+  }
+
+  return class_prob + word_prob;
+}
+
+void FactoredWeights::clearCache() {
+  Weights::clearCache();
+  wordNormalizerCache.clear();
 }
 
 } // namespace oxlm

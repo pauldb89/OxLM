@@ -202,6 +202,12 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::evaluate(
 }
 
 template<class GlobalWeights, class MinibatchWeights, class Metadata>
+Real Model<GlobalWeights, MinibatchWeights, Metadata>::predict(
+    int word_id, const vector<int>& context) const {
+  return weights->predict(word_id, context);
+}
+
+template<class GlobalWeights, class MinibatchWeights, class Metadata>
 void Model<GlobalWeights, MinibatchWeights, Metadata>::save() const {
   if (config.model_output_file.size()) {
     cout << "Writing model to " << config.model_output_file << "..." << endl;
@@ -232,6 +238,11 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::load(const string& filena
 template<class GlobalWeights, class MinibatchWeights, class Metadata>
 Dict Model<GlobalWeights, MinibatchWeights, Metadata>::getDict() const {
   return dict;
+}
+
+template<class GlobalWeights, class MinibatchWeights, class Metadata>
+void Model<GlobalWeights, MinibatchWeights, Metadata>::clearCache() {
+  weights->clearCache();
 }
 
 template class Model<Weights, Weights, Metadata>;

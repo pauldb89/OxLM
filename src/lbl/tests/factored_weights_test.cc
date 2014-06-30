@@ -22,6 +22,18 @@ class FactoredWeightsTest : public testing::Test {
     metadata = boost::make_shared<FactoredMetadata>(config, dict, index);
   }
 
+  Real getPredictions(
+      const FactoredWeights& weights, const vector<int>& indices) const {
+    Real ret = 0;
+    boost::shared_ptr<ContextProcessor> processor =
+        boost::make_shared<ContextProcessor>(corpus, config.ngram_order - 1);
+    for (int index: indices) {
+      vector<int> context = processor->extract(index);
+      ret -= weights.predict(corpus->at(index), context);
+    }
+    return ret;
+  }
+
   ModelData config;
   Dict dict;
   boost::shared_ptr<WordToClassIndex> index;
@@ -62,15 +74,9 @@ TEST_F(FactoredWeightsTest, TestPredict) {
 
   Real objective = weights.getObjective(corpus, indices);
 
-  Real predictions = 0;
-  boost::shared_ptr<ContextProcessor> processor =
-      boost::make_shared<ContextProcessor>(corpus, config.ngram_order - 1);
-  for (int index: indices) {
-    vector<int> context = processor->extract(index);
-    predictions -= weights.predict(corpus->at(index), context);
-  }
-
-  EXPECT_NEAR(objective, predictions, EPS);
+  EXPECT_NEAR(objective, getPredictions(weights, indices), EPS);
+  // Check cache values.
+  EXPECT_NEAR(objective, getPredictions(weights, indices), EPS);
 }
 
 } // namespace oxlm

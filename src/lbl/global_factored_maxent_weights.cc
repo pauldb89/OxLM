@@ -297,10 +297,31 @@ Real GlobalFactoredMaxentWeights::predict(
   int word_class_id = index->getWordIndexInClass(word_id);
   VectorReal prediction_vector = getPredictionVector(context);
 
-  VectorReal class_probs = logSoftMax(S.transpose() * prediction_vector + T + U->get(context));
-  VectorReal word_probs = logSoftMax(classR(class_id).transpose() * prediction_vector + classB(class_id) + V[class_id]->get(context));
+  Real class_prob;
+  auto it = normalizerCache.find(context);
+  if (it != normalizerCache.end()) {
+    Real class_score = U->get(context)(class_id);
+    class_prob = S.col(class_id).dot(prediction_vector) + T(class_id) + class_score - it->second;
+  } else {
+    VectorReal class_probs = logSoftMax(
+        S.transpose() * prediction_vector + T + U->get(context),
+        normalizerCache[context]);
+    class_prob = class_probs(class_id);
+  }
 
-  return class_probs(class_id) + word_probs(word_class_id);
+  Real word_prob;
+  auto it2 = wordNormalizerCache[class_id].find(context);
+  if (it2 != wordNormalizerCache[class_id].end()) {
+    Real word_score = V[class_id]->get(context)(word_class_id);
+    word_prob = R.col(word_id).dot(prediction_vector) + B(word_id) + word_score - it2->second;
+  } else {
+    VectorReal word_probs = logSoftMax(
+        classR(class_id).transpose() * prediction_vector + classB(class_id) + V[class_id]->get(context),
+        wordNormalizerCache[class_id][context]);
+    word_prob = word_probs(word_class_id);
+  }
+
+  return class_prob + word_prob;
 }
 
 } // namespace oxlm

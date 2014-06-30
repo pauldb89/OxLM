@@ -27,11 +27,15 @@ class Model {
       const boost::shared_ptr<Corpus>& corpus, const Time& iteration_start,
       int minibatch_counter, Real& objective, Real& best_perplexity) const;
 
+  Real predict(int word_id, const vector<int>& context) const;
+
   void save() const;
 
   void load(const string& filename);
 
   Dict getDict() const;
+
+  void clearCache();
 
  private:
   ModelData config;

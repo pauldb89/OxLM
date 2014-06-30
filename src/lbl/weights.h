@@ -11,6 +11,7 @@ typedef Eigen::Map<MatrixReal> ContextTransformType;
 typedef vector<ContextTransformType> ContextTransformsType;
 typedef Eigen::Map<MatrixReal> WordVectorsType;
 typedef Eigen::Map<VectorReal> WeightsType;
+typedef unordered_map<vector<int>, Real, boost::hash<vector<int>>> ContextHash;
 
 class Weights {
  public:
@@ -59,6 +60,8 @@ class Weights {
       const boost::shared_ptr<Weights>& global_gradient, Real minibatch_factor);
 
   Real predict(int word_id, const vector<int>& context) const;
+
+  void clearCache();
 
   virtual ~Weights();
 
@@ -150,6 +153,8 @@ class Weights {
   WordVectorsType       R;
   WeightsType           B;
   WeightsType           W;
+
+  mutable ContextHash normalizerCache;
 
  private:
   int size;

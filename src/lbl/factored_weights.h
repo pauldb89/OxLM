@@ -55,6 +55,8 @@ class FactoredWeights : public Weights {
 
   Real predict(int word_id, const vector<int>& context) const;
 
+  void clearCache();
+
   virtual ~FactoredWeights();
 
  protected:
@@ -137,6 +139,8 @@ class FactoredWeights : public Weights {
   WordVectorsType S;
   WeightsType     T;
   WeightsType     FW;
+
+  mutable vector<ContextHash> wordNormalizerCache;
 
  private:
   int size;
