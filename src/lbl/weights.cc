@@ -338,7 +338,7 @@ Real Weights::regularizerUpdate(
   return 0.5 * minibatch_factor * config.l2_lbl * W.array().square().sum();
 }
 
-Real Weights::predict(int word_id, const vector<int>& context) const {
+VectorReal Weights::getPredictionVector(const vector<int>& context) const {
   int context_width = config.ngram_order - 1;
   int word_width = config.word_representation_size;
 
@@ -347,6 +347,11 @@ Real Weights::predict(int word_id, const vector<int>& context) const {
     prediction_vector += getContextProduct(i, Q.col(context[i]));
   }
 
+  return sigmoid(prediction_vector);
+}
+
+Real Weights::predict(int word_id, const vector<int>& context) const {
+  VectorReal prediction_vector = getPredictionVector(context);
   VectorReal word_probs = logSoftMax(R.transpose() * prediction_vector + B);
   return word_probs(word_id);
 }

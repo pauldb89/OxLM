@@ -291,4 +291,16 @@ Real GlobalFactoredMaxentWeights::regularizerUpdate(
   return ret;
 }
 
+Real GlobalFactoredMaxentWeights::predict(
+    int word_id, const vector<int>& context) const {
+  int class_id = index->getClass(word_id);
+  int word_class_id = index->getWordIndexInClass(word_id);
+  VectorReal prediction_vector = getPredictionVector(context);
+
+  VectorReal class_probs = logSoftMax(S.transpose() * prediction_vector + T + U->get(context));
+  VectorReal word_probs = logSoftMax(classR(class_id).transpose() * prediction_vector + classB(class_id) + V[class_id]->get(context));
+
+  return class_probs(class_id) + word_probs(word_class_id);
+}
+
 } // namespace oxlm

@@ -2,6 +2,7 @@
 
 #include <boost/make_shared.hpp>
 
+#include "lbl/context_processor.h"
 #include "lbl/factored_maxent_metadata.h"
 #include "lbl/global_factored_maxent_weights.h"
 #include "utils/constants.h"
@@ -140,6 +141,25 @@ TEST_F(GlobalFactoredMaxentWeightsTest, TestCollisionApproximateFiltering) {
   // See the comment in weights_test.cc if you suspect the gradient is not
   // computed correctly.
   EXPECT_TRUE(weights.checkGradient(corpus, indices, gradient, 1e-3));
+}
+
+TEST_F(GlobalFactoredMaxentWeightsTest, TestPredict) {
+  metadata = boost::make_shared<FactoredMaxentMetadata>(
+      config, dict, index, mapper, populator, matcher);
+  GlobalFactoredMaxentWeights weights(config, metadata, corpus);
+  vector<int> indices = {0, 1, 2, 3};
+
+  Real objective = weights.getObjective(corpus, indices);
+
+  Real predictions = 0;
+  boost::shared_ptr<ContextProcessor> processor =
+      boost::make_shared<ContextProcessor>(corpus, config.ngram_order - 1);
+  for (int index: indices) {
+    vector<int> context = processor->extract(index);
+    predictions -= weights.predict(corpus->at(index), context);
+  }
+
+  EXPECT_NEAR(objective, predictions, EPS);
 }
 
 } // namespace oxlm

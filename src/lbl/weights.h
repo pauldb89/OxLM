@@ -111,6 +111,8 @@ class Weights {
       const MatrixReal& weighted_representations,
       const boost::shared_ptr<Weights>& gradient) const;
 
+   VectorReal getPredictionVector(const vector<int>& context) const;
+
  private:
   void allocate();
 

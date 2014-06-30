@@ -62,6 +62,8 @@ class GlobalFactoredMaxentWeights : public FactoredWeights {
       const boost::shared_ptr<MinibatchFactoredMaxentWeights>& global_gradient,
       Real minibatch_factor);
 
+  Real predict(int word_id, const vector<int>& context) const;
+
  protected:
   bool checkGradientStore(
       const boost::shared_ptr<Corpus>& corpus,

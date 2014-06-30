@@ -53,6 +53,8 @@ class FactoredWeights : public Weights {
       const boost::shared_ptr<FactoredWeights>& global_gradient,
       Real minibatch_factor);
 
+  Real predict(int word_id, const vector<int>& context) const;
+
   virtual ~FactoredWeights();
 
  protected:

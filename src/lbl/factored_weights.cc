@@ -295,4 +295,14 @@ Real FactoredWeights::regularizerUpdate(
   return ret;
 }
 
+Real FactoredWeights::predict(int word_id, const vector<int>& context) const {
+  int class_id = index->getClass(word_id);
+  int word_class_id = index->getWordIndexInClass(word_id);
+
+  VectorReal prediction_vector = getPredictionVector(context);
+  VectorReal class_probs = logSoftMax(S.transpose() * prediction_vector + T);
+  VectorReal word_probs = logSoftMax(classR(class_id).transpose() * prediction_vector + classB(class_id));
+  return class_probs(class_id) + word_probs(word_class_id);
+}
+
 } // namespace oxlm
