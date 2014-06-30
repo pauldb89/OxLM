@@ -6,6 +6,8 @@
 
 namespace oxlm {
 
+FactoredMaxentMetadata::FactoredMaxentMetadata() {}
+
 FactoredMaxentMetadata::FactoredMaxentMetadata(ModelData& config, Dict& dict)
     : FactoredMetadata(config, dict) {}
 

@@ -6,10 +6,19 @@
 #include <boost/serialization/array.hpp>
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/split_free.hpp>
+#include <Eigen/Dense>
 #include <Eigen/Sparse>
 
 namespace boost {
 namespace serialization {
+
+template<class Archive, class Scalar, int Rows, int Cols, int Options, int MaxRows, int MaxCols>
+inline void serialize(
+    Archive& ar,
+    Eigen::Matrix<Scalar, Rows, Cols, Options, MaxRows, MaxCols>& m,
+    const unsigned int version) {
+  ar & boost::serialization::make_array(m.data(), m.size());
+}
 
 // Serialization support for Eigen::SparseVector<Scalar>.
 
@@ -21,8 +30,11 @@ inline void save(
   ar << max_size;
   int actual_size = v.nonZeros();
   ar << actual_size;
-  ar << boost::serialization::make_array(&v._data().index(0), actual_size);
-  ar << boost::serialization::make_array(&v._data().value(0), actual_size);
+  for (typename Eigen::SparseVector<Scalar>::InnerIterator it(v); it; ++it) {
+    int index = it.index();
+    int value = it.value();
+    ar << index << value;
+  }
 }
 
 template<class Archive, class Scalar>
@@ -30,12 +42,14 @@ inline void load(
     Archive& ar, Eigen::SparseVector<Scalar>& v, const unsigned int version) {
   int max_size;
   ar >> max_size;
-  v.resize(max_size);
+  v = Eigen::SparseVector<Scalar>(max_size);
   int actual_size;
   ar >> actual_size;
-  v.resizeNonZeros(actual_size);
-  ar >> boost::serialization::make_array(&v._data().index(0), actual_size);
-  ar >> boost::serialization::make_array(&v._data().value(0), actual_size);
+  for (int i = 0; i < actual_size; ++i) {
+    int index, value;
+    ar >> index >> value;
+    v.coeffRef(index) = value;
+  }
 }
 
 template<class Archive, class Scalar>

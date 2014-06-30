@@ -20,6 +20,8 @@ namespace oxlm {
 
 class FeatureMatcher {
  public:
+  FeatureMatcher();
+
   FeatureMatcher(
       const boost::shared_ptr<Corpus>& corpus,
       const boost::shared_ptr<WordToClassIndex>& index,
@@ -34,6 +36,17 @@ class FeatureMatcher {
       const vector<int>& minibatch_indexes) const;
 
  private:
+  friend class boost::serialization::access;
+
+  template<class Archive>
+  void serialize(Archive& ar, const unsigned int version) {
+    ar & corpus;
+    ar & index;
+    ar & generator;
+    ar & mapper;
+    ar & featureIndexes;
+  }
+
   boost::shared_ptr<Corpus> corpus;
   boost::shared_ptr<WordToClassIndex> index;
   boost::shared_ptr<ContextProcessor> processor;

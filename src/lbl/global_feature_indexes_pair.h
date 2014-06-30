@@ -12,6 +12,8 @@ namespace oxlm {
 
 class GlobalFeatureIndexesPair {
  public:
+  GlobalFeatureIndexesPair();
+
   GlobalFeatureIndexesPair(
       const boost::shared_ptr<WordToClassIndex>& index,
       const boost::shared_ptr<FeatureContextMapper>& mapper);
@@ -31,8 +33,16 @@ class GlobalFeatureIndexesPair {
       int class_id, int feature_context_id, int word_class_id);
 
  private:
-  GlobalFeatureIndexesPtr class_indexes;
-  vector<GlobalFeatureIndexesPtr> word_indexes;
+  friend class boost::serialization::access;
+
+  template<class Archive>
+  void serialize(Archive& ar, const unsigned int version) {
+    ar & classIndexes;
+    ar & wordIndexes;
+  }
+
+  GlobalFeatureIndexesPtr classIndexes;
+  vector<GlobalFeatureIndexesPtr> wordIndexes;
 };
 
 typedef boost::shared_ptr<GlobalFeatureIndexesPair> GlobalFeatureIndexesPairPtr;

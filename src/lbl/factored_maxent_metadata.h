@@ -11,6 +11,8 @@ namespace oxlm {
 
 class FactoredMaxentMetadata : public FactoredMetadata {
  public:
+  FactoredMaxentMetadata();
+
   FactoredMaxentMetadata(ModelData& config, Dict& dict);
 
   FactoredMaxentMetadata(
@@ -27,6 +29,18 @@ class FactoredMaxentMetadata : public FactoredMetadata {
   boost::shared_ptr<BloomFilterPopulator> getPopulator() const;
 
   boost::shared_ptr<FeatureMatcher> getMatcher() const;
+
+ private:
+  friend class boost::serialization::access;
+
+  template<class Archive>
+  void serialize(Archive& ar, const unsigned int version) {
+    ar & boost::serialization::base_object<FactoredMetadata>(*this);
+
+    ar & mapper;
+    ar & populator;
+    ar & matcher;
+  }
 
  protected:
   boost::shared_ptr<FeatureContextMapper> mapper;

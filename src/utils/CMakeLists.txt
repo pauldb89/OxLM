@@ -6,3 +6,5 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/git_revision.cc.in
 
 add_library(utils SHARED git_revision.cc)
 set_target_properties(utils PROPERTIES LINKER_LANGUAGE CXX)
+
+add_subdirectory(tests)

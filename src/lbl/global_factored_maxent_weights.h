@@ -11,6 +11,8 @@ namespace oxlm {
 
 class GlobalFactoredMaxentWeights : public FactoredWeights {
  public:
+  GlobalFactoredMaxentWeights();
+
   GlobalFactoredMaxentWeights(
       const ModelData& config,
       const boost::shared_ptr<FactoredMaxentMetadata>& metadata);
@@ -69,6 +71,15 @@ class GlobalFactoredMaxentWeights : public FactoredWeights {
       Real eps);
 
  private:
+  friend class boost::serialization::access;
+
+  template<class Archive>
+  void serialize(Archive& ar, const unsigned int version) {
+    ar & boost::serialization::base_object<FactoredWeights>(*this);
+
+    ar & U & V;
+  }
+
   void initialize();
 
  protected:

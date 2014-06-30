@@ -5,11 +5,14 @@
 #include "lbl/metadata.h"
 #include "lbl/utils.h"
 #include "lbl/word_to_class_index.h"
+#include "utils/serialization_helpers.h"
 
 namespace oxlm {
 
 class FactoredMetadata : public Metadata {
  public:
+  FactoredMetadata();
+
   FactoredMetadata(ModelData& config, Dict& dict);
 
   FactoredMetadata(
@@ -21,6 +24,17 @@ class FactoredMetadata : public Metadata {
   boost::shared_ptr<WordToClassIndex> getIndex() const;
 
   VectorReal getClassBias() const;
+
+ private:
+  friend class boost::serialization::access;
+
+  template<class Archive>
+  void serialize(Archive& ar, const unsigned int version) {
+    ar & boost::serialization::base_object<Metadata>(*this);
+
+    ar & classBias;
+    ar & index;
+  }
 
  protected:
   VectorReal classBias;

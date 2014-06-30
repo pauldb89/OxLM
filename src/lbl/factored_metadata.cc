@@ -6,6 +6,8 @@
 
 namespace oxlm {
 
+FactoredMetadata::FactoredMetadata() {}
+
 FactoredMetadata::FactoredMetadata(ModelData& config, Dict& dict)
     : Metadata(config, dict) {
   vector<int> classes;

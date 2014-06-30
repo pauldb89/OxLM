@@ -11,6 +11,8 @@ namespace oxlm {
 
 class Metadata {
  public:
+  Metadata();
+
   Metadata(const ModelData& config, Dict& dict);
 
   void initialize(const boost::shared_ptr<Corpus>& corpus);

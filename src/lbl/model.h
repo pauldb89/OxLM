@@ -29,6 +29,8 @@ class Model {
 
   void save() const;
 
+  void load(const string& filename);
+
   Dict getDict() const;
 
  private:

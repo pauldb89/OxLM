@@ -3,6 +3,7 @@
 #include <iomanip>
 
 #include <boost/make_shared.hpp>
+#include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/serialization/shared_ptr.hpp>
 
@@ -210,6 +211,20 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::save() const {
     oar << dict;
     oar << weights;
     oar << metadata;
+    cout << "Done..." << endl;
+  }
+}
+
+template<class GlobalWeights, class MinibatchWeights, class Metadata>
+void Model<GlobalWeights, MinibatchWeights, Metadata>::load(const string& filename) {
+  if (filename.size() > 0) {
+    cout << "Loading model from " << filename << "..." << endl;
+    ifstream fin(filename);
+    boost::archive::binary_iarchive iar(fin);
+    iar >> config;
+    iar >> dict;
+    iar >> weights;
+    iar >> metadata;
     cout << "Done..." << endl;
   }
 }

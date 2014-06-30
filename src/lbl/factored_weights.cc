@@ -8,6 +8,8 @@
 
 namespace oxlm {
 
+FactoredWeights::FactoredWeights() : S(0, 0, 0), T(0, 0), FW(0, 0) {}
+
 FactoredWeights::FactoredWeights(
     const ModelData& config,
     const boost::shared_ptr<FactoredMetadata>& metadata)

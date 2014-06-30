@@ -22,6 +22,8 @@
 
 namespace oxlm {
 
+GlobalFactoredMaxentWeights::GlobalFactoredMaxentWeights() {}
+
 GlobalFactoredMaxentWeights::GlobalFactoredMaxentWeights(
     const ModelData& config,
     const boost::shared_ptr<FactoredMaxentMetadata>& metadata)

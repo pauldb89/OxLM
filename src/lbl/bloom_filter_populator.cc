@@ -9,6 +9,8 @@
 
 namespace oxlm {
 
+BloomFilterPopulator::BloomFilterPopulator() {}
+
 BloomFilterPopulator::BloomFilterPopulator(
     const boost::shared_ptr<Corpus>& corpus,
     const boost::shared_ptr<WordToClassIndex>& index,
@@ -44,6 +46,10 @@ BloomFilterPopulator::BloomFilterPopulator(
 
 boost::shared_ptr<BloomFilter<NGram>> BloomFilterPopulator::get() const {
   return bloomFilter;
+}
+
+bool BloomFilterPopulator::operator==(const BloomFilterPopulator& other) const {
+  return *bloomFilter == *other.bloomFilter;
 }
 
 } // namespace oxlm

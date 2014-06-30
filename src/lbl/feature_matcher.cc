@@ -4,6 +4,8 @@
 
 namespace oxlm {
 
+FeatureMatcher::FeatureMatcher() {}
+
 FeatureMatcher::FeatureMatcher(
     const boost::shared_ptr<Corpus>& corpus,
     const boost::shared_ptr<WordToClassIndex>& index,
