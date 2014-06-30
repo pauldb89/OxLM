@@ -21,9 +21,22 @@
 namespace oxlm {
 
 template<class GlobalWeights, class MinibatchWeights, class Metadata>
+Model<GlobalWeights, MinibatchWeights, Metadata>::Model() {}
+
+template<class GlobalWeights, class MinibatchWeights, class Metadata>
 Model<GlobalWeights, MinibatchWeights, Metadata>::Model(ModelData& config)
     : config(config) {
   metadata = boost::make_shared<Metadata>(config, dict);
+}
+
+template<class GlobalWeights, class MinibatchWeights, class Metadata>
+Dict Model<GlobalWeights, MinibatchWeights, Metadata>::getDict() const {
+  return dict;
+}
+
+template<class GlobalWeights, class MinibatchWeights, class Metadata>
+ModelData Model<GlobalWeights, MinibatchWeights, Metadata>::getConfig() const {
+  return config;
 }
 
 template<class GlobalWeights, class MinibatchWeights, class Metadata>
@@ -224,6 +237,7 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::save() const {
 template<class GlobalWeights, class MinibatchWeights, class Metadata>
 void Model<GlobalWeights, MinibatchWeights, Metadata>::load(const string& filename) {
   if (filename.size() > 0) {
+    auto start_time = GetTime();
     cout << "Loading model from " << filename << "..." << endl;
     ifstream fin(filename);
     boost::archive::binary_iarchive iar(fin);
@@ -231,13 +245,9 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::load(const string& filena
     iar >> dict;
     iar >> weights;
     iar >> metadata;
-    cout << "Done..." << endl;
+    cout << "Reading model took " << GetDuration(start_time, GetTime())
+         << " seconds..." << endl;
   }
-}
-
-template<class GlobalWeights, class MinibatchWeights, class Metadata>
-Dict Model<GlobalWeights, MinibatchWeights, Metadata>::getDict() const {
-  return dict;
 }
 
 template<class GlobalWeights, class MinibatchWeights, class Metadata>

@@ -4,14 +4,34 @@
 
 #include "corpus/corpus.h"
 #include "lbl/config.h"
+#include "lbl/factored_metadata.h"
+#include "lbl/factored_maxent_metadata.h"
+#include "lbl/factored_weights.h"
+#include "lbl/global_factored_maxent_weights.h"
+#include "lbl/metadata.h"
+#include "lbl/minibatch_factored_maxent_weights.h"
+#include "lbl/model_utils.h"
 #include "lbl/utils.h"
+#include "lbl/weights.h"
 
 namespace oxlm {
+
+enum ModelType {
+  NLM = 1,
+  FACTORED_NLM = 2,
+  FACTORED_MAXENT_NLM = 3,
+};
 
 template<class GlobalWeights, class MinibatchWeights, class Metadata>
 class Model {
  public:
+  Model();
+
   Model(ModelData& config);
+
+  Dict getDict() const;
+
+  ModelData getConfig() const;
 
   void learn();
 
@@ -33,8 +53,6 @@ class Model {
 
   void load(const string& filename);
 
-  Dict getDict() const;
-
   void clearCache();
 
  private:
@@ -42,6 +60,28 @@ class Model {
   Dict dict;
   boost::shared_ptr<Metadata> metadata;
   boost::shared_ptr<GlobalWeights> weights;
+};
+
+class LM : public Model<Weights, Weights, Metadata> {
+ public:
+  LM() : Model<Weights, Weights, Metadata>() {}
+
+  LM(ModelData& config) : Model<Weights, Weights, Metadata>(config) {}
+};
+
+class FactoredLM: public Model<FactoredWeights, FactoredWeights, FactoredMetadata> {
+ public:
+  FactoredLM() : Model<FactoredWeights, FactoredWeights, FactoredMetadata>() {}
+
+  FactoredLM(ModelData& config)
+      : Model<FactoredWeights, FactoredWeights, FactoredMetadata>(config) {}
+};
+
+class FactoredMaxentLM : public Model<GlobalFactoredMaxentWeights, MinibatchFactoredMaxentWeights, FactoredMaxentMetadata> {
+ public:
+  FactoredMaxentLM() : Model<GlobalFactoredMaxentWeights, MinibatchFactoredMaxentWeights, FactoredMaxentMetadata>() {}
+
+  FactoredMaxentLM(ModelData& config) : Model<GlobalFactoredMaxentWeights, MinibatchFactoredMaxentWeights, FactoredMaxentMetadata>(config) {}
 };
 
 } // namespace oxlm

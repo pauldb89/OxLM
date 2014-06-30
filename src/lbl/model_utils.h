@@ -4,17 +4,13 @@
 
 #include <boost/shared_ptr.hpp>
 
+#include "corpus/corpus.h"
 #include "lbl/config.h"
-#include "lbl/factored_nlm.h"
 #include "lbl/utils.h"
 
 // Helper functions for reading data, evaluating models, etc.
 
 namespace oxlm {
-
-boost::shared_ptr<FactoredNLM> loadModel(
-    const string& input_file,
-    const boost::shared_ptr<Corpus>& test_corpus = boost::shared_ptr<Corpus>());
 
 vector<int> scatterMinibatch(int start, int end, const vector<int>& indices);
 

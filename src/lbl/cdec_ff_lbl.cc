@@ -1,3 +1,4 @@
+#include <exception>
 #include <iostream>
 #include <string>
 
@@ -13,9 +14,8 @@
 #include "lbl/cdec_lbl_mapper.h"
 #include "lbl/cdec_rule_converter.h"
 #include "lbl/cdec_state_converter.h"
-#include "lbl/factored_nlm.h"
-#include "lbl/factored_maxent_nlm.h"
 #include "lbl/lbl_features.h"
+#include "lbl/model.h"
 #include "lbl/process_identifier.h"
 #include "lbl/query_cache.h"
 
@@ -30,6 +30,7 @@ namespace po = boost::program_options;
 
 namespace oxlm {
 
+template<class Model>
 class FF_LBLLM : public FeatureFunction {
  public:
   FF_LBLLM(
@@ -39,7 +40,7 @@ class FF_LBLLM : public FeatureFunction {
         fidOOV(FD::Convert(feature_name + "_OOV")),
         processIdentifier("FF_LBLLM"),
         cacheQueries(cache_queries), cacheHits(0), totalHits(0) {
-    loadLanguageModel(filename);
+    model.load(filename);
 
     // Note: This is a hack due to lack of time.
     // Ideally, we would like a to have client server architecture, where the
@@ -64,25 +65,27 @@ class FF_LBLLM : public FeatureFunction {
       }
     }
 
-    contextWidth = lm->config.ngram_order - 1;
-    // For each state, we store at most contextWidth word ids to the left and
+    config = model.getConfig();
+    int context_width = config.ngram_order - 1;
+    // For each state, we store at most context_width word ids to the left and
     // to the right and a kSTAR separator. The last bit represents the actual
     // size of the state.
-    int max_state_size = (2 * contextWidth + 1) * sizeof(int) + 1;
+    int max_state_size = (2 * context_width + 1) * sizeof(int) + 1;
     FeatureFunction::SetStateSize(max_state_size);
 
-    mapper = boost::make_shared<CdecLBLMapper>(lm->label_set());
+    Dict dict = model.getDict();
+    mapper = boost::make_shared<CdecLBLMapper>(dict);
     stateConverter = boost::make_shared<CdecStateConverter>(max_state_size - 1);
     ruleConverter = boost::make_shared<CdecRuleConverter>(mapper, stateConverter);
 
-    kSTART = lm->label_id("<s>");
-    kSTOP = lm->label_id("</s>");
-    kUNKNOWN = lm->label_id("<unk>");
-    kSTAR = lm->label_id("<{STAR}>");
+    kSTART = dict.Convert("<s>");
+    kSTOP = dict.Convert("</s>");
+    kUNKNOWN = dict.Convert("<unk>");
+    kSTAR = dict.Convert("<{STAR}>");
   }
 
   virtual void PrepareForInput(const SentenceMetadata& smeta) {
-    lm->clear_cache();
+    model.clearCache();
   }
 
  protected:
@@ -129,28 +132,14 @@ class FF_LBLLM : public FeatureFunction {
   }
 
  private:
-  void loadLanguageModel(const string& filename) {
-    Time start_time = GetTime();
-    cerr << "Reading LM from " << filename << "..." << endl;
-    ifstream ifile(filename);
-    if (!ifile.good()) {
-      cerr << "Failed to open " << filename << " for reading" << endl;
-      abort();
-    }
-    boost::archive::binary_iarchive ia(ifile);
-    ia >> lm;
-    Time stop_time = GetTime();
-    cerr << "Reading language model took " << GetDuration(start_time, stop_time)
-         << " seconds..." << endl;
-  }
-
   LBLFeatures scoreFullContexts(const vector<int>& symbols) const {
     LBLFeatures ret;
     int last_star = -1;
+    int context_width = config.ngram_order - 1;
     for (size_t i = 0; i < symbols.size(); ++i) {
       if (symbols[i] == kSTAR) {
         last_star = i;
-      } else if (i - last_star > contextWidth) {
+      } else if (i - last_star > context_width) {
         ret += scoreContext(symbols, i);
       }
     }
@@ -160,21 +149,22 @@ class FF_LBLLM : public FeatureFunction {
 
   LBLFeatures scoreContext(const vector<int>& symbols, int position) const {
     int word = symbols[position];
+    int context_width = config.ngram_order - 1;
     vector<int> context;
-    for (int i = 1; i <= contextWidth && position - i >= 0; ++i) {
+    for (int i = 1; i <= context_width && position - i >= 0; ++i) {
       assert(symbols[position - i] != kSTAR);
       context.push_back(symbols[position - i]);
     }
 
     if (!context.empty() && context.back() == kSTART) {
-      context.resize(contextWidth, kSTART);
+      context.resize(context_width, kSTART);
     } else {
-      context.resize(contextWidth, kUNKNOWN);
+      context.resize(context_width, kUNKNOWN);
     }
 
     double score;
     if (!cacheQueries) {
-      score = lm->log_prob(word, context, true, true);
+      score = model.predict(word, context);
     } else {
       NGram query(word, context);
       ++totalHits;
@@ -183,7 +173,7 @@ class FF_LBLLM : public FeatureFunction {
         ++cacheHits;
         score = ret.first;
       } else {
-        score = lm->log_prob(word, context, true, true);
+        score = model.predict(word, context);
         cache.put(query, score);
       }
     }
@@ -192,8 +182,10 @@ class FF_LBLLM : public FeatureFunction {
   }
 
   void constructNextState(const vector<int>& symbols, void* state) const {
+    int context_width = config.ngram_order - 1;
+
     vector<int> next_state;
-    for (size_t i = 0; i < symbols.size() && i < contextWidth; ++i) {
+    for (size_t i = 0; i < symbols.size() && i < context_width; ++i) {
       if (symbols[i] == kSTAR) {
         break;
       }
@@ -210,7 +202,7 @@ class FF_LBLLM : public FeatureFunction {
         }
       }
 
-      size_t i = max(last_star + 1, static_cast<int>(symbols.size() - contextWidth));
+      size_t i = max(last_star + 1, static_cast<int>(symbols.size() - context_width));
       while (i < symbols.size()) {
         next_state.push_back(symbols[i]);
         ++i;
@@ -223,7 +215,8 @@ class FF_LBLLM : public FeatureFunction {
   LBLFeatures estimateScore(const vector<int>& symbols) const {
     LBLFeatures ret = scoreFullContexts(symbols);
 
-    for (size_t i = 0; i < symbols.size() && i < contextWidth; ++i) {
+    int context_width = config.ngram_order - 1;
+    for (size_t i = 0; i < symbols.size() && i < context_width; ++i) {
       if (symbols[i] == kSTAR) {
         break;
       }
@@ -238,8 +231,8 @@ class FF_LBLLM : public FeatureFunction {
 
   int fid;
   int fidOOV;
-  int contextWidth;
-  boost::shared_ptr<FactoredNLM> lm;
+  ModelData config;
+  Model model;
   boost::shared_ptr<CdecLBLMapper> mapper;
   boost::shared_ptr<CdecRuleConverter> ruleConverter;
   boost::shared_ptr<CdecStateConverter> stateConverter;
@@ -262,13 +255,15 @@ class FF_LBLLM : public FeatureFunction {
 
 void ParseOptions(
     const string& input, string& filename, string& feature_name,
-    bool& cache_queries) {
+    oxlm::ModelType& model_type, bool& cache_queries) {
   po::options_description options("LBL language model options");
   options.add_options()
       ("file,f", po::value<string>()->required(),
           "File containing serialized language model")
       ("name,n", po::value<string>()->default_value("LBLLM"),
           "Feature name")
+      ("type,t", po::value<int>()->required(),
+          "Model type")
       ("cache-queries", "Whether should cache n-gram probabilities.");
 
   po::variables_map vm;
@@ -279,12 +274,31 @@ void ParseOptions(
 
   filename = vm["file"].as<string>();
   feature_name = vm["name"].as<string>();
+  model_type = static_cast<oxlm::ModelType>(vm["type"].as<int>());
   cache_queries = vm.count("cache-queries");
 }
 
+class UnknownModelException : public exception {
+  virtual const char* what() const throw() {
+    return "Unknown model type";
+  }
+};
+
 extern "C" FeatureFunction* create_ff(const string& str) {
   string filename, feature_name;
+  oxlm::ModelType model_type;
   bool cache_queries;
-  ParseOptions(str, filename, feature_name, cache_queries);
-  return new FF_LBLLM(filename, feature_name, cache_queries);
+
+  ParseOptions(str, filename, feature_name, model_type, cache_queries);
+
+  switch (model_type) {
+    case NLM:
+      return new FF_LBLLM<LM>(filename, feature_name, cache_queries);
+    case FACTORED_NLM:
+      return new FF_LBLLM<FactoredLM>(filename, feature_name, cache_queries);
+    case FACTORED_MAXENT_NLM:
+      return new FF_LBLLM<FactoredMaxentLM>(filename, feature_name, cache_queries);
+    default:
+      throw UnknownModelException();
+  }
 }

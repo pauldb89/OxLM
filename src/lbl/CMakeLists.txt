@@ -11,8 +11,6 @@ add_library(lbl SHARED
   collision_minibatch_feature_store.cc
   config.cc
   context_processor.cc
-  factored_maxent_nlm.cc
-  factored_nlm.cc
   factored_maxent_metadata.cc
   factored_metadata.cc
   factored_weights.cc

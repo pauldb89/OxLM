@@ -10,22 +10,6 @@
 
 namespace oxlm {
 
-boost::shared_ptr<FactoredNLM> loadModel(
-    const string& input_file, const boost::shared_ptr<Corpus>& test_corpus) {
-  boost::shared_ptr<FactoredNLM> model;
-  if (input_file.size() == 0) {
-    return model;
-  }
-
-  cout << "Loading model from " << input_file << "..." << endl;
-  ifstream f(input_file);
-  boost::archive::binary_iarchive ar(f);
-  ar >> model;
-  cout << "Done..." << endl;
-
-  return model;
-}
-
 vector<int> scatterMinibatch(int start, int end, const vector<int>& indices) {
   size_t thread_num = omp_get_thread_num();
   size_t num_threads = omp_get_num_threads();

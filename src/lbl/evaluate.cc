@@ -2,44 +2,75 @@
 
 #include "corpus/corpus.h"
 #include "lbl/context_processor.h"
-#include "lbl/factored_nlm.h"
-#include "lbl/model_utils.h"
+#include "lbl/model.h"
 #include "lbl/utils.h"
 
 using namespace boost::program_options;
 using namespace oxlm;
 using namespace std;
 
-int main(int argc, char** argv) {
-  options_description desc("Command line options");
-  desc.add_options()
-      ("help,h", "Print help message.")
-      ("test,t", value<string>()->required(), "File containing the test corpus")
-      ("model,m", value<string>()->required(), "File containing the model");
+template<class Model>
+void evaluate(const string& model_file, const string& data_file) {
+  Model model;
+  model.load(model_file);
 
-  variables_map vm;
-  store(parse_command_line(argc, argv, desc), vm);
+  ModelData config = model.getConfig();
+  Dict dict = model.getDict();
 
-  boost::shared_ptr<FactoredNLM> model = loadModel(vm["model"].as<string>());
-
-  Dict dict = model->label_set();
   int eos = dict.Convert("</s>");
   boost::shared_ptr<Corpus> test_corpus =
-      readCorpus(vm["test"].as<string>(), dict, true, true);
+      readCorpus(data_file, dict, true, true);
 
   double total = 0;
-  ModelData config = model->config;
   ContextProcessor processor(test_corpus, config.ngram_order - 1);
   for (size_t i = 0; i < test_corpus->size(); ++i) {
     int word_id = test_corpus->at(i);
     vector<int> context = processor.extract(i);
-    double log_prob = model->log_prob(word_id, context, true, true);
+    double log_prob = model.predict(word_id, context);
     total += log_prob;
     cout << "(" << dict.Convert(word_id) << " " << log_prob << ") ";
     if (word_id == eos) {
       cout << "Total: " << total << endl;
       total = 0;
     }
+  }
+}
+
+int main(int argc, char** argv) {
+  options_description desc("Command line options");
+  desc.add_options()
+      ("help,h", "Print help message.")
+      ("model,m", value<string>()->required(), "File containing the model")
+      ("type,t", value<int>()->required(), "Model type")
+      ("data,d", value<string>()->required(), "File containing the test corpus");
+
+  variables_map vm;
+  store(parse_command_line(argc, argv, desc), vm);
+
+  if (vm.count("help")) {
+    cout << desc << endl;
+    return 0;
+  }
+
+  notify(vm);
+
+  string model_file = vm["model"].as<string>();
+  string data_file = vm["data"].as<string>();
+  ModelType model_type = static_cast<ModelType>(vm["type"].as<int>());
+
+  switch (model_type) {
+    case NLM:
+      evaluate<LM>(model_file, data_file);
+      return 0;
+    case FACTORED_NLM:
+      evaluate<FactoredLM>(model_file, data_file);
+      return 0;
+    case FACTORED_MAXENT_NLM:
+      evaluate<FactoredMaxentLM>(model_file, data_file);
+      return 0;
+    default:
+      cout << "Unknown model type" << endl;
+      return 1;
   }
 
   return 0;
