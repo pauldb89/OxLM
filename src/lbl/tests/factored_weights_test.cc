@@ -1,10 +1,14 @@
 #include "gtest/gtest.h"
 
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
 #include <boost/make_shared.hpp>
 
 #include "lbl/context_processor.h"
 #include "lbl/factored_weights.h"
 #include "utils/constants.h"
+
+namespace ar = boost::archive;
 
 namespace oxlm {
 
@@ -77,6 +81,19 @@ TEST_F(FactoredWeightsTest, TestPredict) {
   EXPECT_NEAR(objective, getPredictions(weights, indices), EPS);
   // Check cache values.
   EXPECT_NEAR(objective, getPredictions(weights, indices), EPS);
+}
+
+TEST_F(FactoredWeightsTest, TestSerialization) {
+  FactoredWeights weights(config, metadata, corpus), weights_copy;
+
+  stringstream stream(ios_base::binary | ios_base::out | ios_base::in);
+  ar::binary_oarchive oar(stream, ar::no_header);
+  oar << weights;
+
+  ar::binary_iarchive iar(stream, ar::no_header);
+  iar >> weights_copy;
+
+  EXPECT_EQ(weights, weights_copy);
 }
 
 } // namespace oxlm

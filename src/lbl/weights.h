@@ -1,6 +1,8 @@
 #pragma once
 
+#include <boost/make_shared.hpp>
 #include <boost/serialization/serialization.hpp>
+#include <boost/serialization/shared_ptr.hpp>
 
 #include "lbl/metadata.h"
 #include "lbl/utils.h"
@@ -62,6 +64,8 @@ class Weights {
   Real predict(int word_id, const vector<int>& context) const;
 
   void clearCache();
+
+  bool operator==(const Weights& other) const;
 
   virtual ~Weights();
 
@@ -127,6 +131,7 @@ class Weights {
   void save(Archive& ar, const unsigned int version) const {
     ar << config;
     ar << metadata;
+
     ar << size;
     ar << boost::serialization::make_array(data, size);
   }
@@ -134,7 +139,9 @@ class Weights {
   template<class Archive>
   void load(Archive& ar, const unsigned int version) {
     ar >> config;
+
     ar >> metadata;
+
     ar >> size;
     data = new Real[size];
     ar >> boost::serialization::make_array(data, size);

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <boost/make_shared.hpp>
+
 #include "lbl/factored_metadata.h"
 #include "lbl/weights.h"
 #include "lbl/word_to_class_index.h"
@@ -57,6 +59,8 @@ class FactoredWeights : public Weights {
 
   void clearCache();
 
+  bool operator==(const FactoredWeights& other) const;
+
   virtual ~FactoredWeights();
 
  protected:
@@ -107,9 +111,10 @@ class FactoredWeights : public Weights {
 
   template<class Archive>
   void save(Archive& ar, const unsigned int version) const {
+    ar << metadata;
+
     ar << boost::serialization::base_object<const Weights>(*this);
 
-    ar << metadata;
     ar << index;
 
     ar << size;
@@ -118,9 +123,10 @@ class FactoredWeights : public Weights {
 
   template<class Archive>
   void load(Archive& ar, const unsigned int version) {
+    ar >> metadata;
+
     ar >> boost::serialization::base_object<Weights>(*this);
 
-    ar >> metadata;
     ar >> index;
 
     ar >> size;

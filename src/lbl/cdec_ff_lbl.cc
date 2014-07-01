@@ -73,7 +73,7 @@ class FF_LBLLM : public FeatureFunction {
     int max_state_size = (2 * context_width + 1) * sizeof(int) + 1;
     FeatureFunction::SetStateSize(max_state_size);
 
-    Dict dict = model.getDict();
+    dict = model.getDict();
     mapper = boost::make_shared<CdecLBLMapper>(dict);
     stateConverter = boost::make_shared<CdecStateConverter>(max_state_size - 1);
     ruleConverter = boost::make_shared<CdecRuleConverter>(mapper, stateConverter);
@@ -231,6 +231,7 @@ class FF_LBLLM : public FeatureFunction {
 
   int fid;
   int fidOOV;
+  Dict dict;
   ModelData config;
   Model model;
   boost::shared_ptr<CdecLBLMapper> mapper;

@@ -82,6 +82,8 @@ struct ModelData {
   int         min_ngram_freq;
   int         vocab_size;
 
+  bool operator==(const ModelData& other) const;
+
   friend class boost::serialization::access;
   template<class Archive>
   void serialize(Archive & ar, const unsigned int version) {
@@ -97,31 +99,15 @@ struct ModelData {
     ar & l2_lbl;
     ar & l2_maxent;
     ar & word_representation_size;
-    ar & threads;
     ar & step_size;
     ar & classes;
     ar & class_file;
     ar & randomise;
-    ar & reclass;
     ar & diagonal_contexts;
-    ar & label_sample_size;
-    ar & uniform;
-    ar & pseudo_likelihood_cne;
-    ar & mixture;
-    ar & lbfgs;
-    ar & lbfgs_vectors;
-    ar & test_tokens;
-    ar & gnorm_threshold;
-    ar & eta;
-    ar & multinomial_step_size;
     ar & sparse_features;
-    ar & random_weights;
     ar & hash_space;
-    ar & count_collisions;
     ar & filter_contexts;
     ar & filter_error_rate;
-    ar & max_ngrams;
-    ar & min_ngram_freq;
     ar & vocab_size;
   }
 };

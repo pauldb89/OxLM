@@ -13,8 +13,24 @@ namespace ar = boost::archive;
 
 namespace oxlm {
 
-TEST(SerializationHelpersTest, TestEigenMatrix) {
+TEST(SerializationHelpersTest, TestEigenMatrixFixed) {
   Eigen::Matrix<float, 2, 2> a, b;
+  a << 1, 2, 3, 4;
+
+  stringstream stream(ios_base::binary | ios_base::out | ios_base::in);
+  ar::binary_oarchive oar(stream, ar::no_header);
+  oar << a;
+
+  ar::binary_iarchive iar(stream, ar::no_header);
+  iar >> b;
+
+  EXPECT_MATRIX_NEAR(a, b, EPS);
+}
+
+TEST(SerializationHelpersTest, TestEigenMatrixDynamic) {
+  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> a =
+      Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>::Zero(2, 2);
+  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> b;
   a << 1, 2, 3, 4;
 
   stringstream stream(ios_base::binary | ios_base::out | ios_base::in);

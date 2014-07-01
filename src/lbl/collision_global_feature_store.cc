@@ -56,12 +56,9 @@ void CollisionGlobalFeatureStore::updateSquared(
   boost::shared_ptr<CollisionMinibatchFeatureStore> store =
       CollisionMinibatchFeatureStore::cast(base_store);
 
-  Real value = 0;
   for (const auto& entry: store->featureWeights) {
     space->featureWeights[entry.first] += entry.second * entry.second;
-    value += space->featureWeights[entry.first];
   }
-  cout << "global space: " << value << endl;
 }
 
 void CollisionGlobalFeatureStore::updateAdaGrad(

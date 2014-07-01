@@ -10,13 +10,14 @@
 
 namespace oxlm {
 
-Weights::Weights() : Q(0, 0, 0), R(0, 0, 0), B(0, 0), W(0, 0) {}
+Weights::Weights() : data(NULL), Q(0, 0, 0), R(0, 0, 0), B(0, 0), W(0, 0) {}
 
 Weights::Weights(
     const ModelData& config, const boost::shared_ptr<Metadata>& metadata)
     : config(config), metadata(metadata),
-      Q(0, 0, 0), R(0, 0, 0), B(0, 0), W(0, 0) {
+      data(NULL), Q(0, 0, 0), R(0, 0, 0), B(0, 0), W(0, 0) {
   allocate();
+  W.setZero();
 }
 
 Weights::Weights(
@@ -24,7 +25,7 @@ Weights::Weights(
     const boost::shared_ptr<Metadata>& metadata,
     const boost::shared_ptr<Corpus>& training_corpus)
     : config(config), metadata(metadata),
-      Q(0, 0, 0), R(0, 0, 0), B(0, 0), W(0, 0) {
+      data(NULL), Q(0, 0, 0), R(0, 0, 0), B(0, 0), W(0, 0) {
   allocate();
 
   // Initialize model weights randomly.
@@ -54,13 +55,14 @@ Weights::Weights(
     const boost::shared_ptr<Metadata>& metadata,
     const vector<int>& indices)
     : config(config), metadata(metadata),
-      Q(0, 0, 0), R(0, 0, 0), B(0, 0), W(0, 0) {
+      data(NULL), Q(0, 0, 0), R(0, 0, 0), B(0, 0), W(0, 0) {
   allocate();
+  W.setZero();
 }
 
 Weights::Weights(const Weights& other)
     : config(other.config), metadata(other.metadata),
-      Q(0, 0, 0), R(0, 0, 0), B(0, 0), W(0, 0) {
+      data(NULL), Q(0, 0, 0), R(0, 0, 0), B(0, 0), W(0, 0) {
   allocate();
   memcpy(data, other.data, size * sizeof(Real));
 }
@@ -94,7 +96,6 @@ void Weights::setModelParameters() {
   int B_size = num_output_words;
 
   new (&W) WeightsType(data, size);
-  W.setZero();
 
   new (&Q) WordVectorsType(data, word_width, num_context_words);
   new (&R) WordVectorsType(data + Q_size, word_width, num_output_words);
@@ -344,7 +345,11 @@ VectorReal Weights::getPredictionVector(const vector<int>& context) const {
 
   VectorReal prediction_vector = VectorReal::Zero(word_width);
   for (int i = 0; i < context_width; ++i) {
-    prediction_vector += getContextProduct(i, Q.col(context[i]));
+    if (config.diagonal_contexts) {
+      prediction_vector += C[i].asDiagonal() * Q.col(context[i]);
+    } else {
+      prediction_vector += C[i] * Q.col(context[i]);
+    }
   }
 
   return sigmoid(prediction_vector);
@@ -365,6 +370,13 @@ Real Weights::predict(int word_id, const vector<int>& context) const {
 
 void Weights::clearCache() {
   normalizerCache.clear();
+}
+
+bool Weights::operator==(const Weights& other) const {
+  return config == other.config
+      && *metadata == *other.metadata
+      && size == other.size
+      && W == other.W;
 }
 
 Weights::~Weights() {

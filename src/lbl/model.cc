@@ -255,6 +255,14 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::clearCache() {
   weights->clearCache();
 }
 
+template<class GlobalWeights, class MinibatchWeights, class Metadata>
+bool Model<GlobalWeights, MinibatchWeights, Metadata>::operator==(
+    const Model<GlobalWeights, MinibatchWeights, Metadata>& other) const {
+  return config == other.config
+      && *metadata == *other.metadata
+      && *weights == *other.weights;
+}
+
 template class Model<Weights, Weights, Metadata>;
 template class Model<FactoredWeights, FactoredWeights, FactoredMetadata>;
 template class Model<GlobalFactoredMaxentWeights, MinibatchFactoredMaxentWeights, FactoredMaxentMetadata>;

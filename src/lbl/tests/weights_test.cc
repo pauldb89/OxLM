@@ -1,11 +1,15 @@
 #include "gtest/gtest.h"
 
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
 #include <boost/make_shared.hpp>
 
 #include "lbl/context_processor.h"
 #include "lbl/weights.h"
 #include "utils/constants.h"
 #include "utils/testing.h"
+
+namespace ar = boost::archive;
 
 namespace oxlm {
 
@@ -18,6 +22,7 @@ class TestWeights : public testing::Test {
 
     vector<int> data = {2, 3, 4, 1};
     corpus = boost::make_shared<Corpus>(data);
+    metadata = boost::make_shared<Metadata>();
   }
 
   Real getPredictions(
@@ -78,6 +83,19 @@ TEST_F(TestWeights, TestPredict) {
   EXPECT_NEAR(objective, getPredictions(weights, indices), EPS);
   // Check cache values.
   EXPECT_NEAR(objective, getPredictions(weights, indices), EPS);
+}
+
+TEST_F(TestWeights, TestSerialization) {
+  Weights weights(config, metadata, corpus), weights_copy;
+
+  stringstream stream(ios_base::binary | ios_base::out | ios_base::in);
+  ar::binary_oarchive oar(stream, ar::no_header);
+  oar << weights;
+
+  ar::binary_iarchive iar(stream, ar::no_header);
+  iar >> weights_copy;
+
+  EXPECT_EQ(weights, weights_copy);
 }
 
 } // namespace oxlm

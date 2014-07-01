@@ -64,6 +64,8 @@ class GlobalFactoredMaxentWeights : public FactoredWeights {
 
   Real predict(int word_id, const vector<int>& context) const;
 
+  bool operator==(const GlobalFactoredMaxentWeights& other) const;
+
  protected:
   bool checkGradientStore(
       const boost::shared_ptr<Corpus>& corpus,
@@ -77,9 +79,12 @@ class GlobalFactoredMaxentWeights : public FactoredWeights {
 
   template<class Archive>
   void serialize(Archive& ar, const unsigned int version) {
+    ar & metadata;
+
     ar & boost::serialization::base_object<FactoredWeights>(*this);
 
-    ar & U & V;
+    ar & U;
+    ar & V;
   }
 
   void initialize();

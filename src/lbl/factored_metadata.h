@@ -1,5 +1,6 @@
 #pragma once
 
+#include <boost/serialization/shared_ptr.hpp>
 #include <boost/shared_ptr.hpp>
 
 #include "lbl/metadata.h"
@@ -24,6 +25,8 @@ class FactoredMetadata : public Metadata {
   boost::shared_ptr<WordToClassIndex> getIndex() const;
 
   VectorReal getClassBias() const;
+
+  bool operator==(const FactoredMetadata& other) const;
 
  private:
   friend class boost::serialization::access;

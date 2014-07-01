@@ -20,6 +20,7 @@ set(TESTS
     global_factored_maxent_weights_test
     global_feature_indexes_pair_test
     minibatch_feature_indexes_pair_test
+    model_test
     model_utils_test
     ngram_test
     ngram_filter_test

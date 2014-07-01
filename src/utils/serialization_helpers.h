@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -12,12 +13,38 @@
 namespace boost {
 namespace serialization {
 
+// Serialization support for Eigen::Matrix<Scalar, Rows, Cols, Options, MaxRows, MaxCols>.
+
+template<class Archive, class Scalar, int Rows, int Cols, int Options, int MaxRows, int MaxCols>
+inline void save(
+    Archive& ar,
+    const Eigen::Matrix<Scalar, Rows, Cols, Options, MaxRows, MaxCols>& m,
+    const unsigned int version) {
+  int rows = m.rows();
+  int cols = m.cols();
+  ar & rows;
+  ar & cols;
+  ar & boost::serialization::make_array(m.data(), m.size());
+}
+
+template<class Archive, class Scalar, int Rows, int Cols, int Options, int MaxRows, int MaxCols>
+inline void load(
+    Archive& ar,
+    Eigen::Matrix<Scalar, Rows, Cols, Options, MaxRows, MaxCols>& m,
+    const unsigned int version) {
+  int rows, cols;
+  ar & rows;
+  ar & cols;
+  m = Eigen::Matrix<Scalar, Rows, Cols, Options, MaxRows, MaxCols>::Zero(rows, cols);
+  ar & boost::serialization::make_array(m.data(), m.size());
+}
+
 template<class Archive, class Scalar, int Rows, int Cols, int Options, int MaxRows, int MaxCols>
 inline void serialize(
     Archive& ar,
     Eigen::Matrix<Scalar, Rows, Cols, Options, MaxRows, MaxCols>& m,
     const unsigned int version) {
-  ar & boost::serialization::make_array(m.data(), m.size());
+  boost::serialization::split_free(ar, m, version);
 }
 
 // Serialization support for Eigen::SparseVector<Scalar>.

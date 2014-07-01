@@ -17,6 +17,8 @@ class Metadata {
 
   void initialize(const boost::shared_ptr<Corpus>& corpus);
 
+  bool operator==(const Metadata& other) const;
+
  private:
   friend class boost::serialization::access;
 

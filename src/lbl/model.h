@@ -55,6 +55,9 @@ class Model {
 
   void clearCache();
 
+  bool operator==(
+      const Model<GlobalWeights, MinibatchWeights, Metadata>& other) const;
+
  private:
   ModelData config;
   Dict dict;

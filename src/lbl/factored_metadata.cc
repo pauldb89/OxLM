@@ -42,4 +42,10 @@ VectorReal FactoredMetadata::getClassBias() const {
   return classBias;
 }
 
+bool FactoredMetadata::operator==(const FactoredMetadata& other) const {
+  return Metadata::operator==(other)
+      && classBias == other.classBias
+      && *index == *other.index;
+}
+
 } // namespace oxlm

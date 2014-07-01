@@ -297,7 +297,7 @@ Real GlobalFactoredMaxentWeights::predict(
   int word_class_id = index->getWordIndexInClass(word_id);
   VectorReal prediction_vector = getPredictionVector(context);
 
-  Real class_prob;
+  Real class_prob = 0;
   auto it = normalizerCache.find(context);
   if (it != normalizerCache.end()) {
     Real class_score = U->get(context)(class_id);
@@ -309,7 +309,7 @@ Real GlobalFactoredMaxentWeights::predict(
     class_prob = class_probs(class_id);
   }
 
-  Real word_prob;
+  Real word_prob = 0;
   auto it2 = wordNormalizerCache[class_id].find(context);
   if (it2 != wordNormalizerCache[class_id].end()) {
     Real word_score = V[class_id]->get(context)(word_class_id);
@@ -322,6 +322,12 @@ Real GlobalFactoredMaxentWeights::predict(
   }
 
   return class_prob + word_prob;
+}
+
+bool GlobalFactoredMaxentWeights::operator==(
+    const GlobalFactoredMaxentWeights& other) const {
+  return FactoredWeights::operator==(other)
+      && *metadata == *other.metadata;
 }
 
 } // namespace oxlm

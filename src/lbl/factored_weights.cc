@@ -8,15 +8,17 @@
 
 namespace oxlm {
 
-FactoredWeights::FactoredWeights() : S(0, 0, 0), T(0, 0), FW(0, 0) {}
+FactoredWeights::FactoredWeights()
+    : data(NULL), S(0, 0, 0), T(0, 0), FW(0, 0) {}
 
 FactoredWeights::FactoredWeights(
     const ModelData& config,
     const boost::shared_ptr<FactoredMetadata>& metadata)
     : Weights(config, metadata), metadata(metadata),
       index(metadata->getIndex()), wordNormalizerCache(index->getNumClasses()),
-      S(0, 0, 0), T(0, 0), FW(0, 0) {
+      data(NULL), S(0, 0, 0), T(0, 0), FW(0, 0) {
   allocate();
+  FW.setZero();
 }
 
 FactoredWeights::FactoredWeights(
@@ -25,7 +27,7 @@ FactoredWeights::FactoredWeights(
     const boost::shared_ptr<Corpus>& training_corpus)
     : Weights(config, metadata, training_corpus), metadata(metadata),
       index(metadata->getIndex()), wordNormalizerCache(index->getNumClasses()),
-      S(0, 0, 0), T(0, 0), FW(0, 0) {
+      data(NULL), S(0, 0, 0), T(0, 0), FW(0, 0) {
   allocate();
 
   // Initialize model weights randomly.
@@ -44,13 +46,14 @@ FactoredWeights::FactoredWeights(
     const vector<int>& indices)
     : Weights(config, metadata), metadata(metadata),
       index(metadata->getIndex()), wordNormalizerCache(index->getNumClasses()),
-      S(0, 0, 0), T(0, 0), FW(0, 0) {
+      data(NULL), S(0, 0, 0), T(0, 0), FW(0, 0) {
   allocate();
+  FW.setZero();
 }
 
 FactoredWeights::FactoredWeights(const FactoredWeights& other)
     : Weights(other), metadata(other.metadata), index(other.index),
-      S(0, 0, 0), T(0, 0), FW(0, 0) {
+      data(NULL), S(0, 0, 0), T(0, 0), FW(0, 0) {
   allocate();
   memcpy(data, other.data, size * sizeof(Real));
 }
@@ -76,14 +79,11 @@ void FactoredWeights::setModelParameters() {
   int T_size = num_classes;
 
   new (&FW) WeightsType(data, size);
-  FW.setZero();
 
   new (&S) WordVectorsType(data, word_width, num_classes);
   new (&T) WeightsType(data + S_size, T_size);
-}
 
-FactoredWeights::~FactoredWeights() {
-  delete data;
+  wordNormalizerCache.resize(num_classes);
 }
 
 Real FactoredWeights::getObjective(
@@ -329,7 +329,23 @@ Real FactoredWeights::predict(int word_id, const vector<int>& context) const {
 
 void FactoredWeights::clearCache() {
   Weights::clearCache();
-  wordNormalizerCache.clear();
+  for (size_t i = 0; i < wordNormalizerCache.size(); ++i) {
+    wordNormalizerCache[i].clear();
+  }
 }
+
+bool FactoredWeights::operator==(const FactoredWeights& other) const {
+  return Weights::operator==(other)
+      && *metadata == *other.metadata
+      && *index == *other.index
+      && size == other.size
+      && FW == other.FW;
+}
+
+FactoredWeights::~FactoredWeights() {
+  delete data;
+}
+
+
 
 } // namespace oxlm
