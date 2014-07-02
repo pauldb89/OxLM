@@ -19,6 +19,7 @@ set(TESTS
     feature_store_initializer_test
     global_factored_maxent_weights_test
     global_feature_indexes_pair_test
+    metadata_test
     minibatch_feature_indexes_pair_test
     model_test
     model_utils_test
