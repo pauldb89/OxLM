@@ -24,7 +24,8 @@ template<class GlobalWeights, class MinibatchWeights, class Metadata>
 Model<GlobalWeights, MinibatchWeights, Metadata>::Model() {}
 
 template<class GlobalWeights, class MinibatchWeights, class Metadata>
-Model<GlobalWeights, MinibatchWeights, Metadata>::Model(ModelData& config)
+Model<GlobalWeights, MinibatchWeights, Metadata>::Model(
+    const boost::shared_ptr<ModelData>& config)
     : config(config) {
   metadata = boost::make_shared<Metadata>(config, dict);
 }
@@ -35,7 +36,7 @@ Dict Model<GlobalWeights, MinibatchWeights, Metadata>::getDict() const {
 }
 
 template<class GlobalWeights, class MinibatchWeights, class Metadata>
-ModelData Model<GlobalWeights, MinibatchWeights, Metadata>::getConfig() const {
+boost::shared_ptr<ModelData> Model<GlobalWeights, MinibatchWeights, Metadata>::getConfig() const {
   return config;
 }
 
@@ -43,15 +44,15 @@ template<class GlobalWeights, class MinibatchWeights, class Metadata>
 void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
   // Initialize the dictionary now, if it hasn't been initialized when the
   // vocabulary was partitioned in classes.
-  bool immutable_dict = config.classes > 0 || config.class_file.size();
+  bool immutable_dict = config->classes > 0 || config->class_file.size();
   boost::shared_ptr<Corpus> training_corpus =
-      readCorpus(config.training_file, dict, immutable_dict);
-  config.vocab_size = dict.size();
+      readCorpus(config->training_file, dict, immutable_dict);
+  config->vocab_size = dict.size();
   cout << "Done reading training corpus..." << endl;
 
   boost::shared_ptr<Corpus> test_corpus;
-  if (config.test_file.size()) {
-    test_corpus = readCorpus(config.test_file, dict);
+  if (config->test_file.size()) {
+    test_corpus = readCorpus(config->test_file, dict);
     cout << "Done reading test corpus..." << endl;
   }
 
@@ -68,17 +69,17 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
   boost::shared_ptr<GlobalWeights> adagrad =
       boost::make_shared<GlobalWeights>(config, metadata);
 
-  omp_set_num_threads(config.threads);
+  omp_set_num_threads(config->threads);
   #pragma omp parallel
   {
     int minibatch_counter = 1;
-    int minibatch_size = config.minibatch_size;
-    for (int iter = 0; iter < config.iterations; ++iter) {
+    int minibatch_size = config->minibatch_size;
+    for (int iter = 0; iter < config->iterations; ++iter) {
       auto iteration_start = GetTime();
 
       #pragma omp master
       {
-        if (config.randomise) {
+        if (config->randomise) {
           random_shuffle(indices.begin(), indices.end());
         }
         global_objective = 0;
@@ -104,8 +105,14 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
 
         vector<int> minibatch = scatterMinibatch(start, end, indices);
         Real objective;
-        boost::shared_ptr<MinibatchWeights> gradient =
-            weights->getGradient(training_corpus, minibatch, objective);
+        boost::shared_ptr<MinibatchWeights> gradient;
+        if (config->noise_samples > 0) {
+          gradient = weights->estimateGradient(
+              training_corpus, minibatch, objective);
+        } else {
+          gradient = weights->getGradient(
+              training_corpus, minibatch, objective);
+        }
 
         #pragma omp critical
         {
@@ -222,9 +229,9 @@ Real Model<GlobalWeights, MinibatchWeights, Metadata>::predict(
 
 template<class GlobalWeights, class MinibatchWeights, class Metadata>
 void Model<GlobalWeights, MinibatchWeights, Metadata>::save() const {
-  if (config.model_output_file.size()) {
-    cout << "Writing model to " << config.model_output_file << "..." << endl;
-    ofstream fout(config.model_output_file);
+  if (config->model_output_file.size()) {
+    cout << "Writing model to " << config->model_output_file << "..." << endl;
+    ofstream fout(config->model_output_file);
     boost::archive::binary_oarchive oar(fout);
     oar << config;
     oar << dict;
@@ -258,7 +265,7 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::clearCache() {
 template<class GlobalWeights, class MinibatchWeights, class Metadata>
 bool Model<GlobalWeights, MinibatchWeights, Metadata>::operator==(
     const Model<GlobalWeights, MinibatchWeights, Metadata>& other) const {
-  return config == other.config
+  return *config == *other.config
       && *metadata == *other.metadata
       && *weights == *other.weights;
 }

@@ -14,7 +14,7 @@ void evaluate(const string& model_file, const string& data_file) {
   Model model;
   model.load(model_file);
 
-  ModelData config = model.getConfig();
+  boost::shared_ptr<ModelData> config = model.getConfig();
   Dict dict = model.getDict();
 
   int eos = dict.Convert("</s>");
@@ -22,7 +22,7 @@ void evaluate(const string& model_file, const string& data_file) {
       readCorpus(data_file, dict, true, true);
 
   double total = 0;
-  ContextProcessor processor(test_corpus, config.ngram_order - 1);
+  ContextProcessor processor(test_corpus, config->ngram_order - 1);
   for (size_t i = 0; i < test_corpus->size(); ++i) {
     int word_id = test_corpus->at(i);
     vector<int> context = processor.extract(i);

@@ -86,77 +86,77 @@ int main(int argc, char **argv) {
   notify(vm);
 
 
-  ModelData config;
-  config.training_file = vm["input"].as<string>();
+  boost::shared_ptr<ModelData> config = boost::make_shared<ModelData>();
+  config->training_file = vm["input"].as<string>();
   if (vm.count("test-set")) {
-    config.test_file = vm["test-set"].as<string>();
+    config->test_file = vm["test-set"].as<string>();
   }
-  config.iterations = vm["iterations"].as<int>();
-  config.minibatch_size = vm["minibatch-size"].as<int>();
-  config.ngram_order = vm["order"].as<int>();
-  config.feature_context_size = vm["feature-context-size"].as<int>();
+  config->iterations = vm["iterations"].as<int>();
+  config->minibatch_size = vm["minibatch-size"].as<int>();
+  config->ngram_order = vm["order"].as<int>();
+  config->feature_context_size = vm["feature-context-size"].as<int>();
 
   if (vm.count("model-in")) {
-    config.model_input_file = vm["model-in"].as<string>();
+    config->model_input_file = vm["model-in"].as<string>();
   }
   if (vm.count("model-out")) {
-    config.model_output_file = vm["model-out"].as<string>();
+    config->model_output_file = vm["model-out"].as<string>();
     if (GIT_REVISION) {
-      config.model_output_file += "." + string(GIT_REVISION);
+      config->model_output_file += "." + string(GIT_REVISION);
     }
   }
   if (vm.count("class-file")) {
-    config.class_file = vm["class-file"].as<string>();
+    config->class_file = vm["class-file"].as<string>();
   }
 
-  config.l2_lbl = vm["lambda-lbl"].as<float>();
-  config.l2_maxent = vm["lambda-maxent"].as<float>();
-  config.word_representation_size = vm["word-width"].as<int>();
-  config.threads = vm["threads"].as<int>();
-  config.step_size = vm["step-size"].as<float>();
-  config.classes = vm["classes"].as<int>();
-  config.randomise = vm.count("randomise");
-  config.reclass = vm.count("reclass");
-  config.diagonal_contexts = vm.count("diagonal-contexts");
+  config->l2_lbl = vm["lambda-lbl"].as<float>();
+  config->l2_maxent = vm["lambda-maxent"].as<float>();
+  config->word_representation_size = vm["word-width"].as<int>();
+  config->threads = vm["threads"].as<int>();
+  config->step_size = vm["step-size"].as<float>();
+  config->classes = vm["classes"].as<int>();
+  config->randomise = vm.count("randomise");
+  config->reclass = vm.count("reclass");
+  config->diagonal_contexts = vm.count("diagonal-contexts");
 
-  config.max_ngrams = vm["max-ngrams"].as<int>();
-  config.min_ngram_freq = vm["min-ngram-freq"].as<int>();
+  config->max_ngrams = vm["max-ngrams"].as<int>();
+  config->min_ngram_freq = vm["min-ngram-freq"].as<int>();
 
-  config.sparse_features = vm["sparse-features"].as<bool>();
-  config.hash_space = vm["hash-space"].as<Real>() * 1000000;
-  config.filter_contexts = vm["filter-contexts"].as<bool>();
-  config.filter_error_rate = vm["filter-error-rate"].as<Real>();
-  config.count_collisions = vm["count-collisions"].as<bool>();
+  config->sparse_features = vm["sparse-features"].as<bool>();
+  config->hash_space = vm["hash-space"].as<Real>() * 1000000;
+  config->filter_contexts = vm["filter-contexts"].as<bool>();
+  config->filter_error_rate = vm["filter-error-rate"].as<Real>();
+  config->count_collisions = vm["count-collisions"].as<bool>();
 
   cout << "################################" << endl;
   if (strlen(GIT_REVISION) > 0) {
     cout << "# Git revision: " << GIT_REVISION << endl;
   }
   cout << "# Config Summary" << endl;
-  cout << "# order = " << config.ngram_order << endl;
-  cout << "# feature context size = " << config.feature_context_size << endl;
-  cout << "# word_width = " << config.word_representation_size << endl;
-  cout << "# diagonal contexts = " << config.diagonal_contexts << endl;
-  if (config.model_input_file.size()) {
-    cout << "# model-in = " << config.model_input_file << endl;
+  cout << "# order = " << config->ngram_order << endl;
+  cout << "# feature context size = " << config->feature_context_size << endl;
+  cout << "# word_width = " << config->word_representation_size << endl;
+  cout << "# diagonal contexts = " << config->diagonal_contexts << endl;
+  if (config->model_input_file.size()) {
+    cout << "# model-in = " << config->model_input_file << endl;
   }
-  if (config.model_output_file.size()) {
-    cout << "# model-out = " << config.model_output_file << endl;
+  if (config->model_output_file.size()) {
+    cout << "# model-out = " << config->model_output_file << endl;
   }
-  cout << "# input = " << config.training_file << endl;
-  cout << "# minibatch size = " << config.minibatch_size << endl;
-  cout << "# lambda LBL = " << config.l2_lbl << endl;
-  cout << "# lambda maxent = " << config.l2_maxent << endl;
-  cout << "# step size = " << config.step_size << endl;
-  cout << "# iterations = " << config.iterations << endl;
-  cout << "# threads = " << config.threads << endl;
-  cout << "# classes = " << config.classes << endl;
-  cout << "# max n-grams = " << config.max_ngrams << endl;
-  cout << "# min n-gram frequency = " << config.min_ngram_freq << endl;
-  cout << "# sparse features = " << config.sparse_features << endl;
-  cout << "# hash space = " << config.hash_space << endl;
-  cout << "# filter contexts = " << config.filter_contexts << endl;
-  cout << "# filter error rate = " << config.filter_error_rate << endl;
+  cout << "# input = " << config->training_file << endl;
+  cout << "# minibatch size = " << config->minibatch_size << endl;
+  cout << "# lambda LBL = " << config->l2_lbl << endl;
+  cout << "# lambda maxent = " << config->l2_maxent << endl;
+  cout << "# step size = " << config->step_size << endl;
+  cout << "# iterations = " << config->iterations << endl;
+  cout << "# threads = " << config->threads << endl;
+  cout << "# classes = " << config->classes << endl;
+  cout << "# max n-grams = " << config->max_ngrams << endl;
+  cout << "# min n-gram frequency = " << config->min_ngram_freq << endl;
+  cout << "# sparse features = " << config->sparse_features << endl;
+  cout << "# hash space = " << config->hash_space << endl;
+  cout << "# filter contexts = " << config->filter_contexts << endl;
+  cout << "# filter error rate = " << config->filter_error_rate << endl;
   cout << "################################" << endl;
 
   Model<GlobalFactoredMaxentWeights, MinibatchFactoredMaxentWeights, FactoredMaxentMetadata> model(config);

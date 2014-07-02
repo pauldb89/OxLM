@@ -25,14 +25,14 @@ namespace oxlm {
 GlobalFactoredMaxentWeights::GlobalFactoredMaxentWeights() {}
 
 GlobalFactoredMaxentWeights::GlobalFactoredMaxentWeights(
-    const ModelData& config,
+    const boost::shared_ptr<ModelData>& config,
     const boost::shared_ptr<FactoredMaxentMetadata>& metadata)
     : FactoredWeights(config, metadata), metadata(metadata) {
   initialize();
 }
 
 GlobalFactoredMaxentWeights::GlobalFactoredMaxentWeights(
-    const ModelData& config,
+    const boost::shared_ptr<ModelData>& config,
     const boost::shared_ptr<FactoredMaxentMetadata>& metadata,
     const boost::shared_ptr<Corpus>& training_corpus)
     : FactoredWeights(config, metadata, training_corpus), metadata(metadata) {
@@ -46,16 +46,16 @@ void GlobalFactoredMaxentWeights::initialize() {
   boost::shared_ptr<BloomFilterPopulator> populator = metadata->getPopulator();
   boost::shared_ptr<FeatureMatcher> matcher = metadata->getMatcher();
 
-  if (config.hash_space) {
+  if (config->hash_space) {
     boost::shared_ptr<GlobalCollisionSpace> space =
-        boost::make_shared<GlobalCollisionSpace>(config.hash_space);
+        boost::make_shared<GlobalCollisionSpace>(config->hash_space);
     boost::shared_ptr<FeatureContextHasher> hasher =
-        boost::make_shared<ClassContextHasher>(config.hash_space);
+        boost::make_shared<ClassContextHasher>(config->hash_space);
     GlobalFeatureIndexesPairPtr feature_indexes_pair;
     boost::shared_ptr<BloomFilter<NGram>> bloom_filter;
     boost::shared_ptr<FeatureFilter> filter;
-    if (config.filter_contexts) {
-      if (config.filter_error_rate > 0) {
+    if (config->filter_contexts) {
+      if (config->filter_error_rate > 0) {
         bloom_filter = populator->get();
         filter = boost::make_shared<FeatureApproximateFilter>(
             num_classes, hasher, bloom_filter);
@@ -70,14 +70,14 @@ void GlobalFactoredMaxentWeights::initialize() {
     }
 
     U = boost::make_shared<CollisionGlobalFeatureStore>(
-        num_classes, config.hash_space, config.feature_context_size,
+        num_classes, config->hash_space, config->feature_context_size,
         space, hasher, filter);
 
     for (int i = 0; i < num_classes; ++i) {
       int class_size = index->getClassSize(i);
-      hasher = boost::make_shared<WordContextHasher>(i, config.hash_space);
-      if (config.filter_contexts) {
-        if (config.filter_error_rate) {
+      hasher = boost::make_shared<WordContextHasher>(i, config->hash_space);
+      if (config->filter_contexts) {
+        if (config->filter_error_rate) {
           filter = boost::make_shared<FeatureApproximateFilter>(
               class_size, hasher, bloom_filter);
         } else {
@@ -89,10 +89,10 @@ void GlobalFactoredMaxentWeights::initialize() {
         filter = boost::make_shared<FeatureNoOpFilter>(class_size);
       }
       V[i] = boost::make_shared<CollisionGlobalFeatureStore>(
-          class_size, config.hash_space, config.feature_context_size,
+          class_size, config->hash_space, config->feature_context_size,
           space, hasher, filter);
     }
-  } else if (config.sparse_features) {
+  } else if (config->sparse_features) {
     auto feature_indexes_pair = matcher->getGlobalFeatures();
     U = boost::make_shared<SparseGlobalFeatureStore>(
         num_classes,
@@ -200,7 +200,7 @@ bool GlobalFactoredMaxentWeights::checkGradient(
     return false;
   }
 
-  if (config.hash_space == 0) {
+  if (config->hash_space == 0) {
     // If no hashing is used, check gradients individually.
     if (!checkGradientStore(corpus, indices, U, gradient->U, eps)) {
       return false;
@@ -252,6 +252,13 @@ bool GlobalFactoredMaxentWeights::checkGradientStore(
   return true;
 }
 
+boost::shared_ptr<MinibatchFactoredMaxentWeights> GlobalFactoredMaxentWeights::estimateGradient(
+    const boost::shared_ptr<Corpus>& corpus,
+    const vector<int>& indices,
+    Real& objective) const {
+  return getGradient(corpus, indices, objective);
+}
+
 void GlobalFactoredMaxentWeights::updateSquared(
     const boost::shared_ptr<MinibatchFactoredMaxentWeights>& global_gradient) {
   FactoredWeights::updateSquared(global_gradient);
@@ -267,9 +274,9 @@ void GlobalFactoredMaxentWeights::updateAdaGrad(
     const boost::shared_ptr<GlobalFactoredMaxentWeights>& adagrad) {
   FactoredWeights::updateAdaGrad(global_gradient, adagrad);
 
-  U->updateAdaGrad(global_gradient->U, adagrad->U, config.step_size);
+  U->updateAdaGrad(global_gradient->U, adagrad->U, config->step_size);
   for (size_t i = 0; i < V.size(); ++i) {
-    V[i]->updateAdaGrad(global_gradient->V[i], adagrad->V[i], config.step_size);
+    V[i]->updateAdaGrad(global_gradient->V[i], adagrad->V[i], config->step_size);
   }
 }
 
@@ -279,8 +286,8 @@ Real GlobalFactoredMaxentWeights::regularizerUpdate(
   Real ret = FactoredWeights::regularizerUpdate(
       global_gradient, minibatch_factor);
 
-  Real sigma = minibatch_factor * config.step_size * config.l2_maxent;
-  Real factor = 0.5 * minibatch_factor * config.l2_maxent;
+  Real sigma = minibatch_factor * config->step_size * config->l2_maxent;
+  Real factor = 0.5 * minibatch_factor * config->l2_maxent;
   U->l2GradientUpdate(global_gradient->U, sigma);
   ret += U->l2Objective(global_gradient->U, factor);
   for (size_t i = 0; i < V.size(); ++i) {

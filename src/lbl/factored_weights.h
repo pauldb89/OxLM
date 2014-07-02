@@ -13,16 +13,16 @@ class FactoredWeights : public Weights {
   FactoredWeights();
 
   FactoredWeights(
-      const ModelData& config,
+      const boost::shared_ptr<ModelData>& config,
       const boost::shared_ptr<FactoredMetadata>& metadata);
 
   FactoredWeights(
-      const ModelData& config,
+      const boost::shared_ptr<ModelData>& config,
       const boost::shared_ptr<FactoredMetadata>& metadata,
       const boost::shared_ptr<Corpus>& training_corpus);
 
   FactoredWeights(
-      const ModelData& config,
+      const boost::shared_ptr<ModelData>& config,
       const boost::shared_ptr<FactoredMetadata>& metadata,
       const vector<int>& indices);
 
@@ -42,6 +42,11 @@ class FactoredWeights : public Weights {
       const vector<int>& indices,
       const boost::shared_ptr<FactoredWeights>& gradient,
       double eps);
+
+  boost::shared_ptr<FactoredWeights> estimateGradient(
+      const boost::shared_ptr<Corpus>& corpus,
+      const vector<int>& indices,
+      Real& objective) const;
 
   void update(const boost::shared_ptr<FactoredWeights>& gradient);
 

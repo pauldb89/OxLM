@@ -13,7 +13,7 @@ namespace oxlm {
 Weights::Weights() : data(NULL), Q(0, 0, 0), R(0, 0, 0), B(0, 0), W(0, 0) {}
 
 Weights::Weights(
-    const ModelData& config, const boost::shared_ptr<Metadata>& metadata)
+    const boost::shared_ptr<ModelData>& config, const boost::shared_ptr<Metadata>& metadata)
     : config(config), metadata(metadata),
       data(NULL), Q(0, 0, 0), R(0, 0, 0), B(0, 0), W(0, 0) {
   allocate();
@@ -21,7 +21,7 @@ Weights::Weights(
 }
 
 Weights::Weights(
-    const ModelData& config,
+    const boost::shared_ptr<ModelData>& config,
     const boost::shared_ptr<Metadata>& metadata,
     const boost::shared_ptr<Corpus>& training_corpus)
     : config(config), metadata(metadata),
@@ -36,7 +36,7 @@ Weights::Weights(
   }
 
   // Initialize bias with unigram probabilities.
-  VectorReal counts = VectorReal::Zero(config.vocab_size);
+  VectorReal counts = VectorReal::Zero(config->vocab_size);
   for (size_t i = 0; i < training_corpus->size(); ++i) {
     counts(training_corpus->at(i)) += 1;
   }
@@ -44,14 +44,14 @@ Weights::Weights(
 
   cout << "===============================" << endl;
   cout << " Model parameters: " << endl;
-  cout << "  Context vocab size = " << config.vocab_size << endl;
-  cout << "  Output vocab size = " << config.vocab_size << endl;
+  cout << "  Context vocab size = " << config->vocab_size << endl;
+  cout << "  Output vocab size = " << config->vocab_size << endl;
   cout << "  Total parameters = " << size << endl;
   cout << "===============================" << endl;
 }
 
 Weights::Weights(
-    const ModelData& config,
+    const boost::shared_ptr<ModelData>& config,
     const boost::shared_ptr<Metadata>& metadata,
     const vector<int>& indices)
     : config(config), metadata(metadata),
@@ -68,14 +68,14 @@ Weights::Weights(const Weights& other)
 }
 
 void Weights::allocate() {
-  int num_context_words = config.vocab_size;
-  int num_output_words = config.vocab_size;
-  int word_width = config.word_representation_size;
-  int context_width = config.ngram_order - 1;
+  int num_context_words = config->vocab_size;
+  int num_output_words = config->vocab_size;
+  int word_width = config->word_representation_size;
+  int context_width = config->ngram_order - 1;
 
   int Q_size = word_width * num_context_words;
   int R_size = word_width * num_output_words;
-  int C_size = config.diagonal_contexts ? word_width : word_width * word_width;
+  int C_size = config->diagonal_contexts ? word_width : word_width * word_width;
   int B_size = num_output_words;
 
   size = Q_size + R_size + context_width * C_size + B_size;
@@ -85,14 +85,14 @@ void Weights::allocate() {
 }
 
 void Weights::setModelParameters() {
-  int num_context_words = config.vocab_size;
-  int num_output_words = config.vocab_size;
-  int word_width = config.word_representation_size;
-  int context_width = config.ngram_order - 1;
+  int num_context_words = config->vocab_size;
+  int num_output_words = config->vocab_size;
+  int word_width = config->word_representation_size;
+  int context_width = config->ngram_order - 1;
 
   int Q_size = word_width * num_context_words;
   int R_size = word_width * num_output_words;
-  int C_size = config.diagonal_contexts ? word_width : word_width * word_width;
+  int C_size = config->diagonal_contexts ? word_width : word_width * word_width;
   int B_size = num_output_words;
 
   new (&W) WeightsType(data, size);
@@ -102,7 +102,7 @@ void Weights::setModelParameters() {
 
   Real* start = data + Q_size + R_size;
   for (int i = 0; i < context_width; ++i) {
-    if (config.diagonal_contexts) {
+    if (config->diagonal_contexts) {
       C.push_back(ContextTransformType(start, word_width, 1));
     } else {
       C.push_back(ContextTransformType(start, word_width, word_width));
@@ -138,8 +138,8 @@ void Weights::getContextVectors(
     const vector<int>& indices,
     vector<vector<int>>& contexts,
     vector<MatrixReal>& context_vectors) const {
-  int context_width = config.ngram_order - 1;
-  int word_width = config.word_representation_size;
+  int context_width = config->ngram_order - 1;
+  int word_width = config->word_representation_size;
   boost::shared_ptr<ContextProcessor> processor =
       boost::make_shared<ContextProcessor>(corpus, context_width);
 
@@ -157,8 +157,8 @@ void Weights::getContextVectors(
 MatrixReal Weights::getPredictionVectors(
     const vector<int>& indices,
     const vector<MatrixReal>& context_vectors) const {
-  int context_width = config.ngram_order - 1;
-  int word_width = config.word_representation_size;
+  int context_width = config->ngram_order - 1;
+  int word_width = config->word_representation_size;
   MatrixReal prediction_vectors = MatrixReal::Zero(word_width, indices.size());
 
   for (int i = 0; i < context_width; ++i) {
@@ -174,7 +174,7 @@ MatrixReal Weights::getPredictionVectors(
 
 MatrixReal Weights::getContextProduct(
     int index, const MatrixReal& representations, bool transpose) const {
-  if (config.diagonal_contexts) {
+  if (config->diagonal_contexts) {
     return C[index].asDiagonal() * representations;
   } else {
     if (transpose) {
@@ -242,8 +242,8 @@ void Weights::getContextGradient(
     const vector<MatrixReal>& context_vectors,
     const MatrixReal& weighted_representations,
     const boost::shared_ptr<Weights>& gradient) const {
-  int context_width = config.ngram_order - 1;
-  int word_width = config.word_representation_size;
+  int context_width = config->ngram_order - 1;
+  int word_width = config->word_representation_size;
   MatrixReal context_gradients = MatrixReal::Zero(word_width, indices.size());
   for (int j = 0; j < context_width; ++j) {
     context_gradients = getContextProduct(j, weighted_representations, true);
@@ -251,7 +251,7 @@ void Weights::getContextGradient(
       gradient->Q.col(contexts[i][j]) += context_gradients.col(i);
     }
 
-    if (config.diagonal_contexts) {
+    if (config->diagonal_contexts) {
       gradient->C[j] = context_vectors[j].cwiseProduct(weighted_representations).rowwise().sum();
     } else {
       gradient->C[j] = weighted_representations * context_vectors[j].transpose();
@@ -317,6 +317,13 @@ Real Weights::getObjective(
   return objective;
 }
 
+boost::shared_ptr<Weights> Weights::estimateGradient(
+    const boost::shared_ptr<Corpus>& corpus,
+    const vector<int>& indices,
+    Real& objective) const {
+  return getGradient(corpus, indices, objective);
+}
+
 void Weights::update(const boost::shared_ptr<Weights>& gradient) {
   W += gradient->W;
 }
@@ -329,23 +336,23 @@ void Weights::updateAdaGrad(
     const boost::shared_ptr<Weights>& global_gradient,
     const boost::shared_ptr<Weights>& adagrad) {
   W -= global_gradient->W.binaryExpr(
-      adagrad->W, CwiseAdagradUpdateOp<Real>(config.step_size));
+      adagrad->W, CwiseAdagradUpdateOp<Real>(config->step_size));
 }
 
 Real Weights::regularizerUpdate(
     const boost::shared_ptr<Weights>& global_gradient, Real minibatch_factor) {
-  Real sigma = minibatch_factor * config.step_size * config.l2_lbl;
+  Real sigma = minibatch_factor * config->step_size * config->l2_lbl;
   W -= W * sigma;
-  return 0.5 * minibatch_factor * config.l2_lbl * W.array().square().sum();
+  return 0.5 * minibatch_factor * config->l2_lbl * W.array().square().sum();
 }
 
 VectorReal Weights::getPredictionVector(const vector<int>& context) const {
-  int context_width = config.ngram_order - 1;
-  int word_width = config.word_representation_size;
+  int context_width = config->ngram_order - 1;
+  int word_width = config->word_representation_size;
 
   VectorReal prediction_vector = VectorReal::Zero(word_width);
   for (int i = 0; i < context_width; ++i) {
-    if (config.diagonal_contexts) {
+    if (config->diagonal_contexts) {
       prediction_vector += C[i].asDiagonal() * Q.col(context[i]);
     } else {
       prediction_vector += C[i] * Q.col(context[i]);
@@ -373,7 +380,7 @@ void Weights::clearCache() {
 }
 
 bool Weights::operator==(const Weights& other) const {
-  return config == other.config
+  return *config == *other.config
       && *metadata == *other.metadata
       && size == other.size
       && W == other.W;

@@ -14,10 +14,10 @@ class FactoredMetadata : public Metadata {
  public:
   FactoredMetadata();
 
-  FactoredMetadata(ModelData& config, Dict& dict);
+  FactoredMetadata(const boost::shared_ptr<ModelData>& config, Dict& dict);
 
   FactoredMetadata(
-      const ModelData& config, Dict& dict,
+      const boost::shared_ptr<ModelData>& config, Dict& dict,
       const boost::shared_ptr<WordToClassIndex>& index);
 
   void initialize(const boost::shared_ptr<Corpus>& corpus);

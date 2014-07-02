@@ -66,7 +66,7 @@ class FF_LBLLM : public FeatureFunction {
     }
 
     config = model.getConfig();
-    int context_width = config.ngram_order - 1;
+    int context_width = config->ngram_order - 1;
     // For each state, we store at most context_width word ids to the left and
     // to the right and a kSTAR separator. The last bit represents the actual
     // size of the state.
@@ -135,7 +135,7 @@ class FF_LBLLM : public FeatureFunction {
   LBLFeatures scoreFullContexts(const vector<int>& symbols) const {
     LBLFeatures ret;
     int last_star = -1;
-    int context_width = config.ngram_order - 1;
+    int context_width = config->ngram_order - 1;
     for (size_t i = 0; i < symbols.size(); ++i) {
       if (symbols[i] == kSTAR) {
         last_star = i;
@@ -149,7 +149,7 @@ class FF_LBLLM : public FeatureFunction {
 
   LBLFeatures scoreContext(const vector<int>& symbols, int position) const {
     int word = symbols[position];
-    int context_width = config.ngram_order - 1;
+    int context_width = config->ngram_order - 1;
     vector<int> context;
     for (int i = 1; i <= context_width && position - i >= 0; ++i) {
       assert(symbols[position - i] != kSTAR);
@@ -182,7 +182,7 @@ class FF_LBLLM : public FeatureFunction {
   }
 
   void constructNextState(const vector<int>& symbols, void* state) const {
-    int context_width = config.ngram_order - 1;
+    int context_width = config->ngram_order - 1;
 
     vector<int> next_state;
     for (size_t i = 0; i < symbols.size() && i < context_width; ++i) {
@@ -215,7 +215,7 @@ class FF_LBLLM : public FeatureFunction {
   LBLFeatures estimateScore(const vector<int>& symbols) const {
     LBLFeatures ret = scoreFullContexts(symbols);
 
-    int context_width = config.ngram_order - 1;
+    int context_width = config->ngram_order - 1;
     for (size_t i = 0; i < symbols.size() && i < context_width; ++i) {
       if (symbols[i] == kSTAR) {
         break;
@@ -232,7 +232,7 @@ class FF_LBLLM : public FeatureFunction {
   int fid;
   int fidOOV;
   Dict dict;
-  ModelData config;
+  boost::shared_ptr<ModelData> config;
   Model model;
   boost::shared_ptr<CdecLBLMapper> mapper;
   boost::shared_ptr<CdecRuleConverter> ruleConverter;

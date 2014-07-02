@@ -27,11 +27,11 @@ class Model {
  public:
   Model();
 
-  Model(ModelData& config);
+  Model(const boost::shared_ptr<ModelData>& config);
 
   Dict getDict() const;
 
-  ModelData getConfig() const;
+  boost::shared_ptr<ModelData> getConfig() const;
 
   void learn();
 
@@ -59,7 +59,7 @@ class Model {
       const Model<GlobalWeights, MinibatchWeights, Metadata>& other) const;
 
  private:
-  ModelData config;
+  boost::shared_ptr<ModelData> config;
   Dict dict;
   boost::shared_ptr<Metadata> metadata;
   boost::shared_ptr<GlobalWeights> weights;
@@ -69,14 +69,15 @@ class LM : public Model<Weights, Weights, Metadata> {
  public:
   LM() : Model<Weights, Weights, Metadata>() {}
 
-  LM(ModelData& config) : Model<Weights, Weights, Metadata>(config) {}
+  LM(const boost::shared_ptr<ModelData>& config)
+      : Model<Weights, Weights, Metadata>(config) {}
 };
 
 class FactoredLM: public Model<FactoredWeights, FactoredWeights, FactoredMetadata> {
  public:
   FactoredLM() : Model<FactoredWeights, FactoredWeights, FactoredMetadata>() {}
 
-  FactoredLM(ModelData& config)
+  FactoredLM(const boost::shared_ptr<ModelData>& config)
       : Model<FactoredWeights, FactoredWeights, FactoredMetadata>(config) {}
 };
 
@@ -84,7 +85,8 @@ class FactoredMaxentLM : public Model<GlobalFactoredMaxentWeights, MinibatchFact
  public:
   FactoredMaxentLM() : Model<GlobalFactoredMaxentWeights, MinibatchFactoredMaxentWeights, FactoredMaxentMetadata>() {}
 
-  FactoredMaxentLM(ModelData& config) : Model<GlobalFactoredMaxentWeights, MinibatchFactoredMaxentWeights, FactoredMaxentMetadata>(config) {}
+  FactoredMaxentLM(const boost::shared_ptr<ModelData>& config)
+      : Model<GlobalFactoredMaxentWeights, MinibatchFactoredMaxentWeights, FactoredMaxentMetadata>(config) {}
 };
 
 } // namespace oxlm

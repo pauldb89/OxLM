@@ -2,6 +2,7 @@
 
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
+#include <boost/make_shared.hpp>
 
 #include "lbl/factored_metadata.h"
 #include "utils/constants.h"
@@ -11,9 +12,9 @@ namespace ar = boost::archive;
 namespace oxlm {
 
 TEST(FactoredMetadataTest, TestBasic) {
-  ModelData config;
-  config.training_file = "training.txt";
-  config.class_file = "classes.txt";
+  boost::shared_ptr<ModelData> config = boost::make_shared<ModelData>();
+  config->training_file = "training.txt";
+  config->class_file = "classes.txt";
   Dict dict;
   FactoredMetadata metadata(config, dict);
 
@@ -22,9 +23,9 @@ TEST(FactoredMetadataTest, TestBasic) {
 }
 
 TEST(FactoredMetadataTest, TestSerialization) {
-  ModelData config;
-  config.training_file = "training.txt";
-  config.class_file = "classes.txt";
+  boost::shared_ptr<ModelData> config = boost::make_shared<ModelData>();
+  config->training_file = "training.txt";
+  config->class_file = "classes.txt";
   Dict dict;
   FactoredMetadata metadata(config, dict), metadata_copy;
 

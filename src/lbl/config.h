@@ -81,6 +81,7 @@ struct ModelData {
   int         max_ngrams;
   int         min_ngram_freq;
   int         vocab_size;
+  int         noise_samples;
 
   bool operator==(const ModelData& other) const;
 
@@ -109,6 +110,7 @@ struct ModelData {
     ar & filter_contexts;
     ar & filter_error_rate;
     ar & vocab_size;
+    ar & noise_samples;
   }
 };
 

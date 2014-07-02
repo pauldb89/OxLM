@@ -13,7 +13,7 @@ class Metadata {
  public:
   Metadata();
 
-  Metadata(const ModelData& config, Dict& dict);
+  Metadata(const boost::shared_ptr<ModelData>& config, Dict& dict);
 
   void initialize(const boost::shared_ptr<Corpus>& corpus);
 
@@ -28,7 +28,8 @@ class Metadata {
   }
 
  protected:
-  ModelData config;
+  boost::shared_ptr<ModelData> config;
+  VectorReal unigram;
 };
 
 } // namespace oxlm

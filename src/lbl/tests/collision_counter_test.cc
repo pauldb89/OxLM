@@ -12,14 +12,14 @@ TEST(CollisionCounterTest, TestBasic) {
   boost::shared_ptr<Corpus> corpus = boost::make_shared<Corpus>(data);
   boost::shared_ptr<WordToClassIndex> index =
       boost::make_shared<WordToClassIndex>(classes);
-  ModelData config;
-  config.ngram_order = 4;
-  config.feature_context_size = 4;
-  config.hash_space = 100;
+  boost::shared_ptr<ModelData> config = boost::make_shared<ModelData>();
+  config->ngram_order = 4;
+  config->feature_context_size = 4;
+  config->hash_space = 100;
   boost::shared_ptr<ContextProcessor> processor =
-      boost::make_shared<ContextProcessor>(corpus, config.ngram_order - 1);
+      boost::make_shared<ContextProcessor>(corpus, config->ngram_order - 1);
   boost::shared_ptr<FeatureContextGenerator> generator =
-      boost::make_shared<FeatureContextGenerator>(config.feature_context_size);
+      boost::make_shared<FeatureContextGenerator>(config->feature_context_size);
   boost::shared_ptr<NGramFilter> filter =
       boost::make_shared<NGramFilter>(corpus, index, processor, generator);
   boost::shared_ptr<FeatureContextMapper> mapper =

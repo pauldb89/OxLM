@@ -14,11 +14,11 @@ class GlobalFactoredMaxentWeights : public FactoredWeights {
   GlobalFactoredMaxentWeights();
 
   GlobalFactoredMaxentWeights(
-      const ModelData& config,
+      const boost::shared_ptr<ModelData>& config,
       const boost::shared_ptr<FactoredMaxentMetadata>& metadata);
 
   GlobalFactoredMaxentWeights(
-      const ModelData& config,
+      const boost::shared_ptr<ModelData>& config,
       const boost::shared_ptr<FactoredMaxentMetadata>& metadata,
       const boost::shared_ptr<Corpus>& training_corpus);
 
@@ -44,6 +44,11 @@ class GlobalFactoredMaxentWeights : public FactoredWeights {
       const MatrixReal& weighted_representations,
       MatrixReal& class_probs,
       vector<VectorReal>& word_probs) const;
+
+  boost::shared_ptr<MinibatchFactoredMaxentWeights> estimateGradient(
+      const boost::shared_ptr<Corpus>& corpus,
+      const vector<int>& indices,
+      Real& objective) const;
 
   bool checkGradient(
       const boost::shared_ptr<Corpus>& corpus,

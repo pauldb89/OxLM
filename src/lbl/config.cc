@@ -14,7 +14,8 @@ ModelData::ModelData()
       gnorm_threshold(0), eta(0), multinomial_step_size(0),
       sparse_features(false), random_weights(false), hash_space(0),
       count_collisions(false), filter_contexts(false),
-      filter_error_rate(0), max_ngrams(0), min_ngram_freq(0), vocab_size(0) {}
+      filter_error_rate(0), max_ngrams(0), min_ngram_freq(0), vocab_size(0),
+      noise_samples(0) {}
 
 bool ModelData::operator==(const ModelData& other) const {
   return iterations == other.iterations
@@ -38,7 +39,8 @@ bool ModelData::operator==(const ModelData& other) const {
       && hash_space == other.hash_space
       && filter_contexts == other.filter_contexts
       && fabs(filter_error_rate - other.filter_error_rate) < EPS
-      && vocab_size == other.vocab_size;
+      && vocab_size == other.vocab_size
+      && noise_samples == other.noise_samples;
 }
 
 } // namespace oxlm

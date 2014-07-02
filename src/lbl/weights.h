@@ -20,16 +20,16 @@ class Weights {
   Weights();
 
   Weights(
-      const ModelData& config,
+      const boost::shared_ptr<ModelData>& config,
       const boost::shared_ptr<Metadata>& metadata);
 
   Weights(
-      const ModelData& config,
+      const boost::shared_ptr<ModelData>& config,
       const boost::shared_ptr<Metadata>& metadata,
       const boost::shared_ptr<Corpus>& training_corpus);
 
   Weights(
-      const ModelData& config,
+      const boost::shared_ptr<ModelData>& config,
       const boost::shared_ptr<Metadata>& metadata,
       const vector<int>& minibatch_indices);
 
@@ -49,6 +49,11 @@ class Weights {
       const vector<int>& indices,
       const boost::shared_ptr<Weights>& gradient,
       double eps);
+
+  boost::shared_ptr<Weights> estimateGradient(
+      const boost::shared_ptr<Corpus>& corpus,
+      const vector<int>& indices,
+      Real& objective) const;
 
   void update(const boost::shared_ptr<Weights>& gradient);
 
@@ -152,7 +157,7 @@ class Weights {
   BOOST_SERIALIZATION_SPLIT_MEMBER();
 
  protected:
-  ModelData config;
+  boost::shared_ptr<ModelData> config;
   boost::shared_ptr<Metadata> metadata;
 
   ContextTransformsType C;

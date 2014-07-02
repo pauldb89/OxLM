@@ -11,9 +11,9 @@ namespace oxlm {
 TEST_F(FactoredSGDTest, TestTrainFactoredSGD) {
   Model<FactoredWeights, FactoredWeights, FactoredMetadata> model(config);
   model.learn();
-  config.test_file = "test.txt";
+  config->test_file = "test.txt";
   Dict dict = model.getDict();
-  boost::shared_ptr<Corpus> test_corpus = readCorpus(config.test_file, dict);
+  boost::shared_ptr<Corpus> test_corpus = readCorpus(config->test_file, dict);
   Real objective = 0, perplexity = numeric_limits<Real>::infinity();
   model.evaluate(test_corpus, GetTime(), 0, objective, perplexity);
   EXPECT_NEAR(61.64321517, perplexity, EPS);

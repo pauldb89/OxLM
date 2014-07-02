@@ -16,10 +16,11 @@ namespace oxlm {
 class GlobalFactoredMaxentWeightsTest : public testing::Test {
  protected:
   void SetUp() {
-    config.word_representation_size = 3;
-    config.vocab_size = 5;
-    config.ngram_order = 3;
-    config.feature_context_size = 2;
+    config = boost::make_shared<ModelData>();
+    config->word_representation_size = 3;
+    config->vocab_size = 5;
+    config->ngram_order = 3;
+    config->feature_context_size = 2;
 
     vector<int> data = {2, 3, 2, 4, 1};
     vector<int> classes = {0, 2, 4, 5};
@@ -27,10 +28,10 @@ class GlobalFactoredMaxentWeightsTest : public testing::Test {
     index = boost::make_shared<WordToClassIndex>(classes);
     boost::shared_ptr<ContextProcessor> processor =
         boost::make_shared<ContextProcessor>(
-            corpus, config.feature_context_size);
+            corpus, config->feature_context_size);
     boost::shared_ptr<FeatureContextGenerator> generator =
         boost::make_shared<FeatureContextGenerator>(
-            config.feature_context_size);
+            config->feature_context_size);
     boost::shared_ptr<NGramFilter> filter =
         boost::make_shared<NGramFilter>(corpus, index, processor, generator);
     mapper = boost::make_shared<FeatureContextMapper>(
@@ -44,7 +45,7 @@ class GlobalFactoredMaxentWeightsTest : public testing::Test {
       const vector<int>& indices) const {
     Real ret = 0;
     boost::shared_ptr<ContextProcessor> processor =
-        boost::make_shared<ContextProcessor>(corpus, config.ngram_order - 1);
+        boost::make_shared<ContextProcessor>(corpus, config->ngram_order - 1);
     for (int index: indices) {
       vector<int> context = processor->extract(index);
       ret -= weights.predict(corpus->at(index), context);
@@ -52,7 +53,7 @@ class GlobalFactoredMaxentWeightsTest : public testing::Test {
     return ret;
   }
 
-  ModelData config;
+  boost::shared_ptr<ModelData> config;
   Dict dict;
   boost::shared_ptr<Corpus> corpus;
   boost::shared_ptr<WordToClassIndex> index;
@@ -63,7 +64,7 @@ class GlobalFactoredMaxentWeightsTest : public testing::Test {
 };
 
 TEST_F(GlobalFactoredMaxentWeightsTest, TestCheckGradientUnconstrained) {
-  config.sparse_features = false;
+  config->sparse_features = false;
   metadata = boost::make_shared<FactoredMaxentMetadata>(
       config, dict, index, mapper, populator, matcher);
   GlobalFactoredMaxentWeights weights(config, metadata, corpus);
@@ -81,7 +82,7 @@ TEST_F(GlobalFactoredMaxentWeightsTest, TestCheckGradientUnconstrained) {
 }
 
 TEST_F(GlobalFactoredMaxentWeightsTest, TestCheckGradientSparse) {
-  config.sparse_features = true;
+  config->sparse_features = true;
   metadata = boost::make_shared<FactoredMaxentMetadata>(
       config, dict, index, mapper, populator, matcher);
   GlobalFactoredMaxentWeights weights(config, metadata, corpus);
@@ -99,8 +100,8 @@ TEST_F(GlobalFactoredMaxentWeightsTest, TestCheckGradientSparse) {
 }
 
 TEST_F(GlobalFactoredMaxentWeightsTest, TestCollisionsNoFilter) {
-  config.sparse_features = true;
-  config.hash_space = 100;
+  config->sparse_features = true;
+  config->hash_space = 100;
   metadata = boost::make_shared<FactoredMaxentMetadata>(
       config, dict, index, mapper, populator, matcher);
   GlobalFactoredMaxentWeights weights(config, metadata, corpus);
@@ -118,9 +119,9 @@ TEST_F(GlobalFactoredMaxentWeightsTest, TestCollisionsNoFilter) {
 }
 
 TEST_F(GlobalFactoredMaxentWeightsTest, TestCollisionExactFiltering) {
-  config.sparse_features = true;
-  config.hash_space = 100;
-  config.filter_contexts = true;
+  config->sparse_features = true;
+  config->hash_space = 100;
+  config->filter_contexts = true;
   metadata = boost::make_shared<FactoredMaxentMetadata>(
       config, dict, index, mapper, populator, matcher);
   GlobalFactoredMaxentWeights weights(config, metadata, corpus);
@@ -138,10 +139,10 @@ TEST_F(GlobalFactoredMaxentWeightsTest, TestCollisionExactFiltering) {
 }
 
 TEST_F(GlobalFactoredMaxentWeightsTest, TestCollisionApproximateFiltering) {
-  config.sparse_features = true;
-  config.hash_space = 100;
-  config.filter_contexts = true;
-  config.filter_error_rate = 0.1;
+  config->sparse_features = true;
+  config->hash_space = 100;
+  config->filter_contexts = true;
+  config->filter_error_rate = 0.1;
   populator = boost::make_shared<BloomFilterPopulator>(
       corpus, index, mapper, config);
   metadata = boost::make_shared<FactoredMaxentMetadata>(
@@ -174,7 +175,7 @@ TEST_F(GlobalFactoredMaxentWeightsTest, TestPredict) {
 }
 
 TEST_F(GlobalFactoredMaxentWeightsTest, TestSerialization) {
-  config.sparse_features = false;
+  config->sparse_features = false;
   metadata = boost::make_shared<FactoredMaxentMetadata>(
       config, dict, index, mapper, populator, matcher);
   GlobalFactoredMaxentWeights weights(config, metadata, corpus), weights_copy;

@@ -9,12 +9,12 @@ namespace oxlm {
 class MinibatchFactoredMaxentWeights : public FactoredWeights {
  public:
   MinibatchFactoredMaxentWeights(
-      const ModelData& config,
+      const boost::shared_ptr<ModelData>& config,
       const boost::shared_ptr<FactoredMaxentMetadata>& metadata,
       const vector<int>& minibatch_indices);
 
   MinibatchFactoredMaxentWeights(
-      const ModelData& config,
+      const boost::shared_ptr<ModelData>& config,
       const boost::shared_ptr<FactoredMaxentMetadata>& metadata,
       const vector<int>& minibatch_indices,
       const boost::shared_ptr<FactoredWeights>& base_gradient);

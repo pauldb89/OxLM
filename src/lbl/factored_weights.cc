@@ -12,7 +12,7 @@ FactoredWeights::FactoredWeights()
     : data(NULL), S(0, 0, 0), T(0, 0), FW(0, 0) {}
 
 FactoredWeights::FactoredWeights(
-    const ModelData& config,
+    const boost::shared_ptr<ModelData>& config,
     const boost::shared_ptr<FactoredMetadata>& metadata)
     : Weights(config, metadata), metadata(metadata),
       index(metadata->getIndex()), wordNormalizerCache(index->getNumClasses()),
@@ -22,7 +22,7 @@ FactoredWeights::FactoredWeights(
 }
 
 FactoredWeights::FactoredWeights(
-    const ModelData& config,
+    const boost::shared_ptr<ModelData>& config,
     const boost::shared_ptr<FactoredMetadata>& metadata,
     const boost::shared_ptr<Corpus>& training_corpus)
     : Weights(config, metadata, training_corpus), metadata(metadata),
@@ -41,7 +41,7 @@ FactoredWeights::FactoredWeights(
 }
 
 FactoredWeights::FactoredWeights(
-    const ModelData& config,
+    const boost::shared_ptr<ModelData>& config,
     const boost::shared_ptr<FactoredMetadata>& metadata,
     const vector<int>& indices)
     : Weights(config, metadata), metadata(metadata),
@@ -60,7 +60,7 @@ FactoredWeights::FactoredWeights(const FactoredWeights& other)
 
 void FactoredWeights::allocate() {
   int num_classes = index->getNumClasses();
-  int word_width = config.word_representation_size;
+  int word_width = config->word_representation_size;
 
   int S_size = num_classes * word_width;
   int T_size = num_classes;
@@ -73,7 +73,7 @@ void FactoredWeights::allocate() {
 
 void FactoredWeights::setModelParameters() {
   int num_classes = index->getNumClasses();
-  int word_width = config.word_representation_size;
+  int word_width = config->word_representation_size;
 
   int S_size = num_classes * word_width;
   int T_size = num_classes;
@@ -266,6 +266,13 @@ bool FactoredWeights::checkGradient(
   return true;
 }
 
+boost::shared_ptr<FactoredWeights> FactoredWeights::estimateGradient(
+    const boost::shared_ptr<Corpus>& corpus,
+    const vector<int>& indices,
+    Real& objective) const {
+  return getGradient(corpus, indices, objective);
+}
+
 void FactoredWeights::update(
     const boost::shared_ptr<FactoredWeights>& gradient) {
   Weights::update(gradient);
@@ -283,7 +290,7 @@ void FactoredWeights::updateAdaGrad(
     const boost::shared_ptr<FactoredWeights>& adagrad) {
   Weights::updateAdaGrad(global_gradient, adagrad);
   FW -= global_gradient->FW.binaryExpr(
-      adagrad->FW, CwiseAdagradUpdateOp<Real>(config.step_size));
+      adagrad->FW, CwiseAdagradUpdateOp<Real>(config->step_size));
 }
 
 Real FactoredWeights::regularizerUpdate(
@@ -291,9 +298,9 @@ Real FactoredWeights::regularizerUpdate(
     Real minibatch_factor) {
   Real ret = Weights::regularizerUpdate(global_gradient, minibatch_factor);
 
-  Real sigma = minibatch_factor * config.step_size * config.l2_lbl;
+  Real sigma = minibatch_factor * config->step_size * config->l2_lbl;
   FW -= FW * sigma;
-  ret += 0.5 * minibatch_factor * config.l2_lbl * FW.array().square().sum();
+  ret += 0.5 * minibatch_factor * config->l2_lbl * FW.array().square().sum();
 
   return ret;
 }

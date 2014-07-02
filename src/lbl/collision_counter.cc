@@ -21,22 +21,22 @@ CollisionCounter::CollisionCounter(
     const boost::shared_ptr<FeatureContextMapper>& mapper,
     const boost::shared_ptr<FeatureMatcher>& matcher,
     const boost::shared_ptr<BloomFilterPopulator>& populator,
-    const ModelData& config)
+    const boost::shared_ptr<ModelData>& config)
     : corpus(corpus), index(index), mapper(mapper), matcher(matcher),
       populator(populator), config(config),
       observedWordQueries(index->getNumClasses()) {
   int num_classes = index->getNumClasses();
   boost::shared_ptr<ContextProcessor> processor =
-      boost::make_shared<ContextProcessor>(corpus, config.ngram_order - 1);
-  FeatureContextGenerator generator(config.feature_context_size);
+      boost::make_shared<ContextProcessor>(corpus, config->ngram_order - 1);
+  FeatureContextGenerator generator(config->feature_context_size);
   boost::shared_ptr<FeatureContextHasher> class_hasher =
-      boost::make_shared<ClassContextHasher>(config.hash_space);
+      boost::make_shared<ClassContextHasher>(config->hash_space);
 
   GlobalFeatureIndexesPairPtr feature_indexes_pair;
   boost::shared_ptr<BloomFilter<NGram>> bloom_filter;
   boost::shared_ptr<FeatureFilter> class_filter;
-  if (config.filter_contexts) {
-    if (config.filter_error_rate > 0) {
+  if (config->filter_contexts) {
+    if (config->filter_error_rate > 0) {
       bloom_filter = populator->get();
       class_filter = boost::make_shared<FeatureApproximateFilter>(
           num_classes, class_hasher, bloom_filter);
@@ -54,9 +54,9 @@ CollisionCounter::CollisionCounter(
   vector<boost::shared_ptr<FeatureFilter>> word_filters(num_classes);
   for (int i = 0; i < num_classes; ++i) {
     word_hashers[i] = boost::make_shared<WordContextHasher>(
-        i, config.hash_space);
-    if (config.filter_contexts) {
-      if (config.filter_error_rate > 0) {
+        i, config->hash_space);
+    if (config->filter_contexts) {
+      if (config->filter_error_rate > 0) {
         word_filters[i] = boost::make_shared<FeatureApproximateFilter>(
             index->getClassSize(i), word_hashers[i], bloom_filter);
       } else {
@@ -81,14 +81,14 @@ CollisionCounter::CollisionCounter(
       int key = class_hasher->getKey(feature_context);
       for (int index: class_filter->getIndexes(feature_context)) {
         observedClassQueries.insert(NGram(index, feature_context.data));
-        observedKeys.insert((key + index) % config.hash_space);
+        observedKeys.insert((key + index) % config->hash_space);
       }
 
       key = word_hashers[class_id]->getKey(feature_context);
       for (int index: word_filters[class_id]->getIndexes(feature_context)) {
         observedWordQueries[class_id]
             .insert(NGram(index, class_id, feature_context.data));
-        observedKeys.insert((key + index) % config.hash_space);
+        observedKeys.insert((key + index) % config->hash_space);
       }
     }
   }

@@ -21,7 +21,7 @@
 namespace oxlm {
 
 MinibatchFactoredMaxentWeights::MinibatchFactoredMaxentWeights(
-    const ModelData& config,
+    const boost::shared_ptr<ModelData>& config,
     const boost::shared_ptr<FactoredMaxentMetadata>& metadata,
     const vector<int>& minibatch_indices)
     : FactoredWeights(config, metadata), metadata(metadata) {
@@ -29,7 +29,7 @@ MinibatchFactoredMaxentWeights::MinibatchFactoredMaxentWeights(
 }
 
 MinibatchFactoredMaxentWeights::MinibatchFactoredMaxentWeights(
-    const ModelData& config,
+    const boost::shared_ptr<ModelData>& config,
     const boost::shared_ptr<FactoredMaxentMetadata>& metadata,
     const vector<int>& minibatch_indices,
     const boost::shared_ptr<FactoredWeights>& base_weights)
@@ -45,17 +45,17 @@ void MinibatchFactoredMaxentWeights::initialize(
   boost::shared_ptr<BloomFilterPopulator> populator = metadata->getPopulator();
   boost::shared_ptr<FeatureMatcher> matcher = metadata->getMatcher();
 
-  if (config.hash_space) {
+  if (config->hash_space) {
     boost::shared_ptr<FeatureContextHasher> hasher =
-        boost::make_shared<ClassContextHasher>(config.hash_space);
+        boost::make_shared<ClassContextHasher>(config->hash_space);
     // It's fine to use the global feature indexes here because the stores are
     // not constructed based on these indices. At filtering time, we just want
     // to know which feature indexes match which contexts.
     GlobalFeatureIndexesPairPtr feature_indexes_pair;
     boost::shared_ptr<BloomFilter<NGram>> bloom_filter;
     boost::shared_ptr<FeatureFilter> filter;
-    if (config.filter_contexts) {
-      if (config.filter_error_rate > 0) {
+    if (config->filter_contexts) {
+      if (config->filter_error_rate > 0) {
         bloom_filter = populator->get();
         filter = boost::make_shared<FeatureApproximateFilter>(
             num_classes, hasher, bloom_filter);
@@ -69,15 +69,15 @@ void MinibatchFactoredMaxentWeights::initialize(
       filter = boost::make_shared<FeatureNoOpFilter>(num_classes);
     }
     U = boost::make_shared<CollisionMinibatchFeatureStore>(
-        num_classes, config.hash_space, config.feature_context_size,
+        num_classes, config->hash_space, config->feature_context_size,
         hasher, filter);
 
     for (int i = 0; i < num_classes; ++i) {
       int class_size = index->getClassSize(i);
       hasher = boost::make_shared<WordContextHasher>(
-          i, config.hash_space);
-      if (config.filter_contexts) {
-        if (config.filter_error_rate) {
+          i, config->hash_space);
+      if (config->filter_contexts) {
+        if (config->filter_error_rate) {
           filter = boost::make_shared<FeatureApproximateFilter>(
               class_size, hasher, bloom_filter);
         } else {
@@ -89,10 +89,10 @@ void MinibatchFactoredMaxentWeights::initialize(
         filter = boost::make_shared<FeatureNoOpFilter>(class_size);
       }
       V[i] = boost::make_shared<CollisionMinibatchFeatureStore>(
-          class_size, config.hash_space, config.feature_context_size,
+          class_size, config->hash_space, config->feature_context_size,
           hasher, filter);
     }
-  } else if (config.sparse_features) {
+  } else if (config->sparse_features) {
     auto feature_indexes_pair = matcher->getMinibatchFeatures(minibatch_indices);
     U = boost::make_shared<SparseMinibatchFeatureStore>(
         num_classes,

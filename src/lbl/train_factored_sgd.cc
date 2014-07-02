@@ -61,35 +61,35 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  ModelData config;
-  config.training_file = vm["input"].as<string>();
+  boost::shared_ptr<ModelData> config = boost::make_shared<ModelData>();
+  config->training_file = vm["input"].as<string>();
   if (vm.count("test-set")) {
-    config.test_file = vm["test-set"].as<string>();
+    config->test_file = vm["test-set"].as<string>();
   }
-  config.iterations = vm["iterations"].as<int>();
-  config.minibatch_size = vm["minibatch-size"].as<int>();
-  config.ngram_order = vm["order"].as<int>();
+  config->iterations = vm["iterations"].as<int>();
+  config->minibatch_size = vm["minibatch-size"].as<int>();
+  config->ngram_order = vm["order"].as<int>();
 
   if (vm.count("model-in")) {
-    config.model_input_file = vm["model-in"].as<string>();
+    config->model_input_file = vm["model-in"].as<string>();
   }
   if (vm.count("model-out")) {
-    config.model_output_file = vm["model-out"].as<string>();
+    config->model_output_file = vm["model-out"].as<string>();
     if (GIT_REVISION) {
-      config.model_output_file += "." + string(GIT_REVISION);
+      config->model_output_file += "." + string(GIT_REVISION);
     }
   }
 
-  config.l2_lbl = vm["lambda-lbl"].as<float>();
-  config.word_representation_size = vm["word-width"].as<int>();
-  config.threads = vm["threads"].as<int>();
-  config.step_size = vm["step-size"].as<float>();
-  config.randomise = vm.count("randomise");
-  config.diagonal_contexts = vm.count("diagonal-contexts");
+  config->l2_lbl = vm["lambda-lbl"].as<float>();
+  config->word_representation_size = vm["word-width"].as<int>();
+  config->threads = vm["threads"].as<int>();
+  config->step_size = vm["step-size"].as<float>();
+  config->randomise = vm.count("randomise");
+  config->diagonal_contexts = vm.count("diagonal-contexts");
 
-  config.classes = vm["classes"].as<int>();
+  config->classes = vm["classes"].as<int>();
   if (vm.count("class-file")) {
-    config.class_file = vm["class-file"].as<string>();
+    config->class_file = vm["class-file"].as<string>();
   }
 
   cout << "################################" << endl;
@@ -97,21 +97,21 @@ int main(int argc, char** argv) {
     cout << "# Git revision: " << GIT_REVISION << endl;
   }
   cout << "# Config Summary" << endl;
-  cout << "# order = " << config.ngram_order << endl;
-  cout << "# word_width = " << config.word_representation_size << endl;
-  cout << "# diagonal contexts = " << config.diagonal_contexts << endl;
-  if (config.model_input_file.size()) {
-    cout << "# model-in = " << config.model_input_file << endl;
+  cout << "# order = " << config->ngram_order << endl;
+  cout << "# word_width = " << config->word_representation_size << endl;
+  cout << "# diagonal contexts = " << config->diagonal_contexts << endl;
+  if (config->model_input_file.size()) {
+    cout << "# model-in = " << config->model_input_file << endl;
   }
-  if (config.model_output_file.size()) {
-    cout << "# model-out = " << config.model_output_file << endl;
+  if (config->model_output_file.size()) {
+    cout << "# model-out = " << config->model_output_file << endl;
   }
-  cout << "# input = " << config.training_file << endl;
-  cout << "# minibatch size = " << config.minibatch_size << endl;
-  cout << "# lambda = " << config.l2_lbl << endl;
-  cout << "# step size = " << config.step_size << endl;
-  cout << "# iterations = " << config.iterations << endl;
-  cout << "# threads = " << config.threads << endl;
+  cout << "# input = " << config->training_file << endl;
+  cout << "# minibatch size = " << config->minibatch_size << endl;
+  cout << "# lambda = " << config->l2_lbl << endl;
+  cout << "# step size = " << config->step_size << endl;
+  cout << "# iterations = " << config->iterations << endl;
+  cout << "# threads = " << config->threads << endl;
   cout << "################################" << endl;
 
   Model<FactoredWeights, FactoredWeights, FactoredMetadata> model(config);

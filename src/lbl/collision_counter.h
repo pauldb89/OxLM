@@ -20,12 +20,12 @@ class CollisionCounter {
       const boost::shared_ptr<FeatureContextMapper>& mapper,
       const boost::shared_ptr<FeatureMatcher>& matcher,
       const boost::shared_ptr<BloomFilterPopulator>& populator,
-      const ModelData& config);
+      const boost::shared_ptr<ModelData>& config);
 
   int count() const;
 
  private:
-  ModelData config;
+  boost::shared_ptr<ModelData> config;
   boost::shared_ptr<Corpus> corpus;
   boost::shared_ptr<WordToClassIndex> index;
   boost::shared_ptr<FeatureContextMapper> mapper;

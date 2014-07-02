@@ -19,7 +19,7 @@ class BloomFilterPopulator {
       const boost::shared_ptr<Corpus>& corpus,
       const boost::shared_ptr<WordToClassIndex>& index,
       const boost::shared_ptr<FeatureContextMapper>& mapper,
-      const ModelData& config);
+      const boost::shared_ptr<ModelData>& config);
 
   boost::shared_ptr<BloomFilter<NGram>> get() const;
 

@@ -38,7 +38,10 @@ int main(int argc, char** argv) {
     ("step-size", value<float>()->default_value(0.05),
         "SGD batch stepsize, it is normalised by the number of minibatches.")
     ("randomise", "visit the training tokens in random order")
-    ("diagonal-contexts", "Use diagonal context matrices (usually faster).");
+    ("diagonal-contexts", "Use diagonal context matrices (usually faster).")
+    ("noise-samples", value<int>()->default_value(0),
+        "Number of noise samples for noise contrastive estimation. "
+        "If zero, minibatch gradient descent is used instead.");
   options_description config_options, cmdline_options;
   config_options.add(generic);
   cmdline_options.add(generic).add(cmdline_specific);
@@ -56,52 +59,57 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  ModelData config;
-  config.training_file = vm["input"].as<string>();
+  boost::shared_ptr<ModelData> config = boost::make_shared<ModelData>();
+  config->training_file = vm["input"].as<string>();
   if (vm.count("test-set")) {
-    config.test_file = vm["test-set"].as<string>();
+    config->test_file = vm["test-set"].as<string>();
   }
-  config.iterations = vm["iterations"].as<int>();
-  config.minibatch_size = vm["minibatch-size"].as<int>();
-  config.ngram_order = vm["order"].as<int>();
+  config->iterations = vm["iterations"].as<int>();
+  config->minibatch_size = vm["minibatch-size"].as<int>();
+  config->ngram_order = vm["order"].as<int>();
 
   if (vm.count("model-in")) {
-    config.model_input_file = vm["model-in"].as<string>();
+    config->model_input_file = vm["model-in"].as<string>();
   }
   if (vm.count("model-out")) {
-    config.model_output_file = vm["model-out"].as<string>();
+    config->model_output_file = vm["model-out"].as<string>();
     if (GIT_REVISION) {
-      config.model_output_file += "." + string(GIT_REVISION);
+      config->model_output_file += "." + string(GIT_REVISION);
     }
   }
 
-  config.l2_lbl = vm["lambda-lbl"].as<float>();
-  config.word_representation_size = vm["word-width"].as<int>();
-  config.threads = vm["threads"].as<int>();
-  config.step_size = vm["step-size"].as<float>();
-  config.randomise = vm.count("randomise");
-  config.diagonal_contexts = vm.count("diagonal-contexts");
+  config->l2_lbl = vm["lambda-lbl"].as<float>();
+  config->word_representation_size = vm["word-width"].as<int>();
+  config->threads = vm["threads"].as<int>();
+  config->step_size = vm["step-size"].as<float>();
+  config->randomise = vm.count("randomise");
+  config->diagonal_contexts = vm.count("diagonal-contexts");
+
+  config->noise_samples = vm["noise-samples"].as<int>();
 
   cout << "################################" << endl;
   if (strlen(GIT_REVISION) > 0) {
     cout << "# Git revision: " << GIT_REVISION << endl;
   }
   cout << "# Config Summary" << endl;
-  cout << "# order = " << config.ngram_order << endl;
-  cout << "# word_width = " << config.word_representation_size << endl;
-  cout << "# diagonal contexts = " << config.diagonal_contexts << endl;
-  if (config.model_input_file.size()) {
-    cout << "# model-in = " << config.model_input_file << endl;
+  cout << "# order = " << config->ngram_order << endl;
+  cout << "# word_width = " << config->word_representation_size << endl;
+  cout << "# diagonal contexts = " << config->diagonal_contexts << endl;
+  if (config->model_input_file.size()) {
+    cout << "# model-in = " << config->model_input_file << endl;
   }
-  if (config.model_output_file.size()) {
-    cout << "# model-out = " << config.model_output_file << endl;
+  if (config->model_output_file.size()) {
+    cout << "# model-out = " << config->model_output_file << endl;
   }
-  cout << "# input = " << config.training_file << endl;
-  cout << "# minibatch size = " << config.minibatch_size << endl;
-  cout << "# lambda = " << config.l2_lbl << endl;
-  cout << "# step size = " << config.step_size << endl;
-  cout << "# iterations = " << config.iterations << endl;
-  cout << "# threads = " << config.threads << endl;
+  cout << "# input = " << config->training_file << endl;
+  cout << "# minibatch size = " << config->minibatch_size << endl;
+  cout << "# lambda = " << config->l2_lbl << endl;
+  cout << "# step size = " << config->step_size << endl;
+  cout << "# iterations = " << config->iterations << endl;
+  cout << "# threads = " << config->threads << endl;
+  cout << "# randomise = " << config->randomise << endl;
+  cout << "# diagonal contexts = " << config->diagonal_contexts << endl;
+  cout << "# noise samples = " << config->noise_samples << endl;
   cout << "################################" << endl;
 
   Model<Weights, Weights, Metadata> model(config);

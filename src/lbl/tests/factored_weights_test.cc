@@ -15,9 +15,10 @@ namespace oxlm {
 class FactoredWeightsTest : public testing::Test {
  protected:
   void SetUp() {
-    config.word_representation_size = 3;
-    config.vocab_size = 5;
-    config.ngram_order = 3;
+    config = boost::make_shared<ModelData>();
+    config->word_representation_size = 3;
+    config->vocab_size = 5;
+    config->ngram_order = 3;
 
     vector<int> data = {2, 3, 4, 1};
     vector<int> classes = {0, 2, 4, 5};
@@ -30,7 +31,7 @@ class FactoredWeightsTest : public testing::Test {
       const FactoredWeights& weights, const vector<int>& indices) const {
     Real ret = 0;
     boost::shared_ptr<ContextProcessor> processor =
-        boost::make_shared<ContextProcessor>(corpus, config.ngram_order - 1);
+        boost::make_shared<ContextProcessor>(corpus, config->ngram_order - 1);
     for (int index: indices) {
       vector<int> context = processor->extract(index);
       ret -= weights.predict(corpus->at(index), context);
@@ -38,7 +39,7 @@ class FactoredWeightsTest : public testing::Test {
     return ret;
   }
 
-  ModelData config;
+  boost::shared_ptr<ModelData> config;
   Dict dict;
   boost::shared_ptr<WordToClassIndex> index;
   boost::shared_ptr<FactoredMetadata> metadata;
@@ -59,7 +60,7 @@ TEST_F(FactoredWeightsTest, TestCheckGradient) {
 }
 
 TEST_F(FactoredWeightsTest, TestCheckGradientDiagonal) {
-  config.diagonal_contexts = true;
+  config->diagonal_contexts = true;
   FactoredWeights weights(config, metadata, corpus);
   vector<int> indices = {0, 1, 2, 3};
   Real objective;

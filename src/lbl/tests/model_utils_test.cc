@@ -42,7 +42,7 @@ TEST_F(ModelUtilsTest, TestLoadClassesFromFile) {
   Dict dict;
   VectorReal class_bias;
   loadClassesFromFile(
-      config.class_file, config.training_file, classes, dict, class_bias);
+      config->class_file, config->training_file, classes, dict, class_bias);
   EXPECT_EQ(37, classes.size());
   EXPECT_EQ(0, classes[0]);
   EXPECT_EQ(2, classes[1]);
@@ -75,7 +75,7 @@ TEST_F(ModelUtilsTest, TestFrequnecyBinning) {
   vector<int> classes;
   Dict dict;
   VectorReal class_bias;
-  frequencyBinning(config.training_file, 30, classes, dict, class_bias);
+  frequencyBinning(config->training_file, 30, classes, dict, class_bias);
 
   EXPECT_EQ(31, classes.size());
   EXPECT_EQ(0, classes[0]);
