@@ -62,7 +62,6 @@ struct ModelData {
   bool        randomise;
   bool        reclass;
   bool        diagonal_contexts;
-  int         label_sample_size;
   bool        uniform;
   bool        pseudo_likelihood_cne;
   bool        mixture;

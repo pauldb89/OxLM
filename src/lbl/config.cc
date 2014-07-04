@@ -9,13 +9,12 @@ ModelData::ModelData()
       feature_context_size(0), l2_lbl(0), l2_maxent(0),
       word_representation_size(0), threads(1), step_size(0), classes(0),
       randomise(false), reclass(false), diagonal_contexts(false),
-      label_sample_size(0), uniform(false), pseudo_likelihood_cne(false),
-      mixture(false), lbfgs(false), lbfgs_vectors(0), test_tokens(0),
-      gnorm_threshold(0), eta(0), multinomial_step_size(0),
-      sparse_features(false), random_weights(false), hash_space(0),
-      count_collisions(false), filter_contexts(false),
-      filter_error_rate(0), max_ngrams(0), min_ngram_freq(0), vocab_size(0),
-      noise_samples(0) {}
+      uniform(false), pseudo_likelihood_cne(false), mixture(false),
+      lbfgs(false), lbfgs_vectors(0), test_tokens(0), gnorm_threshold(0),
+      eta(0), multinomial_step_size(0), sparse_features(false),
+      random_weights(false), hash_space(0), count_collisions(false),
+      filter_contexts(false), filter_error_rate(0), max_ngrams(0),
+      min_ngram_freq(0), vocab_size(0), noise_samples(0) {}
 
 bool ModelData::operator==(const ModelData& other) const {
   return iterations == other.iterations

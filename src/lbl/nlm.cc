@@ -34,7 +34,7 @@ NLM::NLM(const NLM& model)
 
 NLM::NLM(const ModelData& config, const Dict& labels, bool diagonal)
     : config(config), R(0,0,0), Q(0,0,0), B(0,0), W(0,0), 
-      m_labels(labels), m_diagonal(diagonal) {
+      m_labels(labels), m_diagonal(config.diagonal_contexts) {
   init(config, config.random_weights);
 }
 
@@ -88,9 +88,15 @@ void NLM::initWeights(const ModelData& config, bool random_weights) {
       }
     }
     for (int k = 0; k < context_width; ++k) {
-      for (int i = 0; i < C[k].rows(); ++i) {
-        for (int j = 0; j < C[k].cols(); ++j) {
-          C[k](i, j) = gaussian(gen);
+      if (config.diagonal_contexts) {
+        for (int i = 0; i < word_width; ++i) {
+          C[k](i) = gaussian(gen);
+        }
+      } else {
+        for (int i = 0; i < C[k].rows(); ++i) {
+          for (int j = 0; j < C[k].cols(); ++j) {
+            C[k](i, j) = gaussian(gen);
+          }
         }
       }
     }

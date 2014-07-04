@@ -123,7 +123,11 @@ class Weights {
       const MatrixReal& weighted_representations,
       const boost::shared_ptr<Weights>& gradient) const;
 
-   VectorReal getPredictionVector(const vector<int>& context) const;
+  vector<vector<int>> getNoiseWords(
+      const boost::shared_ptr<Corpus>& corpus,
+      const vector<int>& indices) const;
+
+  VectorReal getPredictionVector(const vector<int>& context) const;
 
  private:
   void allocate();

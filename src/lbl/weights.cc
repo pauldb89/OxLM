@@ -317,11 +317,77 @@ Real Weights::getObjective(
   return objective;
 }
 
+vector<vector<int>> Weights::getNoiseWords(
+    const boost::shared_ptr<Corpus>& corpus,
+    const vector<int>& indices) const {
+  vector<vector<int>> noise_words(indices.size());
+  for (size_t i = 0; i < indices.size(); ++i) {
+    for (int j = 0; j < config->noise_samples; ++j) {
+      noise_words[i].push_back(corpus->at(rand() % corpus->size()));
+    }
+  }
+
+  return noise_words;
+}
+
 boost::shared_ptr<Weights> Weights::estimateGradient(
     const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& indices,
     Real& objective) const {
-  return getGradient(corpus, indices, objective);
+  int noise_samples = config->noise_samples;
+  int word_width = config->word_representation_size;
+
+  vector<vector<int>> contexts;
+  vector<MatrixReal> context_vectors;
+  getContextVectors(corpus, indices, contexts, context_vectors);
+
+  MatrixReal prediction_vectors =
+      getPredictionVectors(indices, context_vectors);
+
+  VectorReal unigram = metadata->getUnigram();
+  vector<vector<int>> noise_words = getNoiseWords(corpus, indices);
+
+  objective = 0;
+  boost::shared_ptr<Weights> gradient =
+      boost::make_shared<Weights>(config, metadata);
+  MatrixReal weighted_representations =
+      MatrixReal::Zero(word_width, indices.size());
+  for (size_t i = 0; i < indices.size(); ++i) {
+    int word_id = corpus->at(indices[i]);
+    Real log_pos_prob = R.col(word_id).dot(prediction_vectors.col(i)) + B(word_id);
+    Real pos_prob = exp(log_pos_prob);
+    assert(pos_prob <= numeric_limits<Real>::max());
+
+    Real pos_weight = (noise_samples * unigram(word_id)) / (pos_prob + noise_samples * unigram(word_id));
+    weighted_representations.col(i) -= pos_weight * R.col(word_id);
+
+    objective -= log(1 - pos_weight);
+
+    gradient->R.col(word_id) -= pos_weight * prediction_vectors.col(i);
+    gradient->B(word_id) -= pos_weight;
+
+    for (int j = 0; j < noise_samples; ++j) {
+      int noise_word_id = noise_words[i][j];
+      Real log_neg_prob = R.col(noise_word_id).dot(prediction_vectors.col(i)) + B(noise_word_id);
+      Real neg_prob = exp(log_neg_prob);
+      assert(neg_prob <= numeric_limits<Real>::max());
+
+      Real neg_weight = neg_prob / (neg_prob + noise_samples * unigram(noise_word_id));
+      weighted_representations.col(i) += neg_weight * R.col(noise_word_id);
+
+      objective -= log(1 - neg_weight);
+
+      gradient->R.col(noise_word_id) += neg_weight * prediction_vectors.col(i);
+      gradient->B(noise_word_id) += neg_weight;
+    }
+  }
+
+  weighted_representations.array() *= sigmoidDerivative(prediction_vectors);
+
+  getContextGradient(
+      indices, contexts, context_vectors, weighted_representations, gradient);
+
+  return gradient;
 }
 
 void Weights::update(const boost::shared_ptr<Weights>& gradient) {
