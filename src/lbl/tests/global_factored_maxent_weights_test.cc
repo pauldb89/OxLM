@@ -21,6 +21,7 @@ class GlobalFactoredMaxentWeightsTest : public testing::Test {
     config->vocab_size = 5;
     config->ngram_order = 3;
     config->feature_context_size = 2;
+    config->sigmoid = true;
 
     vector<int> data = {2, 3, 2, 4, 1};
     vector<int> classes = {0, 2, 4, 5};

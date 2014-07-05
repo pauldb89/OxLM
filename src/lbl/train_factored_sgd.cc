@@ -37,8 +37,12 @@ int main(int argc, char** argv) {
         "number of worker threads.")
     ("step-size", value<float>()->default_value(0.05),
         "SGD batch stepsize, it is normalised by the number of minibatches.")
-    ("randomise", "visit the training tokens in random order")
-    ("diagonal-contexts", "Use diagonal context matrices (usually faster).")
+    ("randomise", value<bool>()->default_value(true),
+        "Visit the training tokens in random order.")
+    ("diagonal-contexts", value<bool>()->default_value(true),
+        "Use diagonal context matrices (usually faster).")
+    ("sigmoid", value<bool>()->default_value(true),
+        "Apply a sigmoid non-linearity to the prediction (hidden) layer.")
     ("classes", value<int>()->default_value(100),
         "Number of classes for factored output using frequency binning.")
     ("class-file", value<string>(),
@@ -84,8 +88,9 @@ int main(int argc, char** argv) {
   config->word_representation_size = vm["word-width"].as<int>();
   config->threads = vm["threads"].as<int>();
   config->step_size = vm["step-size"].as<float>();
-  config->randomise = vm.count("randomise");
-  config->diagonal_contexts = vm.count("diagonal-contexts");
+  config->randomise = vm["randomise"].as<bool>();
+  config->diagonal_contexts = vm["diagonal-contexts"].as<bool>();
+  config->sigmoid = vm["sigmoid"].as<bool>();
 
   config->classes = vm["classes"].as<int>();
   if (vm.count("class-file")) {
@@ -100,6 +105,7 @@ int main(int argc, char** argv) {
   cout << "# order = " << config->ngram_order << endl;
   cout << "# word_width = " << config->word_representation_size << endl;
   cout << "# diagonal contexts = " << config->diagonal_contexts << endl;
+  cout << "# sigmoid = " << config->sigmoid << endl;
   if (config->model_input_file.size()) {
     cout << "# model-in = " << config->model_input_file << endl;
   }

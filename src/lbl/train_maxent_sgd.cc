@@ -49,8 +49,12 @@ int main(int argc, char **argv) {
     ("class-file", value<string>(),
         "file containing word to class mappings in the format"
         "<class> <word> <frequence>.")
-    ("randomise", "visit the training tokens in random order")
-    ("diagonal-contexts", "Use diagonal context matrices (usually faster).")
+    ("randomise", value<bool>()->default_value(true),
+        "Visit the training tokens in random order.")
+    ("diagonal-contexts", value<bool>()->default_value(true),
+        "Use diagonal context matrices (usually faster).")
+    ("sigmoid", value<bool>()->default_value(true),
+        "Apply a sigmoid non-linearity to the prediction (hidden) layer.")
     ("max-ngrams", value<int>()->default_value(0),
         "Define maxent features only for the most frequent max-ngrams ngrams.")
     ("min-ngram-freq", value<int>()->default_value(1),
@@ -114,10 +118,10 @@ int main(int argc, char **argv) {
   config->word_representation_size = vm["word-width"].as<int>();
   config->threads = vm["threads"].as<int>();
   config->step_size = vm["step-size"].as<float>();
+  config->randomise = vm["randomise"].as<bool>();
+  config->diagonal_contexts = vm["diagonal-contexts"].as<bool>();
   config->classes = vm["classes"].as<int>();
-  config->randomise = vm.count("randomise");
-  config->reclass = vm.count("reclass");
-  config->diagonal_contexts = vm.count("diagonal-contexts");
+  config->sigmoid = vm["sigmoid"].as<bool>();
 
   config->max_ngrams = vm["max-ngrams"].as<int>();
   config->min_ngram_freq = vm["min-ngram-freq"].as<int>();
@@ -137,6 +141,7 @@ int main(int argc, char **argv) {
   cout << "# feature context size = " << config->feature_context_size << endl;
   cout << "# word_width = " << config->word_representation_size << endl;
   cout << "# diagonal contexts = " << config->diagonal_contexts << endl;
+  cout << "# sigmiod = " << config->sigmoid << endl;
   if (config->model_input_file.size()) {
     cout << "# model-in = " << config->model_input_file << endl;
   }

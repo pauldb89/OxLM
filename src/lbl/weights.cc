@@ -165,8 +165,10 @@ MatrixReal Weights::getPredictionVectors(
     prediction_vectors += getContextProduct(i, context_vectors[i]);
   }
 
-  for (size_t i = 0; i < indices.size(); ++i) {
-    prediction_vectors.col(i) = sigmoid(prediction_vectors.col(i));
+  if (config->sigmoid) {
+    for (size_t i = 0; i < indices.size(); ++i) {
+      prediction_vectors.col(i) = sigmoid(prediction_vectors.col(i));
+    }
   }
 
   return prediction_vectors;
@@ -206,8 +208,9 @@ MatrixReal Weights::getWeightedRepresentations(
     weighted_representations.col(i) -= R.col(corpus->at(indices[i]));
   }
 
-  // Sigmoid derivative.
-  weighted_representations.array() *= sigmoidDerivative(prediction_vectors);
+  if (config->sigmoid) {
+    weighted_representations.array() *= sigmoidDerivative(prediction_vectors);
+  }
 
   return weighted_representations;
 }
@@ -382,7 +385,9 @@ boost::shared_ptr<Weights> Weights::estimateGradient(
     }
   }
 
-  weighted_representations.array() *= sigmoidDerivative(prediction_vectors);
+  if (config->sigmoid) {
+    weighted_representations.array() *= sigmoidDerivative(prediction_vectors);
+  }
 
   getContextGradient(
       indices, contexts, context_vectors, weighted_representations, gradient);
@@ -425,7 +430,7 @@ VectorReal Weights::getPredictionVector(const vector<int>& context) const {
     }
   }
 
-  return sigmoid(prediction_vector);
+  return config->sigmoid ? sigmoid(prediction_vector) : prediction_vector;
 }
 
 Real Weights::predict(int word_id, const vector<int>& context) const {

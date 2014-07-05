@@ -28,6 +28,7 @@ Model<GlobalWeights, MinibatchWeights, Metadata>::Model(
     const boost::shared_ptr<ModelData>& config)
     : config(config) {
   metadata = boost::make_shared<Metadata>(config, dict);
+  srand(1);
 }
 
 template<class GlobalWeights, class MinibatchWeights, class Metadata>

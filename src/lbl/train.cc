@@ -29,6 +29,7 @@
 #include "corpus/corpus.h"
 #include "lbl/log_add.h"
 #include "lbl/nlm.h"
+#include "lbl/operators.h"
 #include "utils/conditional_omp.h"
 
 static const char *REVISION = "$Rev: 247 $";
@@ -326,8 +327,7 @@ void learn(const ModelData& config) {
         #pragma omp master
         {
           adaGrad.array() += global_gradient.array().square();
-          for (int w=0; w<model.num_weights(); ++w)
-            if (adaGrad(w)) model.W(w) -= (step_size*global_gradient(w) / sqrt(adaGrad(w)));
+          model.W -= global_gradient.binaryExpr(adaGrad, CwiseAdagradUpdateOp<Real>(config.step_size));
 
         //        model.W -= (step_size*global_gradient);
         //        model.R -= (step_size*g_R);
@@ -351,7 +351,6 @@ void learn(const ModelData& config) {
       #pragma omp master
       cerr << endl;
 
-      Real iteration_time = GetDuration(iteration_start, GetTime());
       if (test_corpus.size()) {
         Real local_pp=0;
         local_pp = perplexity(model, test_corpus, 1);
@@ -362,6 +361,7 @@ void learn(const ModelData& config) {
         #pragma omp barrier
       }
 
+      Real iteration_time = GetDuration(iteration_start, GetTime());
       #pragma omp master
       {
         pp = exp(-pp/test_corpus.size());
@@ -445,6 +445,7 @@ Real sgd_gradient(NLM& model,
 //  clock_t cache_start = clock();
   int instances=training_instances.size();
   vector<MatrixReal> context_vectors(context_width, MatrixReal::Zero(instances, word_width));
+  vector<vector<int>> contexts(instances);
   for (int instance=0; instance < instances; ++instance) {
     const TrainingInstance& t = training_instances.at(instance);
     int context_start = t.data_index - context_width;
@@ -454,7 +455,12 @@ Real sgd_gradient(NLM& model,
       int j=context_start+i;
       sentence_start = (sentence_start || j<0 || training_corpus.at(j) == end_id);
       int v_i = (sentence_start ? start_id : training_corpus.at(j));
-      context_vectors.at(i).row(instance) = model.Q.row(v_i);
+      context_vectors.at(context_width - i - 1).row(instance) = model.Q.row(v_i);
+      contexts[instance].push_back(v_i);
+    }
+
+    for (size_t i = 0; i < contexts[instance].size(); ++i) {
+      context_vectors[i].row(instance) = model.Q.row(contexts[instance][i]);
     }
   }
 
@@ -560,17 +566,8 @@ Real sgd_gradient(NLM& model,
     context_gradients = model.context_product(i, weightedRepresentations, true); // weightedRepresentations*C(i)^T
 
     for (int instance=0; instance < instances; ++instance) {
-      const TrainingInstance& t = training_instances.at(instance);
-      int j=t.data_index-context_width+i;
-
-      bool sentence_start = (j<0);
-      for (int k=j; !sentence_start && k < t.data_index; k++)
-        if (training_corpus.at(k) == end_id)
-          sentence_start=true;
-      int v_i = (sentence_start ? start_id : training_corpus.at(j));
-
       //model.Q.row(v_i) -= step_size * context_gradients.row(instance);
-      g_Q.row(v_i) += context_gradients.row(instance);
+      g_Q.row(contexts[instance][i]) += context_gradients.row(instance);
     }
     //model.C.at(i) -= step_size * context_vectors.at(i).transpose() * weightedRepresentations;
     model.context_gradient_update(g_C.at(i), context_vectors.at(i), weightedRepresentations);
@@ -614,11 +611,16 @@ Real perplexity(const NLM& model, const Corpus& test_corpus, int stride) {
 
       int context_start = s - context_width;
       bool sentence_start = (s==0);
+      vector<int> context;
       for (int i=context_width-1; i>=0; --i) {
         int j=context_start+i;
         sentence_start = (sentence_start || j<0 || test_corpus.at(j) == end_id);
         int v_i = (sentence_start ? start_id : test_corpus.at(j));
-        prediction_vector += q_context_products[i].row(v_i).transpose();
+        context.push_back(v_i);
+      }
+
+      for (size_t i = 0; i < context.size(); ++i) {
+        prediction_vector += q_context_products[i].row(context[i]).transpose();
       }
 
       ArrayReal score_vector = model.R * prediction_vector + model.B;

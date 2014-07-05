@@ -194,8 +194,9 @@ MatrixReal FactoredWeights::getWeightedRepresentations(
     weighted_representations.col(i) -= S.col(class_id) + R.col(word_id);
   }
 
-  // Sigmoid derivative.
-  weighted_representations.array() *= sigmoidDerivative(prediction_vectors);
+  if (config->sigmoid) {
+    weighted_representations.array() *= sigmoidDerivative(prediction_vectors);
+  }
 
   return weighted_representations;
 }
