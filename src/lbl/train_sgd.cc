@@ -99,8 +99,6 @@ int main(int argc, char** argv) {
   cout << "# Config Summary" << endl;
   cout << "# order = " << config->ngram_order << endl;
   cout << "# word_width = " << config->word_representation_size << endl;
-  cout << "# diagonal contexts = " << config->diagonal_contexts << endl;
-  cout << "# sigmoid = " << config->sigmoid << endl;
   if (config->model_input_file.size()) {
     cout << "# model-in = " << config->model_input_file << endl;
   }
@@ -115,6 +113,7 @@ int main(int argc, char** argv) {
   cout << "# threads = " << config->threads << endl;
   cout << "# randomise = " << config->randomise << endl;
   cout << "# diagonal contexts = " << config->diagonal_contexts << endl;
+  cout << "# sigmoid = " << config->sigmoid << endl;
   cout << "# noise samples = " << config->noise_samples << endl;
   cout << "################################" << endl;
 

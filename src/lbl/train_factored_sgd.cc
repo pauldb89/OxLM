@@ -43,6 +43,9 @@ int main(int argc, char** argv) {
         "Use diagonal context matrices (usually faster).")
     ("sigmoid", value<bool>()->default_value(true),
         "Apply a sigmoid non-linearity to the prediction (hidden) layer.")
+    ("noise-samples", value<int>()->default_value(0),
+        "Number of noise samples for noise contrastive estimation. "
+        "If zero, minibatch gradient descent is used instead.")
     ("classes", value<int>()->default_value(100),
         "Number of classes for factored output using frequency binning.")
     ("class-file", value<string>(),
@@ -92,6 +95,8 @@ int main(int argc, char** argv) {
   config->diagonal_contexts = vm["diagonal-contexts"].as<bool>();
   config->sigmoid = vm["sigmoid"].as<bool>();
 
+  config->noise_samples = vm["noise-samples"].as<int>();
+
   config->classes = vm["classes"].as<int>();
   if (vm.count("class-file")) {
     config->class_file = vm["class-file"].as<string>();
@@ -104,8 +109,6 @@ int main(int argc, char** argv) {
   cout << "# Config Summary" << endl;
   cout << "# order = " << config->ngram_order << endl;
   cout << "# word_width = " << config->word_representation_size << endl;
-  cout << "# diagonal contexts = " << config->diagonal_contexts << endl;
-  cout << "# sigmoid = " << config->sigmoid << endl;
   if (config->model_input_file.size()) {
     cout << "# model-in = " << config->model_input_file << endl;
   }
@@ -118,6 +121,10 @@ int main(int argc, char** argv) {
   cout << "# step size = " << config->step_size << endl;
   cout << "# iterations = " << config->iterations << endl;
   cout << "# threads = " << config->threads << endl;
+  cout << "# randomise = " << config->randomise << endl;
+  cout << "# diagonal contexts = " << config->diagonal_contexts << endl;
+  cout << "# sigmoid = " << config->sigmoid << endl;
+  cout << "# noise samples = " << config->noise_samples << endl;
   cout << "################################" << endl;
 
   Model<FactoredWeights, FactoredWeights, FactoredMetadata> model(config);
