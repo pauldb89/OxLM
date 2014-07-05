@@ -21,7 +21,7 @@ TEST_F(FactoredSGDTest, TestTrainMaxentSGD) {
   boost::shared_ptr<Corpus> test_corpus = readCorpus(config->test_file, dict);
   Real objective = 0, perplexity = numeric_limits<Real>::infinity();
   model.evaluate(test_corpus, GetTime(), 0, objective, perplexity);
-  EXPECT_NEAR(55.079029, perplexity, EPS);
+  EXPECT_NEAR(55.0796585, perplexity, EPS);
 }
 
 TEST_F(FactoredSGDTest, TestTrainMaxentSGDSparseFeatures) {
@@ -36,7 +36,7 @@ TEST_F(FactoredSGDTest, TestTrainMaxentSGDSparseFeatures) {
   boost::shared_ptr<Corpus> test_corpus = readCorpus(config->test_file, dict);
   Real objective = 0, perplexity = numeric_limits<Real>::infinity();
   model.evaluate(test_corpus, GetTime(), 0, objective, perplexity);
-  EXPECT_NEAR(56.51299285, perplexity, EPS);
+  EXPECT_NEAR(56.51520156, perplexity, EPS);
 }
 
 TEST_F(FactoredSGDTest, TestTrainMaxentSGDCollisions) {
@@ -51,7 +51,7 @@ TEST_F(FactoredSGDTest, TestTrainMaxentSGDCollisions) {
   boost::shared_ptr<Corpus> test_corpus = readCorpus(config->test_file, dict);
   Real objective = 0, perplexity = numeric_limits<Real>::infinity();
   model.evaluate(test_corpus, GetTime(), 0, objective, perplexity);
-  EXPECT_NEAR(54.080169677, perplexity, EPS);
+  EXPECT_NEAR(54.080219268, perplexity, EPS);
 }
 
 TEST_F(FactoredSGDTest, TestTrainMaxentSGDExactFiltering) {
@@ -67,7 +67,7 @@ TEST_F(FactoredSGDTest, TestTrainMaxentSGDExactFiltering) {
   boost::shared_ptr<Corpus> test_corpus = readCorpus(config->test_file, dict);
   Real objective = 0, perplexity = numeric_limits<Real>::infinity();
   model.evaluate(test_corpus, GetTime(), 0, objective, perplexity);
-  EXPECT_NEAR(56.5222892761, perplexity, EPS);
+  EXPECT_NEAR(56.52196502, perplexity, EPS);
 }
 
 TEST_F(FactoredSGDTest, TestTrainMaxentSGDApproximateFiltering) {
@@ -84,7 +84,7 @@ TEST_F(FactoredSGDTest, TestTrainMaxentSGDApproximateFiltering) {
   boost::shared_ptr<Corpus> test_corpus = readCorpus(config->test_file, dict);
   Real objective = 0, perplexity = numeric_limits<Real>::infinity();
   model.evaluate(test_corpus, GetTime(), 0, objective, perplexity);
-  EXPECT_NEAR(56.4230575561, perplexity, EPS);
+  EXPECT_NEAR(56.422843933, perplexity, EPS);
 }
 
 } // namespace oxlm

@@ -194,11 +194,17 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::evaluate(
 
     vector<int> indices(test_corpus->size());
     iota(indices.begin(), indices.end(), 0);
-    vector<int> minibatch = scatterMinibatch(0, indices.size(), indices);
+    size_t start = 0;
+    while (start < test_corpus->size()) {
+      size_t end = min(start + config->minibatch_size, test_corpus->size());
+      vector<int> minibatch = scatterMinibatch(start, end, indices);
 
-    Real local_objective = weights->getObjective(test_corpus, minibatch);
-    #pragma omp critical
-    objective += local_objective;
+      Real local_objective = weights->getObjective(test_corpus, minibatch);
+      #pragma omp critical
+      objective += local_objective;
+
+      start = end;
+    }
 
     // Wait for all the threads to compute the perplexity for their slice of
     // test data.

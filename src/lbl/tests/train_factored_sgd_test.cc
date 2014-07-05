@@ -16,7 +16,7 @@ TEST_F(FactoredSGDTest, TestTrainFactoredSGD) {
   boost::shared_ptr<Corpus> test_corpus = readCorpus(config->test_file, dict);
   Real objective = 0, perplexity = numeric_limits<Real>::infinity();
   model.evaluate(test_corpus, GetTime(), 0, objective, perplexity);
-  EXPECT_NEAR(61.64321517, perplexity, EPS);
+  EXPECT_NEAR(61.642803192, perplexity, EPS);
 }
 
 } // namespace oxlm

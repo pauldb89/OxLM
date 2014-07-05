@@ -16,7 +16,7 @@ TEST_F(SGDTest, TestBasic) {
   boost::shared_ptr<Corpus> test_corpus = readCorpus(config->test_file, dict, true, false);
   Real objective = 0, perplexity = numeric_limits<Real>::infinity();
   model.evaluate(test_corpus, GetTime(), 0, objective, perplexity);
-  EXPECT_NEAR(72.24227905273, perplexity, EPS);
+  EXPECT_NEAR(72.24452209, perplexity, EPS);
 }
 
 } // namespace oxlm

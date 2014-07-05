@@ -271,7 +271,25 @@ boost::shared_ptr<FactoredWeights> FactoredWeights::estimateGradient(
     const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& indices,
     Real& objective) const {
-  return getGradient(corpus, indices, objective);
+  int noise_samples = config->noise_samples;
+  int word_width = config->word_representation_size;
+
+  vector<vector<int>> contexts;
+  vector<MatrixReal> context_vectors;
+
+  MatrixReal prediction_vectors =
+      getPredictionVectors(indices, context_vectors);
+
+  objective = 0;
+  boost::shared_ptr<FactoredWeights> gradient;
+  MatrixReal weighted_representations =
+      MatrixReal::Zero(word_width, indices.size());
+  for (size_t i = 0; i < indices.size(); ++i) {
+    int word_id = corpus->at(i);
+    int class_id = index->getClass(word_id);
+  }
+
+  return gradient;
 }
 
 void FactoredWeights::update(
