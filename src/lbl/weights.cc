@@ -333,28 +333,20 @@ vector<vector<int>> Weights::getNoiseWords(
   return noise_words;
 }
 
-boost::shared_ptr<Weights> Weights::estimateGradient(
+void Weights::estimateProjectionGradient(
     const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& indices,
+    const MatrixReal& prediction_vectors,
+    const boost::shared_ptr<Weights>& gradient,
+    MatrixReal& weighted_representations,
     Real& objective) const {
   int noise_samples = config->noise_samples;
   int word_width = config->word_representation_size;
-
-  vector<vector<int>> contexts;
-  vector<MatrixReal> context_vectors;
-  getContextVectors(corpus, indices, contexts, context_vectors);
-
-  MatrixReal prediction_vectors =
-      getPredictionVectors(indices, context_vectors);
-
   VectorReal unigram = metadata->getUnigram();
   vector<vector<int>> noise_words = getNoiseWords(corpus, indices);
 
   objective = 0;
-  boost::shared_ptr<Weights> gradient =
-      boost::make_shared<Weights>(config, metadata);
-  MatrixReal weighted_representations =
-      MatrixReal::Zero(word_width, indices.size());
+  weighted_representations = MatrixReal::Zero(word_width, indices.size());
   for (size_t i = 0; i < indices.size(); ++i) {
     int word_id = corpus->at(indices[i]);
     Real log_pos_prob = R.col(word_id).dot(prediction_vectors.col(i)) + B(word_id);
@@ -384,6 +376,25 @@ boost::shared_ptr<Weights> Weights::estimateGradient(
       gradient->B(noise_word_id) += neg_weight;
     }
   }
+}
+
+boost::shared_ptr<Weights> Weights::estimateGradient(
+    const boost::shared_ptr<Corpus>& corpus,
+    const vector<int>& indices,
+    Real& objective) const {
+  vector<vector<int>> contexts;
+  vector<MatrixReal> context_vectors;
+  getContextVectors(corpus, indices, contexts, context_vectors);
+
+  MatrixReal prediction_vectors =
+      getPredictionVectors(indices, context_vectors);
+
+  boost::shared_ptr<Weights> gradient =
+      boost::make_shared<Weights>(config, metadata);
+  MatrixReal weighted_representations;
+  estimateProjectionGradient(
+      corpus, indices, prediction_vectors, gradient,
+      weighted_representations, objective);
 
   if (config->sigmoid) {
     weighted_representations.array() *= sigmoidDerivative(prediction_vectors);

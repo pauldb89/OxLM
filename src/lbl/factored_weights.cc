@@ -267,27 +267,118 @@ bool FactoredWeights::checkGradient(
   return true;
 }
 
+vector<vector<int>> FactoredWeights::getNoiseWords(
+    const boost::shared_ptr<Corpus>& corpus,
+    const vector<int>& indices) const {
+  random_device rd;
+  mt19937 gen(rd());
+  VectorReal unigram = metadata->getUnigram();
+  vector<vector<int>> noise_words(indices.size());
+  for (size_t i = 0; i < indices.size(); ++i) {
+    int word_id = corpus->at(indices[i]);
+    int class_id = index->getClass(word_id);
+    int class_start = index->getClassMarker(class_id);
+    int class_size = index->getClassSize(class_id);
+
+    discrete_distribution<int> discrete(
+        unigram.data() + class_start,
+        unigram.data() + class_start + class_size);
+    for (int j = 0; j < config->noise_samples; ++j) {
+      noise_words[i].push_back(class_start + discrete(gen));
+    }
+  }
+
+  return noise_words;
+}
+
+vector<vector<int>> FactoredWeights::getNoiseClasses(
+    const boost::shared_ptr<Corpus>& corpus,
+    const vector<int>& indices) const {
+  random_device rd;
+  mt19937 gen(rd());
+  VectorReal class_unigram = metadata->getClassBias().array().exp();
+  discrete_distribution<int> discrete(
+      class_unigram.data(), class_unigram.data() + class_unigram.size());
+  vector<vector<int>> noise_classes(indices.size());
+  for (size_t i = 0; i < indices.size(); ++i) {
+    for (int j = 0; j < config->noise_samples; ++j) {
+      noise_classes[i].push_back(discrete(gen));
+    }
+  }
+
+  return noise_classes;
+}
+
+void FactoredWeights::estimateProjectionGradient(
+    const boost::shared_ptr<Corpus>& corpus,
+    const vector<int>& indices,
+    const MatrixReal& prediction_vectors,
+    const boost::shared_ptr<FactoredWeights>& gradient,
+    MatrixReal& weighted_representations,
+    Real& objective) const {
+  Weights::estimateProjectionGradient(
+      corpus, indices, prediction_vectors, gradient,
+      weighted_representations, objective);
+
+  int noise_samples = config->noise_samples;
+  VectorReal class_unigram = metadata->getClassBias().array().exp();
+  vector<vector<int>> noise_classes = getNoiseClasses(corpus, indices);
+  for (size_t i = 0; i < indices.size(); ++i) {
+    int word_id = corpus->at(indices[i]);
+    int class_id = index->getClass(word_id);
+    Real log_pos_prob = S.col(class_id).dot(prediction_vectors.col(i)) + T(class_id);
+    Real pos_prob = exp(log_pos_prob);
+    assert(pos_prob <= numeric_limits<Real>::max());
+
+    Real pos_weight = (noise_samples * class_unigram(class_id)) / (pos_prob + noise_samples * class_unigram(class_id));
+    weighted_representations.col(i) -= pos_weight * S.col(class_id);
+
+    objective -= log(1 - pos_weight);
+
+    gradient->S.col(class_id) -= pos_weight * prediction_vectors.col(i);
+    gradient->T(class_id) -= pos_weight;
+
+    for (int j = 0; j < noise_samples; ++j) {
+      int noise_class_id = noise_classes[i][j];
+      Real log_neg_prob = S.col(noise_class_id).dot(prediction_vectors.col(i)) + T(noise_class_id);
+      Real neg_prob = exp(log_neg_prob);
+      assert(neg_prob <= numeric_limits<Real>::max());
+
+      Real neg_weight = neg_prob / (neg_prob + noise_samples * class_unigram(noise_class_id));
+      weighted_representations.col(i) += neg_weight * S.col(noise_class_id);
+
+      objective -= log(1 - neg_weight);
+
+      gradient->S.col(noise_class_id) += neg_weight * prediction_vectors.col(i);
+      gradient->T(noise_class_id) += neg_weight;
+    }
+  }
+}
+
 boost::shared_ptr<FactoredWeights> FactoredWeights::estimateGradient(
     const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& indices,
     Real& objective) const {
-  int noise_samples = config->noise_samples;
-  int word_width = config->word_representation_size;
-
   vector<vector<int>> contexts;
   vector<MatrixReal> context_vectors;
+  getContextVectors(corpus, indices, contexts, context_vectors);
 
   MatrixReal prediction_vectors =
       getPredictionVectors(indices, context_vectors);
 
-  objective = 0;
-  boost::shared_ptr<FactoredWeights> gradient;
-  MatrixReal weighted_representations =
-      MatrixReal::Zero(word_width, indices.size());
-  for (size_t i = 0; i < indices.size(); ++i) {
-    int word_id = corpus->at(i);
-    int class_id = index->getClass(word_id);
+  boost::shared_ptr<FactoredWeights> gradient =
+      boost::make_shared<FactoredWeights>(config, metadata);
+  MatrixReal weighted_representations;
+  estimateProjectionGradient(
+      corpus, indices, prediction_vectors, gradient,
+      weighted_representations, objective);
+
+  if (config->sigmoid) {
+    weighted_representations.array() *= sigmoidDerivative(prediction_vectors);
   }
+
+  getContextGradient(
+      indices, contexts, context_vectors, weighted_representations, gradient);
 
   return gradient;
 }

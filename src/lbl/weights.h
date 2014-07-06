@@ -123,9 +123,17 @@ class Weights {
       const MatrixReal& weighted_representations,
       const boost::shared_ptr<Weights>& gradient) const;
 
-  vector<vector<int>> getNoiseWords(
+  virtual vector<vector<int>> getNoiseWords(
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices) const;
+
+  void estimateProjectionGradient(
+      const boost::shared_ptr<Corpus>& corpus,
+      const vector<int>& indices,
+      const MatrixReal& prediction_vectors,
+      const boost::shared_ptr<Weights>& gradient,
+      MatrixReal& weighted_representations,
+      Real& objective) const;
 
   VectorReal getPredictionVector(const vector<int>& context) const;
 

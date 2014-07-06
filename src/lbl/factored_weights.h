@@ -107,6 +107,22 @@ class FactoredWeights : public Weights {
       MatrixReal& class_probs,
       vector<VectorReal>& word_probs) const;
 
+  virtual vector<vector<int>> getNoiseWords(
+      const boost::shared_ptr<Corpus>& corpus,
+      const vector<int>& indices) const;
+
+  vector<vector<int>> getNoiseClasses(
+      const boost::shared_ptr<Corpus>& corpus,
+      const vector<int>& indices) const;
+
+  void estimateProjectionGradient(
+      const boost::shared_ptr<Corpus>& corpus,
+      const vector<int>& indices,
+      const MatrixReal& prediction_vectors,
+      const boost::shared_ptr<FactoredWeights>& gradient,
+      MatrixReal& weighted_representations,
+      Real& objective) const;
+
  private:
   void allocate();
 
