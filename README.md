@@ -23,9 +23,16 @@ mkdir build
 cd build
 cmake ../src
 make
-make all_tests
-
 ```
 
 All binaries will automatically be placed in the bin/ directory within the main
 project root, all libraries in the lib/ directory.
+
+To run the unit tests coming with the LBL language modelling code, use the following commands:
+
+```
+#!
+
+cd build
+make all_tests
+```
