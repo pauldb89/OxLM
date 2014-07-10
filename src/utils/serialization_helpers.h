@@ -109,7 +109,7 @@ inline void load(
     Key key;
     Value value;
     ar >> key >> value;
-    map.insert(make_pair(key, value));
+    map.insert(std::make_pair(key, value));
   }
 }
 
