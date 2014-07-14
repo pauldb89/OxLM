@@ -56,12 +56,13 @@ int main(int argc, char** argv) {
     ifstream config(vm["config"].as<string>().c_str());
     store(parse_config_file(config, cmdline_options), vm);
   }
-  notify(vm);
 
   if (vm.count("help")) {
     cout << cmdline_options << "\n";
     return 1;
   }
+
+  notify(vm);
 
   boost::shared_ptr<ModelData> config = boost::make_shared<ModelData>();
   config->training_file = vm["input"].as<string>();

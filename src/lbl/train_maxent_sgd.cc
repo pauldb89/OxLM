@@ -89,7 +89,6 @@ int main(int argc, char **argv) {
 
   notify(vm);
 
-
   boost::shared_ptr<ModelData> config = boost::make_shared<ModelData>();
   config->training_file = vm["input"].as<string>();
   if (vm.count("test-set")) {
