@@ -5,11 +5,10 @@
 namespace oxlm {
 
 CdecLBLMapper::CdecLBLMapper(const Dict& dict) : dict(dict) {
+  kUNKNOWN = this->dict.Convert("<unk>");
   for (int i = 0; i < dict.size(); ++i) {
     add(i, TD::Convert(dict.Convert(i)));
   }
-
-  kUNKNOWN = this->dict.Convert("<unk>");
 }
 
 void CdecLBLMapper::add(int lbl_id, int cdec_id) {

@@ -269,14 +269,14 @@ template<class GlobalWeights, class MinibatchWeights, class Metadata>
 void Model<GlobalWeights, MinibatchWeights, Metadata>::load(const string& filename) {
   if (filename.size() > 0) {
     auto start_time = GetTime();
-    cout << "Loading model from " << filename << "..." << endl;
+    cerr << "Loading model from " << filename << "..." << endl;
     ifstream fin(filename);
     boost::archive::binary_iarchive iar(fin);
     iar >> config;
     iar >> dict;
     iar >> weights;
     iar >> metadata;
-    cout << "Reading model took " << GetDuration(start_time, GetTime())
+    cerr << "Reading model took " << GetDuration(start_time, GetTime())
          << " seconds..." << endl;
   }
 }
