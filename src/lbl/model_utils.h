@@ -30,4 +30,6 @@ boost::shared_ptr<Corpus> readCorpus(
     const string& file, Dict& dict,
     bool immutable_dict = true, bool convert_unknowns = false);
 
+Real perplexity(Real log_likelihood, size_t corpus_size);
+
 } // namespace oxlm

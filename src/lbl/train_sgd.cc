@@ -73,9 +73,6 @@ int main(int argc, char** argv) {
   config->minibatch_size = vm["minibatch-size"].as<int>();
   config->ngram_order = vm["order"].as<int>();
 
-  if (vm.count("model-in")) {
-    config->model_input_file = vm["model-in"].as<string>();
-  }
   if (vm.count("model-out")) {
     config->model_output_file = vm["model-out"].as<string>();
     if (GIT_REVISION) {
@@ -100,9 +97,6 @@ int main(int argc, char** argv) {
   cout << "# Config Summary" << endl;
   cout << "# order = " << config->ngram_order << endl;
   cout << "# word_width = " << config->word_representation_size << endl;
-  if (config->model_input_file.size()) {
-    cout << "# model-in = " << config->model_input_file << endl;
-  }
   if (config->model_output_file.size()) {
     cout << "# model-out = " << config->model_output_file << endl;
   }

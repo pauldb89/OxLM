@@ -176,4 +176,8 @@ boost::shared_ptr<Corpus> readCorpus(
   return corpus;
 }
 
+Real perplexity(Real log_likelihood, size_t corpus_size) {
+  return exp(log_likelihood / corpus_size);
+}
+
 } // namespace oxlm

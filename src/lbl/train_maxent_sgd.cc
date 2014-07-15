@@ -99,9 +99,6 @@ int main(int argc, char **argv) {
   config->ngram_order = vm["order"].as<int>();
   config->feature_context_size = vm["feature-context-size"].as<int>();
 
-  if (vm.count("model-in")) {
-    config->model_input_file = vm["model-in"].as<string>();
-  }
   if (vm.count("model-out")) {
     config->model_output_file = vm["model-out"].as<string>();
     if (GIT_REVISION) {
@@ -141,9 +138,6 @@ int main(int argc, char **argv) {
   cout << "# word_width = " << config->word_representation_size << endl;
   cout << "# diagonal contexts = " << config->diagonal_contexts << endl;
   cout << "# sigmiod = " << config->sigmoid << endl;
-  if (config->model_input_file.size()) {
-    cout << "# model-in = " << config->model_input_file << endl;
-  }
   if (config->model_output_file.size()) {
     cout << "# model-out = " << config->model_output_file << endl;
   }
@@ -163,8 +157,15 @@ int main(int argc, char **argv) {
   cout << "# filter error rate = " << config->filter_error_rate << endl;
   cout << "################################" << endl;
 
-  Model<GlobalFactoredMaxentWeights, MinibatchFactoredMaxentWeights, FactoredMaxentMetadata> model(config);
-  model.learn();
+  if (config->model_input_file.size() == 0) {
+    FactoredMaxentLM model(config);
+    model.learn();
+  } else {
+    FactoredMaxentLM model;
+    model.load(config->model_input_file);
+    assert(config == model.getConfig());
+    model.learn();
+  }
 
   return 0;
 }

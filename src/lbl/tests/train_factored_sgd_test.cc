@@ -14,9 +14,9 @@ TEST_F(FactoredSGDTest, TestTrainFactoredSGD) {
   config->test_file = "test.txt";
   Dict dict = model.getDict();
   boost::shared_ptr<Corpus> test_corpus = readCorpus(config->test_file, dict);
-  Real objective = 0, perplexity = numeric_limits<Real>::infinity();
-  model.evaluate(test_corpus, GetTime(), 0, objective, perplexity);
-  EXPECT_NEAR(61.642803192, perplexity, EPS);
+  Real log_likelihood = 0;
+  model.evaluate(test_corpus, log_likelihood);
+  EXPECT_NEAR(61.6428031, perplexity(log_likelihood, test_corpus->size()), EPS);
 }
 
 } // namespace oxlm

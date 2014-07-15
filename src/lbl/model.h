@@ -44,8 +44,7 @@ class Model {
       Real minibatch_factor);
 
   void evaluate(
-      const boost::shared_ptr<Corpus>& corpus, const Time& iteration_start,
-      int minibatch_counter, Real& objective, Real& best_perplexity) const;
+      const boost::shared_ptr<Corpus>& corpus, Real& accumulator) const;
 
   Real predict(int word_id, const vector<int>& context) const;
 
@@ -59,6 +58,10 @@ class Model {
       const Model<GlobalWeights, MinibatchWeights, Metadata>& other) const;
 
  private:
+  void evaluate(
+      const boost::shared_ptr<Corpus>& corpus, const Time& iteration_start,
+      int minibatch_counter, Real& objective, Real& best_perplexity) const;
+
   boost::shared_ptr<ModelData> config;
   Dict dict;
   boost::shared_ptr<Metadata> metadata;

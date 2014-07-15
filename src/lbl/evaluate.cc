@@ -1,8 +1,9 @@
+#include <iostream>
+
 #include <boost/program_options.hpp>
 
-#include "corpus/corpus.h"
-#include "lbl/context_processor.h"
 #include "lbl/model.h"
+#include "lbl/model_utils.h"
 #include "lbl/utils.h"
 
 using namespace boost::program_options;
@@ -10,30 +11,18 @@ using namespace oxlm;
 using namespace std;
 
 template<class Model>
-void evaluate(const string& model_file, const string& data_file) {
+void evaluate(const string& model_file, const string& test_file, int num_threads) {
   Model model;
   model.load(model_file);
-
-  boost::shared_ptr<ModelData> config = model.getConfig();
   Dict dict = model.getDict();
+  boost::shared_ptr<Corpus> test_corpus = readCorpus(test_file, dict);
 
-  int eos = dict.Convert("</s>");
-  boost::shared_ptr<Corpus> test_corpus =
-      readCorpus(data_file, dict, true, true);
+  Real accumulator = 0;
+  #pragma omp parallel num_threads(num_threads)
+  model.evaluate(test_corpus, accumulator);
 
-  double total = 0;
-  ContextProcessor processor(test_corpus, config->ngram_order - 1);
-  for (size_t i = 0; i < test_corpus->size(); ++i) {
-    int word_id = test_corpus->at(i);
-    vector<int> context = processor.extract(i);
-    double log_prob = model.predict(word_id, context);
-    total += log_prob;
-    cout << "(" << dict.Convert(word_id) << " " << log_prob << ") ";
-    if (word_id == eos) {
-      cout << "Total: " << total << endl;
-      total = 0;
-    }
-  }
+  cout << "Test set perplexity: "
+       << perplexity(accumulator, test_corpus->size()) << endl;
 }
 
 int main(int argc, char** argv) {
@@ -42,7 +31,9 @@ int main(int argc, char** argv) {
       ("help,h", "Print help message.")
       ("model,m", value<string>()->required(), "File containing the model")
       ("type,t", value<int>()->required(), "Model type")
-      ("data,d", value<string>()->required(), "File containing the test corpus");
+      ("data,d", value<string>()->required(), "File containing the test set.")
+      ("threads", value<int>()->required()->default_value(1),
+          "Number of threads for evaluation.");
 
   variables_map vm;
   store(parse_command_line(argc, argv, desc), vm);
@@ -55,18 +46,19 @@ int main(int argc, char** argv) {
   notify(vm);
 
   string model_file = vm["model"].as<string>();
-  string data_file = vm["data"].as<string>();
+  string test_file = vm["data"].as<string>();
+  int num_threads = vm["threads"].as<int>();
   ModelType model_type = static_cast<ModelType>(vm["type"].as<int>());
 
   switch (model_type) {
     case NLM:
-      evaluate<LM>(model_file, data_file);
+      evaluate<LM>(model_file, test_file, num_threads);
       return 0;
     case FACTORED_NLM:
-      evaluate<FactoredLM>(model_file, data_file);
+      evaluate<FactoredLM>(model_file, test_file, num_threads);
       return 0;
     case FACTORED_MAXENT_NLM:
-      evaluate<FactoredMaxentLM>(model_file, data_file);
+      evaluate<FactoredMaxentLM>(model_file, test_file, num_threads);
       return 0;
     default:
       cout << "Unknown model type" << endl;

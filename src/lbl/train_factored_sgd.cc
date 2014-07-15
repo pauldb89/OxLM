@@ -27,6 +27,8 @@ int main(int argc, char** argv) {
         "number of sentences per minibatch")
     ("order,n", value<int>()->default_value(4),
         "ngram order")
+    ("model-in", value<string>(),
+        "Load initial model from this file")
     ("model-out,o", value<string>(),
         "base filename of model output files")
     ("lambda-lbl,r", value<float>()->default_value(7.0),
@@ -81,6 +83,7 @@ int main(int argc, char** argv) {
   if (vm.count("model-in")) {
     config->model_input_file = vm["model-in"].as<string>();
   }
+
   if (vm.count("model-out")) {
     config->model_output_file = vm["model-out"].as<string>();
     if (GIT_REVISION) {
@@ -110,9 +113,6 @@ int main(int argc, char** argv) {
   cout << "# Config Summary" << endl;
   cout << "# order = " << config->ngram_order << endl;
   cout << "# word_width = " << config->word_representation_size << endl;
-  if (config->model_input_file.size()) {
-    cout << "# model-in = " << config->model_input_file << endl;
-  }
   if (config->model_output_file.size()) {
     cout << "# model-out = " << config->model_output_file << endl;
   }
@@ -128,8 +128,15 @@ int main(int argc, char** argv) {
   cout << "# noise samples = " << config->noise_samples << endl;
   cout << "################################" << endl;
 
-  Model<FactoredWeights, FactoredWeights, FactoredMetadata> model(config);
-  model.learn();
+  if (config->model_input_file.size() == 0) {
+    FactoredLM model(config);
+    model.learn();
+  } else {
+    FactoredLM model;
+    model.load(config->model_input_file);
+    assert(config == model.getConfig());
+    model.learn();
+  }
 
   return 0;
 }

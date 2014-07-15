@@ -14,14 +14,14 @@ TEST_F(FactoredSGDTest, TestTrainMaxentSGD) {
   config->l2_maxent = 2;
   config->feature_context_size = 3;
 
-  Model<GlobalFactoredMaxentWeights, MinibatchFactoredMaxentWeights, FactoredMaxentMetadata> model(config);
+  FactoredMaxentLM model(config);
   model.learn();
   config->test_file = "test.txt";
   Dict dict = model.getDict();
   boost::shared_ptr<Corpus> test_corpus = readCorpus(config->test_file, dict);
-  Real objective = 0, perplexity = numeric_limits<Real>::infinity();
-  model.evaluate(test_corpus, GetTime(), 0, objective, perplexity);
-  EXPECT_NEAR(55.0796585, perplexity, EPS);
+  Real log_likelihood = 0;
+  model.evaluate(test_corpus, log_likelihood);
+  EXPECT_NEAR(55.0796585, perplexity(log_likelihood, test_corpus->size()), EPS);
 }
 
 TEST_F(FactoredSGDTest, TestTrainMaxentSGDSparseFeatures) {
@@ -29,14 +29,14 @@ TEST_F(FactoredSGDTest, TestTrainMaxentSGDSparseFeatures) {
   config->feature_context_size = 3;
   config->sparse_features = true;
 
-  Model<GlobalFactoredMaxentWeights, MinibatchFactoredMaxentWeights, FactoredMaxentMetadata> model(config);
+  FactoredMaxentLM model(config);
   model.learn();
   config->test_file = "test.txt";
   Dict dict = model.getDict();
   boost::shared_ptr<Corpus> test_corpus = readCorpus(config->test_file, dict);
-  Real objective = 0, perplexity = numeric_limits<Real>::infinity();
-  model.evaluate(test_corpus, GetTime(), 0, objective, perplexity);
-  EXPECT_NEAR(56.51520156, perplexity, EPS);
+  Real log_likelihood = 0;
+  model.evaluate(test_corpus, log_likelihood);
+  EXPECT_NEAR(56.5152015, perplexity(log_likelihood, test_corpus->size()), EPS);
 }
 
 TEST_F(FactoredSGDTest, TestTrainMaxentSGDCollisions) {
@@ -44,14 +44,14 @@ TEST_F(FactoredSGDTest, TestTrainMaxentSGDCollisions) {
   config->feature_context_size = 3;
   config->hash_space = 1000000;
 
-  Model<GlobalFactoredMaxentWeights, MinibatchFactoredMaxentWeights, FactoredMaxentMetadata> model(config);
+  FactoredMaxentLM model(config);
   model.learn();
   config->test_file = "test.txt";
   Dict dict = model.getDict();
   boost::shared_ptr<Corpus> test_corpus = readCorpus(config->test_file, dict);
-  Real objective = 0, perplexity = numeric_limits<Real>::infinity();
-  model.evaluate(test_corpus, GetTime(), 0, objective, perplexity);
-  EXPECT_NEAR(54.080219268, perplexity, EPS);
+  Real log_likelihood = 0;
+  model.evaluate(test_corpus, log_likelihood);
+  EXPECT_NEAR(54.0802192, perplexity(log_likelihood, test_corpus->size()), EPS);
 }
 
 TEST_F(FactoredSGDTest, TestTrainMaxentSGDExactFiltering) {
@@ -60,14 +60,14 @@ TEST_F(FactoredSGDTest, TestTrainMaxentSGDExactFiltering) {
   config->hash_space = 1000000;
   config->filter_contexts = true;
 
-  Model<GlobalFactoredMaxentWeights, MinibatchFactoredMaxentWeights, FactoredMaxentMetadata> model(config);
+  FactoredMaxentLM model(config);
   model.learn();
   config->test_file = "test.txt";
   Dict dict = model.getDict();
   boost::shared_ptr<Corpus> test_corpus = readCorpus(config->test_file, dict);
-  Real objective = 0, perplexity = numeric_limits<Real>::infinity();
-  model.evaluate(test_corpus, GetTime(), 0, objective, perplexity);
-  EXPECT_NEAR(56.52196502, perplexity, EPS);
+  Real log_likelihood = 0;
+  model.evaluate(test_corpus, log_likelihood);
+  EXPECT_NEAR(56.5219650, perplexity(log_likelihood, test_corpus->size()), EPS);
 }
 
 TEST_F(FactoredSGDTest, TestTrainMaxentSGDApproximateFiltering) {
@@ -82,9 +82,9 @@ TEST_F(FactoredSGDTest, TestTrainMaxentSGDApproximateFiltering) {
   config->test_file = "test.txt";
   Dict dict = model.getDict();
   boost::shared_ptr<Corpus> test_corpus = readCorpus(config->test_file, dict);
-  Real objective = 0, perplexity = numeric_limits<Real>::infinity();
-  model.evaluate(test_corpus, GetTime(), 0, objective, perplexity);
-  EXPECT_NEAR(56.422843933, perplexity, EPS);
+  Real log_likelihood = 0;
+  model.evaluate(test_corpus, log_likelihood);
+  EXPECT_NEAR(56.4228439, perplexity(log_likelihood, test_corpus->size()), EPS);
 }
 
 } // namespace oxlm
