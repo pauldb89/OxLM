@@ -54,6 +54,8 @@ class UnconstrainedFeatureStore :
 
   bool operator==(const UnconstrainedFeatureStore& store) const;
 
+  bool operator==(const boost::shared_ptr<GlobalFeatureStore>& other) const;
+
   virtual vector<pair<int, int>> getFeatureIndexes() const;
 
   virtual void updateFeature(const pair<int, int>& index, Real value);

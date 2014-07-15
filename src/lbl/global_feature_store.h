@@ -29,6 +29,8 @@ class GlobalFeatureStore : virtual public FeatureStore {
 
   virtual ~GlobalFeatureStore();
 
+  virtual bool operator==(const boost::shared_ptr<GlobalFeatureStore>& other) const = 0;
+
  private:
   friend class boost::serialization::access;
 

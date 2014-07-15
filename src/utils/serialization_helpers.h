@@ -59,7 +59,7 @@ inline void save(
   ar << actual_size;
   for (typename Eigen::SparseVector<Scalar>::InnerIterator it(v); it; ++it) {
     int index = it.index();
-    int value = it.value();
+    Scalar value = it.value();
     ar << index << value;
   }
 }
@@ -73,7 +73,8 @@ inline void load(
   int actual_size;
   ar >> actual_size;
   for (int i = 0; i < actual_size; ++i) {
-    int index, value;
+    int index;
+    Scalar value;
     ar >> index >> value;
     v.coeffRef(index) = value;
   }

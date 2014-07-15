@@ -96,6 +96,11 @@ bool CollisionGlobalFeatureStore::operator==(
       && *space == *other.space;
 }
 
+bool CollisionGlobalFeatureStore::operator==(
+    const boost::shared_ptr<GlobalFeatureStore>& other) const {
+  return operator==(*cast(other));
+}
+
 vector<pair<int, int>> CollisionGlobalFeatureStore::getFeatureIndexes() const {
   vector<pair<int, int>> feature_indexes;
 

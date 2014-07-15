@@ -45,8 +45,8 @@ TEST(SerializationHelpersTest, TestEigenMatrixDynamic) {
 
 TEST(SerializationHelpersTest, TestEigenSparseVector) {
   Eigen::SparseVector<float> a(10), b;
-  a.coeffRef(3) = 5;
-  a.coeffRef(8) = 2;
+  a.coeffRef(3) = 5.3;
+  a.coeffRef(8) = 2.5;
 
   stringstream stream(ios_base::binary | ios_base::out | ios_base::in);
   ar::binary_oarchive oar(stream, ar::no_header);

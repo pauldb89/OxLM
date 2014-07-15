@@ -116,6 +116,11 @@ bool UnconstrainedFeatureStore::operator==(
   return true;
 }
 
+bool UnconstrainedFeatureStore::operator==(
+    const boost::shared_ptr<GlobalFeatureStore>& other) const {
+  return operator==(*cast(other));
+}
+
 vector<pair<int, int>> UnconstrainedFeatureStore::getFeatureIndexes() const {
   vector<pair<int, int>> feature_indexes;
   for (const auto& entry: featureWeights) {

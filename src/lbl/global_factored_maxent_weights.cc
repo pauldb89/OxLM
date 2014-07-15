@@ -333,8 +333,19 @@ Real GlobalFactoredMaxentWeights::predict(
 
 bool GlobalFactoredMaxentWeights::operator==(
     const GlobalFactoredMaxentWeights& other) const {
+  if (V.size() != other.V.size()) {
+    return false;
+  }
+
+  for (size_t i = 0; i < V.size(); ++i) {
+    if (!(V[i]->operator==(other.V[i]))) {
+      return false;
+    }
+  }
+
   return FactoredWeights::operator==(other)
-      && *metadata == *other.metadata;
+      && *metadata == *other.metadata
+      && U->operator==(other.U);
 }
 
 } // namespace oxlm

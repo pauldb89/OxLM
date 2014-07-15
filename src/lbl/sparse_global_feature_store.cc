@@ -122,6 +122,11 @@ bool SparseGlobalFeatureStore::operator==(
   return true;
 }
 
+bool SparseGlobalFeatureStore::operator==(
+    const boost::shared_ptr<GlobalFeatureStore>& other) const {
+  return operator==(*cast(other));
+}
+
 vector<pair<int, int>> SparseGlobalFeatureStore::getFeatureIndexes() const {
   vector<pair<int, int>> feature_indexes;
   for (size_t i = 0; i < featureWeights.size(); ++i) {

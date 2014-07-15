@@ -44,6 +44,8 @@ class CollisionGlobalFeatureStore : public GlobalFeatureStore {
 
   bool operator==(const CollisionGlobalFeatureStore& other) const;
 
+  bool operator==(const boost::shared_ptr<GlobalFeatureStore>& other) const;
+
   virtual vector<pair<int, int>> getFeatureIndexes() const;
 
   virtual void updateFeature(const pair<int, int>& index, Real value);

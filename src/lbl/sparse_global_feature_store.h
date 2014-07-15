@@ -54,6 +54,8 @@ class SparseGlobalFeatureStore : public GlobalFeatureStore {
 
   bool operator==(const SparseGlobalFeatureStore& store) const;
 
+  bool operator==(const boost::shared_ptr<GlobalFeatureStore>& other) const;
+
   virtual vector<pair<int, int>> getFeatureIndexes() const;
 
   void updateFeature(const pair<int, int>& index, Real value);
