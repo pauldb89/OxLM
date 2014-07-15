@@ -31,6 +31,7 @@ class Weights {
   Weights(
       const boost::shared_ptr<ModelData>& config,
       const boost::shared_ptr<Metadata>& metadata,
+      const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& minibatch_indices);
 
   Weights(const Weights& other);

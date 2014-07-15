@@ -134,7 +134,9 @@ int main(int argc, char** argv) {
   } else {
     FactoredLM model;
     model.load(config->model_input_file);
-    assert(config == model.getConfig());
+    boost::shared_ptr<ModelData> model_config = model.getConfig();
+    model_config->model_input_file = config->model_input_file;
+    assert(*config == *model_config);
     model.learn();
   }
 

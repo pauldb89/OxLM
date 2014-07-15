@@ -28,8 +28,8 @@ int main(int argc, char **argv) {
         "number of sentences per minibatch")
     ("order,n", value<int>()->default_value(5),
         "ngram order")
-    ("model-in,m", value<string>(),
-        "initial model")
+    ("model-in", value<string>(),
+        "Load initial model from this file")
     ("model-out,o", value<string>(),
         "base filename of model output files")
     ("lambda-lbl,r", value<float>()->default_value(2.0),
@@ -99,6 +99,10 @@ int main(int argc, char **argv) {
   config->ngram_order = vm["order"].as<int>();
   config->feature_context_size = vm["feature-context-size"].as<int>();
 
+  if (vm.count("model-in")) {
+    config->model_input_file = vm["model-in"].as<string>();
+  }
+
   if (vm.count("model-out")) {
     config->model_output_file = vm["model-out"].as<string>();
     if (GIT_REVISION) {
@@ -163,7 +167,9 @@ int main(int argc, char **argv) {
   } else {
     FactoredMaxentLM model;
     model.load(config->model_input_file);
-    assert(config == model.getConfig());
+    boost::shared_ptr<ModelData> model_config = model.getConfig();
+    model_config->model_input_file = config->model_input_file;
+    assert(*config == *model_config);
     model.learn();
   }
 

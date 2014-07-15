@@ -24,6 +24,7 @@ class FactoredWeights : public Weights {
   FactoredWeights(
       const boost::shared_ptr<ModelData>& config,
       const boost::shared_ptr<FactoredMetadata>& metadata,
+      const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices);
 
   FactoredWeights(const FactoredWeights& other);

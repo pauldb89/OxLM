@@ -12,7 +12,7 @@ class FeatureMatcherTest : public testing::Test {
   void SetUp() {
     vector<int> class_markers = {0, 2, 3, 4};
     vector<int> data = {2, 3, 3, 1, 3, 2};
-    boost::shared_ptr<Corpus> corpus = boost::make_shared<Corpus>(data);
+    corpus = boost::make_shared<Corpus>(data);
     boost::shared_ptr<WordToClassIndex> index =
         boost::make_shared<WordToClassIndex>(class_markers);
     boost::shared_ptr<ContextProcessor> processor =
@@ -51,6 +51,7 @@ class FeatureMatcherTest : public testing::Test {
     }
   }
 
+  boost::shared_ptr<Corpus> corpus;
   boost::shared_ptr<FeatureContextMapper> mapper;
   boost::shared_ptr<FeatureMatcher> feature_matcher;
 };
@@ -115,7 +116,7 @@ TEST_F(FeatureMatcherTest, TestSubset) {
   vector<int> history;
   vector<int> class_context_ids, word_context_ids;
   boost::shared_ptr<MinibatchFeatureIndexesPair> feature_indexes_pair =
-      feature_matcher->getMinibatchFeatures(minibatch_indexes);
+      feature_matcher->getMinibatchFeatures(corpus, 2, minibatch_indexes);
   boost::shared_ptr<MinibatchFeatureIndexes> feature_indexes =
       feature_indexes_pair->getClassIndexes();
   EXPECT_EQ(4, feature_indexes->size());

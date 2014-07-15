@@ -53,6 +53,7 @@ Weights::Weights(
 Weights::Weights(
     const boost::shared_ptr<ModelData>& config,
     const boost::shared_ptr<Metadata>& metadata,
+    const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& indices)
     : config(config), metadata(metadata),
       data(NULL), Q(0, 0, 0), R(0, 0, 0), B(0, 0), W(0, 0) {

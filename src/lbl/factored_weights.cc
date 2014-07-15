@@ -43,8 +43,9 @@ FactoredWeights::FactoredWeights(
 FactoredWeights::FactoredWeights(
     const boost::shared_ptr<ModelData>& config,
     const boost::shared_ptr<FactoredMetadata>& metadata,
+    const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& indices)
-    : Weights(config, metadata), metadata(metadata),
+    : Weights(config, metadata, corpus, indices), metadata(metadata),
       index(metadata->getIndex()), wordNormalizerCache(index->getNumClasses()),
       data(NULL), S(0, 0, 0), T(0, 0), FW(0, 0) {
   allocate();

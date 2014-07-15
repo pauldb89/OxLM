@@ -25,7 +25,6 @@ add_library(lbl SHARED
   feature_no_op_filter.cc
   feature_matcher.cc
   feature_store.cc
-  feature_store_initializer.cc
   global_collision_space.cc
   global_factored_maxent_weights.cc
   global_feature_indexes_pair.cc

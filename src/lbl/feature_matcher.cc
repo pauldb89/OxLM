@@ -13,8 +13,7 @@ FeatureMatcher::FeatureMatcher(
     const boost::shared_ptr<FeatureContextGenerator>& generator,
     const boost::shared_ptr<NGramFilter>& filter,
     const boost::shared_ptr<FeatureContextMapper>& mapper)
-    : corpus(corpus), index(index), processor(processor), generator(generator),
-      mapper(mapper) {
+    : corpus(corpus), index(index), generator(generator), mapper(mapper) {
   featureIndexes = boost::make_shared<GlobalFeatureIndexesPair>(index, mapper);
   for (size_t i = 0; i < corpus->size(); ++i) {
     int word_id = corpus->at(i);
@@ -42,10 +41,13 @@ GlobalFeatureIndexesPairPtr FeatureMatcher::getGlobalFeatures() const {
 }
 
 MinibatchFeatureIndexesPairPtr FeatureMatcher::getMinibatchFeatures(
+    const boost::shared_ptr<Corpus>& corpus,
+    size_t feature_context_size,
     const vector<int>& minibatch_indexes) const {
+  boost::shared_ptr<ContextProcessor> processor =
+      boost::make_shared<ContextProcessor>(corpus, feature_context_size);
   MinibatchFeatureIndexesPairPtr minibatch_feature_indexes =
       boost::make_shared<MinibatchFeatureIndexesPair>(index);
-
   for (int i: minibatch_indexes) {
     int word_id = corpus->at(i);
     int class_id = index->getClass(word_id);

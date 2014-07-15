@@ -23,21 +23,25 @@ namespace oxlm {
 MinibatchFactoredMaxentWeights::MinibatchFactoredMaxentWeights(
     const boost::shared_ptr<ModelData>& config,
     const boost::shared_ptr<FactoredMaxentMetadata>& metadata,
+    const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& minibatch_indices)
-    : FactoredWeights(config, metadata), metadata(metadata) {
-  initialize(minibatch_indices);
+    : FactoredWeights(config, metadata, corpus, minibatch_indices),
+      metadata(metadata) {
+  initialize(corpus, minibatch_indices);
 }
 
 MinibatchFactoredMaxentWeights::MinibatchFactoredMaxentWeights(
     const boost::shared_ptr<ModelData>& config,
     const boost::shared_ptr<FactoredMaxentMetadata>& metadata,
+    const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& minibatch_indices,
     const boost::shared_ptr<FactoredWeights>& base_weights)
     : FactoredWeights(*base_weights), metadata(metadata) {
-  initialize(minibatch_indices);
+  initialize(corpus, minibatch_indices);
 }
 
 void MinibatchFactoredMaxentWeights::initialize(
+    const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& minibatch_indices) {
   int num_classes = index->getNumClasses();
   V.resize(num_classes);
@@ -93,7 +97,8 @@ void MinibatchFactoredMaxentWeights::initialize(
           hasher, filter);
     }
   } else if (config->sparse_features) {
-    auto feature_indexes_pair = matcher->getMinibatchFeatures(minibatch_indices);
+    auto feature_indexes_pair = matcher->getMinibatchFeatures(
+        corpus, config->feature_context_size, minibatch_indices);
     U = boost::make_shared<SparseMinibatchFeatureStore>(
         num_classes,
         feature_indexes_pair->getClassIndexes(),

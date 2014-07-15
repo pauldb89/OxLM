@@ -16,7 +16,6 @@ set(TESTS
     feature_exact_filter_test
     feature_matcher_test
     feature_no_op_filter_test
-    feature_store_initializer_test
     global_factored_maxent_weights_test
     global_feature_indexes_pair_test
     metadata_test

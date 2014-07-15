@@ -178,7 +178,7 @@ boost::shared_ptr<MinibatchFactoredMaxentWeights> GlobalFactoredMaxentWeights::g
 
   boost::shared_ptr<MinibatchFactoredMaxentWeights> gradient =
       boost::make_shared<MinibatchFactoredMaxentWeights>(
-          config, metadata, indices, base_gradient);
+          config, metadata, corpus, indices, base_gradient);
 
   for (size_t i = 0; i < indices.size(); ++i) {
     int word_id = corpus->at(indices[i]);

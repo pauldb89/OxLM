@@ -33,6 +33,8 @@ class FeatureMatcher {
   GlobalFeatureIndexesPairPtr getGlobalFeatures() const;
 
   MinibatchFeatureIndexesPairPtr getMinibatchFeatures(
+      const boost::shared_ptr<Corpus>& corpus,
+      size_t feature_context_size,
       const vector<int>& minibatch_indexes) const;
 
  private:
@@ -49,7 +51,6 @@ class FeatureMatcher {
 
   boost::shared_ptr<Corpus> corpus;
   boost::shared_ptr<WordToClassIndex> index;
-  boost::shared_ptr<ContextProcessor> processor;
   boost::shared_ptr<FeatureContextGenerator> generator;
   boost::shared_ptr<FeatureContextMapper> mapper;
   GlobalFeatureIndexesPairPtr featureIndexes;
