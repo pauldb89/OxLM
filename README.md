@@ -7,13 +7,13 @@ Oxford Neural Language Modelling Toolkit.
 
 #### Dependecies
 
-Our code uses [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page) to speed up vector and matrix operations. Set up `$EIGEN3` to point to the directory where Eigen is installed.
+We use [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page) to speed up vector and matrix operations. Set up `$EIGEN3` to point to the directory where Eigen is installed.
 
-If you want to use our code for translation experiments with [cdec](http://www.cdec-decoder.org/), set `$CDEC` to point to the `cdec` repository.
+To use our models with [cdec](http://www.cdec-decoder.org/), you must first set `$CDEC` to point to the `cdec` repository.
 
 #### Instalation
 
-Run the following commands:
+Run the following to compile the code for the first time:
 
     cd oxlm
     mkdir build
@@ -21,14 +21,14 @@ Run the following commands:
     cmake ../src
     make
 
-To run unit tests:
+Run unit tests:
 
     cd build
     make all_tests
 
 #### Pepare training data
 
-Replace words occuring less than `min-freq` times in the training data with `<UNK>`. Replace the words in the development data that do not occur in the training data with `<UNK>` symbol.
+Replace the words occuring less than `min-freq` times in the training data as well as the words in the development data which do not occur in the training data with the `<UNK>` symbol:
 
     sh oxlm/scripts/countcutoff.sh training.en min-freq
     python oxlm/scripts/preprocess-corpus.py -i training.en,dev.en -o training.unk.en,dev.unk.en -v vocab
@@ -53,6 +53,7 @@ Create a `oxlm.ini` file with the following contents:
     test-set=dev.unk.en
 
 Run:
+
     oxlm/bin/train_sgd -c oxlm.ini --threads=8 --model-out=model.bin
 
 Set the `--noise-samples` argument, if you want to train the models using noise contrastive estimation instead of minibatch stochastic gradient descent.
@@ -84,9 +85,9 @@ Append the following to the `oxlm.ini` configuration file:
 Run the following command to train the model:
 
     oxlm/train_maxent_sgd -c oxlm.ini \
-                            --threads=8 \
-                            --model-out=model.bin \
-                            --class-file=clusters/path
+                          --threads=8 \
+                          --model-out=model.bin \
+                          --class-file=clusters/path
 
 This will use a one-to-one mapping from features to weights. If you want to use a lower dimensional feature space for the weights (i.e. collision stores), use the `--hash-space` parameter. Generally, setting the hash-space to 1/2 or 1/4 of the total number of features results in a negligible loss in perplexity. Collision store reduce the memory requirements significantly.
 
