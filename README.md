@@ -26,7 +26,7 @@ Run unit tests:
     cd build
     make all_tests
 
-#### Pepare training data
+#### Prepare the training data
 
 Replace the words occuring less than `min-freq` times in the training data as well as the words in the development data which do not occur in the training data with the `<UNK>` symbol:
 
