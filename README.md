@@ -26,16 +26,16 @@ Run unit tests:
     cd build
     make all_tests
 
-#### Prepare the training data
+### Prepare the training data
 
 Replace the words occuring less than `min-freq` times in the training data as well as the words in the development data which do not occur in the training data with the `<UNK>` symbol:
 
     sh oxlm/scripts/countcutoff.sh training.en min-freq
     python oxlm/scripts/preprocess-corpus.py -i training.en,dev.en -o training.unk.en,dev.unk.en -v vocab
 
-#### Training
+### Training
 
-##### Train a standard model
+#### Train a standard model
 
 Create a `oxlm.ini` file with the following contents:
 
@@ -58,7 +58,7 @@ Run:
 
 Set the `--noise-samples` argument, if you want to train the models using noise contrastive estimation instead of minibatch stochastic gradient descent.
 
-##### Train a factored model
+#### Train a factored model
 
 Partition the vocabulary using [agglomerative Brown clustering](https://github.com/percyliang/brown-cluster):
 
@@ -73,7 +73,7 @@ Set `num-clusters` to the square root of the size of the vocabulary. To train th
                             --model-out=model.bin \
                             --class-file=clusters/path
 
-##### Train a factored model with direct n-gram features
+#### Train a factored model with direct n-gram features
 
 Append the following to the `oxlm.ini` configuration file:
 
@@ -91,7 +91,7 @@ Run the following command to train the model:
 
 This will use a one-to-one mapping from features to weights. If you want to use a lower dimensional feature space for the weights (i.e. collision stores), use the `--hash-space` parameter. Generally, setting the hash-space to 1/2 or 1/4 of the total number of features results in a negligible loss in perplexity. Collision store reduce the memory requirements significantly.
 
-#### Decoding
+### Decoding
 
 To incorporate our neural language models as a normalized feature in the `cdec` decoder (in the beam search), simply edit the `cdec.ini` configuration file to include the following line:
 
