@@ -89,10 +89,6 @@ add_custom_target(all_tests)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -O3")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 
-add_subdirectory(cg)
-add_subdirectory(experimental/kmh)
-add_subdirectory(experimental/egrefen)
-add_subdirectory(hvlm)
 add_subdirectory(lbl)
 add_subdirectory(utils)
 
