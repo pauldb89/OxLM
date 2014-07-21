@@ -11,7 +11,7 @@ We use [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page) to speed up
 
 To use our models with [cdec](http://www.cdec-decoder.org/), you must first set `$CDEC` to point to the `cdec` repository.
 
-#### Instalation
+#### Installation
 
 Run the following to compile the code for the first time:
 
