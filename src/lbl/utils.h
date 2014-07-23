@@ -77,4 +77,10 @@ inline size_t MurmurHash(const vector<int>& data, int seed = 0) {
   return result[0];
 }
 
+class NotImplementedException : public exception {
+  virtual const char* what() const throw() {
+    return "This method was not implemented";
+  }
+};
+
 } // namespace oxlm

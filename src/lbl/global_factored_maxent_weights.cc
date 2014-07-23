@@ -256,7 +256,7 @@ boost::shared_ptr<MinibatchFactoredMaxentWeights> GlobalFactoredMaxentWeights::e
     const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& indices,
     Real& objective) const {
-  return getGradient(corpus, indices, objective);
+  throw NotImplementedException();
 }
 
 void GlobalFactoredMaxentWeights::updateSquared(
