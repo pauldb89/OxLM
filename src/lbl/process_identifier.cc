@@ -7,7 +7,9 @@ namespace oxlm {
 const int ProcessIdentifier::MAX_PROCESS_ID = 1000;
 
 ProcessIdentifier::ProcessIdentifier(const char* segment_name) {
-  segment = SharedMemory(ip::open_or_create, segment_name, 1 << 16);
+  ip::permissions perm;
+  perm.set_unrestricted();
+  segment = SharedMemory(ip::open_or_create, segment_name, 1 << 16, 0, perm);
   processIds = segment.find_or_construct<ProcessIdSet>("ProcessIds")
       (0, boost::hash<int>(), equal_to<int>(), segment.get_allocator<int>());
   mutex = segment.find_or_construct<SharedMutex>("Mutex")();
