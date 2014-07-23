@@ -71,6 +71,8 @@ class Weights {
 
   void clearCache();
 
+  MatrixReal getWordVectors() const;
+
   bool operator==(const Weights& other) const;
 
   virtual ~Weights();

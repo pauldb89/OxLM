@@ -462,6 +462,10 @@ void Weights::clearCache() {
   normalizerCache.clear();
 }
 
+MatrixReal Weights::getWordVectors() const {
+  return R;
+}
+
 bool Weights::operator==(const Weights& other) const {
   return *config == *other.config
       && *metadata == *other.metadata

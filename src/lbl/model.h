@@ -48,6 +48,8 @@ class Model {
 
   Real predict(int word_id, const vector<int>& context) const;
 
+  MatrixReal getWordVectors() const;
+
   void save() const;
 
   void load(const string& filename);

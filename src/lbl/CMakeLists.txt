@@ -68,7 +68,14 @@ endif(CDEC_FOUND)
 # Executables
 #############################################
 
-set(EXECUTABLES train_sgd train_factored_sgd train_maxent_sgd evaluate predict)
+set(EXECUTABLES
+  extract_word_vectors
+  evaluate
+  predict
+  train_sgd
+  train_factored_sgd
+  train_maxent_sgd
+)
 foreach(f ${EXECUTABLES})
  add_executable(${f} ${f}.cc)
  target_link_libraries(${f} lbl utils)

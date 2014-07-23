@@ -41,6 +41,12 @@ boost::shared_ptr<ModelData> Model<GlobalWeights, MinibatchWeights, Metadata>::g
   return config;
 }
 
+
+template<class GlobalWeights, class MinibatchWeights, class Metadata>
+MatrixReal Model<GlobalWeights, MinibatchWeights, Metadata>::getWordVectors() const {
+  return weights->getWordVectors();
+}
+
 template<class GlobalWeights, class MinibatchWeights, class Metadata>
 void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
   // Initialize the dictionary now, if it hasn't been initialized when the
