@@ -37,8 +37,6 @@ add_library(lbl SHARED
   model_utils.cc
   ngram.cc
   ngram_filter.cc
-  nlm.cc
-  nlm_approximate_z.cc
   process_identifier.cc
   query_cache.cc
   sparse_global_feature_store.cc
