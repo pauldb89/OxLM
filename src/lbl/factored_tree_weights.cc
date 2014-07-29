@@ -51,7 +51,7 @@ FactoredTreeWeights::FactoredTreeWeights(
       node = parent;
     }
   }
-  assert(fabs(B(tree->getRoot()) - 1) < EPS);
+  assert(fabs(B(tree->getRoot()) - 1) < 1e-4);
   B = B.array().log();
 
   cout << "===============================" << endl;
