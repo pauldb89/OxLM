@@ -424,4 +424,8 @@ bool FactoredTreeWeights::operator==(const FactoredTreeWeights& other) const {
       && W.isApprox(other.W, EPS);
 }
 
+FactoredTreeWeights::~FactoredTreeWeights() {
+  delete data;
+}
+
 } // namespace oxlm

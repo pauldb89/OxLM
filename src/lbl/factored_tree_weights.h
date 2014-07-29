@@ -76,6 +76,8 @@ class FactoredTreeWeights : public Weights {
 
   bool operator==(const FactoredTreeWeights& other) const;
 
+  ~FactoredTreeWeights();
+
  protected:
   void getContextVectors(
       const boost::shared_ptr<Corpus>& corpus,
