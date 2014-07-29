@@ -8,6 +8,34 @@ import fastcluster
 from optparse import OptionParser
 from utils import *
 
+def read_words(filename):
+  words = []
+  for line in open(filename):
+    words.append(line.strip())
+  return words
+
+def read_vectors(filename):
+  vectors = []
+  for line in open(filename):
+    vectors.append(map(float, line.strip().split()))
+  return vectors
+
+def depth(words, hierarchy):
+  depths = [1] * len(words)
+  for node1, node2, _, _ in hierarchy:
+    depths.append(1 + max(depths[int(node1)], depths[int(node2)]))
+  return depths[-1]
+
+def write_tree(words, hierarchy, filename):
+  f = open(filename, "w")
+  print >> f, len(words)
+  for word in words:
+    print >> f, word
+
+  print >> f, len(hierarchy)
+  for node1, node2, _, _ in hierarchy:
+    print >> f, 2, int(node1), int(node2)
+
 def main():
   parser = OptionParser()
   parser.add_option("-d", "--vocab-file", dest="vocab_file",
