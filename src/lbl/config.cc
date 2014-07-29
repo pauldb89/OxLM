@@ -31,6 +31,7 @@ bool ModelData::operator==(const ModelData& other) const {
       && word_representation_size == other.word_representation_size
       && classes == other.classes
       && class_file == other.class_file
+      && tree_file == other.tree_file
       && diagonal_contexts == other.diagonal_contexts
       && hash_space == other.hash_space
       && filter_contexts == other.filter_contexts

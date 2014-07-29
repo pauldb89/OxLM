@@ -7,6 +7,7 @@
 #include "lbl/factored_metadata.h"
 #include "lbl/factored_maxent_metadata.h"
 #include "lbl/factored_weights.h"
+#include "lbl/factored_tree_weights.h"
 #include "lbl/global_factored_maxent_weights.h"
 #include "lbl/metadata.h"
 #include "lbl/minibatch_factored_maxent_weights.h"
@@ -14,6 +15,7 @@
 #include "lbl/model_utils.h"
 #include "lbl/parallel_vocabulary.h"
 #include "lbl/source_factored_weights.h"
+#include "lbl/tree_metadata.h"
 #include "lbl/utils.h"
 #include "lbl/vocabulary.h"
 #include "lbl/weights.h"
@@ -26,6 +28,7 @@ enum ModelType {
   FACTORED_NLM = 2,
   FACTORED_MAXENT_NLM = 3,
   SOURCE_FACTORED_NLM = 4,
+  FACTORED_TREE_NLM = 5,
 };
 
 template<class GlobalWeights, class MinibatchWeights, class Metadata>
@@ -110,6 +113,14 @@ class SourceFactoredLM: public Model<SourceFactoredWeights, SourceFactoredWeight
 
   SourceFactoredLM(const boost::shared_ptr<ModelData>& config)
       : Model<SourceFactoredWeights, SourceFactoredWeights, FactoredMetadata>(config) {}
+};
+
+class FactoredTreeLM : public Model<FactoredTreeWeights, FactoredTreeWeights, TreeMetadata> {
+ public:
+  FactoredTreeLM() : Model<FactoredTreeWeights, FactoredTreeWeights, TreeMetadata>() {}
+
+  FactoredTreeLM(const boost::shared_ptr<ModelData>& config)
+      : Model<FactoredTreeWeights, FactoredTreeWeights, TreeMetadata>(config) {}
 };
 
 } // namespace oxlm

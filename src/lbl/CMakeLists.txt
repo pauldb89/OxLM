@@ -7,6 +7,7 @@ add_libraries(lbl
   class_context_extractor.cc
   class_context_hasher.cc
   class_distribution.cc
+  class_tree.cc
   collision_counter.cc
   collision_global_feature_store.cc
   collision_minibatch_feature_store.cc
@@ -16,6 +17,7 @@ add_libraries(lbl
   corpus.cc
   factored_maxent_metadata.cc
   factored_metadata.cc
+  factored_tree_weights.cc
   factored_weights.cc
   feature_approximate_filter.cc
   feature_context.cc
@@ -48,6 +50,7 @@ add_libraries(lbl
   source_factored_weights.cc
   sparse_global_feature_store.cc
   sparse_minibatch_feature_store.cc
+  tree_metadata.cc
   utils.cc
   vocabulary.cc
   weights.cc
@@ -90,6 +93,7 @@ set(EXECUTABLES
   train_factored_sgd
   train_maxent_sgd
   train_sgd
+  train_tree_sgd
 )
 foreach(f ${EXECUTABLES})
  add_executable(${f} ${f}.cc)

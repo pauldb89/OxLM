@@ -41,6 +41,7 @@ struct ModelData {
   float       step_size;
   int         classes;
   string      class_file;
+  string      tree_file;
   bool        randomise;
   bool        reclass;
   bool        diagonal_contexts;
@@ -89,6 +90,7 @@ struct ModelData {
     ar & step_size;
     ar & classes;
     ar & class_file;
+    ar & tree_file;
     ar & randomise;
     ar & diagonal_contexts;
     ar & hash_space;

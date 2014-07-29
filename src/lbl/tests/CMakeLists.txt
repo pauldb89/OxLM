@@ -4,6 +4,7 @@ set(TESTS
     class_context_extractor_test
     class_context_hasher_test
     class_distribution_test
+    class_tree_test
     collision_counter_test
     collision_global_feature_store_test
     collision_minibatch_feature_store_test
@@ -11,6 +12,7 @@ set(TESTS
     context_processor_test
     corpus_test
     factored_metadata_test
+    factored_tree_weights_test
     factored_weights_test
     feature_approximate_filter_test
     feature_context_test

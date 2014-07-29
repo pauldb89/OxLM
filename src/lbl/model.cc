@@ -369,5 +369,6 @@ template class Model<Weights, Weights, Metadata>;
 template class Model<FactoredWeights, FactoredWeights, FactoredMetadata>;
 template class Model<GlobalFactoredMaxentWeights, MinibatchFactoredMaxentWeights, FactoredMaxentMetadata>;
 template class Model<SourceFactoredWeights, SourceFactoredWeights, FactoredMetadata>;
+template class Model<FactoredTreeWeights, FactoredTreeWeights, TreeMetadata>;
 
 } // namespace oxlm

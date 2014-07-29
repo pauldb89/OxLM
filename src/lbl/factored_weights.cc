@@ -527,7 +527,7 @@ bool FactoredWeights::operator==(const FactoredWeights& other) const {
       && *metadata == *other.metadata
       && *index == *other.index
       && size == other.size
-      && FW == other.FW;
+      && FW.isApprox(other.FW, EPS);
 }
 
 FactoredWeights::~FactoredWeights() {
