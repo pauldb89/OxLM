@@ -26,9 +26,14 @@ def main():
   vectors = read_vectors(options.vectors_file)
   print "Read", len(vectors), "vectors..."
 
+<<<<<<< HEAD
   cluster_data = fastcluster.linkage(
       vectors, method=options.method, metric=options.metric)
   hierarchy = convert_fastcluster(cluster_data)
+=======
+  hierarchy = fastcluster.linkage(
+      vectors, method=options.method, metric=options.metric)
+>>>>>>> Script for creating tree files.
   print "Tree depth:", depth(words, hierarchy)
 
   write_tree(words, hierarchy, options.output_file)
