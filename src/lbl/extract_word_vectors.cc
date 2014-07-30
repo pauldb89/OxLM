@@ -45,6 +45,7 @@ int main(int argc, char** argv) {
   store(parse_command_line(argc, argv, desc), vm);
   if (vm.count("help")) {
     cout << desc << endl;
+    return 0;
   }
 
   notify(vm);
