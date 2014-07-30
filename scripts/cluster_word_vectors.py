@@ -28,7 +28,7 @@ def main():
 
   cluster_data = fastcluster.linkage(
       vectors, method=options.method, metric=options.metric)
-  hierarchy = convert(cluster_data)
+  hierarchy = convert_fastcluster(cluster_data)
   print "Tree depth:", depth(words, hierarchy)
 
   write_tree(words, hierarchy, options.output_file)

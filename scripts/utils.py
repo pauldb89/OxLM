@@ -20,7 +20,7 @@ def write_tree(words, hierarchy, filename):
   for children in hierarchy:
     print >> f, len(children), " ".join(map(str, children))
 
-def convert(cluster_data):
+def convert_fastcluster(cluster_data):
   hierarchy = []
   for n1, n2, _, _ in cluster_data:
     hierarchy.append((int(n1), int(n2)))
