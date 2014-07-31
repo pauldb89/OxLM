@@ -266,7 +266,7 @@ class FF_LBLLM : public FeatureFunction {
 
 void ParseOptions(
     const string& input, string& filename, string& feature_name,
-    oxlm::ModelType& model_type) {
+    oxlm::ModelType& model_type, bool& cache_queries) {
   po::options_description options("LBL language model options");
   options.add_options()
       ("file,f", po::value<string>()->required(),
@@ -274,7 +274,8 @@ void ParseOptions(
       ("name,n", po::value<string>()->default_value("LBLLM"),
           "Feature name")
       ("type,t", po::value<int>()->required(),
-          "Model type");
+          "Model type")
+      ("cache-queries", "Cache queries between consecutive decoder runs");
 
   po::variables_map vm;
   vector<string> args;
@@ -285,6 +286,7 @@ void ParseOptions(
   filename = vm["file"].as<string>();
   feature_name = vm["name"].as<string>();
   model_type = static_cast<oxlm::ModelType>(vm["type"].as<int>());
+  cache_queries = vm.count("cache-queries");
 }
 
 class UnknownModelException : public exception {
@@ -296,16 +298,17 @@ class UnknownModelException : public exception {
 extern "C" FeatureFunction* create_ff(const string& str) {
   string filename, feature_name;
   oxlm::ModelType model_type;
-
-  ParseOptions(str, filename, feature_name, model_type);
+  bool cache_queries;
+  ParseOptions(str, filename, feature_name, model_type, cache_queries);
 
   switch (model_type) {
     case NLM:
-      return new FF_LBLLM<LM>(filename, feature_name);
+      return new FF_LBLLM<LM>(filename, feature_name, cache_queries);
     case FACTORED_NLM:
-      return new FF_LBLLM<FactoredLM>(filename, feature_name);
+      return new FF_LBLLM<FactoredLM>(filename, feature_name, cache_queries);
     case FACTORED_MAXENT_NLM:
-      return new FF_LBLLM<FactoredMaxentLM>(filename, feature_name);
+      return new FF_LBLLM<FactoredMaxentLM>(
+          filename, feature_name, cache_queries);
     default:
       throw UnknownModelException();
   }
