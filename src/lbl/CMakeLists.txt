@@ -2,7 +2,7 @@
 # Libraries
 #############################################
 
-add_library(lbl SHARED
+add_libraries(lbl
   bloom_filter_populator.cc
   class_context_extractor.cc
   class_context_hasher.cc
@@ -48,17 +48,17 @@ add_library(lbl SHARED
   word_to_class_index.cc
 )
 
-target_link_libraries(lbl murmurhash rt ${Boost_LIBRARIES})
+target_link_libs(lbl murmurhash rt ${Boost_LIBRARIES})
 
 if(CDEC_FOUND)
   include_directories(cdec_ff_lbl PRIVATE ${CDEC_INCLUDE_DIRS})
-  add_library(cdec_ff_lbl SHARED
+  add_libraries(cdec_ff_lbl
       cdec_ff_lbl.cc
       cdec_lbl_mapper.cc
       cdec_rule_converter.cc
       cdec_state_converter.cc
       lbl_features.cc)
-  target_link_libraries(cdec_ff_lbl lbl)
+  target_link_libs(cdec_ff_lbl lbl)
 endif(CDEC_FOUND)
 
 #############################################

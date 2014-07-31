@@ -79,6 +79,23 @@ endmacro()
 add_custom_target(all_tests)
 
 #############################################
+# Generate both static and shared libraries.
+#############################################
+
+macro(add_libraries _name)
+  set(files ${ARGN})
+  add_library(${_name} SHARED ${files})
+  add_library(${_name}_static STATIC ${files})
+  set_target_properties(${_name}_static PROPERTIES OUTPUT_NAME ${_name})
+endmacro()
+
+macro(target_link_libs _name)
+  set(libs ${ARGN})
+  target_link_libraries(${_name} ${libs})
+  target_link_libraries(${_name}_static ${libs})
+endmacro()
+
+#############################################
 # Compiler Settings
 #############################################
 
