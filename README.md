@@ -7,8 +7,6 @@ Oxford Neural Language Modelling Toolkit.
 
 #### Dependecies
 
-We use [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page) to speed up vector and matrix operations. Set up `$EIGEN3` to point to the directory where Eigen is installed.
-
 To use our models with [cdec](http://www.cdec-decoder.org/), you must first set `$CDEC` to point to the `cdec` repository.
 
 #### Installation
