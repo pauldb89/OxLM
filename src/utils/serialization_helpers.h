@@ -7,8 +7,9 @@
 #include <boost/serialization/array.hpp>
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/split_free.hpp>
-#include <Eigen/Dense>
-#include <Eigen/Sparse>
+
+#include "third_party/eigen/Eigen/Dense"
+#include "third_party/eigen/Eigen/Sparse"
 
 namespace boost {
 namespace serialization {

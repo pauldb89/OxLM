@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Eigen/Dense>
+#include "third_party/eigen/Eigen/Dense"
 
 #include "utils/constants.h"
 

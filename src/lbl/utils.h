@@ -6,9 +6,8 @@
 
 #include <boost/shared_ptr.hpp>
 
-#include <Eigen/Dense>
-#include <Eigen/Sparse>
-
+#include "third_party/eigen/Eigen/Dense"
+#include "third_party/eigen/Eigen/Sparse"
 #include "third_party/smhasher/MurmurHash3.h"
 
 using namespace std;

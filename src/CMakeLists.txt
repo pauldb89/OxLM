@@ -34,10 +34,6 @@ include_directories(${Boost_INCLUDE_DIRS})
 # link_directories(${Boost_LIBRARY_DIRS})
 # set(link_libraries(train_cnlm ${Boost_LIBRARIES} cnlm)
 
-# Eigen
-find_package(Eigen3 REQUIRED)
-include_directories(${EIGEN3_INCLUDE_DIR})
-
 # OpenMP
 find_package(OpenMP QUIET)
 
@@ -70,7 +66,7 @@ endmacro()
 #   (2) automatically include the google test headers and link the libraries,
 #   (3) define a custom target for running the test,
 #   (4) add a dependency to the all_tests target.
-macro(add_test test_target)
+macro(lbl_add_test test_target)
   add_executable(${test_target} ${test_target}.cc)
   include_directories(${THIRD_PARTY}/gtest/include)
   target_link_libraries(${test_target} gtest_main gtest)
@@ -93,5 +89,6 @@ add_subdirectory(lbl)
 add_subdirectory(utils)
 
 # Third party libraries
+add_subdirectory(third_party/eigen)
 add_subdirectory(third_party/gtest)
 add_subdirectory(third_party/smhasher)

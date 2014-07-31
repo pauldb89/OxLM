@@ -50,6 +50,6 @@ if(CDEC_FOUND AND CDEC_LIBRARIES_FOUND)
 endif(CDEC_FOUND AND CDEC_LIBRARIES_FOUND)
 
 foreach(test ${TESTS})
-    add_test(${test})
+    lbl_add_test(${test})
     target_link_libraries(${test} ${LIBRARIES})
 endforeach(test)
