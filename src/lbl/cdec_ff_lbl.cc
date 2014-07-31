@@ -16,7 +16,6 @@
 #include "lbl/cdec_state_converter.h"
 #include "lbl/lbl_features.h"
 #include "lbl/model.h"
-#include "lbl/process_identifier.h"
 #include "lbl/query_cache.h"
 
 // cdec headers
@@ -34,36 +33,14 @@ template<class Model>
 class FF_LBLLM : public FeatureFunction {
  public:
   FF_LBLLM(
-      const string& filename, const string& feature_name,
+      const string& filename,
+      const string& feature_name,
       bool cache_queries)
       : fid(FD::Convert(feature_name)),
         fidOOV(FD::Convert(feature_name + "_OOV")),
-        processIdentifier("FF_LBLLM"),
-        cacheQueries(cache_queries), cacheHits(0), totalHits(0) {
+        filename(filename), cacheQueries(cache_queries),
+        cacheHits(0), totalHits(0) {
     model.load(filename);
-
-    // Note: This is a hack due to lack of time.
-    // Ideally, we would like a to have client server architecture, where the
-    // server contains both the LM and the n-gram cache, preventing these huge
-    // data structures from being replicated to every process. Also, that
-    // approach would not require us to save the n-gram cache to disk after
-    // every MIRA iteration.
-    if (cacheQueries) {
-      processId = processIdentifier.reserveId();
-      cerr << "Reserved id " << processId
-           << " at time " << Clock::to_time_t(GetTime()) << endl;
-      cacheFile = filename + "." + to_string(processId) + ".cache.bin";
-      if (boost::filesystem::exists(cacheFile)) {
-        ifstream f(cacheFile);
-        boost::archive::binary_iarchive ia(f);
-        cerr << "Loading n-gram probability cache from " << cacheFile << endl;
-        ia >> cache;
-        cerr << "Finished loading " << cache.size()
-             << " n-gram probabilities..." << endl;
-      } else {
-        cerr << "Cache file not found..." << endl;
-      }
-    }
 
     config = model.getConfig();
     int context_width = config->ngram_order - 1;
@@ -84,8 +61,38 @@ class FF_LBLLM : public FeatureFunction {
     kSTAR = dict.Convert("<{STAR}>");
   }
 
+  void savePersistentCache() {
+    if (cacheQueries && cacheFile.size()) {
+      ofstream f(cacheFile);
+      boost::archive::binary_oarchive oa(f);
+      cerr << "Saving n-gram probability cache to " << cacheFile << endl;
+      oa << cache;
+      cerr << "Finished saving " << cache.size()
+           << " n-gram probabilities..." << endl;
+    }
+  }
+
+  void loadPersistentCache(int sentence_id) {
+    if (cacheQueries) {
+      cacheFile = filename + "." + to_string(sentence_id) + ".cache.bin";
+      if (boost::filesystem::exists(cacheFile)) {
+        ifstream f(cacheFile);
+        boost::archive::binary_iarchive ia(f);
+        cerr << "Loading n-gram probability cache from " << cacheFile << endl;
+        ia >> cache;
+        cerr << "Finished loading " << cache.size()
+             << " n-gram probabilities..." << endl;
+      } else {
+        cerr << "Cache file not found..." << endl;
+      }
+    }
+  }
+
   virtual void PrepareForInput(const SentenceMetadata& smeta) {
     model.clearCache();
+
+    savePersistentCache();
+    loadPersistentCache(smeta.GetSentenceId());
   }
 
  protected:
@@ -229,8 +236,18 @@ class FF_LBLLM : public FeatureFunction {
     return ret;
   }
 
+  ~FF_LBLLM() {
+    savePersistentCache();
+    if (cacheQueries) {
+      cerr << "Cache hit ratio: " << 100.0 * cacheHits / totalHits
+           << " %" << endl;
+    }
+  }
+
   int fid;
   int fidOOV;
+  string filename;
+
   Dict dict;
   boost::shared_ptr<ModelData> config;
   Model model;
@@ -242,9 +259,6 @@ class FF_LBLLM : public FeatureFunction {
   int kSTOP;
   int kUNKNOWN;
   int kSTAR;
-
-  ProcessIdentifier processIdentifier;
-  int processId;
 
   bool cacheQueries;
   string cacheFile;
