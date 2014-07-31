@@ -20,6 +20,8 @@ class QueryCache {
 
   size_t size() const;
 
+  void clear();
+
   bool operator==(const QueryCache& other) const;
 
  private:

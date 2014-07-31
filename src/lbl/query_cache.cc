@@ -15,6 +15,10 @@ size_t QueryCache::size() const {
   return cache.size();
 }
 
+void QueryCache::clear() {
+  cache.clear();
+}
+
 bool QueryCache::operator==(const QueryCache& other) const {
   return cache == other.cache;
 }
