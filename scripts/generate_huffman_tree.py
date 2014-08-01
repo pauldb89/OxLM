@@ -52,6 +52,7 @@ def main():
   print "Vocabulary size:", len(word_counts)
 
   words, tree = get_huffman_tree(word_counts)
+  print "Tree depth:", depth(words, tree)
   write_tree(words, tree, options.output_file)
 
 
