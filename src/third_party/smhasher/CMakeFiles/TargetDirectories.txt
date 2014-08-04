@@ -1,2 +1,0 @@
-/home/paulb/workspace/smhasher/CMakeFiles/SMHasher.dir
-/home/paulb/workspace/smhasher/CMakeFiles/SMHasherSupport.dir
