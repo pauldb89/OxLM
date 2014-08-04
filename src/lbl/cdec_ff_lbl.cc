@@ -92,6 +92,7 @@ class FF_LBLLM : public FeatureFunction {
     model.clearCache();
 
     savePersistentCache();
+    cache.clear();
     loadPersistentCache(smeta.GetSentenceId());
   }
 
@@ -275,7 +276,8 @@ void ParseOptions(
           "Feature name")
       ("type,t", po::value<int>()->required(),
           "Model type")
-      ("cache-queries", "Cache queries between consecutive decoder runs");
+      ("cache-queries",
+          "Cache queries persistently between consecutive decoder runs");
 
   po::variables_map vm;
   vector<string> args;
