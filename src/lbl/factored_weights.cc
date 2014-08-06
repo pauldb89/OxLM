@@ -53,7 +53,8 @@ FactoredWeights::FactoredWeights(
 }
 
 FactoredWeights::FactoredWeights(const FactoredWeights& other)
-    : Weights(other), metadata(other.metadata), index(other.index),
+    : Weights(other), metadata(other.metadata),
+      index(other.index), wordNormalizerCache(index->getNumClasses()),
       data(NULL), S(0, 0, 0), T(0, 0), FW(0, 0) {
   allocate();
   memcpy(data, other.data, size * sizeof(Real));
@@ -83,8 +84,6 @@ void FactoredWeights::setModelParameters() {
 
   new (&S) WordVectorsType(data, word_width, num_classes);
   new (&T) WeightsType(data + S_size, T_size);
-
-  wordNormalizerCache.resize(num_classes);
 }
 
 Real FactoredWeights::getObjective(
@@ -419,26 +418,30 @@ Real FactoredWeights::regularizerUpdate(
 Real FactoredWeights::predict(int word_id, const vector<int>& context) const {
   int class_id = index->getClass(word_id);
   int word_class_id = index->getWordIndexInClass(word_id);
-
   VectorReal prediction_vector = getPredictionVector(context);
 
   Real class_prob;
-  auto it = normalizerCache.find(context);
-  if (it != normalizerCache.end()) {
-    class_prob = S.col(class_id).dot(prediction_vector) + T(class_id) - it->second;
+  auto ret = normalizerCache.get(context);
+  if (ret.second) {
+    class_prob = S.col(class_id).dot(prediction_vector) + T(class_id) - ret.first;
   } else {
-    VectorReal class_probs = logSoftMax(S.transpose() * prediction_vector + T, normalizerCache[context]);
+    Real normalizer = 0;
+    VectorReal class_probs = logSoftMax(
+        S.transpose() * prediction_vector + T, normalizer);
+    normalizerCache.set(context, normalizer);
     class_prob = class_probs(class_id);
   }
 
   Real word_prob;
-  auto it2 = wordNormalizerCache[class_id].find(context);
-  if (it2 != wordNormalizerCache[class_id].end()) {
-    word_prob = R.col(word_id).dot(prediction_vector) + B(word_id) - it2->second;
+  ret = wordNormalizerCache[class_id].get(context);
+  if (ret.second) {
+    word_prob = R.col(word_id).dot(prediction_vector) + B(word_id) - ret.first;
   } else {
+    Real normalizer = 0;
     VectorReal word_probs = logSoftMax(
         classR(class_id).transpose() * prediction_vector + classB(class_id),
-        wordNormalizerCache[class_id][context]);
+        normalizer);
+    wordNormalizerCache[class_id].set(context, normalizer);
     word_prob = word_probs(word_class_id);
   }
 

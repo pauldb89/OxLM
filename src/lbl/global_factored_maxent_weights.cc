@@ -305,26 +305,29 @@ Real GlobalFactoredMaxentWeights::predict(
   VectorReal prediction_vector = getPredictionVector(context);
 
   Real class_prob = 0;
-  auto it = normalizerCache.find(context);
-  if (it != normalizerCache.end()) {
+  auto ret = normalizerCache.get(context);
+  if (ret.second) {
     Real class_score = U->get(context)(class_id);
-    class_prob = S.col(class_id).dot(prediction_vector) + T(class_id) + class_score - it->second;
+    class_prob = S.col(class_id).dot(prediction_vector) + T(class_id) + class_score - ret.first;
   } else {
+    Real normalizer = 0;
     VectorReal class_probs = logSoftMax(
-        S.transpose() * prediction_vector + T + U->get(context),
-        normalizerCache[context]);
+        S.transpose() * prediction_vector + T + U->get(context), normalizer);
+    normalizerCache.set(context, normalizer);
     class_prob = class_probs(class_id);
   }
 
   Real word_prob = 0;
-  auto it2 = wordNormalizerCache[class_id].find(context);
-  if (it2 != wordNormalizerCache[class_id].end()) {
+  ret = wordNormalizerCache[class_id].get(context);
+  if (ret.second) {
     Real word_score = V[class_id]->get(context)(word_class_id);
-    word_prob = R.col(word_id).dot(prediction_vector) + B(word_id) + word_score - it2->second;
+    word_prob = R.col(word_id).dot(prediction_vector) + B(word_id) + word_score - ret.first;
   } else {
+    Real normalizer = 0;
     VectorReal word_probs = logSoftMax(
         classR(class_id).transpose() * prediction_vector + classB(class_id) + V[class_id]->get(context),
-        wordNormalizerCache[class_id][context]);
+        normalizer);
+    wordNormalizerCache[class_id].set(context, normalizer);
     word_prob = word_probs(word_class_id);
   }
 

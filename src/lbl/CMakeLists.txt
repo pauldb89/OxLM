@@ -10,6 +10,7 @@ add_libraries(lbl
   collision_global_feature_store.cc
   collision_minibatch_feature_store.cc
   config.cc
+  context_cache.cc
   context_processor.cc
   factored_maxent_metadata.cc
   factored_metadata.cc

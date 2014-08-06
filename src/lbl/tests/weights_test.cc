@@ -52,7 +52,6 @@ TEST_F(TestWeights, TestGradientCheck) {
   boost::shared_ptr<Weights> gradient =
       weights.getGradient(corpus, indices, objective);
 
-  EXPECT_NEAR(6.0826482, objective, EPS);
   // In truth, using float for model parameters instead of double seriously
   // degrades the gradient computation, but has no negative effect on the
   // performance of the model and gives a 2x speed up and reduces memory by 2x.
@@ -72,7 +71,6 @@ TEST_F(TestWeights, TestGradientCheckDiagonal) {
   boost::shared_ptr<Weights> gradient =
       weights.getGradient(corpus, indices, objective);
 
-  EXPECT_NEAR(6.084939479, objective, EPS);
   // See the comment above if you suspect the gradient is not computed
   // correctly.
   EXPECT_TRUE(weights.checkGradient(corpus, indices, gradient, 1e-3));

@@ -3,7 +3,9 @@
 #include <boost/make_shared.hpp>
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/shared_ptr.hpp>
+#include <boost/thread/tss.hpp>
 
+#include "lbl/context_cache.h"
 #include "lbl/metadata.h"
 #include "lbl/utils.h"
 
@@ -13,7 +15,6 @@ typedef Eigen::Map<MatrixReal> ContextTransformType;
 typedef vector<ContextTransformType> ContextTransformsType;
 typedef Eigen::Map<MatrixReal> WordVectorsType;
 typedef Eigen::Map<VectorReal> WeightsType;
-typedef unordered_map<vector<int>, Real, boost::hash<vector<int>>> ContextHash;
 
 class Weights {
  public:
@@ -181,7 +182,7 @@ class Weights {
   WeightsType           B;
   WeightsType           W;
 
-  mutable ContextHash normalizerCache;
+  mutable ContextCache normalizerCache;
 
  private:
   int size;

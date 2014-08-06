@@ -168,7 +168,7 @@ class FactoredWeights : public Weights {
   WeightsType     T;
   WeightsType     FW;
 
-  mutable vector<ContextHash> wordNormalizerCache;
+  mutable vector<ContextCache> wordNormalizerCache;
 
  private:
   int size;

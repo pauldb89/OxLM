@@ -448,12 +448,14 @@ VectorReal Weights::getPredictionVector(const vector<int>& context) const {
 Real Weights::predict(int word_id, const vector<int>& context) const {
   VectorReal prediction_vector = getPredictionVector(context);
 
-  auto it = normalizerCache.find(context);
-  if (it != normalizerCache.end()) {
-    return R.col(word_id).dot(prediction_vector) + B(word_id) - it->second;
+  auto ret = normalizerCache.get(context);
+  if (ret.second) {
+    return R.col(word_id).dot(prediction_vector) + B(word_id) - ret.first;
   } else {
+    Real normalizer = 0;
     VectorReal word_probs = logSoftMax(
-        R.transpose() * prediction_vector + B, normalizerCache[context]);
+        R.transpose() * prediction_vector + B, normalizer);
+    normalizerCache.set(context, normalizer);
     return word_probs(word_id);
   }
 }

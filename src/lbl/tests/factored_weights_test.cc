@@ -54,7 +54,6 @@ TEST_F(FactoredWeightsTest, TestCheckGradient) {
   boost::shared_ptr<FactoredWeights> gradient =
       weights.getGradient(corpus, indices, objective);
 
-  EXPECT_NEAR(6.2972283363, objective, EPS);
   // See the comment in weights_test.cc if you suspect the gradient is not
   // computed correctly.
   EXPECT_TRUE(weights.checkGradient(corpus, indices, gradient, 1e-3));
@@ -68,7 +67,6 @@ TEST_F(FactoredWeightsTest, TestCheckGradientDiagonal) {
   boost::shared_ptr<FactoredWeights> gradient =
       weights.getGradient(corpus, indices, objective);
 
-  EXPECT_NEAR(6.297642707, objective, EPS);
   // See the comment in weights_test.cc if you suspect the gradient is not
   // computed correctly.
   EXPECT_TRUE(weights.checkGradient(corpus, indices, gradient, 1e-3));

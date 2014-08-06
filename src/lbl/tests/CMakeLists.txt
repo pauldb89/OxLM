@@ -6,6 +6,7 @@ set(TESTS
     collision_counter_test
     collision_global_feature_store_test
     collision_minibatch_feature_store_test
+    context_cache_test
     context_processor_test
     factored_metadata_test
     factored_weights_test

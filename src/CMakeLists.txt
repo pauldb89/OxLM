@@ -29,7 +29,7 @@ set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME OFF)
 find_package(Boost 1.45.0 COMPONENTS
-  date_time filesystem program_options serialization REQUIRED)
+  date_time filesystem program_options serialization thread REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
 # link_directories(${Boost_LIBRARY_DIRS})
 # set(link_libraries(train_cnlm ${Boost_LIBRARIES} cnlm)
