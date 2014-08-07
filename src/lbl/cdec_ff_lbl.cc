@@ -35,10 +35,10 @@ class FF_LBLLM : public FeatureFunction {
   FF_LBLLM(
       const string& filename,
       const string& feature_name,
-      bool cache_queries)
+      bool persistent_cache)
       : fid(FD::Convert(feature_name)),
         fidOOV(FD::Convert(feature_name + "_OOV")),
-        filename(filename), cacheQueries(cache_queries),
+        filename(filename), persistentCache(persistent_cache),
         cacheHits(0), totalHits(0) {
     model.load(filename);
 
@@ -62,7 +62,7 @@ class FF_LBLLM : public FeatureFunction {
   }
 
   void savePersistentCache() {
-    if (cacheQueries && cacheFile.size()) {
+    if (persistentCache && cacheFile.size()) {
       ofstream f(cacheFile);
       boost::archive::binary_oarchive oa(f);
       cerr << "Saving n-gram probability cache to " << cacheFile << endl;
@@ -73,7 +73,7 @@ class FF_LBLLM : public FeatureFunction {
   }
 
   void loadPersistentCache(int sentence_id) {
-    if (cacheQueries) {
+    if (persistentCache) {
       cacheFile = filename + "." + to_string(sentence_id) + ".cache.bin";
       if (boost::filesystem::exists(cacheFile)) {
         ifstream f(cacheFile);
@@ -171,7 +171,7 @@ class FF_LBLLM : public FeatureFunction {
     }
 
     double score;
-    if (cacheQueries) {
+    if (persistentCache) {
       NGram query(word, context);
       ++totalHits;
       pair<double, bool> ret = cache.get(query);
@@ -239,7 +239,7 @@ class FF_LBLLM : public FeatureFunction {
 
   ~FF_LBLLM() {
     savePersistentCache();
-    if (cacheQueries) {
+    if (persistentCache) {
       cerr << "Cache hit ratio: " << 100.0 * cacheHits / totalHits
            << " %" << endl;
     }
@@ -261,7 +261,7 @@ class FF_LBLLM : public FeatureFunction {
   int kUNKNOWN;
   int kSTAR;
 
-  bool cacheQueries;
+  bool persistentCache;
   string cacheFile;
   mutable QueryCache cache;
   mutable int cacheHits, totalHits;
@@ -271,7 +271,7 @@ class FF_LBLLM : public FeatureFunction {
 
 void ParseOptions(
     const string& input, string& filename, string& feature_name,
-    oxlm::ModelType& model_type, bool& cache_queries) {
+    oxlm::ModelType& model_type, bool& persistent_cache) {
   po::options_description options("LBL language model options");
   options.add_options()
       ("file,f", po::value<string>()->required(),
@@ -280,7 +280,7 @@ void ParseOptions(
           "Feature name")
       ("type,t", po::value<int>()->required(),
           "Model type")
-      ("cache-queries",
+      ("persistent-cache",
           "Cache queries persistently between consecutive decoder runs");
 
   po::variables_map vm;
@@ -292,7 +292,7 @@ void ParseOptions(
   filename = vm["file"].as<string>();
   feature_name = vm["name"].as<string>();
   model_type = static_cast<oxlm::ModelType>(vm["type"].as<int>());
-  cache_queries = vm.count("cache-queries");
+  persistent_cache = vm.count("cache-queries");
 }
 
 class UnknownModelException : public exception {
@@ -304,17 +304,17 @@ class UnknownModelException : public exception {
 extern "C" FeatureFunction* create_ff(const string& str) {
   string filename, feature_name;
   oxlm::ModelType model_type;
-  bool cache_queries;
-  ParseOptions(str, filename, feature_name, model_type, cache_queries);
+  bool persistent_cache;
+  ParseOptions(str, filename, feature_name, model_type, persistent_cache);
 
   switch (model_type) {
     case NLM:
-      return new FF_LBLLM<LM>(filename, feature_name, cache_queries);
+      return new FF_LBLLM<LM>(filename, feature_name, persistent_cache);
     case FACTORED_NLM:
-      return new FF_LBLLM<FactoredLM>(filename, feature_name, cache_queries);
+      return new FF_LBLLM<FactoredLM>(filename, feature_name, persistent_cache);
     case FACTORED_MAXENT_NLM:
       return new FF_LBLLM<FactoredMaxentLM>(
-          filename, feature_name, cache_queries);
+          filename, feature_name, persistent_cache);
     default:
       throw UnknownModelException();
   }
