@@ -292,7 +292,7 @@ void ParseOptions(
   filename = vm["file"].as<string>();
   feature_name = vm["name"].as<string>();
   model_type = static_cast<oxlm::ModelType>(vm["type"].as<int>());
-  persistent_cache = vm.count("cache-queries");
+  persistent_cache = vm.count("persistent-cache");
 }
 
 class UnknownModelException : public exception {
