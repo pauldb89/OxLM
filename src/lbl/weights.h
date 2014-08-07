@@ -68,7 +68,7 @@ class Weights {
   Real regularizerUpdate(
       const boost::shared_ptr<Weights>& global_gradient, Real minibatch_factor);
 
-  Real predict(int word_id, const vector<int>& context) const;
+  Real predict(int word_id, vector<int> context) const;
 
   void clearCache();
 

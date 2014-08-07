@@ -171,15 +171,19 @@ class FF_LBLLM : public FeatureFunction {
     }
 
     double score;
-    NGram query(word, context);
-    ++totalHits;
-    pair<double, bool> ret = cache.get(query);
-    if (ret.second) {
-      ++cacheHits;
-      score = ret.first;
+    if (cacheQueries) {
+      NGram query(word, context);
+      ++totalHits;
+      pair<double, bool> ret = cache.get(query);
+      if (ret.second) {
+        ++cacheHits;
+        score = ret.first;
+      } else {
+        score = model.predict(word, context);
+        cache.put(query, score);
+      }
     } else {
       score = model.predict(word, context);
-      cache.put(query, score);
     }
 
     return LBLFeatures(score, word == kUNKNOWN);

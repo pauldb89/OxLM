@@ -67,7 +67,7 @@ class GlobalFactoredMaxentWeights : public FactoredWeights {
       const boost::shared_ptr<MinibatchFactoredMaxentWeights>& global_gradient,
       Real minibatch_factor);
 
-  Real predict(int word_id, const vector<int>& context) const;
+  Real predict(int word_id, vector<int> context) const;
 
   bool operator==(const GlobalFactoredMaxentWeights& other) const;
 

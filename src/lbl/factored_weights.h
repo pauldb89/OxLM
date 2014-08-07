@@ -61,7 +61,7 @@ class FactoredWeights : public Weights {
       const boost::shared_ptr<FactoredWeights>& global_gradient,
       Real minibatch_factor);
 
-  Real predict(int word_id, const vector<int>& context) const;
+  Real predict(int word_id, vector<int> context) const;
 
   void clearCache();
 
@@ -168,7 +168,7 @@ class FactoredWeights : public Weights {
   WeightsType     T;
   WeightsType     FW;
 
-  mutable vector<ContextCache> wordNormalizerCache;
+  mutable ContextCache classNormalizerCache;
 
  private:
   int size;

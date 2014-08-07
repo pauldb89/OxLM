@@ -445,7 +445,7 @@ VectorReal Weights::getPredictionVector(const vector<int>& context) const {
   return config->sigmoid ? sigmoid(prediction_vector) : prediction_vector;
 }
 
-Real Weights::predict(int word_id, const vector<int>& context) const {
+Real Weights::predict(int word_id, vector<int> context) const {
   VectorReal prediction_vector = getPredictionVector(context);
 
   auto ret = normalizerCache.get(context);

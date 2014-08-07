@@ -15,7 +15,7 @@ FactoredWeights::FactoredWeights(
     const boost::shared_ptr<ModelData>& config,
     const boost::shared_ptr<FactoredMetadata>& metadata)
     : Weights(config, metadata), metadata(metadata),
-      index(metadata->getIndex()), wordNormalizerCache(index->getNumClasses()),
+      index(metadata->getIndex()),
       data(NULL), S(0, 0, 0), T(0, 0), FW(0, 0) {
   allocate();
   FW.setZero();
@@ -26,7 +26,7 @@ FactoredWeights::FactoredWeights(
     const boost::shared_ptr<FactoredMetadata>& metadata,
     const boost::shared_ptr<Corpus>& training_corpus)
     : Weights(config, metadata, training_corpus), metadata(metadata),
-      index(metadata->getIndex()), wordNormalizerCache(index->getNumClasses()),
+      index(metadata->getIndex()),
       data(NULL), S(0, 0, 0), T(0, 0), FW(0, 0) {
   allocate();
 
@@ -46,7 +46,7 @@ FactoredWeights::FactoredWeights(
     const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& indices)
     : Weights(config, metadata, corpus, indices), metadata(metadata),
-      index(metadata->getIndex()), wordNormalizerCache(index->getNumClasses()),
+      index(metadata->getIndex()),
       data(NULL), S(0, 0, 0), T(0, 0), FW(0, 0) {
   allocate();
   FW.setZero();
@@ -54,7 +54,7 @@ FactoredWeights::FactoredWeights(
 
 FactoredWeights::FactoredWeights(const FactoredWeights& other)
     : Weights(other), metadata(other.metadata),
-      index(other.index), wordNormalizerCache(index->getNumClasses()),
+      index(other.index),
       data(NULL), S(0, 0, 0), T(0, 0), FW(0, 0) {
   allocate();
   memcpy(data, other.data, size * sizeof(Real));
@@ -415,7 +415,7 @@ Real FactoredWeights::regularizerUpdate(
   return ret;
 }
 
-Real FactoredWeights::predict(int word_id, const vector<int>& context) const {
+Real FactoredWeights::predict(int word_id, vector<int> context) const {
   int class_id = index->getClass(word_id);
   int word_class_id = index->getWordIndexInClass(word_id);
   VectorReal prediction_vector = getPredictionVector(context);
@@ -432,8 +432,9 @@ Real FactoredWeights::predict(int word_id, const vector<int>& context) const {
     class_prob = class_probs(class_id);
   }
 
+  context.insert(context.begin(), class_id);
   Real word_prob;
-  ret = wordNormalizerCache[class_id].get(context);
+  ret = classNormalizerCache.get(context);
   if (ret.second) {
     word_prob = R.col(word_id).dot(prediction_vector) + B(word_id) - ret.first;
   } else {
@@ -441,7 +442,7 @@ Real FactoredWeights::predict(int word_id, const vector<int>& context) const {
     VectorReal word_probs = logSoftMax(
         classR(class_id).transpose() * prediction_vector + classB(class_id),
         normalizer);
-    wordNormalizerCache[class_id].set(context, normalizer);
+    classNormalizerCache.set(context, normalizer);
     word_prob = word_probs(word_class_id);
   }
 
@@ -450,9 +451,7 @@ Real FactoredWeights::predict(int word_id, const vector<int>& context) const {
 
 void FactoredWeights::clearCache() {
   Weights::clearCache();
-  for (size_t i = 0; i < wordNormalizerCache.size(); ++i) {
-    wordNormalizerCache[i].clear();
-  }
+  classNormalizerCache.clear();
 }
 
 bool FactoredWeights::operator==(const FactoredWeights& other) const {

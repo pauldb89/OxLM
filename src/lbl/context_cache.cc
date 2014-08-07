@@ -21,7 +21,10 @@ void ContextCache::set(const vector<int>& context, Real value) {
 }
 
 void ContextCache::clear() {
-  assert(cache.get());
+  if (!cache.get()) {
+    cache.reset(new ContextMap());
+  }
+
   cache->clear();
 }
 
