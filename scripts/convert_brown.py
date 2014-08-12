@@ -40,6 +40,7 @@ def main():
 
   data = read_brown_clusters(options.input_file)
   words, tree = convert_brown_clusters(data)
+  print "Tree depth:", depth(words, tree)
   write_tree(words, tree, options.output_file)
 
 if __name__ == "__main__":
