@@ -83,9 +83,6 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
   boost::shared_ptr<GlobalWeights> adagrad =
       boost::make_shared<GlobalWeights>(config, metadata);
 
-  double init_duration = 0, gradient_duration = 0;
-  double update_duration = 0, regularizer_duration = 0;
-
   omp_set_num_threads(config->threads);
   #pragma omp parallel
   {
@@ -121,13 +118,6 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
         // afterwards.
         #pragma omp barrier
 
-        #pragma omp master
-        {
-          auto end_time = GetTime();
-          init_duration += GetDuration(start_time, end_time);
-          start_time = end_time;
-        }
-
         vector<int> minibatch = scatterMinibatch(start, end, indices);
         Real objective;
         boost::shared_ptr<MinibatchWeights> gradient;
@@ -149,22 +139,11 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
 
         #pragma omp master
         {
-          auto end_time = GetTime();
-          gradient_duration += GetDuration(start_time, end_time);
-          start_time = end_time;
-        }
-
-        #pragma omp master
-        {
           update(global_gradient, adagrad);
-          auto end_time = GetTime();
-          update_duration += GetDuration(start_time, end_time);
-          start_time = end_time;
 
           Real minibatch_factor =
               static_cast<Real>(end - start) / training_corpus->size();
           global_objective += regularize(global_gradient, minibatch_factor);
-          regularizer_duration += GetDuration(start_time, GetTime());
         }
 
         // Wait for master thread to update model.
@@ -173,12 +152,6 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
             minibatch_counter % 1000 == 0) {
           evaluate(test_corpus, iteration_start, minibatch_counter,
                    test_objective, best_perplexity);
-
-          #pragma omp master
-          cout << "Init time: " << init_duration << ", "
-               << "Gradient time: " << gradient_duration << ", "
-               << "Update time: " << update_duration << ", "
-               << "Regularizer time: " << regularizer_duration << endl;
         }
 
         ++minibatch_counter;
