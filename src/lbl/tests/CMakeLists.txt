@@ -39,7 +39,7 @@ set(TESTS
     word_context_hasher_test
     word_to_class_index_test)
 
-set(LIBRARIES lbl)
+set(LIBRARIES murmurhash lbl)
 
 if(CDEC_FOUND AND CDEC_LIBRARIES_FOUND)
   set(TESTS ${TESTS}
