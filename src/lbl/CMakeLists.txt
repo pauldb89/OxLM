@@ -76,7 +76,7 @@ set(EXECUTABLES
 )
 foreach(f ${EXECUTABLES})
  add_executable(${f} ${f}.cc)
- target_link_libraries(${f} lbl utils)
+ target_link_libraries(${f} lbl murmurhash utils)
 endforeach(f)
 
 add_subdirectory(tests)
