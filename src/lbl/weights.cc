@@ -344,7 +344,14 @@ void Weights::estimateProjectionGradient(
   int noise_samples = config->noise_samples;
   int word_width = config->word_representation_size;
   VectorReal unigram = metadata->getUnigram();
+  auto start_time = GetTime();
   vector<vector<int>> noise_words = getNoiseWords(corpus, indices);
+  #pragma omp master
+  {
+    auto end_time = GetTime();
+    noise_samples_duration += GetDuration(start_time, end_time);
+    start_time = end_time;
+  }
 
   objective = 0;
   weighted_representations = MatrixReal::Zero(word_width, indices.size());
@@ -376,6 +383,11 @@ void Weights::estimateProjectionGradient(
       gradient->R.col(noise_word_id) += neg_weight * prediction_vectors.col(i);
       gradient->B(noise_word_id) += neg_weight;
     }
+  }
+
+  #pragma omp master
+  {
+    gradient_update_duration += GetDuration(start_time, GetTime());
   }
 }
 

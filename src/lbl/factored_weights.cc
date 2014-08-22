@@ -270,8 +270,13 @@ bool FactoredWeights::checkGradient(
 vector<vector<int>> FactoredWeights::getNoiseWords(
     const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& indices) const {
+  auto start_time = GetTime();
   random_device rd;
   mt19937 gen(rd());
+  #pragma omp master
+  {
+    distribution_duration += GetDuration(start_time, GetTime());
+  }
   VectorReal unigram = metadata->getUnigram();
   vector<vector<int>> noise_words(indices.size());
   for (size_t i = 0; i < indices.size(); ++i) {
@@ -280,9 +285,14 @@ vector<vector<int>> FactoredWeights::getNoiseWords(
     int class_start = index->getClassMarker(class_id);
     int class_size = index->getClassSize(class_id);
 
+    start_time = GetTime();
     discrete_distribution<int> discrete(
         unigram.data() + class_start,
         unigram.data() + class_start + class_size);
+    #pragma omp master
+    {
+      distribution_duration += GetDuration(start_time, GetTime());
+    }
     for (int j = 0; j < config->noise_samples; ++j) {
       noise_words[i].push_back(class_start + discrete(gen));
     }
@@ -294,11 +304,21 @@ vector<vector<int>> FactoredWeights::getNoiseWords(
 vector<vector<int>> FactoredWeights::getNoiseClasses(
     const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& indices) const {
+  auto start_time = GetTime();
   random_device rd;
   mt19937 gen(rd());
+  #pragma omp master
+  {
+    distribution_duration += GetDuration(start_time, GetTime());
+  }
   VectorReal class_unigram = metadata->getClassBias().array().exp();
+  start_time = GetTime();
   discrete_distribution<int> discrete(
       class_unigram.data(), class_unigram.data() + class_unigram.size());
+  #pragma omp master
+  {
+    distribution_duration += GetDuration(start_time, GetTime());
+  }
   vector<vector<int>> noise_classes(indices.size());
   for (size_t i = 0; i < indices.size(); ++i) {
     for (int j = 0; j < config->noise_samples; ++j) {
@@ -322,7 +342,14 @@ void FactoredWeights::estimateProjectionGradient(
 
   int noise_samples = config->noise_samples;
   VectorReal class_unigram = metadata->getClassBias().array().exp();
+  auto start_time = GetTime();
   vector<vector<int>> noise_classes = getNoiseClasses(corpus, indices);
+  #pragma omp master
+  {
+    auto end_time = GetTime();
+    noise_samples_duration += GetDuration(start_time, end_time);
+    start_time = end_time;
+  }
   for (size_t i = 0; i < indices.size(); ++i) {
     int word_id = corpus->at(indices[i]);
     int class_id = index->getClass(word_id);
@@ -352,6 +379,11 @@ void FactoredWeights::estimateProjectionGradient(
       gradient->S.col(noise_class_id) += neg_weight * prediction_vectors.col(i);
       gradient->T(noise_class_id) += neg_weight;
     }
+  }
+
+  #pragma omp master
+  {
+    gradient_update_duration += GetDuration(start_time, GetTime());
   }
 }
 

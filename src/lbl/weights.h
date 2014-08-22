@@ -187,6 +187,11 @@ class Weights {
  private:
   int size;
   Real* data;
+
+ public:
+  mutable Real noise_samples_duration;
+  mutable Real gradient_update_duration;
+  mutable Real distribution_duration;
 };
 
 } // namespace oxlm
