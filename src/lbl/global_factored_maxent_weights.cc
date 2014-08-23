@@ -248,9 +248,16 @@ void GlobalFactoredMaxentWeights::updateSquared(
     const boost::shared_ptr<MinibatchFactoredMaxentWeights>& global_gradient) {
   FactoredWeights::updateSquared(global_gradient);
 
-  U->updateSquared(global_gradient->U);
-  for (size_t i = 0; i < V.size(); ++i) {
-    V[i]->updateSquared(global_gradient->V[i]);
+  // The number of n-gram weights updated for each minibatch is relatively low
+  // (compared to the number of parameters updated in the base (factored)
+  // bilinear model, so it's okay to let a single thread handle this
+  // computation. Adding parallelization is not trivial.
+  #pragma omp master
+  {
+    U->updateSquared(global_gradient->U);
+    for (size_t i = 0; i < V.size(); ++i) {
+      V[i]->updateSquared(global_gradient->V[i]);
+    }
   }
 }
 
@@ -259,9 +266,13 @@ void GlobalFactoredMaxentWeights::updateAdaGrad(
     const boost::shared_ptr<GlobalFactoredMaxentWeights>& adagrad) {
   FactoredWeights::updateAdaGrad(global_gradient, adagrad);
 
-  U->updateAdaGrad(global_gradient->U, adagrad->U, config->step_size);
-  for (size_t i = 0; i < V.size(); ++i) {
-    V[i]->updateAdaGrad(global_gradient->V[i], adagrad->V[i], config->step_size);
+  // See comment above.
+  #pragma omp master
+  {
+    U->updateAdaGrad(global_gradient->U, adagrad->U, config->step_size);
+    for (size_t i = 0; i < V.size(); ++i) {
+      V[i]->updateAdaGrad(global_gradient->V[i], adagrad->V[i], config->step_size);
+    }
   }
 }
 
@@ -271,13 +282,17 @@ Real GlobalFactoredMaxentWeights::regularizerUpdate(
   Real ret = FactoredWeights::regularizerUpdate(
       global_gradient, minibatch_factor);
 
-  Real sigma = minibatch_factor * config->step_size * config->l2_maxent;
-  Real factor = 0.5 * minibatch_factor * config->l2_maxent;
-  U->l2GradientUpdate(global_gradient->U, sigma);
-  ret += U->l2Objective(global_gradient->U, factor);
-  for (size_t i = 0; i < V.size(); ++i) {
-    V[i]->l2GradientUpdate(global_gradient->V[i], sigma);
-    ret += V[i]->l2Objective(global_gradient->V[i], factor);
+  // See comment above.
+  #pragma omp master
+  {
+    Real sigma = minibatch_factor * config->step_size * config->l2_maxent;
+    Real factor = 0.5 * minibatch_factor * config->l2_maxent;
+    U->l2GradientUpdate(global_gradient->U, sigma);
+    ret += U->l2Objective(global_gradient->U, factor);
+    for (size_t i = 0; i < V.size(); ++i) {
+      V[i]->l2GradientUpdate(global_gradient->V[i], sigma);
+      ret += V[i]->l2Objective(global_gradient->V[i], factor);
+    }
   }
 
   return ret;
