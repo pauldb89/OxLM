@@ -117,7 +117,7 @@ class Weights {
       const MatrixReal& prediction_vectors,
       const MatrixReal& word_probs) const;
 
-  boost::shared_ptr<Weights> getFullGradient(
+  void getFullGradient(
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices,
       const vector<vector<int>>& contexts,

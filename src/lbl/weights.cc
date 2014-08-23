@@ -216,7 +216,7 @@ MatrixReal Weights::getWeightedRepresentations(
   return weighted_representations;
 }
 
-boost::shared_ptr<Weights> Weights::getFullGradient(
+void Weights::getFullGradient(
     const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& indices,
     const vector<vector<int>>& contexts,

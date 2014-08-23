@@ -10,20 +10,6 @@
 
 namespace oxlm {
 
-TEST_F(FactoredSGDTest, TestTrainMaxentSGD) {
-  config->l2_maxent = 2;
-  config->feature_context_size = 3;
-
-  FactoredMaxentLM model(config);
-  model.learn();
-  config->test_file = "test.txt";
-  Dict dict = model.getDict();
-  boost::shared_ptr<Corpus> test_corpus = readCorpus(config->test_file, dict);
-  Real log_likelihood = 0;
-  model.evaluate(test_corpus, log_likelihood);
-  EXPECT_NEAR(55.0796585, perplexity(log_likelihood, test_corpus->size()), EPS);
-}
-
 TEST_F(FactoredSGDTest, TestTrainMaxentSGDSparseFeatures) {
   config->l2_maxent = 0.1;
   config->feature_context_size = 3;

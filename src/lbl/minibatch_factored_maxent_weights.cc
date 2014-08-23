@@ -26,7 +26,7 @@ MinibatchFactoredMaxentWeights::MinibatchFactoredMaxentWeights(
   V.resize(index->getNumClasses());
 
   mutexU = boost::make_shared<mutex>();
-  for (int i = 0; i < config->threads; ++i) {
+  for (int i = 0; i < V.size(); ++i) {
     mutexesV.push_back(boost::make_shared<mutex>());
   }
 }
