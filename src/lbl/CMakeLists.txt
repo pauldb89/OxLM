@@ -41,7 +41,6 @@ add_libraries(lbl
   query_cache.cc
   sparse_global_feature_store.cc
   sparse_minibatch_feature_store.cc
-  unconstrained_feature_store.cc
   utils.cc
   weights.cc
   word_context_extractor.cc

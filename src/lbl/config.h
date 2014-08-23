@@ -71,7 +71,6 @@ struct ModelData {
   float       gnorm_threshold;
   float       eta;
   float       multinomial_step_size;
-  bool        sparse_features;
   bool        random_weights;
   int         hash_space;
   bool        count_collisions;
@@ -105,7 +104,6 @@ struct ModelData {
     ar & class_file;
     ar & randomise;
     ar & diagonal_contexts;
-    ar & sparse_features;
     ar & hash_space;
     ar & filter_contexts;
     ar & filter_error_rate;

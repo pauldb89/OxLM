@@ -27,7 +27,6 @@ TEST_F(FactoredSGDTest, TestTrainMaxentSGD) {
 TEST_F(FactoredSGDTest, TestTrainMaxentSGDSparseFeatures) {
   config->l2_maxent = 0.1;
   config->feature_context_size = 3;
-  config->sparse_features = true;
 
   FactoredMaxentLM model(config);
   model.learn();

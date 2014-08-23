@@ -14,7 +14,6 @@
 #include "lbl/feature_matcher.h"
 #include "lbl/feature_no_op_filter.h"
 #include "lbl/sparse_minibatch_feature_store.h"
-#include "lbl/unconstrained_feature_store.h"
 #include "lbl/word_context_extractor.h"
 #include "lbl/word_context_hasher.h"
 
@@ -89,7 +88,7 @@ void MinibatchFactoredMaxentWeights::reset(
           class_size, config->hash_space, config->feature_context_size,
           hasher, filter);
     }
-  } else if (config->sparse_features) {
+  } else {
     auto feature_indexes_pair = matcher->getMinibatchFeatures(
         corpus, config->feature_context_size, minibatch_indices);
     U = boost::make_shared<SparseMinibatchFeatureStore>(
@@ -102,15 +101,6 @@ void MinibatchFactoredMaxentWeights::reset(
          index->getClassSize(i),
          feature_indexes_pair->getWordIndexes(i),
          boost::make_shared<WordContextExtractor>(i, mapper));
-    }
-  } else {
-    U = boost::make_shared<UnconstrainedFeatureStore>(
-        num_classes, boost::make_shared<ClassContextExtractor>(mapper));
-
-    for (int i = 0; i < num_classes; ++i) {
-      V[i] = boost::make_shared<UnconstrainedFeatureStore>(
-          index->getClassSize(i),
-          boost::make_shared<WordContextExtractor>(i, mapper));
     }
   }
 }

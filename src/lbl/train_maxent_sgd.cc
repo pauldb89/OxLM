@@ -59,8 +59,6 @@ int main(int argc, char **argv) {
         "Define maxent features only for the most frequent max-ngrams ngrams.")
     ("min-ngram-freq", value<int>()->default_value(1),
         "Define maxent features only for n-grams above this frequency.")
-    ("sparse-features", value<bool>()->default_value(true),
-        "Only define maximum entropy feature functions for observed contexts")
     ("hash-space", value<Real>()->default_value(0),
         "The size of the space in which the maxent features are mapped to "
         "(in millions).")
@@ -126,7 +124,6 @@ int main(int argc, char **argv) {
   config->max_ngrams = vm["max-ngrams"].as<int>();
   config->min_ngram_freq = vm["min-ngram-freq"].as<int>();
 
-  config->sparse_features = vm["sparse-features"].as<bool>();
   config->hash_space = vm["hash-space"].as<Real>() * 1000000;
   config->filter_contexts = vm["filter-contexts"].as<bool>();
   config->filter_error_rate = vm["filter-error-rate"].as<Real>();
@@ -155,7 +152,6 @@ int main(int argc, char **argv) {
   cout << "# classes = " << config->classes << endl;
   cout << "# max n-grams = " << config->max_ngrams << endl;
   cout << "# min n-gram frequency = " << config->min_ngram_freq << endl;
-  cout << "# sparse features = " << config->sparse_features << endl;
   cout << "# hash space = " << config->hash_space << endl;
   cout << "# filter contexts = " << config->filter_contexts << endl;
   cout << "# filter error rate = " << config->filter_error_rate << endl;

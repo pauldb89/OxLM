@@ -32,7 +32,6 @@ set(TESTS
     train_factored_sgd_test
     train_maxent_sgd_test
     train_sgd_test
-    unconstrained_feature_store_test
     utils_test
     weights_test
     word_context_extractor_test

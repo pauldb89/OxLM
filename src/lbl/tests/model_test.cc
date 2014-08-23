@@ -20,7 +20,6 @@ class ModelTest : public testing::Test {
 
     config->l2_maxent = 0.1;
     config->feature_context_size = 3;
-    config->sparse_features = true;
 
     config->model_output_file = "model.txt";
   }
@@ -42,8 +41,6 @@ TEST_F(ModelTest, TestSerializationCollisionStores) {
 }
 
 TEST_F(ModelTest, TestSerializationSparseStores) {
-  config->sparse_features = true;
-
   FactoredMaxentLM model(config);
   model.learn();
   model.save();
