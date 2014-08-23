@@ -50,7 +50,8 @@ TEST_F(TestWeights, TestGradientCheck) {
   vector<int> indices = {0, 1, 2, 3};
   Real objective;
   boost::shared_ptr<Weights> gradient =
-      weights.getGradient(corpus, indices, objective);
+      boost::make_shared<Weights>(config, metadata);
+  weights.getGradient(corpus, indices, gradient, objective);
 
   // In truth, using float for model parameters instead of double seriously
   // degrades the gradient computation, but has no negative effect on the
@@ -69,7 +70,8 @@ TEST_F(TestWeights, TestGradientCheckDiagonal) {
   vector<int> indices = {0, 1, 2, 3};
   Real objective;
   boost::shared_ptr<Weights> gradient =
-      weights.getGradient(corpus, indices, objective);
+      boost::make_shared<Weights>(config, metadata);
+  weights.getGradient(corpus, indices, gradient, objective);
 
   // See the comment above if you suspect the gradient is not computed
   // correctly.

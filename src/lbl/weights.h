@@ -35,17 +35,16 @@ class Weights {
       const boost::shared_ptr<Metadata>& metadata,
       const boost::shared_ptr<Corpus>& training_corpus);
 
-  Weights(
-      const boost::shared_ptr<ModelData>& config,
-      const boost::shared_ptr<Metadata>& metadata,
-      const boost::shared_ptr<Corpus>& corpus,
-      const vector<int>& minibatch_indices);
-
   Weights(const Weights& other);
 
-  boost::shared_ptr<Weights> getGradient(
+  void reset(
+      const boost::shared_ptr<Corpus>& corpus,
+      const vector<int>& minibatch);
+
+  void getGradient(
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices,
+      const boost::shared_ptr<Weights>& gradient,
       Real& objective) const;
 
   virtual Real getObjective(
@@ -58,9 +57,10 @@ class Weights {
       const boost::shared_ptr<Weights>& gradient,
       double eps);
 
-  boost::shared_ptr<Weights> estimateGradient(
+  void estimateGradient(
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices,
+      const boost::shared_ptr<Weights>& gradient,
       Real& objective) const;
 
   void syncUpdate(const boost::shared_ptr<Weights>& gradient);
@@ -124,7 +124,8 @@ class Weights {
       const vector<MatrixReal>& context_vectors,
       const MatrixReal& prediction_vectors,
       const MatrixReal& weighted_representations,
-      MatrixReal& word_probs) const;
+      MatrixReal& word_probs,
+      const boost::shared_ptr<Weights>& gradient) const;
 
   void getContextGradient(
       const vector<int>& indices,
@@ -199,7 +200,6 @@ class Weights {
 
  public:
   mutable Real prediction_vectors_duration;
-  mutable Real create_gradient_duration;
   mutable Real distribution_duration;
   mutable Real sampling_duration;
   mutable Real nce_duration;

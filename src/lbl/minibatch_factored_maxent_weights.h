@@ -10,29 +10,20 @@ class MinibatchFactoredMaxentWeights : public FactoredWeights {
  public:
   MinibatchFactoredMaxentWeights(
       const boost::shared_ptr<ModelData>& config,
-      const boost::shared_ptr<FactoredMaxentMetadata>& metadata,
-      const boost::shared_ptr<Corpus>& corpus,
-      const vector<int>& minibatch_indices);
-
-  MinibatchFactoredMaxentWeights(
-      const boost::shared_ptr<ModelData>& config,
-      const boost::shared_ptr<FactoredMaxentMetadata>& metadata,
-      const boost::shared_ptr<Corpus>& corpus,
-      const vector<int>& minibatch_indices,
-      const boost::shared_ptr<FactoredWeights>& base_gradient);
+      const boost::shared_ptr<FactoredMaxentMetadata>& metadata);
 
   MinibatchFactoredMaxentWeights(
       int num_classes, const boost::shared_ptr<FactoredWeights>& base_gradient);
+
+  void reset(
+      const boost::shared_ptr<Corpus>& corpus,
+      const vector<int>& minibatch);
 
   void syncUpdate(
       const boost::shared_ptr<MinibatchFactoredMaxentWeights>& gradient);
 
  private:
   friend class GlobalFactoredMaxentWeights;
-
-  void initialize(
-      const boost::shared_ptr<Corpus>& corpus,
-      const vector<int>& minibatch_indices);
 
  protected:
   boost::shared_ptr<FactoredMaxentMetadata> metadata;

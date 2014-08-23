@@ -52,7 +52,8 @@ TEST_F(FactoredWeightsTest, TestCheckGradient) {
   vector<int> indices = {0, 1, 2, 3};
   Real objective;
   boost::shared_ptr<FactoredWeights> gradient =
-      weights.getGradient(corpus, indices, objective);
+      boost::make_shared<FactoredWeights>(config, metadata);
+  weights.getGradient(corpus, indices, gradient, objective);
 
   // See the comment in weights_test.cc if you suspect the gradient is not
   // computed correctly.
@@ -65,7 +66,8 @@ TEST_F(FactoredWeightsTest, TestCheckGradientDiagonal) {
   vector<int> indices = {0, 1, 2, 3};
   Real objective;
   boost::shared_ptr<FactoredWeights> gradient =
-      weights.getGradient(corpus, indices, objective);
+      boost::make_shared<FactoredWeights>(config, metadata);
+  weights.getGradient(corpus, indices, gradient, objective);
 
   // See the comment in weights_test.cc if you suspect the gradient is not
   // computed correctly.

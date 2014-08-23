@@ -22,35 +22,22 @@ namespace oxlm {
 
 MinibatchFactoredMaxentWeights::MinibatchFactoredMaxentWeights(
     const boost::shared_ptr<ModelData>& config,
-    const boost::shared_ptr<FactoredMaxentMetadata>& metadata,
-    const boost::shared_ptr<Corpus>& corpus,
-    const vector<int>& minibatch_indices)
-    : FactoredWeights(config, metadata, corpus, minibatch_indices),
-      metadata(metadata) {
-  initialize(corpus, minibatch_indices);
-}
-
-MinibatchFactoredMaxentWeights::MinibatchFactoredMaxentWeights(
-    const boost::shared_ptr<ModelData>& config,
-    const boost::shared_ptr<FactoredMaxentMetadata>& metadata,
-    const boost::shared_ptr<Corpus>& corpus,
-    const vector<int>& minibatch_indices,
-    const boost::shared_ptr<FactoredWeights>& base_weights)
-    : FactoredWeights(*base_weights), metadata(metadata) {
-  initialize(corpus, minibatch_indices);
-}
-
-void MinibatchFactoredMaxentWeights::initialize(
-    const boost::shared_ptr<Corpus>& corpus,
-    const vector<int>& minibatch_indices) {
-  int num_classes = index->getNumClasses();
-  V.resize(num_classes);
+    const boost::shared_ptr<FactoredMaxentMetadata>& metadata)
+    : FactoredWeights(config, metadata), metadata(metadata) {
+  V.resize(index->getNumClasses());
 
   mutexU = boost::make_shared<mutex>();
   for (int i = 0; i < config->threads; ++i) {
     mutexesV.push_back(boost::make_shared<mutex>());
   }
+}
 
+void MinibatchFactoredMaxentWeights::reset(
+    const boost::shared_ptr<Corpus>& corpus,
+    const vector<int>& minibatch_indices) {
+  FactoredWeights::reset(corpus, minibatch_indices);
+
+  int num_classes = index->getNumClasses();
   boost::shared_ptr<FeatureContextMapper> mapper = metadata->getMapper();
   boost::shared_ptr<BloomFilterPopulator> populator = metadata->getPopulator();
   boost::shared_ptr<FeatureMatcher> matcher = metadata->getMatcher();

@@ -21,17 +21,16 @@ class FactoredWeights : public Weights {
       const boost::shared_ptr<FactoredMetadata>& metadata,
       const boost::shared_ptr<Corpus>& training_corpus);
 
-  FactoredWeights(
-      const boost::shared_ptr<ModelData>& config,
-      const boost::shared_ptr<FactoredMetadata>& metadata,
-      const boost::shared_ptr<Corpus>& corpus,
-      const vector<int>& indices);
-
   FactoredWeights(const FactoredWeights& other);
 
-  boost::shared_ptr<FactoredWeights> getGradient(
+  void reset(
+      const boost::shared_ptr<Corpus>& corpus,
+      const vector<int>& minibatch);
+
+  void getGradient(
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices,
+      const boost::shared_ptr<FactoredWeights>& gradient,
       Real& objective) const;
 
   virtual Real getObjective(
@@ -44,9 +43,10 @@ class FactoredWeights : public Weights {
       const boost::shared_ptr<FactoredWeights>& gradient,
       double eps);
 
-  boost::shared_ptr<FactoredWeights> estimateGradient(
+  void estimateGradient(
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices,
+      const boost::shared_ptr<FactoredWeights>& gradient,
       Real& objective) const;
 
   void syncUpdate(const boost::shared_ptr<FactoredWeights>& gradient);
@@ -98,7 +98,7 @@ class FactoredWeights : public Weights {
       const MatrixReal& class_probs,
       const vector<VectorReal>& word_probs) const;
 
-  boost::shared_ptr<FactoredWeights> getFullGradient(
+  void getFullGradient(
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices,
       const vector<vector<int>>& contexts,
@@ -106,7 +106,8 @@ class FactoredWeights : public Weights {
       const MatrixReal& prediction_vectors,
       const MatrixReal& weighted_representations,
       MatrixReal& class_probs,
-      vector<VectorReal>& word_probs) const;
+      vector<VectorReal>& word_probs,
+      const boost::shared_ptr<FactoredWeights>& gradient) const;
 
   virtual vector<vector<int>> getNoiseWords(
       const boost::shared_ptr<Corpus>& corpus,

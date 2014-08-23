@@ -30,12 +30,13 @@ class GlobalFactoredMaxentWeights : public FactoredWeights {
       MatrixReal& class_probs,
       vector<VectorReal>& word_probs) const;
 
-  boost::shared_ptr<MinibatchFactoredMaxentWeights> getGradient(
+  void getGradient(
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices,
+      const boost::shared_ptr<MinibatchFactoredMaxentWeights>& gradient,
       Real& objective) const;
 
-  boost::shared_ptr<MinibatchFactoredMaxentWeights> getFullGradient(
+  void getFullGradient(
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices,
       const vector<vector<int>>& contexts,
@@ -43,11 +44,13 @@ class GlobalFactoredMaxentWeights : public FactoredWeights {
       const MatrixReal& prediction_vectors,
       const MatrixReal& weighted_representations,
       MatrixReal& class_probs,
-      vector<VectorReal>& word_probs) const;
+      vector<VectorReal>& word_probs,
+      const boost::shared_ptr<MinibatchFactoredMaxentWeights>& gradient) const;
 
-  boost::shared_ptr<MinibatchFactoredMaxentWeights> estimateGradient(
+  void estimateGradient(
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices,
+      const boost::shared_ptr<MinibatchFactoredMaxentWeights>& gradient,
       Real& objective) const;
 
   bool checkGradient(

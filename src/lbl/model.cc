@@ -79,7 +79,8 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
 
   Real best_perplexity = numeric_limits<Real>::infinity();
   Real global_objective = 0, test_objective = 0;
-  boost::shared_ptr<MinibatchWeights> global_gradient;
+  boost::shared_ptr<MinibatchWeights> global_gradient =
+      boost::make_shared<MinibatchWeights>(config, metadata);
   boost::shared_ptr<GlobalWeights> adagrad =
       boost::make_shared<GlobalWeights>(config, metadata);
 
@@ -88,7 +89,8 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
   {
     int minibatch_counter = 1;
     int minibatch_size = config->minibatch_size;
-
+    boost::shared_ptr<MinibatchWeights> gradient =
+        boost::make_shared<MinibatchWeights>(config, metadata);
 
     for (int iter = 0; iter < config->iterations; ++iter) {
       auto iteration_start = GetTime();
@@ -110,8 +112,7 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
         #pragma omp master
         {
           vector<int> minibatch(indices.begin() + start, indices.begin() + end);
-          global_gradient = boost::make_shared<MinibatchWeights>(
-              config, metadata, training_corpus, minibatch);
+          global_gradient->reset(training_corpus, minibatch);
         }
 
         // Wait until the global gradient is reset to 0. Otherwise, some
@@ -120,14 +121,13 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
         #pragma omp barrier
 
         vector<int> minibatch = scatterMinibatch(start, end, indices);
+        gradient->reset(training_corpus, minibatch);
         Real objective;
-        boost::shared_ptr<MinibatchWeights> gradient;
         if (config->noise_samples > 0) {
-          gradient = weights->estimateGradient(
-              training_corpus, minibatch, objective);
+          weights->estimateGradient(
+              training_corpus, minibatch, gradient, objective);
         } else {
-          gradient = weights->getGradient(
-              training_corpus, minibatch, objective);
+          weights->getGradient(training_corpus, minibatch, gradient, objective);
         }
 
         global_gradient->syncUpdate(gradient);

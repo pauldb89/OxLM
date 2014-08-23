@@ -50,17 +50,6 @@ Weights::Weights(
   cout << "===============================" << endl;
 }
 
-Weights::Weights(
-    const boost::shared_ptr<ModelData>& config,
-    const boost::shared_ptr<Metadata>& metadata,
-    const boost::shared_ptr<Corpus>& corpus,
-    const vector<int>& indices)
-    : config(config), metadata(metadata),
-      data(NULL), Q(0, 0, 0), R(0, 0, 0), B(0, 0), W(0, 0) {
-  allocate();
-  W.setZero();
-}
-
 Weights::Weights(const Weights& other)
     : config(other.config), metadata(other.metadata),
       data(NULL), Q(0, 0, 0), R(0, 0, 0), B(0, 0), W(0, 0) {
@@ -118,9 +107,16 @@ void Weights::setModelParameters() {
   new (&B) WeightsType(start, B_size);
 }
 
-boost::shared_ptr<Weights> Weights::getGradient(
+void Weights::reset(
+    const boost::shared_ptr<Corpus>& corpus,
+    const vector<int>& minibatch) {
+  W.setZero();
+}
+
+void Weights::getGradient(
     const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& indices,
+    const boost::shared_ptr<Weights>& gradient,
     Real& objective) const {
   vector<vector<int>> contexts;
   vector<MatrixReal> context_vectors;
@@ -133,9 +129,9 @@ boost::shared_ptr<Weights> Weights::getGradient(
   MatrixReal weighted_representations = getWeightedRepresentations(
       corpus, indices, prediction_vectors, word_probs);
 
-  return getFullGradient(
+  getFullGradient(
       corpus, indices, contexts, context_vectors, prediction_vectors,
-      weighted_representations, word_probs);
+      weighted_representations, word_probs, gradient);
 }
 
 void Weights::getContextVectors(
@@ -227,10 +223,8 @@ boost::shared_ptr<Weights> Weights::getFullGradient(
     const vector<MatrixReal>& context_vectors,
     const MatrixReal& prediction_vectors,
     const MatrixReal& weighted_representations,
-    MatrixReal& word_probs) const {
-  boost::shared_ptr<Weights> gradient =
-      boost::make_shared<Weights>(config, metadata);
-
+    MatrixReal& word_probs,
+    const boost::shared_ptr<Weights>& gradient) const {
   for (size_t i = 0; i < indices.size(); ++i) {
     word_probs(corpus->at(indices[i]), i) -= 1;
   }
@@ -240,8 +234,6 @@ boost::shared_ptr<Weights> Weights::getFullGradient(
 
   getContextGradient(
       indices, contexts, context_vectors, weighted_representations, gradient);
-
-  return gradient;
 }
 
 void Weights::getContextGradient(
@@ -395,9 +387,10 @@ void Weights::estimateProjectionGradient(
   }
 }
 
-boost::shared_ptr<Weights> Weights::estimateGradient(
+void Weights::estimateGradient(
     const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& indices,
+    const boost::shared_ptr<Weights>& gradient,
     Real& objective) const {
   vector<vector<int>> contexts;
   vector<MatrixReal> context_vectors;
@@ -406,8 +399,6 @@ boost::shared_ptr<Weights> Weights::estimateGradient(
   MatrixReal prediction_vectors =
       getPredictionVectors(indices, context_vectors);
 
-  boost::shared_ptr<Weights> gradient =
-      boost::make_shared<Weights>(config, metadata);
   MatrixReal weighted_representations;
   estimateProjectionGradient(
       corpus, indices, prediction_vectors, gradient,
@@ -419,8 +410,6 @@ boost::shared_ptr<Weights> Weights::estimateGradient(
 
   getContextGradient(
       indices, contexts, context_vectors, weighted_representations, gradient);
-
-  return gradient;
 }
 
 void Weights::syncUpdate(const boost::shared_ptr<Weights>& gradient) {

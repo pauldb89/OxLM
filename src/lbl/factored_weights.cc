@@ -40,24 +40,19 @@ FactoredWeights::FactoredWeights(
   T = metadata->getClassBias();
 }
 
-FactoredWeights::FactoredWeights(
-    const boost::shared_ptr<ModelData>& config,
-    const boost::shared_ptr<FactoredMetadata>& metadata,
-    const boost::shared_ptr<Corpus>& corpus,
-    const vector<int>& indices)
-    : Weights(config, metadata, corpus, indices), metadata(metadata),
-      index(metadata->getIndex()),
-      data(NULL), S(0, 0, 0), T(0, 0), FW(0, 0) {
-  allocate();
-  FW.setZero();
-}
-
 FactoredWeights::FactoredWeights(const FactoredWeights& other)
     : Weights(other), metadata(other.metadata),
       index(other.index),
       data(NULL), S(0, 0, 0), T(0, 0), FW(0, 0) {
   allocate();
   memcpy(data, other.data, size * sizeof(Real));
+}
+
+void FactoredWeights::reset(
+    const boost::shared_ptr<Corpus>& corpus,
+    const vector<int>& minibatch) {
+  Weights::reset(corpus, minibatch);
+  FW.setZero();
 }
 
 void FactoredWeights::allocate() {
@@ -129,9 +124,10 @@ Real FactoredWeights::getObjective(
   return objective;
 }
 
-boost::shared_ptr<FactoredWeights> FactoredWeights::getGradient(
+void FactoredWeights::getGradient(
     const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& indices,
+    const boost::shared_ptr<FactoredWeights>& gradient,
     Real& objective) const {
   vector<vector<int>> contexts;
   vector<MatrixReal> context_vectors;
@@ -144,9 +140,9 @@ boost::shared_ptr<FactoredWeights> FactoredWeights::getGradient(
   MatrixReal weighted_representations = getWeightedRepresentations(
       corpus, indices, prediction_vectors, class_probs, word_probs);
 
-  return getFullGradient(
+  getFullGradient(
       corpus, indices, contexts, context_vectors, prediction_vectors,
-      weighted_representations, class_probs, word_probs);
+      weighted_representations, class_probs, word_probs, gradient);
 }
 
 MatrixReal FactoredWeights::classR(int class_id) const {
@@ -205,7 +201,7 @@ MatrixReal FactoredWeights::getWeightedRepresentations(
   return weighted_representations;
 }
 
-boost::shared_ptr<FactoredWeights> FactoredWeights::getFullGradient(
+void FactoredWeights::getFullGradient(
     const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& indices,
     const vector<vector<int>>& contexts,
@@ -213,10 +209,8 @@ boost::shared_ptr<FactoredWeights> FactoredWeights::getFullGradient(
     const MatrixReal& prediction_vectors,
     const MatrixReal& weighted_representations,
     MatrixReal& class_probs,
-    vector<VectorReal>& word_probs) const {
-  boost::shared_ptr<FactoredWeights> gradient =
-      boost::make_shared<FactoredWeights>(config, metadata);
-
+    vector<VectorReal>& word_probs,
+    const boost::shared_ptr<FactoredWeights>& gradient) const {
   for (size_t i = 0; i < indices.size(); ++i) {
     int word_id = corpus->at(indices[i]);
     int class_id = index->getClass(word_id);
@@ -240,8 +234,6 @@ boost::shared_ptr<FactoredWeights> FactoredWeights::getFullGradient(
 
   getContextGradient(
       indices, contexts, context_vectors, weighted_representations, gradient);
-
-  return gradient;
 }
 
 bool FactoredWeights::checkGradient(
@@ -391,9 +383,10 @@ void FactoredWeights::estimateProjectionGradient(
   }
 }
 
-boost::shared_ptr<FactoredWeights> FactoredWeights::estimateGradient(
+void FactoredWeights::estimateGradient(
     const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& indices,
+    const boost::shared_ptr<FactoredWeights>& gradient,
     Real& objective) const {
   auto start_time = GetTime();
   vector<vector<int>> contexts;
@@ -408,13 +401,6 @@ boost::shared_ptr<FactoredWeights> FactoredWeights::estimateGradient(
     auto end_time = GetTime();
     prediction_vectors_duration += GetDuration(start_time, end_time);
     start_time = end_time;
-  }
-
-  boost::shared_ptr<FactoredWeights> gradient =
-      boost::make_shared<FactoredWeights>(config, metadata);
-  #pragma omp master
-  {
-    create_gradient_duration += GetDuration(start_time, GetTime());
   }
 
   MatrixReal weighted_representations;
@@ -434,8 +420,6 @@ boost::shared_ptr<FactoredWeights> FactoredWeights::estimateGradient(
   {
     context_gradient_duration += GetDuration(start_time, GetTime());
   }
-
-  return gradient;
 }
 
 void FactoredWeights::syncUpdate(

@@ -74,7 +74,9 @@ TEST_F(GlobalFactoredMaxentWeightsTest, TestCheckGradientUnconstrained) {
   Real objective;
 
   boost::shared_ptr<MinibatchFactoredMaxentWeights> gradient =
-      weights.getGradient(corpus, indices, objective);
+      boost::make_shared<MinibatchFactoredMaxentWeights>(config, metadata);
+  gradient->reset(corpus, indices);
+  weights.getGradient(corpus, indices, gradient, objective);
 
   // See the comment in weights_test.cc if you suspect the gradient is not
   // computed correctly.
@@ -91,7 +93,9 @@ TEST_F(GlobalFactoredMaxentWeightsTest, TestCheckGradientSparse) {
   Real objective;
 
   boost::shared_ptr<MinibatchFactoredMaxentWeights> gradient =
-      weights.getGradient(corpus, indices, objective);
+       boost::make_shared<MinibatchFactoredMaxentWeights>(config, metadata);
+  gradient->reset(corpus, indices);
+  weights.getGradient(corpus, indices, gradient, objective);
 
   // See the comment in weights_test.cc if you suspect the gradient is not
   // computed correctly.
@@ -109,7 +113,9 @@ TEST_F(GlobalFactoredMaxentWeightsTest, TestCollisionsNoFilter) {
   Real objective;
 
   boost::shared_ptr<MinibatchFactoredMaxentWeights> gradient =
-      weights.getGradient(corpus, indices, objective);
+       boost::make_shared<MinibatchFactoredMaxentWeights>(config, metadata);
+  gradient->reset(corpus, indices);
+  weights.getGradient(corpus, indices, gradient, objective);
 
   // See the comment in weights_test.cc if you suspect the gradient is not
   // computed correctly.
@@ -128,7 +134,9 @@ TEST_F(GlobalFactoredMaxentWeightsTest, TestCollisionExactFiltering) {
   Real objective;
 
   boost::shared_ptr<MinibatchFactoredMaxentWeights> gradient =
-      weights.getGradient(corpus, indices, objective);
+       boost::make_shared<MinibatchFactoredMaxentWeights>(config, metadata);
+  gradient->reset(corpus, indices);
+  weights.getGradient(corpus, indices, gradient, objective);
 
   // See the comment in weights_test.cc if you suspect the gradient is not
   // computed correctly.
@@ -150,7 +158,9 @@ TEST_F(GlobalFactoredMaxentWeightsTest, TestCollisionApproximateFiltering) {
   Real objective;
 
   boost::shared_ptr<MinibatchFactoredMaxentWeights> gradient =
-      weights.getGradient(corpus, indices, objective);
+       boost::make_shared<MinibatchFactoredMaxentWeights>(config, metadata);
+  gradient->reset(corpus, indices);
+  weights.getGradient(corpus, indices, gradient, objective);
 
   // See the comment in weights_test.cc if you suspect the gradient is not
   // computed correctly.
