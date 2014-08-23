@@ -45,6 +45,12 @@ void MinibatchFactoredMaxentWeights::initialize(
     const vector<int>& minibatch_indices) {
   int num_classes = index->getNumClasses();
   V.resize(num_classes);
+
+  mutexU = boost::make_shared<mutex>();
+  for (int i = 0; i < config->threads; ++i) {
+    mutexesV.push_back(boost::make_shared<mutex>());
+  }
+
   boost::shared_ptr<FeatureContextMapper> mapper = metadata->getMapper();
   boost::shared_ptr<BloomFilterPopulator> populator = metadata->getPopulator();
   boost::shared_ptr<FeatureMatcher> matcher = metadata->getMatcher();
@@ -122,12 +128,17 @@ void MinibatchFactoredMaxentWeights::initialize(
   }
 }
 
-void MinibatchFactoredMaxentWeights::update(
+void MinibatchFactoredMaxentWeights::syncUpdate(
     const boost::shared_ptr<MinibatchFactoredMaxentWeights>& gradient) {
-  FactoredWeights::update(gradient);
+  FactoredWeights::syncUpdate(gradient);
 
-  U->update(gradient->U);
+  {
+    lock_guard<mutex> lock(*mutexU);
+    U->update(gradient->U);
+  }
+
   for (size_t i = 0; i < V.size(); ++i) {
+    lock_guard<mutex> lock(*mutexesV[i]);
     V[i]->update(gradient->V[i]);
   }
 }

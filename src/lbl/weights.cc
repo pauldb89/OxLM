@@ -82,6 +82,10 @@ void Weights::allocate() {
   size = Q_size + R_size + context_width * C_size + B_size;
   data = new Real[size];
 
+  for (int i = 0; i < config->threads; ++i) {
+    mutexes.push_back(boost::make_shared<mutex>());
+  }
+
   setModelParameters();
 }
 
@@ -349,7 +353,7 @@ void Weights::estimateProjectionGradient(
   #pragma omp master
   {
     auto end_time = GetTime();
-    noise_samples_duration += GetDuration(start_time, end_time);
+    sampling_duration += GetDuration(start_time, end_time);
     start_time = end_time;
   }
 
@@ -387,7 +391,7 @@ void Weights::estimateProjectionGradient(
 
   #pragma omp master
   {
-    gradient_update_duration += GetDuration(start_time, GetTime());
+    nce_duration += GetDuration(start_time, GetTime());
   }
 }
 
@@ -419,26 +423,51 @@ boost::shared_ptr<Weights> Weights::estimateGradient(
   return gradient;
 }
 
-void Weights::update(const boost::shared_ptr<Weights>& gradient) {
-  W += gradient->W;
+void Weights::syncUpdate(const boost::shared_ptr<Weights>& gradient) {
+  size_t block_size = W.size() / mutexes.size() + 1;
+  size_t block_start = 0;
+  for (size_t i = 0; i < mutexes.size(); ++i) {
+    block_size = min(block_size, W.size() - block_start);
+    lock_guard<mutex> lock(*mutexes[i]);
+    W.segment(block_start, block_size) +=
+        gradient->W.segment(block_start, block_size);
+    block_start += block_size;
+  }
+}
+
+Block Weights::getBlock() const {
+  int thread_id = omp_get_thread_num();
+  size_t block_size = W.size() / config->threads + 1;
+  size_t block_start = thread_id * block_size;
+  block_size = min(block_size, W.size() - block_start);
+  return make_pair(block_start, block_size);
 }
 
 void Weights::updateSquared(const boost::shared_ptr<Weights>& global_gradient) {
-  W.array() += global_gradient->W.array().square();
+  Block block = getBlock();
+  W.segment(block.first, block.second).array() +=
+      global_gradient->W.segment(block.first, block.second).array().square();
 }
 
 void Weights::updateAdaGrad(
     const boost::shared_ptr<Weights>& global_gradient,
     const boost::shared_ptr<Weights>& adagrad) {
-  W -= global_gradient->W.binaryExpr(
-      adagrad->W, CwiseAdagradUpdateOp<Real>(config->step_size));
+  Block block = getBlock();
+  W.segment(block.first, block.second) -=
+      global_gradient->W.segment(block.first, block.second).binaryExpr(
+          adagrad->W.segment(block.first, block.second),
+          CwiseAdagradUpdateOp<Real>(config->step_size));
 }
 
 Real Weights::regularizerUpdate(
     const boost::shared_ptr<Weights>& global_gradient, Real minibatch_factor) {
+  Block block = getBlock();
   Real sigma = minibatch_factor * config->step_size * config->l2_lbl;
-  W -= W * sigma;
-  return 0.5 * minibatch_factor * config->l2_lbl * W.array().square().sum();
+  W.segment(block.first, block.second) -=
+      W.segment(block.first, block.second) * sigma;
+
+  Real squares = W.segment(block.first, block.second).array().square().sum();
+  return 0.5 * minibatch_factor * config->l2_lbl * squares;
 }
 
 VectorReal Weights::getPredictionVector(const vector<int>& context) const {

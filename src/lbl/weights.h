@@ -1,5 +1,8 @@
 #pragma once
 
+#include <mutex>
+#include <vector>
+
 #include <boost/make_shared.hpp>
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/shared_ptr.hpp>
@@ -15,6 +18,9 @@ typedef Eigen::Map<MatrixReal> ContextTransformType;
 typedef vector<ContextTransformType> ContextTransformsType;
 typedef Eigen::Map<MatrixReal> WordVectorsType;
 typedef Eigen::Map<VectorReal> WeightsType;
+
+typedef boost::shared_ptr<mutex> Mutex;
+typedef pair<size_t, size_t> Block;
 
 class Weights {
  public:
@@ -57,7 +63,7 @@ class Weights {
       const vector<int>& indices,
       Real& objective) const;
 
-  void update(const boost::shared_ptr<Weights>& gradient);
+  void syncUpdate(const boost::shared_ptr<Weights>& gradient);
 
   void updateSquared(const boost::shared_ptr<Weights>& global_gradient);
 
@@ -146,6 +152,8 @@ class Weights {
 
   void setModelParameters();
 
+  Block getBlock() const;
+
   friend class boost::serialization::access;
 
   template<class Archive>
@@ -187,11 +195,15 @@ class Weights {
  private:
   int size;
   Real* data;
+  vector<Mutex> mutexes;
 
  public:
-  mutable Real noise_samples_duration;
-  mutable Real gradient_update_duration;
+  mutable Real prediction_vectors_duration;
+  mutable Real create_gradient_duration;
   mutable Real distribution_duration;
+  mutable Real sampling_duration;
+  mutable Real nce_duration;
+  mutable Real context_gradient_duration;
 };
 
 } // namespace oxlm

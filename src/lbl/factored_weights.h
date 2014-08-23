@@ -49,7 +49,7 @@ class FactoredWeights : public Weights {
       const vector<int>& indices,
       Real& objective) const;
 
-  void update(const boost::shared_ptr<FactoredWeights>& gradient);
+  void syncUpdate(const boost::shared_ptr<FactoredWeights>& gradient);
 
   void updateSquared(const boost::shared_ptr<FactoredWeights>& global_gradient);
 
@@ -129,6 +129,8 @@ class FactoredWeights : public Weights {
 
   void setModelParameters();
 
+  Block getBlock() const;
+
   friend class boost::serialization::access;
 
   template<class Archive>
@@ -173,6 +175,7 @@ class FactoredWeights : public Weights {
  private:
   int size;
   Real* data;
+  vector<Mutex> mutexes;
 };
 
 } // namespace oxlm

@@ -88,6 +88,8 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
   {
     int minibatch_counter = 1;
     int minibatch_size = config->minibatch_size;
+
+
     for (int iter = 0; iter < config->iterations; ++iter) {
       auto iteration_start = GetTime();
 
@@ -103,7 +105,6 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
 
       size_t start = 0;
       while (start < training_corpus->size()) {
-        auto start_time = GetTime();
         size_t end = min(training_corpus->size(), start + minibatch_size);
 
         #pragma omp master
@@ -129,22 +130,22 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
               training_corpus, minibatch, objective);
         }
 
+        global_gradient->syncUpdate(gradient);
         #pragma omp critical
-        {
-          global_gradient->update(gradient);
-          global_objective += objective;
-        }
+        global_objective += objective;
 
         #pragma omp barrier
 
-        #pragma omp master
-        {
-          update(global_gradient, adagrad);
+        update(global_gradient, adagrad);
 
-          Real minibatch_factor =
-              static_cast<Real>(end - start) / training_corpus->size();
-          global_objective += regularize(global_gradient, minibatch_factor);
-        }
+        // Wait for all threads to finish making the model gradient update.
+        #pragma omp barrier
+
+        Real minibatch_factor =
+            static_cast<Real>(end - start) / training_corpus->size();
+        objective = regularize(global_gradient, minibatch_factor);
+        #pragma omp critical
+        global_objective += objective;
 
         // Wait for master thread to update model.
         #pragma omp barrier

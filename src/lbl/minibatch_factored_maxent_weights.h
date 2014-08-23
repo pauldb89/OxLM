@@ -24,7 +24,7 @@ class MinibatchFactoredMaxentWeights : public FactoredWeights {
   MinibatchFactoredMaxentWeights(
       int num_classes, const boost::shared_ptr<FactoredWeights>& base_gradient);
 
-  void update(
+  void syncUpdate(
       const boost::shared_ptr<MinibatchFactoredMaxentWeights>& gradient);
 
  private:
@@ -39,6 +39,10 @@ class MinibatchFactoredMaxentWeights : public FactoredWeights {
 
   boost::shared_ptr<MinibatchFeatureStore> U;
   vector<boost::shared_ptr<MinibatchFeatureStore>> V;
+
+ private:
+  Mutex mutexU;
+  vector<Mutex> mutexesV;
 };
 
 } // namespace oxlm

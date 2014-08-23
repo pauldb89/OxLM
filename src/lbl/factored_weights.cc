@@ -70,6 +70,10 @@ void FactoredWeights::allocate() {
   size = S_size + T_size;
   data = new Real[size];
 
+  for (int i = 0; i < config->threads; ++i) {
+    mutexes.push_back(boost::make_shared<mutex>());
+  }
+
   setModelParameters();
 }
 
@@ -347,7 +351,7 @@ void FactoredWeights::estimateProjectionGradient(
   #pragma omp master
   {
     auto end_time = GetTime();
-    noise_samples_duration += GetDuration(start_time, end_time);
+    sampling_duration += GetDuration(start_time, end_time);
     start_time = end_time;
   }
   for (size_t i = 0; i < indices.size(); ++i) {
@@ -383,7 +387,7 @@ void FactoredWeights::estimateProjectionGradient(
 
   #pragma omp master
   {
-    gradient_update_duration += GetDuration(start_time, GetTime());
+    nce_duration += GetDuration(start_time, GetTime());
   }
 }
 
@@ -391,6 +395,7 @@ boost::shared_ptr<FactoredWeights> FactoredWeights::estimateGradient(
     const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& indices,
     Real& objective) const {
+  auto start_time = GetTime();
   vector<vector<int>> contexts;
   vector<MatrixReal> context_vectors;
   getContextVectors(corpus, indices, contexts, context_vectors);
@@ -398,8 +403,20 @@ boost::shared_ptr<FactoredWeights> FactoredWeights::estimateGradient(
   MatrixReal prediction_vectors =
       getPredictionVectors(indices, context_vectors);
 
+  #pragma omp master
+  {
+    auto end_time = GetTime();
+    prediction_vectors_duration += GetDuration(start_time, end_time);
+    start_time = end_time;
+  }
+
   boost::shared_ptr<FactoredWeights> gradient =
       boost::make_shared<FactoredWeights>(config, metadata);
+  #pragma omp master
+  {
+    create_gradient_duration += GetDuration(start_time, GetTime());
+  }
+
   MatrixReal weighted_representations;
   estimateProjectionGradient(
       corpus, indices, prediction_vectors, gradient,
@@ -409,30 +426,60 @@ boost::shared_ptr<FactoredWeights> FactoredWeights::estimateGradient(
     weighted_representations.array() *= sigmoidDerivative(prediction_vectors);
   }
 
+  start_time = GetTime();
   getContextGradient(
       indices, contexts, context_vectors, weighted_representations, gradient);
+
+  #pragma omp master
+  {
+    context_gradient_duration += GetDuration(start_time, GetTime());
+  }
 
   return gradient;
 }
 
-void FactoredWeights::update(
+void FactoredWeights::syncUpdate(
     const boost::shared_ptr<FactoredWeights>& gradient) {
-  Weights::update(gradient);
-  FW += gradient->FW;
+  Weights::syncUpdate(gradient);
+
+  size_t block_size = FW.size() / mutexes.size() + 1;
+  size_t block_start = 0;
+  for (size_t i = 0; i < mutexes.size(); ++i) {
+    block_size = min(block_size, FW.size() - block_start);
+    lock_guard<mutex> lock(*mutexes[i]);
+    FW.segment(block_start, block_size) +=
+        gradient->FW.segment(block_start, block_size);
+    block_start += block_size;
+  }
+}
+
+Block FactoredWeights::getBlock() const {
+  int thread_id = omp_get_thread_num();
+  size_t block_size = FW.size() / config->threads + 1;
+  size_t block_start = thread_id * block_size;
+  block_size = min(block_size, FW.size() - block_start);
+  return make_pair(block_start, block_size);
 }
 
 void FactoredWeights::updateSquared(
     const boost::shared_ptr<FactoredWeights>& global_gradient) {
   Weights::updateSquared(global_gradient);
-  FW.array() += global_gradient->FW.array().square();
+
+  Block block = getBlock();
+  FW.segment(block.first, block.second).array() +=
+      global_gradient->FW.segment(block.first, block.second).array().square();
 }
 
 void FactoredWeights::updateAdaGrad(
     const boost::shared_ptr<FactoredWeights>& global_gradient,
     const boost::shared_ptr<FactoredWeights>& adagrad) {
   Weights::updateAdaGrad(global_gradient, adagrad);
-  FW -= global_gradient->FW.binaryExpr(
-      adagrad->FW, CwiseAdagradUpdateOp<Real>(config->step_size));
+
+  Block block = getBlock();
+  FW.segment(block.first, block.second) -=
+      global_gradient->FW.segment(block.first, block.second).binaryExpr(
+          adagrad->FW.segment(block.first, block.second),
+          CwiseAdagradUpdateOp<Real>(config->step_size));
 }
 
 Real FactoredWeights::regularizerUpdate(
@@ -440,9 +487,13 @@ Real FactoredWeights::regularizerUpdate(
     Real minibatch_factor) {
   Real ret = Weights::regularizerUpdate(global_gradient, minibatch_factor);
 
+  Block block = getBlock();
   Real sigma = minibatch_factor * config->step_size * config->l2_lbl;
-  FW -= FW * sigma;
-  ret += 0.5 * minibatch_factor * config->l2_lbl * FW.array().square().sum();
+  FW.segment(block.first, block.second) -=
+      FW.segment(block.first, block.second) * sigma;
+
+  Real squares = FW.segment(block.first, block.second).array().square().sum();
+  ret += 0.5 * minibatch_factor * config->l2_lbl * squares;
 
   return ret;
 }
