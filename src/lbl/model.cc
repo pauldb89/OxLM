@@ -109,19 +109,17 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
       while (start < training_corpus->size()) {
         size_t end = min(training_corpus->size(), start + minibatch_size);
 
-        #pragma omp master
-        {
-          vector<int> minibatch(indices.begin() + start, indices.begin() + end);
-          global_gradient->reset(training_corpus, minibatch);
-        }
+        vector<int> minibatch(
+            indices.begin() + start, min(indices.begin() + end, indices.end()));
+        global_gradient->reset(training_corpus, minibatch, true);
 
         // Wait until the global gradient is reset to 0. Otherwise, some
         // gradient updates may be ignored if the global gradient is reset
         // afterwards.
         #pragma omp barrier
 
-        vector<int> minibatch = scatterMinibatch(start, end, indices);
-        gradient->reset(training_corpus, minibatch);
+        minibatch = scatterMinibatch(minibatch);
+        gradient->reset(training_corpus, minibatch, false);
         Real objective;
         if (config->noise_samples > 0) {
           weights->estimateGradient(
@@ -134,6 +132,7 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
         #pragma omp critical
         global_objective += objective;
 
+        // Wait until the global gradient is fully updated by all threads.
         #pragma omp barrier
 
         update(global_gradient, adagrad);
@@ -211,7 +210,9 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::evaluate(
     size_t start = 0;
     while (start < test_corpus->size()) {
       size_t end = min(start + config->minibatch_size, test_corpus->size());
-      vector<int> minibatch = scatterMinibatch(start, end, indices);
+      vector<int> minibatch(
+          indices.begin() + start, min(indices.begin() + end, indices.end()));
+      minibatch = scatterMinibatch(minibatch);
 
       Real objective = weights->getObjective(test_corpus, minibatch);
       #pragma omp critical

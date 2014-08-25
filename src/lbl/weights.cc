@@ -109,8 +109,14 @@ void Weights::setModelParameters() {
 
 void Weights::reset(
     const boost::shared_ptr<Corpus>& corpus,
-    const vector<int>& minibatch) {
-  W.setZero();
+    const vector<int>& minibatch,
+    bool block_reset) {
+  if (block_reset) {
+    Block block = getBlock();
+    W.segment(block.first, block.second).setZero();
+  } else {
+    W.setZero();
+  }
 }
 
 void Weights::getGradient(
@@ -340,14 +346,7 @@ void Weights::estimateProjectionGradient(
   int noise_samples = config->noise_samples;
   int word_width = config->word_representation_size;
   VectorReal unigram = metadata->getUnigram();
-  auto start_time = GetTime();
   vector<vector<int>> noise_words = getNoiseWords(corpus, indices);
-  #pragma omp master
-  {
-    auto end_time = GetTime();
-    sampling_duration += GetDuration(start_time, end_time);
-    start_time = end_time;
-  }
 
   objective = 0;
   weighted_representations = MatrixReal::Zero(word_width, indices.size());
@@ -379,11 +378,6 @@ void Weights::estimateProjectionGradient(
       gradient->R.col(noise_word_id) += neg_weight * prediction_vectors.col(i);
       gradient->B(noise_word_id) += neg_weight;
     }
-  }
-
-  #pragma omp master
-  {
-    nce_duration += GetDuration(start_time, GetTime());
   }
 }
 

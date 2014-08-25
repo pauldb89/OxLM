@@ -25,7 +25,8 @@ class FactoredWeights : public Weights {
 
   void reset(
       const boost::shared_ptr<Corpus>& corpus,
-      const vector<int>& minibatch);
+      const vector<int>& minibatch,
+      bool block_reset = false);
 
   void getGradient(
       const boost::shared_ptr<Corpus>& corpus,

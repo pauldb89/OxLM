@@ -10,14 +10,14 @@
 
 namespace oxlm {
 
-vector<int> scatterMinibatch(int start, int end, const vector<int>& indices) {
-  size_t thread_num = omp_get_thread_num();
+vector<int> scatterMinibatch(const vector<int>& minibatch) {
+  size_t thread_id = omp_get_thread_num();
   size_t num_threads = omp_get_num_threads();
 
   vector<int> result;
-  result.reserve((end - start) / num_threads);
-  for (int s = start + thread_num; s < end; s += num_threads) {
-    result.push_back(indices.at(s));
+  result.reserve(minibatch.size() / num_threads + 1);
+  for (size_t s = thread_id; s < minibatch.size(); s += num_threads) {
+    result.push_back(minibatch.at(s));
   }
 
   return result;

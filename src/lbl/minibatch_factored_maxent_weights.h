@@ -17,7 +17,8 @@ class MinibatchFactoredMaxentWeights : public FactoredWeights {
 
   void reset(
       const boost::shared_ptr<Corpus>& corpus,
-      const vector<int>& minibatch);
+      const vector<int>& minibatch,
+      bool block_update = false);
 
   void syncUpdate(
       const boost::shared_ptr<MinibatchFactoredMaxentWeights>& gradient);

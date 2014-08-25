@@ -249,9 +249,9 @@ void GlobalFactoredMaxentWeights::updateSquared(
   FactoredWeights::updateSquared(global_gradient);
 
   // The number of n-gram weights updated for each minibatch is relatively low
-  // (compared to the number of parameters updated in the base (factored)
+  // compared to the number of parameters updated in the base (factored)
   // bilinear model, so it's okay to let a single thread handle this
-  // computation. Adding parallelization is not trivial.
+  // computation. Adding parallelization here is not trivial.
   #pragma omp master
   {
     U->updateSquared(global_gradient->U);

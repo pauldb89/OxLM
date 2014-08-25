@@ -39,7 +39,8 @@ class Weights {
 
   void reset(
       const boost::shared_ptr<Corpus>& corpus,
-      const vector<int>& minibatch);
+      const vector<int>& minibatch,
+      bool block_reset = false);
 
   void getGradient(
       const boost::shared_ptr<Corpus>& corpus,
@@ -197,13 +198,6 @@ class Weights {
   int size;
   Real* data;
   vector<Mutex> mutexes;
-
- public:
-  mutable Real prediction_vectors_duration;
-  mutable Real distribution_duration;
-  mutable Real sampling_duration;
-  mutable Real nce_duration;
-  mutable Real context_gradient_duration;
 };
 
 } // namespace oxlm

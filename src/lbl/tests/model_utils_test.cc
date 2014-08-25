@@ -27,7 +27,7 @@ TEST_F(ModelUtilsTest, TestScatterMinibatch) {
 
   #pragma omp parallel num_threads(2)
   {
-    vector<int> result = scatterMinibatch(0, 6, indices);
+    vector<int> result = scatterMinibatch(indices);
     EXPECT_EQ(3, result.size());
 
     size_t thread_id = omp_get_thread_num();

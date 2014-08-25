@@ -12,7 +12,7 @@
 
 namespace oxlm {
 
-vector<int> scatterMinibatch(int start, int end, const vector<int>& indices);
+vector<int> scatterMinibatch(const vector<int>& minibatch);
 
 void loadClassesFromFile(
     const string& class_file, const string& training_file,
