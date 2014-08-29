@@ -71,9 +71,16 @@ void Weights::allocate() {
   size = Q_size + R_size + context_width * C_size + B_size;
   data = new Real[size];
 
-  for (int i = 0; i < config->threads; ++i) {
-    mutexes.push_back(boost::make_shared<mutex>());
+  for (int i = 0; i < num_context_words; ++i) {
+    mutexesQ.push_back(boost::make_shared<mutex>());
   }
+  for (int i = 0; i < num_output_words; ++i) {
+    mutexesR.push_back(boost::make_shared<mutex>());
+  }
+  for (int i = 0; i < context_width; ++i) {
+    mutexesC.push_back(boost::make_shared<mutex>());
+  }
+  mutexB = boost::make_shared<mutex>();
 
   setModelParameters();
 }
@@ -406,16 +413,10 @@ void Weights::estimateGradient(
       indices, contexts, context_vectors, weighted_representations, gradient);
 }
 
-void Weights::syncUpdate(const boost::shared_ptr<Weights>& gradient) {
-  size_t block_size = W.size() / mutexes.size() + 1;
-  size_t block_start = 0;
-  for (size_t i = 0; i < mutexes.size(); ++i) {
-    block_size = min(block_size, W.size() - block_start);
-    lock_guard<mutex> lock(*mutexes[i]);
-    W.segment(block_start, block_size) +=
-        gradient->W.segment(block_start, block_size);
-    block_start += block_size;
-  }
+void Weights::syncUpdate(
+    const boost::shared_ptr<Corpus>& corpus,
+    const vector<int>& minibatch,
+    const boost::shared_ptr<Weights>& gradient) {
 }
 
 Block Weights::getBlock() const {

@@ -197,7 +197,10 @@ class Weights {
  private:
   int size;
   Real* data;
-  vector<Mutex> mutexes;
+  vector<Mutex> mutexesC;
+  vector<MuteX> mutexesQ;
+  vector<Mutex> mutexesR;
+  Mutex mutexB;
 };
 
 } // namespace oxlm
