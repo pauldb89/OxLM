@@ -83,9 +83,11 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
       boost::make_shared<MinibatchWeights>(config, metadata);
   boost::shared_ptr<GlobalWeights> adagrad =
       boost::make_shared<GlobalWeights>(config, metadata);
+  MinibatchWords global_words;
 
   Real init_duration = 0;
   Real gradient_duration = 0;
+  Real gradient_only_duration = 0;
   Real sync_update_duration = 0;
   Real adagrad_duration = 0;
   Real regularizer_duration = 0;
@@ -118,8 +120,12 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
         size_t end = min(training_corpus->size(), start + minibatch_size);
 
         vector<int> minibatch(
-            indices.begin() + start, min(indices.begin() + end, indices.end()));
+            indices.begin() + start,
+            min(indices.begin() + end, indices.end()));
         global_gradient->reset(training_corpus, minibatch, true);
+        // Reset the set of minibatch words shared across all threads.
+        #pragma omp master
+        global_words = MinibatchWords();
 
         // Wait until the global gradient is reset to 0. Otherwise, some
         // gradient updates may be ignored if the global gradient is reset
@@ -135,20 +141,33 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
 
         minibatch = scatterMinibatch(minibatch);
         gradient->reset(training_corpus, minibatch, false);
+
         Real objective;
+        MinibatchWords words;
         if (config->noise_samples > 0) {
           weights->estimateGradient(
-              training_corpus, minibatch, gradient, objective);
+              training_corpus, minibatch, gradient, objective, words);
         } else {
-          weights->getGradient(training_corpus, minibatch, gradient, objective);
+          weights->getGradient(
+              training_corpus, minibatch, gradient, objective, words);
         }
 
-        #pragma omp barrier
+        #pragma omp master
+        {
+          gradient_only_duration += GetDuration(start_time, GetTime());
+        }
 
         auto sync_update_start = GetTime();
-        global_gradient->syncUpdate(gradient);
+        global_gradient->syncUpdate(words, gradient);
         #pragma omp critical
-        global_objective += objective;
+        {
+          global_objective += objective;
+          global_words.merge(words);
+        }
+
+        // Prepare minibatch words for parallel processing.
+        #pragma omp master
+        global_words.transform();
 
         #pragma omp master
         {
@@ -165,7 +184,7 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
           start_time = end_time;
         }
 
-        update(global_gradient, adagrad);
+        update(global_words, global_gradient, adagrad);
 
         // Wait for all threads to finish making the model gradient update.
         #pragma omp barrier
@@ -179,7 +198,8 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
 
         Real minibatch_factor =
             static_cast<Real>(end - start) / training_corpus->size();
-        objective = regularize(global_gradient, minibatch_factor);
+        objective = regularize(
+            global_words, global_gradient, minibatch_factor);
         #pragma omp critical
         global_objective += objective;
 
@@ -203,6 +223,7 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
 
             cout << "Init: " << init_duration << endl;
             cout << "Gradient: " << gradient_duration << endl;
+            cout << "Gradient only duration: " << gradient_only_duration << endl;
             cout << "Sync Update: " << sync_update_duration << endl;
             cout << "Adagrad: " << adagrad_duration << endl;
             cout << "Regularizer: " << regularizer_duration << endl;
@@ -210,6 +231,7 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
 
             init_duration = 0;
             gradient_duration = 0;
+            gradient_only_duration = 0;
             sync_update_duration = 0;
             adagrad_duration = 0;
             regularizer_duration = 0;
@@ -240,17 +262,20 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
 
 template<class GlobalWeights, class MinibatchWeights, class Metadata>
 void Model<GlobalWeights, MinibatchWeights, Metadata>::update(
+    const MinibatchWords& global_words,
     const boost::shared_ptr<MinibatchWeights>& global_gradient,
     const boost::shared_ptr<GlobalWeights>& adagrad) {
-  adagrad->updateSquared(global_gradient);
-  weights->updateAdaGrad(global_gradient, adagrad);
+  adagrad->updateSquared(global_words, global_gradient);
+  weights->updateAdaGrad(global_words, global_gradient, adagrad);
 }
 
 template<class GlobalWeights, class MinibatchWeights, class Metadata>
 Real Model<GlobalWeights, MinibatchWeights, Metadata>::regularize(
+    const MinibatchWords& global_words,
     const boost::shared_ptr<MinibatchWeights>& global_gradient,
     Real minibatch_factor) {
-  return weights->regularizerUpdate(global_gradient, minibatch_factor);
+  return weights->regularizerUpdate(
+      global_words, global_gradient, minibatch_factor);
 }
 
 template<class GlobalWeights, class MinibatchWeights, class Metadata>

@@ -51,10 +51,10 @@ TEST_F(FactoredWeightsTest, TestCheckGradient) {
   FactoredWeights weights(config, metadata, corpus);
   vector<int> indices = {0, 1, 2, 3};
   Real objective;
+  MinibatchWords words;
   boost::shared_ptr<FactoredWeights> gradient =
       boost::make_shared<FactoredWeights>(config, metadata);
-  weights.getGradient(corpus, indices, gradient, objective);
-
+  weights.getGradient(corpus, indices, gradient, objective, words);
   // See the comment in weights_test.cc if you suspect the gradient is not
   // computed correctly.
   EXPECT_TRUE(weights.checkGradient(corpus, indices, gradient, 1e-3));
@@ -65,9 +65,10 @@ TEST_F(FactoredWeightsTest, TestCheckGradientDiagonal) {
   FactoredWeights weights(config, metadata, corpus);
   vector<int> indices = {0, 1, 2, 3};
   Real objective;
+  MinibatchWords words;
   boost::shared_ptr<FactoredWeights> gradient =
       boost::make_shared<FactoredWeights>(config, metadata);
-  weights.getGradient(corpus, indices, gradient, objective);
+  weights.getGradient(corpus, indices, gradient, objective, words);
 
   // See the comment in weights_test.cc if you suspect the gradient is not
   // computed correctly.

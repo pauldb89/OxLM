@@ -70,12 +70,13 @@ TEST_F(GlobalFactoredMaxentWeightsTest, TestCheckGradientSparse) {
   GlobalFactoredMaxentWeights weights(config, metadata, corpus);
 
   vector<int> indices = {0, 1, 2, 3, 4};
-  Real objective;
 
+  Real objective;
+  MinibatchWords words;
   boost::shared_ptr<MinibatchFactoredMaxentWeights> gradient =
        boost::make_shared<MinibatchFactoredMaxentWeights>(config, metadata);
   gradient->reset(corpus, indices);
-  weights.getGradient(corpus, indices, gradient, objective);
+  weights.getGradient(corpus, indices, gradient, objective, words);
 
   // See the comment in weights_test.cc if you suspect the gradient is not
   // computed correctly.
@@ -89,12 +90,13 @@ TEST_F(GlobalFactoredMaxentWeightsTest, TestCollisionsNoFilter) {
   GlobalFactoredMaxentWeights weights(config, metadata, corpus);
 
   vector<int> indices = {0, 1, 2, 3, 4};
-  Real objective;
 
+  Real objective;
+  MinibatchWords words;
   boost::shared_ptr<MinibatchFactoredMaxentWeights> gradient =
        boost::make_shared<MinibatchFactoredMaxentWeights>(config, metadata);
   gradient->reset(corpus, indices);
-  weights.getGradient(corpus, indices, gradient, objective);
+  weights.getGradient(corpus, indices, gradient, objective, words);
 
   // See the comment in weights_test.cc if you suspect the gradient is not
   // computed correctly.
@@ -110,11 +112,11 @@ TEST_F(GlobalFactoredMaxentWeightsTest, TestCollisionExactFiltering) {
 
   vector<int> indices = {0, 1, 2, 3, 4};
   Real objective;
-
+  MinibatchWords words;
   boost::shared_ptr<MinibatchFactoredMaxentWeights> gradient =
        boost::make_shared<MinibatchFactoredMaxentWeights>(config, metadata);
   gradient->reset(corpus, indices);
-  weights.getGradient(corpus, indices, gradient, objective);
+  weights.getGradient(corpus, indices, gradient, objective, words);
 
   // See the comment in weights_test.cc if you suspect the gradient is not
   // computed correctly.
@@ -133,11 +135,11 @@ TEST_F(GlobalFactoredMaxentWeightsTest, TestCollisionApproximateFiltering) {
 
   vector<int> indices = {0, 1, 2, 3, 4};
   Real objective;
-
+  MinibatchWords words;
   boost::shared_ptr<MinibatchFactoredMaxentWeights> gradient =
        boost::make_shared<MinibatchFactoredMaxentWeights>(config, metadata);
   gradient->reset(corpus, indices);
-  weights.getGradient(corpus, indices, gradient, objective);
+  weights.getGradient(corpus, indices, gradient, objective, words);
 
   // See the comment in weights_test.cc if you suspect the gradient is not
   // computed correctly.

@@ -10,6 +10,7 @@
 #include "lbl/global_factored_maxent_weights.h"
 #include "lbl/metadata.h"
 #include "lbl/minibatch_factored_maxent_weights.h"
+#include "lbl/minibatch_words.h"
 #include "lbl/model_utils.h"
 #include "lbl/utils.h"
 #include "lbl/weights.h"
@@ -36,10 +37,12 @@ class Model {
   void learn();
 
   void update(
+      const MinibatchWords& global_words,
       const boost::shared_ptr<MinibatchWeights>& global_gradient,
       const boost::shared_ptr<GlobalWeights>& adagrad);
 
   Real regularize(
+      const MinibatchWords& global_words,
       const boost::shared_ptr<MinibatchWeights>& global_gradient,
       Real minibatch_factor);
 

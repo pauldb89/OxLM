@@ -115,8 +115,9 @@ void MinibatchFactoredMaxentWeights::reset(
 }
 
 void MinibatchFactoredMaxentWeights::syncUpdate(
+    const MinibatchWords& words,
     const boost::shared_ptr<MinibatchFactoredMaxentWeights>& gradient) {
-  FactoredWeights::syncUpdate(gradient);
+  FactoredWeights::syncUpdate(words, gradient);
 
   {
     lock_guard<mutex> lock(*mutexU);

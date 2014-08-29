@@ -21,6 +21,7 @@ class MinibatchFactoredMaxentWeights : public FactoredWeights {
       bool block_update = false);
 
   void syncUpdate(
+      const MinibatchWords& words,
       const boost::shared_ptr<MinibatchFactoredMaxentWeights>& gradient);
 
  private:

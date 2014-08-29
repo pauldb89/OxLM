@@ -34,6 +34,7 @@ add_libraries(lbl
   minibatch_factored_maxent_weights.cc
   minibatch_feature_indexes_pair.cc
   minibatch_feature_store.cc
+  minibatch_words.cc
   model.cc
   model_utils.cc
   ngram.cc

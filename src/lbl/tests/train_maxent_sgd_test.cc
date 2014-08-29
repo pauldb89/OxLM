@@ -21,7 +21,7 @@ TEST_F(FactoredSGDTest, TestTrainMaxentSGDSparseFeatures) {
   boost::shared_ptr<Corpus> test_corpus = readCorpus(config->test_file, dict);
   Real log_likelihood = 0;
   model.evaluate(test_corpus, log_likelihood);
-  EXPECT_NEAR(56.5152015, perplexity(log_likelihood, test_corpus->size()), EPS);
+  EXPECT_NEAR(56.4481391, perplexity(log_likelihood, test_corpus->size()), EPS);
 }
 
 TEST_F(FactoredSGDTest, TestTrainMaxentSGDCollisions) {
@@ -36,7 +36,7 @@ TEST_F(FactoredSGDTest, TestTrainMaxentSGDCollisions) {
   boost::shared_ptr<Corpus> test_corpus = readCorpus(config->test_file, dict);
   Real log_likelihood = 0;
   model.evaluate(test_corpus, log_likelihood);
-  EXPECT_NEAR(54.0802192, perplexity(log_likelihood, test_corpus->size()), EPS);
+  EXPECT_NEAR(54.0201301, perplexity(log_likelihood, test_corpus->size()), EPS);
 }
 
 TEST_F(FactoredSGDTest, TestTrainMaxentSGDExactFiltering) {
@@ -52,7 +52,7 @@ TEST_F(FactoredSGDTest, TestTrainMaxentSGDExactFiltering) {
   boost::shared_ptr<Corpus> test_corpus = readCorpus(config->test_file, dict);
   Real log_likelihood = 0;
   model.evaluate(test_corpus, log_likelihood);
-  EXPECT_NEAR(56.5219650, perplexity(log_likelihood, test_corpus->size()), EPS);
+  EXPECT_NEAR(56.4541969, perplexity(log_likelihood, test_corpus->size()), EPS);
 }
 
 TEST_F(FactoredSGDTest, TestTrainMaxentSGDApproximateFiltering) {
@@ -69,7 +69,7 @@ TEST_F(FactoredSGDTest, TestTrainMaxentSGDApproximateFiltering) {
   boost::shared_ptr<Corpus> test_corpus = readCorpus(config->test_file, dict);
   Real log_likelihood = 0;
   model.evaluate(test_corpus, log_likelihood);
-  EXPECT_NEAR(56.4228439, perplexity(log_likelihood, test_corpus->size()), EPS);
+  EXPECT_NEAR(56.3561325, perplexity(log_likelihood, test_corpus->size()), EPS);
 }
 
 } // namespace oxlm

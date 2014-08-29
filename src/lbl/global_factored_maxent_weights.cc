@@ -134,7 +134,8 @@ void GlobalFactoredMaxentWeights::getGradient(
     const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& indices,
     const boost::shared_ptr<MinibatchFactoredMaxentWeights>& gradient,
-    Real& objective) const {
+    Real& objective,
+    MinibatchWords& words) const {
   vector<vector<int>> contexts;
   vector<MatrixReal> context_vectors;
   MatrixReal prediction_vectors;
@@ -144,12 +145,14 @@ void GlobalFactoredMaxentWeights::getGradient(
       corpus, indices, contexts, context_vectors, prediction_vectors,
       class_probs, word_probs);
 
+  setContextWords(contexts, words);
+
   MatrixReal weighted_representations = getWeightedRepresentations(
       corpus, indices, prediction_vectors, class_probs, word_probs);
 
   getFullGradient(
       corpus, indices, contexts, context_vectors, prediction_vectors,
-      weighted_representations, class_probs, word_probs, gradient);
+      weighted_representations, class_probs, word_probs, gradient, words);
 }
 
 void GlobalFactoredMaxentWeights::getFullGradient(
@@ -161,10 +164,11 @@ void GlobalFactoredMaxentWeights::getFullGradient(
     const MatrixReal& weighted_representations,
     MatrixReal& class_probs,
     vector<VectorReal>& word_probs,
-    const boost::shared_ptr<MinibatchFactoredMaxentWeights>& gradient) const {
+    const boost::shared_ptr<MinibatchFactoredMaxentWeights>& gradient,
+    MinibatchWords& words) const {
   FactoredWeights::getFullGradient(
       corpus, indices, contexts, context_vectors, prediction_vectors,
-      weighted_representations, class_probs, word_probs, gradient);
+      weighted_representations, class_probs, word_probs, gradient, words);
 
   for (size_t i = 0; i < indices.size(); ++i) {
     int word_id = corpus->at(indices[i]);
@@ -240,13 +244,15 @@ void GlobalFactoredMaxentWeights::estimateGradient(
     const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& indices,
     const boost::shared_ptr<MinibatchFactoredMaxentWeights>& gradient,
-    Real& objective) const {
+    Real& objective,
+    MinibatchWords& words) const {
   throw NotImplementedException();
 }
 
 void GlobalFactoredMaxentWeights::updateSquared(
+    const MinibatchWords& global_words,
     const boost::shared_ptr<MinibatchFactoredMaxentWeights>& global_gradient) {
-  FactoredWeights::updateSquared(global_gradient);
+  FactoredWeights::updateSquared(global_words, global_gradient);
 
   // The number of n-gram weights updated for each minibatch is relatively low
   // compared to the number of parameters updated in the base (factored)
@@ -262,9 +268,10 @@ void GlobalFactoredMaxentWeights::updateSquared(
 }
 
 void GlobalFactoredMaxentWeights::updateAdaGrad(
+    const MinibatchWords& global_words,
     const boost::shared_ptr<MinibatchFactoredMaxentWeights>& global_gradient,
     const boost::shared_ptr<GlobalFactoredMaxentWeights>& adagrad) {
-  FactoredWeights::updateAdaGrad(global_gradient, adagrad);
+  FactoredWeights::updateAdaGrad(global_words, global_gradient, adagrad);
 
   // See comment above.
   #pragma omp master
@@ -277,10 +284,11 @@ void GlobalFactoredMaxentWeights::updateAdaGrad(
 }
 
 Real GlobalFactoredMaxentWeights::regularizerUpdate(
+    const MinibatchWords& global_words,
     const boost::shared_ptr<MinibatchFactoredMaxentWeights>& global_gradient,
     Real minibatch_factor) {
   Real ret = FactoredWeights::regularizerUpdate(
-      global_gradient, minibatch_factor);
+      global_words, global_gradient, minibatch_factor);
 
   // See comment above.
   #pragma omp master

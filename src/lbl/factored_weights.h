@@ -32,7 +32,8 @@ class FactoredWeights : public Weights {
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices,
       const boost::shared_ptr<FactoredWeights>& gradient,
-      Real& objective) const;
+      Real& objective,
+      MinibatchWords& words) const;
 
   virtual Real getObjective(
       const boost::shared_ptr<Corpus>& corpus,
@@ -48,17 +49,24 @@ class FactoredWeights : public Weights {
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices,
       const boost::shared_ptr<FactoredWeights>& gradient,
-      Real& objective) const;
+      Real& objective,
+      MinibatchWords& words) const;
 
-  void syncUpdate(const boost::shared_ptr<FactoredWeights>& gradient);
+  void syncUpdate(
+      const MinibatchWords& words,
+      const boost::shared_ptr<FactoredWeights>& gradient);
 
-  void updateSquared(const boost::shared_ptr<FactoredWeights>& global_gradient);
+  void updateSquared(
+      const MinibatchWords& global_words,
+      const boost::shared_ptr<FactoredWeights>& global_gradient);
 
   void updateAdaGrad(
+      const MinibatchWords& global_words,
       const boost::shared_ptr<FactoredWeights>& global_gradient,
       const boost::shared_ptr<FactoredWeights>& adagrad);
 
   Real regularizerUpdate(
+      const MinibatchWords& global_words,
       const boost::shared_ptr<FactoredWeights>& global_gradient,
       Real minibatch_factor);
 
@@ -108,7 +116,8 @@ class FactoredWeights : public Weights {
       const MatrixReal& weighted_representations,
       MatrixReal& class_probs,
       vector<VectorReal>& word_probs,
-      const boost::shared_ptr<FactoredWeights>& gradient) const;
+      const boost::shared_ptr<FactoredWeights>& gradient,
+      MinibatchWords& words) const;
 
   virtual vector<vector<int>> getNoiseWords(
       const boost::shared_ptr<Corpus>& corpus,
@@ -124,7 +133,8 @@ class FactoredWeights : public Weights {
       const MatrixReal& prediction_vectors,
       const boost::shared_ptr<FactoredWeights>& gradient,
       MatrixReal& weighted_representations,
-      Real& objective) const;
+      Real& objective,
+      MinibatchWords& words) const;
 
  private:
   void allocate();

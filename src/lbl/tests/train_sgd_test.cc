@@ -16,7 +16,7 @@ TEST_F(SGDTest, TestBasic) {
   boost::shared_ptr<Corpus> test_corpus = readCorpus(config->test_file, dict);
   Real log_likelihood = 0;
   model.evaluate(test_corpus, log_likelihood);
-  EXPECT_NEAR(72.2445220, perplexity(log_likelihood, test_corpus->size()), EPS);
+  EXPECT_NEAR(72.2352218, perplexity(log_likelihood, test_corpus->size()), EPS);
 }
 
 TEST_F(SGDTest, TestNCE) {
@@ -28,7 +28,7 @@ TEST_F(SGDTest, TestNCE) {
   boost::shared_ptr<Corpus> test_corpus = readCorpus(config->test_file, dict);
   Real log_likelihood = 0;
   model.evaluate(test_corpus, log_likelihood);
-  EXPECT_NEAR(67.7361526, perplexity(log_likelihood, test_corpus->size()), EPS);
+  EXPECT_NEAR(67.7501068, perplexity(log_likelihood, test_corpus->size()), EPS);
 }
 
 } // namespace oxlm

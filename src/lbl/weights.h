@@ -10,6 +10,7 @@
 
 #include "lbl/context_cache.h"
 #include "lbl/metadata.h"
+#include "lbl/minibatch_words.h"
 #include "lbl/utils.h"
 
 namespace oxlm {
@@ -46,7 +47,8 @@ class Weights {
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices,
       const boost::shared_ptr<Weights>& gradient,
-      Real& objective) const;
+      Real& objective,
+      MinibatchWords& words) const;
 
   virtual Real getObjective(
       const boost::shared_ptr<Corpus>& corpus,
@@ -62,18 +64,26 @@ class Weights {
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices,
       const boost::shared_ptr<Weights>& gradient,
-      Real& objective) const;
+      Real& objective,
+      MinibatchWords& words) const;
 
-  void syncUpdate(const boost::shared_ptr<Weights>& gradient);
+  void syncUpdate(
+      const MinibatchWords& words,
+      const boost::shared_ptr<Weights>& gradient);
 
-  void updateSquared(const boost::shared_ptr<Weights>& global_gradient);
+  void updateSquared(
+      const MinibatchWords& global_words,
+      const boost::shared_ptr<Weights>& global_gradient);
 
   void updateAdaGrad(
+      const MinibatchWords& global_words,
       const boost::shared_ptr<Weights>& global_gradient,
       const boost::shared_ptr<Weights>& adagrad);
 
   Real regularizerUpdate(
-      const boost::shared_ptr<Weights>& global_gradient, Real minibatch_factor);
+      const MinibatchWords& global_words,
+      const boost::shared_ptr<Weights>& global_gradient,
+      Real minibatch_factor);
 
   Real predict(int word_id, vector<int> context) const;
 
@@ -99,6 +109,10 @@ class Weights {
       const vector<int>& indices,
       vector<vector<int>>& contexts,
       vector<MatrixReal>& context_vectors) const;
+
+  void setContextWords(
+      const vector<vector<int>>& contexts,
+      MinibatchWords& words) const;
 
   MatrixReal getPredictionVectors(
       const vector<int>& indices,
@@ -126,7 +140,8 @@ class Weights {
       const MatrixReal& prediction_vectors,
       const MatrixReal& weighted_representations,
       MatrixReal& word_probs,
-      const boost::shared_ptr<Weights>& gradient) const;
+      const boost::shared_ptr<Weights>& gradient,
+      MinibatchWords& words) const;
 
   void getContextGradient(
       const vector<int>& indices,
@@ -145,7 +160,8 @@ class Weights {
       const MatrixReal& prediction_vectors,
       const boost::shared_ptr<Weights>& gradient,
       MatrixReal& weighted_representations,
-      Real& objective) const;
+      Real& objective,
+      MinibatchWords& words) const;
 
   VectorReal getPredictionVector(const vector<int>& context) const;
 
@@ -154,7 +170,7 @@ class Weights {
 
   void setModelParameters();
 
-  Block getBlock() const;
+  Block getBlock(int start, int size) const;
 
   friend class boost::serialization::access;
 
@@ -198,7 +214,7 @@ class Weights {
   int size;
   Real* data;
   vector<Mutex> mutexesC;
-  vector<MuteX> mutexesQ;
+  vector<Mutex> mutexesQ;
   vector<Mutex> mutexesR;
   Mutex mutexB;
 };

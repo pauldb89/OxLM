@@ -135,7 +135,8 @@ void FactoredWeights::getGradient(
     const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& indices,
     const boost::shared_ptr<FactoredWeights>& gradient,
-    Real& objective) const {
+    Real& objective,
+    MinibatchWords& words) const {
   vector<vector<int>> contexts;
   vector<MatrixReal> context_vectors;
   MatrixReal prediction_vectors, class_probs;
@@ -144,12 +145,14 @@ void FactoredWeights::getGradient(
       corpus, indices, contexts, context_vectors, prediction_vectors,
       class_probs, word_probs);
 
+  setContextWords(contexts, words);
+
   MatrixReal weighted_representations = getWeightedRepresentations(
       corpus, indices, prediction_vectors, class_probs, word_probs);
 
   getFullGradient(
       corpus, indices, contexts, context_vectors, prediction_vectors,
-      weighted_representations, class_probs, word_probs, gradient);
+      weighted_representations, class_probs, word_probs, gradient, words);
 }
 
 MatrixReal FactoredWeights::classR(int class_id) const {
@@ -218,7 +221,8 @@ void FactoredWeights::getFullGradient(
     const MatrixReal& weighted_representations,
     MatrixReal& class_probs,
     vector<VectorReal>& word_probs,
-    const boost::shared_ptr<FactoredWeights>& gradient) const {
+    const boost::shared_ptr<FactoredWeights>& gradient,
+    MinibatchWords& words) const {
   for (size_t i = 0; i < indices.size(); ++i) {
     int word_id = corpus->at(indices[i]);
     int class_id = index->getClass(word_id);
@@ -234,6 +238,10 @@ void FactoredWeights::getFullGradient(
     int class_id = index->getClass(word_id);
     int class_start = index->getClassMarker(class_id);
     int class_size = index->getClassSize(class_id);
+
+    for (int j = 0; j < class_size; ++j) {
+      words.addOutputWord(class_start + j);
+    }
 
     gradient->B.segment(class_start, class_size) += word_probs[i];
     gradient->R.block(0, class_start, gradient->R.rows(), class_size) +=
@@ -317,10 +325,11 @@ void FactoredWeights::estimateProjectionGradient(
     const MatrixReal& prediction_vectors,
     const boost::shared_ptr<FactoredWeights>& gradient,
     MatrixReal& weighted_representations,
-    Real& objective) const {
+    Real& objective,
+    MinibatchWords& words) const {
   Weights::estimateProjectionGradient(
       corpus, indices, prediction_vectors, gradient,
-      weighted_representations, objective);
+      weighted_representations, objective, words);
 
   int noise_samples = config->noise_samples;
   VectorReal class_unigram = metadata->getClassBias().array().exp();
@@ -361,10 +370,13 @@ void FactoredWeights::estimateGradient(
     const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& indices,
     const boost::shared_ptr<FactoredWeights>& gradient,
-    Real& objective) const {
+    Real& objective,
+    MinibatchWords& words) const {
   vector<vector<int>> contexts;
   vector<MatrixReal> context_vectors;
   getContextVectors(corpus, indices, contexts, context_vectors);
+
+  setContextWords(contexts, words);
 
   MatrixReal prediction_vectors =
       getPredictionVectors(indices, context_vectors);
@@ -372,7 +384,7 @@ void FactoredWeights::estimateGradient(
   MatrixReal weighted_representations;
   estimateProjectionGradient(
       corpus, indices, prediction_vectors, gradient,
-      weighted_representations, objective);
+      weighted_representations, objective, words);
 
   if (config->sigmoid) {
     weighted_representations.array() *= sigmoidDerivative(prediction_vectors);
@@ -383,8 +395,9 @@ void FactoredWeights::estimateGradient(
 }
 
 void FactoredWeights::syncUpdate(
+    const MinibatchWords& words,
     const boost::shared_ptr<FactoredWeights>& gradient) {
-  Weights::syncUpdate(gradient);
+  Weights::syncUpdate(words, gradient);
 
   size_t block_size = FW.size() / mutexes.size() + 1;
   size_t block_start = 0;
@@ -406,8 +419,9 @@ Block FactoredWeights::getBlock() const {
 }
 
 void FactoredWeights::updateSquared(
+    const MinibatchWords& global_words,
     const boost::shared_ptr<FactoredWeights>& global_gradient) {
-  Weights::updateSquared(global_gradient);
+  Weights::updateSquared(global_words, global_gradient);
 
   Block block = getBlock();
   FW.segment(block.first, block.second).array() +=
@@ -415,9 +429,10 @@ void FactoredWeights::updateSquared(
 }
 
 void FactoredWeights::updateAdaGrad(
+    const MinibatchWords& global_words,
     const boost::shared_ptr<FactoredWeights>& global_gradient,
     const boost::shared_ptr<FactoredWeights>& adagrad) {
-  Weights::updateAdaGrad(global_gradient, adagrad);
+  Weights::updateAdaGrad(global_words, global_gradient, adagrad);
 
   Block block = getBlock();
   FW.segment(block.first, block.second) -=
@@ -427,9 +442,11 @@ void FactoredWeights::updateAdaGrad(
 }
 
 Real FactoredWeights::regularizerUpdate(
+    const MinibatchWords& global_words,
     const boost::shared_ptr<FactoredWeights>& global_gradient,
     Real minibatch_factor) {
-  Real ret = Weights::regularizerUpdate(global_gradient, minibatch_factor);
+  Real ret = Weights::regularizerUpdate(
+      global_words, global_gradient, minibatch_factor);
 
   Block block = getBlock();
   Real sigma = minibatch_factor * config->step_size * config->l2_lbl;
