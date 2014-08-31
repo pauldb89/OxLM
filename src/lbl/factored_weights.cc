@@ -274,8 +274,7 @@ bool FactoredWeights::checkGradient(
 vector<vector<int>> FactoredWeights::getNoiseWords(
     const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& indices) const {
-  random_device rd;
-  mt19937 gen(rd());
+  mt19937 gen(0);
   VectorReal unigram = metadata->getUnigram();
   vector<vector<int>> noise_words(indices.size());
   for (size_t i = 0; i < indices.size(); ++i) {
@@ -298,8 +297,7 @@ vector<vector<int>> FactoredWeights::getNoiseWords(
 vector<vector<int>> FactoredWeights::getNoiseClasses(
     const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& indices) const {
-  random_device rd;
-  mt19937 gen(rd());
+  mt19937 gen(0);
   VectorReal class_unigram = metadata->getClassBias().array().exp();
   discrete_distribution<int> discrete(
       class_unigram.data(), class_unigram.data() + class_unigram.size());
