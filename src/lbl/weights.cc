@@ -518,11 +518,23 @@ Real Weights::regularizerUpdate(
     const MinibatchWords& global_words,
     const boost::shared_ptr<Weights>& global_gradient,
     Real minibatch_factor) {
+  Real sum = 0;
+
   Real sigma = minibatch_factor * config->step_size * config->l2_lbl;
-  Block block = getBlock(0, W.size());
+  for (int word_id: global_words.getContextWords()) {
+    Q.col(word_id) -= Q.col(word_id) * sigma;
+    sum += Q.col(word_id).array().square().sum();
+  }
+
+  for (int word_id: global_words.getOutputWords()) {
+    R.col(word_id) -= R.col(word_id) * sigma;
+    sum += R.col(word_id).array().square().sum();
+  }
+
+  Block block = getBlock(Q.size() + R.size(), W.size() - (Q.size() + R.size()));
   W.segment(block.first, block.second) -=
       W.segment(block.first, block.second) * sigma;
-  Real sum = W.segment(block.first, block.second).array().square().sum();
+  sum += W.segment(block.first, block.second).array().square().sum();
 
   return 0.5 * minibatch_factor * config->l2_lbl * sum;
 }

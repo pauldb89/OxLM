@@ -286,7 +286,10 @@ bool FactoredWeights::checkGradient(
 vector<vector<int>> FactoredWeights::getNoiseWords(
     const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& indices) const {
-  mt19937 gen(0);
+  if (!gen.get()) {
+    gen.reset(new mt19937(0));
+  }
+
   VectorReal unigram = metadata->getUnigram();
   vector<vector<int>> noise_words(indices.size());
   for (size_t i = 0; i < indices.size(); ++i) {
@@ -299,7 +302,7 @@ vector<vector<int>> FactoredWeights::getNoiseWords(
         unigram.data() + class_start,
         unigram.data() + class_start + class_size);
     for (int j = 0; j < config->noise_samples; ++j) {
-      noise_words[i].push_back(class_start + discrete(gen));
+      noise_words[i].push_back(class_start + discrete(*gen));
     }
   }
 
@@ -309,14 +312,17 @@ vector<vector<int>> FactoredWeights::getNoiseWords(
 vector<vector<int>> FactoredWeights::getNoiseClasses(
     const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& indices) const {
-  mt19937 gen(0);
+  if (!gen.get()) {
+    gen.reset(new mt19937(0));
+  }
+
   VectorReal class_unigram = metadata->getClassBias().array().exp();
   discrete_distribution<int> discrete(
       class_unigram.data(), class_unigram.data() + class_unigram.size());
   vector<vector<int>> noise_classes(indices.size());
   for (size_t i = 0; i < indices.size(); ++i) {
     for (int j = 0; j < config->noise_samples; ++j) {
-      noise_classes[i].push_back(discrete(gen));
+      noise_classes[i].push_back(discrete(*gen));
     }
   }
 

@@ -165,16 +165,21 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
           global_words.merge(words);
         }
 
-        // Prepare minibatch words for parallel processing.
-        #pragma omp master
-        global_words.transform();
-
         #pragma omp master
         {
           sync_update_duration += GetDuration(sync_update_start, GetTime());
         }
 
-        // Wait until the global gradient is fully updated by all threads.
+        // Wait until the global gradient is fully updated by all threads and
+        // the global words are fully merged.
+        #pragma omp barrier
+
+        // Prepare minibatch words for parallel processing.
+        #pragma omp master
+        global_words.transform();
+
+        // Wait until the minibatch words are fully prepared for parallel
+        // processing.
         #pragma omp barrier
 
         #pragma omp master

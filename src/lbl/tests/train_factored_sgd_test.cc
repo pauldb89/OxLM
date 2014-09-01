@@ -28,7 +28,7 @@ TEST_F(FactoredSGDTest, TestTrainFactoredNCE) {
   boost::shared_ptr<Corpus> test_corpus = readCorpus(config->test_file, dict);
   Real log_likelihood = 0;
   model.evaluate(test_corpus, log_likelihood);
-  EXPECT_NEAR(65.7675323, perplexity(log_likelihood, test_corpus->size()), EPS);
+  EXPECT_NEAR(66.1025543, perplexity(log_likelihood, test_corpus->size()), EPS);
 }
 
 } // namespace oxlm

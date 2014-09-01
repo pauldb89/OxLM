@@ -1,6 +1,7 @@
 #pragma once
 
 #include <boost/make_shared.hpp>
+#include <boost/thread/tss.hpp>
 
 #include "lbl/factored_metadata.h"
 #include "lbl/weights.h"
@@ -190,6 +191,8 @@ class FactoredWeights : public Weights {
   int size;
   Real* data;
   vector<Mutex> mutexes;
+
+  mutable boost::thread_specific_ptr<mt19937> gen;
 };
 
 } // namespace oxlm
