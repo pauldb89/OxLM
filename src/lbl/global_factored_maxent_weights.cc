@@ -107,6 +107,11 @@ void GlobalFactoredMaxentWeights::initialize() {
   }
 }
 
+size_t GlobalFactoredMaxentWeights::numParameters() const {
+  // TODO: Count parameters in feature stores.
+  return FactoredWeights::numParameters();
+}
+
 void GlobalFactoredMaxentWeights::getProbabilities(
     const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& indices,

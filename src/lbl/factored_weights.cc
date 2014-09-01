@@ -48,6 +48,10 @@ FactoredWeights::FactoredWeights(const FactoredWeights& other)
   memcpy(data, other.data, size * sizeof(Real));
 }
 
+size_t FactoredWeights::numParameters() const {
+  return Weights::numParameters() + size;
+}
+
 void FactoredWeights::reset(
     const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& minibatch,

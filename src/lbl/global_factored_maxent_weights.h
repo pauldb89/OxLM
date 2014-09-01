@@ -22,6 +22,8 @@ class GlobalFactoredMaxentWeights : public FactoredWeights {
       const boost::shared_ptr<FactoredMaxentMetadata>& metadata,
       const boost::shared_ptr<Corpus>& training_corpus);
 
+  virtual size_t numParameters() const;
+
   virtual void getProbabilities(
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices,

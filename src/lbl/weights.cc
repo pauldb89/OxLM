@@ -46,7 +46,7 @@ Weights::Weights(
   cout << " Model parameters: " << endl;
   cout << "  Context vocab size = " << config->vocab_size << endl;
   cout << "  Output vocab size = " << config->vocab_size << endl;
-  cout << "  Total parameters = " << size << endl;
+  cout << "  Total parameters = " << numParameters() << endl;
   cout << "===============================" << endl;
 }
 
@@ -112,6 +112,10 @@ void Weights::setModelParameters() {
   }
 
   new (&B) WeightsType(start, B_size);
+}
+
+size_t Weights::numParameters() const {
+  return size;
 }
 
 void Weights::reset(

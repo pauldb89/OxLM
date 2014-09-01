@@ -23,6 +23,8 @@ class FactoredWeights : public Weights {
 
   FactoredWeights(const FactoredWeights& other);
 
+  virtual size_t numParameters() const;
+
   void reset(
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& minibatch,

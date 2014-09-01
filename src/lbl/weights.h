@@ -38,6 +38,8 @@ class Weights {
 
   Weights(const Weights& other);
 
+  virtual size_t numParameters() const;
+
   void reset(
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& minibatch,
@@ -96,6 +98,7 @@ class Weights {
   virtual ~Weights();
 
  protected:
+
   Real getObjective(
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices,
