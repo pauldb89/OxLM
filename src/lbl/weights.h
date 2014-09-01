@@ -83,7 +83,6 @@ class Weights {
       const boost::shared_ptr<Weights>& adagrad);
 
   Real regularizerUpdate(
-      const MinibatchWords& global_words,
       const boost::shared_ptr<Weights>& global_gradient,
       Real minibatch_factor);
 

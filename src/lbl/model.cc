@@ -203,8 +203,7 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
 
         Real minibatch_factor =
             static_cast<Real>(end - start) / training_corpus->size();
-        objective = regularize(
-            global_words, global_gradient, minibatch_factor);
+        objective = regularize(global_gradient, minibatch_factor);
         #pragma omp critical
         global_objective += objective;
 
@@ -276,11 +275,9 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::update(
 
 template<class GlobalWeights, class MinibatchWeights, class Metadata>
 Real Model<GlobalWeights, MinibatchWeights, Metadata>::regularize(
-    const MinibatchWords& global_words,
     const boost::shared_ptr<MinibatchWeights>& global_gradient,
     Real minibatch_factor) {
-  return weights->regularizerUpdate(
-      global_words, global_gradient, minibatch_factor);
+  return weights->regularizerUpdate(global_gradient, minibatch_factor);
 }
 
 template<class GlobalWeights, class MinibatchWeights, class Metadata>

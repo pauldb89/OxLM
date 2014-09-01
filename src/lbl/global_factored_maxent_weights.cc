@@ -289,11 +289,10 @@ void GlobalFactoredMaxentWeights::updateAdaGrad(
 }
 
 Real GlobalFactoredMaxentWeights::regularizerUpdate(
-    const MinibatchWords& global_words,
     const boost::shared_ptr<MinibatchFactoredMaxentWeights>& global_gradient,
     Real minibatch_factor) {
   Real ret = FactoredWeights::regularizerUpdate(
-      global_words, global_gradient, minibatch_factor);
+      global_gradient, minibatch_factor);
 
   // See comment above.
   #pragma omp master

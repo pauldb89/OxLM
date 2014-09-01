@@ -42,7 +42,6 @@ class Model {
       const boost::shared_ptr<GlobalWeights>& adagrad);
 
   Real regularize(
-      const MinibatchWords& global_words,
       const boost::shared_ptr<MinibatchWeights>& global_gradient,
       Real minibatch_factor);
 
