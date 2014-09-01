@@ -21,6 +21,7 @@ set(TESTS
     global_feature_indexes_pair_test
     metadata_test
     minibatch_feature_indexes_pair_test
+    minibatch_words_test
     model_test
     model_utils_test
     ngram_test
