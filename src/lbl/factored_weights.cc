@@ -52,18 +52,10 @@ size_t FactoredWeights::numParameters() const {
   return Weights::numParameters() + size;
 }
 
-void FactoredWeights::reset(
+void FactoredWeights::init(
     const boost::shared_ptr<Corpus>& corpus,
-    const vector<int>& minibatch,
-    bool block_reset) {
-  Weights::reset(corpus, minibatch, block_reset);
-
-  if (block_reset) {
-    Block block = getBlock();
-    FW.segment(block.first, block.second) = VectorReal::Zero(block.second);
-  } else {
-    FW.setZero();
-  }
+    const vector<int>& minibatch) {
+  Weights::init(corpus, minibatch);
 }
 
 void FactoredWeights::allocate() {
@@ -289,6 +281,19 @@ vector<vector<int>> FactoredWeights::getNoiseWords(
   if (!gen.get()) {
     gen.reset(new mt19937(0));
   }
+  if (!wordDists.get()) {
+    VectorReal unigram = metadata->getUnigram();
+
+    vector<discrete_distribution<int>> dists;
+    for (size_t i = 0; i < index->getNumClasses(); ++i) {
+      int class_start = index->getClassMarker(i);
+      int class_size = index->getClassSize(i);
+      dists.push_back(discrete_distribution<int>(
+          unigram.data() + class_start,
+          unigram.data() + class_start + class_size));
+    }
+    wordDists.reset(new vector<discrete_distribution<int>>(dists));
+  }
 
   VectorReal unigram = metadata->getUnigram();
   vector<vector<int>> noise_words(indices.size());
@@ -296,13 +301,10 @@ vector<vector<int>> FactoredWeights::getNoiseWords(
     int word_id = corpus->at(indices[i]);
     int class_id = index->getClass(word_id);
     int class_start = index->getClassMarker(class_id);
-    int class_size = index->getClassSize(class_id);
 
-    discrete_distribution<int> discrete(
-        unigram.data() + class_start,
-        unigram.data() + class_start + class_size);
+    auto start_sampling = GetTime();
     for (int j = 0; j < config->noise_samples; ++j) {
-      noise_words[i].push_back(class_start + discrete(*gen));
+      noise_words[i].push_back(class_start + wordDists->at(class_id)(*gen));
     }
   }
 
@@ -316,13 +318,17 @@ vector<vector<int>> FactoredWeights::getNoiseClasses(
     gen.reset(new mt19937(0));
   }
 
-  VectorReal class_unigram = metadata->getClassBias().array().exp();
-  discrete_distribution<int> discrete(
-      class_unigram.data(), class_unigram.data() + class_unigram.size());
+  if (!classDist.get()) {
+    VectorReal class_unigram = metadata->getClassBias().array().exp();
+    classDist.reset(new discrete_distribution<int>(
+        class_unigram.data(), class_unigram.data() + class_unigram.size()));
+  }
+
   vector<vector<int>> noise_classes(indices.size());
+  auto start_sampling = GetTime();
   for (size_t i = 0; i < indices.size(); ++i) {
     for (int j = 0; j < config->noise_samples; ++j) {
-      noise_classes[i].push_back(discrete(*gen));
+      noise_classes[i].push_back((*classDist)(*gen));
     }
   }
 
@@ -465,6 +471,17 @@ Real FactoredWeights::regularizerUpdate(
   ret += 0.5 * minibatch_factor * config->l2_lbl * squares;
 
   return ret;
+}
+
+void FactoredWeights::clear(const MinibatchWords& words, bool parallel_update) {
+  Weights::clear(words, parallel_update);
+
+  if (parallel_update) {
+    Block block = getBlock();
+    FW.segment(block.first, block.second).setZero();
+  } else {
+    FW.setZero();
+  }
 }
 
 Real FactoredWeights::predict(int word_id, vector<int> context) const {

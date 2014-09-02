@@ -31,11 +31,10 @@ MinibatchFactoredMaxentWeights::MinibatchFactoredMaxentWeights(
   }
 }
 
-void MinibatchFactoredMaxentWeights::reset(
+void MinibatchFactoredMaxentWeights::init(
     const boost::shared_ptr<Corpus>& corpus,
-    const vector<int>& minibatch_indices,
-    bool block_update) {
-  FactoredWeights::reset(corpus, minibatch_indices, block_update);
+    const vector<int>& minibatch_indices) {
+  FactoredWeights::init(corpus, minibatch_indices);
 
   // The number of n-gram weights updated for each minibatch is relatively low
   // compared to the number of parameters updated in the base (factored)

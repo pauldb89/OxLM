@@ -75,7 +75,7 @@ TEST_F(GlobalFactoredMaxentWeightsTest, TestCheckGradientSparse) {
   MinibatchWords words;
   boost::shared_ptr<MinibatchFactoredMaxentWeights> gradient =
        boost::make_shared<MinibatchFactoredMaxentWeights>(config, metadata);
-  gradient->reset(corpus, indices);
+  gradient->init(corpus, indices);
   weights.getGradient(corpus, indices, gradient, objective, words);
 
   // See the comment in weights_test.cc if you suspect the gradient is not
@@ -95,7 +95,7 @@ TEST_F(GlobalFactoredMaxentWeightsTest, TestCollisionsNoFilter) {
   MinibatchWords words;
   boost::shared_ptr<MinibatchFactoredMaxentWeights> gradient =
        boost::make_shared<MinibatchFactoredMaxentWeights>(config, metadata);
-  gradient->reset(corpus, indices);
+  gradient->init(corpus, indices);
   weights.getGradient(corpus, indices, gradient, objective, words);
 
   // See the comment in weights_test.cc if you suspect the gradient is not
@@ -115,7 +115,7 @@ TEST_F(GlobalFactoredMaxentWeightsTest, TestCollisionExactFiltering) {
   MinibatchWords words;
   boost::shared_ptr<MinibatchFactoredMaxentWeights> gradient =
        boost::make_shared<MinibatchFactoredMaxentWeights>(config, metadata);
-  gradient->reset(corpus, indices);
+  gradient->init(corpus, indices);
   weights.getGradient(corpus, indices, gradient, objective, words);
 
   // See the comment in weights_test.cc if you suspect the gradient is not
@@ -138,7 +138,7 @@ TEST_F(GlobalFactoredMaxentWeightsTest, TestCollisionApproximateFiltering) {
   MinibatchWords words;
   boost::shared_ptr<MinibatchFactoredMaxentWeights> gradient =
        boost::make_shared<MinibatchFactoredMaxentWeights>(config, metadata);
-  gradient->reset(corpus, indices);
+  gradient->init(corpus, indices);
   weights.getGradient(corpus, indices, gradient, objective, words);
 
   // See the comment in weights_test.cc if you suspect the gradient is not

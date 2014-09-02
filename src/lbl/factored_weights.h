@@ -26,10 +26,9 @@ class FactoredWeights : public Weights {
 
   virtual size_t numParameters() const;
 
-  void reset(
+  void init(
       const boost::shared_ptr<Corpus>& corpus,
-      const vector<int>& minibatch,
-      bool block_reset = false);
+      const vector<int>& minibatch);
 
   void getGradient(
       const boost::shared_ptr<Corpus>& corpus,
@@ -71,6 +70,8 @@ class FactoredWeights : public Weights {
   Real regularizerUpdate(
       const boost::shared_ptr<FactoredWeights>& global_gradient,
       Real minibatch_factor);
+
+  void clear(const MinibatchWords& words, bool parallel_update);
 
   Real predict(int word_id, vector<int> context) const;
 
@@ -192,6 +193,8 @@ class FactoredWeights : public Weights {
   vector<Mutex> mutexes;
 
   mutable boost::thread_specific_ptr<mt19937> gen;
+  mutable boost::thread_specific_ptr<discrete_distribution<int>> classDist;
+  mutable boost::thread_specific_ptr<vector<discrete_distribution<int>>> wordDists;
 };
 
 } // namespace oxlm

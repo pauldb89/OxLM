@@ -118,17 +118,9 @@ size_t Weights::numParameters() const {
   return size;
 }
 
-void Weights::reset(
+void Weights::init(
     const boost::shared_ptr<Corpus>& corpus,
-    const vector<int>& minibatch,
-    bool block_reset) {
-  if (block_reset) {
-    Block block = getBlock(0, W.size());
-    W.segment(block.first, block.second).setZero();
-  } else {
-    W.setZero();
-  }
-}
+    const vector<int>& minibatch) {}
 
 void Weights::getGradient(
     const boost::shared_ptr<Corpus>& corpus,
@@ -524,6 +516,31 @@ Real Weights::regularizerUpdate(
 
   Real sum = W.segment(block.first, block.second).array().square().sum();
   return 0.5 * minibatch_factor * config->l2_lbl * sum;
+}
+
+void Weights::clear(const MinibatchWords& words, bool parallel_update) {
+  if (parallel_update) {
+    for (int word_id: words.getContextWords()) {
+      Q.col(word_id).setZero();
+    }
+
+    for (int word_id: words.getOutputWords()) {
+      R.col(word_id).setZero();
+    }
+
+    Block block = getBlock(Q.size() + R.size(), W.size() - (Q.size() + R.size()));
+    W.segment(block.first, block.second).setZero();
+  } else {
+    for (int word_id: words.getContextWordsSet()) {
+      Q.col(word_id).setZero();
+    }
+
+    for (int word_id: words.getOutputWordsSet()) {
+      R.col(word_id).setZero();
+    }
+
+    W.segment(Q.size() + R.size(), W.size() - (Q.size() + R.size())).setZero();
+  }
 }
 
 VectorReal Weights::getPredictionVector(const vector<int>& context) const {
