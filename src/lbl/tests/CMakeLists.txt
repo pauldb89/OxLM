@@ -3,6 +3,7 @@ set(TESTS
     bloom_filter_test
     class_context_extractor_test
     class_context_hasher_test
+    class_distribution_test
     collision_counter_test
     collision_global_feature_store_test
     collision_minibatch_feature_store_test
@@ -37,6 +38,7 @@ set(TESTS
     weights_test
     word_context_extractor_test
     word_context_hasher_test
+    word_distributions_test
     word_to_class_index_test)
 
 set(LIBRARIES murmurhash lbl)

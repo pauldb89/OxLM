@@ -278,21 +278,8 @@ bool FactoredWeights::checkGradient(
 vector<vector<int>> FactoredWeights::getNoiseWords(
     const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& indices) const {
-  if (!gen.get()) {
-    gen.reset(new mt19937(0));
-  }
   if (!wordDists.get()) {
-    VectorReal unigram = metadata->getUnigram();
-
-    vector<discrete_distribution<int>> dists;
-    for (size_t i = 0; i < index->getNumClasses(); ++i) {
-      int class_start = index->getClassMarker(i);
-      int class_size = index->getClassSize(i);
-      dists.push_back(discrete_distribution<int>(
-          unigram.data() + class_start,
-          unigram.data() + class_start + class_size));
-    }
-    wordDists.reset(new vector<discrete_distribution<int>>(dists));
+    wordDists.reset(new WordDistributions(metadata->getUnigram(), index));
   }
 
   VectorReal unigram = metadata->getUnigram();
@@ -304,7 +291,7 @@ vector<vector<int>> FactoredWeights::getNoiseWords(
 
     auto start_sampling = GetTime();
     for (int j = 0; j < config->noise_samples; ++j) {
-      noise_words[i].push_back(class_start + wordDists->at(class_id)(*gen));
+      noise_words[i].push_back(wordDists->sample(class_id));
     }
   }
 
@@ -314,21 +301,16 @@ vector<vector<int>> FactoredWeights::getNoiseWords(
 vector<vector<int>> FactoredWeights::getNoiseClasses(
     const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& indices) const {
-  if (!gen.get()) {
-    gen.reset(new mt19937(0));
-  }
-
   if (!classDist.get()) {
     VectorReal class_unigram = metadata->getClassBias().array().exp();
-    classDist.reset(new discrete_distribution<int>(
-        class_unigram.data(), class_unigram.data() + class_unigram.size()));
+    classDist.reset(new ClassDistribution(class_unigram));
   }
 
   vector<vector<int>> noise_classes(indices.size());
   auto start_sampling = GetTime();
   for (size_t i = 0; i < indices.size(); ++i) {
     for (int j = 0; j < config->noise_samples; ++j) {
-      noise_classes[i].push_back((*classDist)(*gen));
+      noise_classes[i].push_back(classDist->sample());
     }
   }
 

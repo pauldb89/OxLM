@@ -6,6 +6,7 @@ add_libraries(lbl
   bloom_filter_populator.cc
   class_context_extractor.cc
   class_context_hasher.cc
+  class_distribution.cc
   collision_counter.cc
   collision_global_feature_store.cc
   collision_minibatch_feature_store.cc
@@ -46,6 +47,7 @@ add_libraries(lbl
   weights.cc
   word_context_extractor.cc
   word_context_hasher.cc
+  word_distributions.cc
   word_to_class_index.cc
 )
 

@@ -3,8 +3,10 @@
 #include <boost/make_shared.hpp>
 #include <boost/thread/tss.hpp>
 
+#include "lbl/class_distribution.h"
 #include "lbl/factored_metadata.h"
 #include "lbl/weights.h"
+#include "lbl/word_distributions.h"
 #include "lbl/word_to_class_index.h"
 
 namespace oxlm {
@@ -192,9 +194,8 @@ class FactoredWeights : public Weights {
   Real* data;
   vector<Mutex> mutexes;
 
-  mutable boost::thread_specific_ptr<mt19937> gen;
-  mutable boost::thread_specific_ptr<discrete_distribution<int>> classDist;
-  mutable boost::thread_specific_ptr<vector<discrete_distribution<int>>> wordDists;
+  mutable boost::thread_specific_ptr<ClassDistribution> classDist;
+  mutable boost::thread_specific_ptr<WordDistributions> wordDists;
 };
 
 } // namespace oxlm
