@@ -85,6 +85,16 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
       boost::make_shared<GlobalWeights>(config, metadata);
   MinibatchWords global_words;
 
+  Real init_duration = 0;
+  Real gradient_duration = 0;
+  Real gradient_unsync_duration = 0;
+  Real gradient_only_duration = 0;
+  Real sync_duration = 0;
+  Real adagrad_duration = 0;
+  Real regularizer_duration = 0;
+  Real clear_duration = 0;
+  Real evaluate_duration = 0;
+
   omp_set_num_threads(config->threads);
   #pragma omp parallel
   {
@@ -108,6 +118,7 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
 
       size_t start = 0;
       while (start < training_corpus->size()) {
+        auto start_time = GetTime();
         size_t end = min(training_corpus->size(), start + minibatch_size);
 
         vector<int> minibatch(
@@ -118,12 +129,19 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
         #pragma omp master
         global_words = MinibatchWords();
 
+        minibatch = scatterMinibatch(minibatch);
+        gradient->init(training_corpus, minibatch);
+
         // Wait until the global gradient is initialized. Otherwise, some
         // gradient updates may be ignored.
         #pragma omp barrier
 
-        minibatch = scatterMinibatch(minibatch);
-        gradient->init(training_corpus, minibatch);
+        #pragma omp master
+        {
+          auto end_time = GetTime();
+          init_duration += GetDuration(start_time, end_time);
+          start_time = end_time;
+        }
 
         Real objective;
         MinibatchWords words;
@@ -135,16 +153,43 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
               training_corpus, minibatch, gradient, objective, words);
         }
 
+        #pragma omp master
+        gradient_unsync_duration += GetDuration(start_time, GetTime());
+
+        // Remove this barrier.
+        #pragma omp barrier
+
+        #pragma omp master
+        gradient_only_duration += GetDuration(start_time, GetTime());
+
+        auto sync_start_time = GetTime();
         global_gradient->syncUpdate(words, gradient);
         #pragma omp critical
         {
           global_objective += objective;
-          global_words.merge(words);
         }
+
+        // Remove barrier and join critical sections.
+        #pragma omp barrier
+
+        #pragma omp master
+        {
+          sync_duration += GetDuration(sync_start_time, GetTime());
+        }
+
+        #pragma omp critical
+        global_words.merge(words);
 
         // Wait until the global gradient is fully updated by all threads and
         // the global words are fully merged.
         #pragma omp barrier
+
+        #pragma omp master
+        {
+          auto end_time = GetTime();
+          gradient_duration += GetDuration(start_time, end_time);
+          start_time = end_time;
+        }
 
         // Prepare minibatch words for parallel processing.
         #pragma omp master
@@ -159,11 +204,28 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
         // Wait for all threads to finish making the model gradient update.
         #pragma omp barrier
 
+        #pragma omp master
+        {
+          auto end_time = GetTime();
+          adagrad_duration += GetDuration(start_time, end_time);
+          start_time = end_time;
+        }
+
         Real minibatch_factor =
             static_cast<Real>(end - start) / training_corpus->size();
         objective = regularize(global_gradient, minibatch_factor);
         #pragma omp critical
         global_objective += objective;
+
+        // Remove barrier.
+        #pragma omp barrier
+
+        #pragma omp master
+        {
+          auto end_time = GetTime();
+          regularizer_duration += GetDuration(start_time, end_time);
+          start_time = end_time;
+        }
 
         // Clear gradients.
         gradient->clear(words, false);
@@ -173,10 +235,42 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
         // words are reset only after the global gradient is fully cleared.
         #pragma omp barrier
 
+        #pragma omp master
+        {
+          auto end_time = GetTime();
+          clear_duration += GetDuration(start_time, end_time);
+          start_time = end_time;
+        }
+
         if ((minibatch_counter % 100 == 0 && minibatch_counter <= 1000) ||
             minibatch_counter % 1000 == 0) {
           evaluate(test_corpus, iteration_start, minibatch_counter,
                    test_objective, best_perplexity);
+
+          #pragma omp master
+          {
+            evaluate_duration += GetDuration(start_time, GetTime());
+
+            cout << "Init: " << init_duration << endl;
+            cout << "Gradient: " << gradient_duration << endl;
+            cout << "Gradient unsync duration: " << gradient_unsync_duration << endl;
+            cout << "Gradient only: " << gradient_only_duration << endl;
+            cout << "Sync update: " << sync_duration << endl;
+            cout << "Adagrad: " << adagrad_duration << endl;
+            cout << "Regularizer: " << regularizer_duration << endl;
+            cout << "Clear: " << clear_duration << endl;
+            cout << "Evaluate: " << evaluate_duration << endl;
+
+            init_duration = 0;
+            gradient_duration = 0;
+            gradient_unsync_duration = 0;
+            gradient_only_duration = 0;
+            sync_duration = 0;
+            adagrad_duration = 0;
+            regularizer_duration = 0;
+            clear_duration = 0;
+            evaluate_duration = 0;
+          }
         }
 
         ++minibatch_counter;
