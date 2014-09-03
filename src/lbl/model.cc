@@ -95,6 +95,10 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
   Real clear_duration = 0;
   Real evaluate_duration = 0;
 
+  int shared_index = 0;
+  // For no particular reason. It just looks like this works best.
+  int task_size = sqrt(config->minibatch_size);
+
   omp_set_num_threads(config->threads);
   #pragma omp parallel
   {
@@ -127,9 +131,12 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
         global_gradient->init(training_corpus, minibatch);
         // Reset the set of minibatch words shared across all threads.
         #pragma omp master
-        global_words = MinibatchWords();
+        {
+          global_words = MinibatchWords();
+          shared_index = 0;
+        }
 
-        minibatch = scatterMinibatch(minibatch);
+        // minibatch = scatterMinibatch(minibatch);
         gradient->init(training_corpus, minibatch);
 
         // Wait until the global gradient is initialized. Otherwise, some
@@ -143,21 +150,34 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
           start_time = end_time;
         }
 
-        Real objective;
+        Real objective = 0;
         MinibatchWords words;
-        if (config->noise_samples > 0) {
-          weights->estimateGradient(
-              training_corpus, minibatch, gradient, objective, words);
-        } else {
-          weights->getGradient(
-              training_corpus, minibatch, gradient, objective, words);
+        size_t task_start;
+        while (true) {
+          #pragma omp critical
+          {
+            task_start = shared_index;
+            shared_index += task_size;
+          }
+
+          if (task_start < minibatch.size()) {
+            size_t task_end = min(task_start + task_size, minibatch.size());
+            vector<int> task(
+                minibatch.begin() + task_start, minibatch.begin() + task_end);
+            if (config->noise_samples > 0) {
+              weights->estimateGradient(
+                  training_corpus, task, gradient, objective, words);
+            } else {
+              weights->getGradient(
+                  training_corpus, task, gradient, objective, words);
+            }
+          } else {
+            break;
+          }
         }
 
         #pragma omp master
         gradient_unsync_duration += GetDuration(start_time, GetTime());
-
-        // Remove this barrier.
-        #pragma omp barrier
 
         #pragma omp master
         gradient_only_duration += GetDuration(start_time, GetTime());
@@ -167,22 +187,17 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
         #pragma omp critical
         {
           global_objective += objective;
+          global_words.merge(words);
         }
 
-        // Remove barrier and join critical sections.
+        // Wait until the global gradient is fully updated by all threads and
+        // the global words are fully merged.
         #pragma omp barrier
 
         #pragma omp master
         {
           sync_duration += GetDuration(sync_start_time, GetTime());
         }
-
-        #pragma omp critical
-        global_words.merge(words);
-
-        // Wait until the global gradient is fully updated by all threads and
-        // the global words are fully merged.
-        #pragma omp barrier
 
         #pragma omp master
         {
@@ -216,9 +231,6 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
         objective = regularize(global_gradient, minibatch_factor);
         #pragma omp critical
         global_objective += objective;
-
-        // Remove barrier.
-        #pragma omp barrier
 
         #pragma omp master
         {

@@ -132,7 +132,7 @@ void Weights::getGradient(
   vector<MatrixReal> context_vectors;
   MatrixReal prediction_vectors;
   MatrixReal word_probs;
-  objective = getObjective(
+  objective += getObjective(
       corpus, indices, contexts, context_vectors,
       prediction_vectors, word_probs);
 
@@ -256,8 +256,8 @@ void Weights::getFullGradient(
     words.addOutputWord(word_id);
   }
 
-  gradient->R = prediction_vectors * word_probs.transpose();
-  gradient->B = word_probs.rowwise().sum();
+  gradient->R += prediction_vectors * word_probs.transpose();
+  gradient->B += word_probs.rowwise().sum();
 
   getContextGradient(
       indices, contexts, context_vectors, weighted_representations, gradient);
@@ -279,9 +279,9 @@ void Weights::getContextGradient(
     }
 
     if (config->diagonal_contexts) {
-      gradient->C[j] = context_vectors[j].cwiseProduct(weighted_representations).rowwise().sum();
+      gradient->C[j] += context_vectors[j].cwiseProduct(weighted_representations).rowwise().sum();
     } else {
-      gradient->C[j] = weighted_representations * context_vectors[j].transpose();
+      gradient->C[j] += weighted_representations * context_vectors[j].transpose();
     }
   }
 }
@@ -377,7 +377,6 @@ void Weights::estimateProjectionGradient(
     }
   }
 
-  objective = 0;
   weighted_representations = MatrixReal::Zero(word_width, indices.size());
   for (size_t i = 0; i < indices.size(); ++i) {
     int word_id = corpus->at(indices[i]);

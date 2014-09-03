@@ -137,7 +137,7 @@ void FactoredWeights::getGradient(
   vector<MatrixReal> context_vectors;
   MatrixReal prediction_vectors, class_probs;
   vector<VectorReal> word_probs;
-  objective = getObjective(
+  objective += getObjective(
       corpus, indices, contexts, context_vectors, prediction_vectors,
       class_probs, word_probs);
 
@@ -227,8 +227,8 @@ void FactoredWeights::getFullGradient(
     word_probs[i](word_class_id) -= 1;
   }
 
-  gradient->S = prediction_vectors * class_probs.transpose();
-  gradient->T = class_probs.rowwise().sum();
+  gradient->S += prediction_vectors * class_probs.transpose();
+  gradient->T += class_probs.rowwise().sum();
   for (size_t i = 0; i < indices.size(); ++i) {
     int word_id = corpus->at(indices[i]);
     int class_id = index->getClass(word_id);
