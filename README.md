@@ -30,7 +30,7 @@ Run unit tests:
 
 ### Prepare the training data
 
-Replace the words occuring less than `min-freq` times in the training data as well as the words in the development data which do not occur in the training data with the `<UNK>` symbol:
+Replace the words occuring less than `min-freq` times (`min-freq` > 1) in the training data as well as the words in the development data which do not occur in the training data with the `<UNK>` symbol:
 
     sh oxlm/scripts/countcutoff.sh training.en min-freq
     python oxlm/scripts/preprocess-corpus.py -i training.en,dev.en -o training.unk.en,dev.unk.en -v vocab
@@ -66,7 +66,7 @@ Unless your vocabulary is really small, you probably want to look at factored mo
 
 Partition the vocabulary using [agglomerative Brown clustering](https://github.com/percyliang/brown-cluster):
 
-    brown-cluster/wcluster -c num-clusters \
+    brown-cluster/wcluster --c num-clusters \
                            --text training.unk.en \
                            --output_dir=clusters
 

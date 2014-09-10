@@ -12,6 +12,7 @@
 #include "lbl/minibatch_factored_maxent_weights.h"
 #include "lbl/minibatch_words.h"
 #include "lbl/model_utils.h"
+#include "lbl/source_factored_weights.h"
 #include "lbl/utils.h"
 #include "lbl/weights.h"
 
@@ -21,6 +22,7 @@ enum ModelType {
   NLM = 1,
   FACTORED_NLM = 2,
   FACTORED_MAXENT_NLM = 3,
+  SOURCE_FACTORED_NLM = 4,
 };
 
 template<class GlobalWeights, class MinibatchWeights, class Metadata>
@@ -94,6 +96,14 @@ class FactoredMaxentLM : public Model<GlobalFactoredMaxentWeights, MinibatchFact
 
   FactoredMaxentLM(const boost::shared_ptr<ModelData>& config)
       : Model<GlobalFactoredMaxentWeights, MinibatchFactoredMaxentWeights, FactoredMaxentMetadata>(config) {}
+};
+
+class SourceFactoredLM: public Model<SourceFactoredWeights, SourceFactoredWeights, FactoredMetadata> {
+ public:
+  SourceFactoredLM() : Model<SourceFactoredWeights, SourceFactoredWeights, FactoredMetadata>() {}
+
+  SourceFactoredLM(const boost::shared_ptr<ModelData>& config)
+      : Model<SourceFactoredWeights, SourceFactoredWeights, FactoredMetadata>(config) {}
 };
 
 } // namespace oxlm

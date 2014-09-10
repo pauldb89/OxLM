@@ -64,10 +64,13 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
   }
 
   if (config->model_input_file.size() == 0) {
+    // Train a new model.
     metadata->initialize(training_corpus);
     weights = boost::make_shared<GlobalWeights>(
         config, metadata, training_corpus);
+    weights->printInfo();
   } else {
+    // Continue training an existing model.
     Real log_likelihood = 0;
     evaluate(test_corpus, log_likelihood);
     cout << "Initial perplexity: "
@@ -354,5 +357,6 @@ bool Model<GlobalWeights, MinibatchWeights, Metadata>::operator==(
 template class Model<Weights, Weights, Metadata>;
 template class Model<FactoredWeights, FactoredWeights, FactoredMetadata>;
 template class Model<GlobalFactoredMaxentWeights, MinibatchFactoredMaxentWeights, FactoredMaxentMetadata>;
+template class Model<SourceFactoredWeights, SourceFactoredWeights, FactoredMetadata>;
 
 } // namespace oxlm

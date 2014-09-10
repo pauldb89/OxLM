@@ -15,7 +15,7 @@ using namespace chrono;
 
 namespace oxlm {
 
-typedef float Real;
+typedef double Real;
 
 typedef int            WordId;
 typedef vector<WordId> Sentence;

@@ -41,6 +41,8 @@ add_libraries(lbl
   ngram.cc
   ngram_filter.cc
   query_cache.cc
+  parallel_processor.cc
+  source_factored_weights.cc
   sparse_global_feature_store.cc
   sparse_minibatch_feature_store.cc
   utils.cc
@@ -72,9 +74,10 @@ set(EXECUTABLES
   extract_word_vectors
   evaluate
   predict
-  train_sgd
+  train_conditional_sgd
   train_factored_sgd
   train_maxent_sgd
+  train_sgd
 )
 foreach(f ${EXECUTABLES})
  add_executable(${f} ${f}.cc)

@@ -14,7 +14,7 @@ ModelData::ModelData()
       eta(0), multinomial_step_size(0), random_weights(false), hash_space(0),
       count_collisions(false), filter_contexts(false), filter_error_rate(0),
       max_ngrams(0), min_ngram_freq(0), vocab_size(0), noise_samples(0),
-      sigmoid(false) {}
+      sigmoid(false), source_order(0), source_vocab_size(0) {}
 
 bool ModelData::operator==(const ModelData& other) const {
   if (fabs(l2_lbl - other.l2_lbl) > EPS ||
@@ -32,7 +32,8 @@ bool ModelData::operator==(const ModelData& other) const {
       && hash_space == other.hash_space
       && filter_contexts == other.filter_contexts
       && fabs(filter_error_rate - other.filter_error_rate) < EPS
-      && sigmoid == other.sigmoid;
+      && sigmoid == other.sigmoid
+      && source_order == other.source_order;
 }
 
 } // namespace oxlm

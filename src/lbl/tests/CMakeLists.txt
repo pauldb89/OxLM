@@ -29,6 +29,7 @@ set(TESTS
     ngram_filter_test
     operators_test
     query_cache_test
+    source_factored_weights_test
     sparse_global_feature_store_test
     sparse_minibatch_feature_store_test
     train_factored_sgd_test

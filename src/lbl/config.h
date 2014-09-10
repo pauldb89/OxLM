@@ -81,6 +81,8 @@ struct ModelData {
   int         vocab_size;
   int         noise_samples;
   bool        sigmoid;
+  int         source_vocab_size;
+  int         source_order;
 
   bool operator==(const ModelData& other) const;
 
@@ -110,6 +112,8 @@ struct ModelData {
     ar & vocab_size;
     ar & noise_samples;
     ar & sigmoid;
+    ar & source_vocab_size;
+    ar & source_order;
   }
 };
 

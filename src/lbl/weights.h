@@ -40,6 +40,8 @@ class Weights {
 
   virtual size_t numParameters() const;
 
+  virtual void printInfo() const;
+
   void init(
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& minibatch);
@@ -98,7 +100,6 @@ class Weights {
   virtual ~Weights();
 
  protected:
-
   Real getObjective(
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices,
@@ -107,17 +108,17 @@ class Weights {
       MatrixReal& prediction_vectors,
       MatrixReal& word_probs) const;
 
-  void getContextVectors(
+  virtual void getContextVectors(
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices,
       vector<vector<int>>& contexts,
       vector<MatrixReal>& context_vectors) const;
 
-  void setContextWords(
+  virtual void setContextWords(
       const vector<vector<int>>& contexts,
       MinibatchWords& words) const;
 
-  MatrixReal getPredictionVectors(
+  virtual MatrixReal getPredictionVectors(
       const vector<int>& indices,
       const vector<MatrixReal>& context_vectors) const;
 
@@ -146,7 +147,7 @@ class Weights {
       const boost::shared_ptr<Weights>& gradient,
       MinibatchWords& words) const;
 
-  void getContextGradient(
+  virtual void getContextGradient(
       const vector<int>& indices,
       const vector<vector<int>>& contexts,
       const vector<MatrixReal>& context_vectors,

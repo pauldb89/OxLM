@@ -41,13 +41,6 @@ Weights::Weights(
     counts(training_corpus->at(i)) += 1;
   }
   B = ((counts.array() + 1) / (counts.sum() + counts.size())).log();
-
-  cout << "===============================" << endl;
-  cout << " Model parameters: " << endl;
-  cout << "  Context vocab size = " << config->vocab_size << endl;
-  cout << "  Output vocab size = " << config->vocab_size << endl;
-  cout << "  Total parameters = " << numParameters() << endl;
-  cout << "===============================" << endl;
 }
 
 Weights::Weights(const Weights& other)
@@ -116,6 +109,15 @@ void Weights::setModelParameters() {
 
 size_t Weights::numParameters() const {
   return size;
+}
+
+void Weights::printInfo() const {
+  cout << "===============================" << endl;
+  cout << " Model parameters: " << endl;
+  cout << "  Context vocab size = " << config->vocab_size << endl;
+  cout << "  Output vocab size = " << config->vocab_size << endl;
+  cout << "  Total parameters = " << numParameters() << endl;
+  cout << "===============================" << endl;
 }
 
 void Weights::init(
