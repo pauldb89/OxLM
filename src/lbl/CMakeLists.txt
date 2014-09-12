@@ -42,6 +42,8 @@ add_libraries(lbl
   ngram_filter.cc
   query_cache.cc
   parallel_processor.cc
+  parallel_vocabulary.cc
+  ParallelCorpus.cc
   source_factored_weights.cc
   sparse_global_feature_store.cc
   sparse_minibatch_feature_store.cc

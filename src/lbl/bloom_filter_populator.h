@@ -6,6 +6,7 @@
 #include "lbl/ngram.h"
 #include "lbl/utils.h"
 #include "lbl/word_to_class_index.h"
+#include "lbl/ParallelCorpus.h"
 
 #include <boost/serialization/shared_ptr.hpp>
 

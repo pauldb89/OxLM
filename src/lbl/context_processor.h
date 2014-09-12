@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "lbl/utils.h"
+#include "lbl/ParallelCorpus.h"
 
 using namespace std;
 

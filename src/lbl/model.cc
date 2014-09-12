@@ -54,7 +54,6 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
   bool immutable_vocab = config->classes > 0 || config->class_file.size();
   boost::shared_ptr<Corpus> training_corpus =
       readCorpus(config, vocab, immutable_vocab);
-  config->vocab_size = vocab->size();
   cout << "Done reading training corpus..." << endl;
 
   boost::shared_ptr<Corpus> test_corpus;

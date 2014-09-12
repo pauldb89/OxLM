@@ -143,12 +143,12 @@ void frequencyBinning(
 }
 
 int convert(
-    const string& token, Dict& dict,
+    const string& token, const boost::shared_ptr<Vocabulary>& vocab,
     bool immutable_dict, bool convert_unknowns) {
-  int w = dict.Convert(token, immutable_dict);
+  int w = vocab->convert(token, immutable_dict);
   if (w < 0) {
     if (convert_unknowns) {
-      w = dict.Convert("<unk>", immutable_dict);
+      w = vocab->convert("<unk>", immutable_dict);
       assert(w >= 0);
     } else {
       cout << token << " " << w << endl;
@@ -157,12 +157,33 @@ int convert(
   }
   return w;
 }
-
+int convertSource(
+    const string& token, const boost::shared_ptr<ParallelVocabulary>& vocab,
+    bool immutable_dict, bool convert_unknowns) {
+  int w = vocab->convertSource(token, immutable_dict);
+  if (w < 0) {
+    if (convert_unknowns) {
+      w = vocab->convertSource("<unk>", immutable_dict);
+      assert(w >= 0);
+    } else {
+      cout << token << " " << w << endl;
+      assert(!"Unknown word found in test corpus.");
+    }
+  }
+  return w;
+}
 boost::shared_ptr<Corpus> readCorpus(
     const boost::shared_ptr<ModelData>& config,
     const boost::shared_ptr<Vocabulary>& vocab,
     bool immutable_dict,
-    bool convert_unknowns) {}
+    bool convert_unknowns) {
+  if(config->source_order==0){
+	  return boost::make_shared<Corpus>(config->training_file, vocab, immutable_dict, convert_unknowns);
+  }
+  else{
+	  return boost::make_shared<ParallelCorpus>(config->training_file, config->alignment_file, vocab, immutable_dict, convert_unknowns);
+  }
+}
 
 Real perplexity(Real log_likelihood, size_t corpus_size) {
   return exp(log_likelihood / corpus_size);

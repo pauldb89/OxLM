@@ -19,7 +19,6 @@ typedef double Real;
 
 typedef int            WordId;
 typedef vector<WordId> Sentence;
-typedef vector<WordId> Corpus;
 
 typedef vector<vector<int>>                        GlobalFeatureIndexes;
 typedef boost::shared_ptr<GlobalFeatureIndexes>    GlobalFeatureIndexesPtr;

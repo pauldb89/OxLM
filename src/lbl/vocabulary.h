@@ -8,11 +8,11 @@ namespace oxlm {
 
 class Vocabulary {
  public:
-  size_t size() const;
+  virtual size_t size() const;
 
-  int convert(const string& word, bool frozen = false);
+  virtual int convert(const string& word, bool frozen = false);
 
-  string convert(int word_id);
+  virtual string convert(int word_id);
 
  private:
   friend class boost::serialization::access;

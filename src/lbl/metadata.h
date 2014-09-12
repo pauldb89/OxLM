@@ -7,6 +7,7 @@
 #include "lbl/config.h"
 #include "lbl/utils.h"
 #include "lbl/vocabulary.h"
+#include "lbl/ParallelCorpus.h"
 #include "utils/serialization_helpers.h"
 
 namespace oxlm {

@@ -8,6 +8,8 @@
 #include "lbl/config.h"
 #include "lbl/utils.h"
 #include "lbl/vocabulary.h"
+#include "lbl/parallel_vocabulary.h"
+#include "lbl/ParallelCorpus.h"
 
 // Helper functions for reading data, evaluating models, etc.
 
@@ -26,7 +28,7 @@ void frequencyBinning(
     VectorReal& class_bias);
 
 int convert(
-    const string& file, Dict& dict,
+    const string& file, const boost::shared_ptr<Vocabulary>& vocab,
     bool immutable_dict, bool convert_unknowns);
 
 boost::shared_ptr<Corpus> readCorpus(
@@ -34,6 +36,10 @@ boost::shared_ptr<Corpus> readCorpus(
     const boost::shared_ptr<Vocabulary>& vocabulary,
     bool immutable_dict = true,
     bool convert_unknowns = false);
+
+int convertSource(
+    const string& file, const boost::shared_ptr<ParallelVocabulary>& vocab,
+    bool immutable_dict, bool convert_unknowns);
 
 Real perplexity(Real log_likelihood, size_t corpus_size);
 

@@ -9,3 +9,4 @@ train*sgd
 train_melbl
 git_revision.cc
 *pyc
+.*project

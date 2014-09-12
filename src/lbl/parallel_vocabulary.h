@@ -15,6 +15,9 @@ class ParallelVocabulary : public Vocabulary {
   }
 
   Dict sourceDict;
+
+ public:
+  int convertSource(const string& word, bool frozen=false);
 };
 
 } // namespace oxlm
