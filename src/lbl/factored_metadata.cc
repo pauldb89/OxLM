@@ -9,26 +9,28 @@ namespace oxlm {
 FactoredMetadata::FactoredMetadata() {}
 
 FactoredMetadata::FactoredMetadata(
-    const boost::shared_ptr<ModelData>& config, Dict& dict)
-    : Metadata(config, dict) {
+    const boost::shared_ptr<ModelData>& config,
+    boost::shared_ptr<Vocabulary>& vocab)
+    : Metadata(config, vocab) {
   vector<int> classes;
   if (config->class_file.size()) {
     cout << "--class-file set, ignoring --classes." << endl;
     loadClassesFromFile(
-        config->class_file, config->training_file, classes, dict, classBias);
+        config->class_file, config->training_file, classes, vocab, classBias);
   } else {
     frequencyBinning(
-        config->training_file, config->classes, classes, dict, classBias);
+        config->training_file, config->classes, classes, vocab, classBias);
   }
 
-  config->vocab_size = dict.size();
+  config->vocab_size = vocab->size();
   index = boost::make_shared<WordToClassIndex>(classes);
 }
 
 FactoredMetadata::FactoredMetadata(
-    const boost::shared_ptr<ModelData>& config, Dict& dict,
+    const boost::shared_ptr<ModelData>& config,
+    boost::shared_ptr<Vocabulary>& vocab,
     const boost::shared_ptr<WordToClassIndex>& index)
-    : Metadata(config, dict), index(index),
+    : Metadata(config, vocab), index(index),
       classBias(VectorReal::Zero(index->getNumClasses())) {}
 
 void FactoredMetadata::initialize(const boost::shared_ptr<Corpus>& corpus) {

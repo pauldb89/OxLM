@@ -1,5 +1,7 @@
 #include "gtest/gtest.h"
 
+#include <boost/make_shared.hpp>
+
 #include "lbl/cdec_lbl_mapper.h"
 
 #include "hg.h"
@@ -7,12 +9,12 @@
 namespace oxlm {
 
 TEST(CdecLBLMapperTest, TestBasic) {
-  Dict dict;
-  dict.Convert("<s>");
-  dict.Convert("</s>");
-  dict.Convert("foo");
-  dict.Convert("bar");
-  CdecLBLMapper mapper(dict);
+  boost::shared_ptr<Vocabulary> vocab = boost::make_shared<Vocabulary>();
+  vocab->convert("<s>");
+  vocab->convert("</s>");
+  vocab->convert("foo");
+  vocab->convert("bar");
+  CdecLBLMapper mapper(vocab);
 
   EXPECT_EQ(0, mapper.convert(1));
   EXPECT_EQ(1, mapper.convert(2));

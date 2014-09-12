@@ -15,8 +15,8 @@ TEST(FactoredMetadataTest, TestBasic) {
   boost::shared_ptr<ModelData> config = boost::make_shared<ModelData>();
   config->training_file = "training.txt";
   config->class_file = "classes.txt";
-  Dict dict;
-  FactoredMetadata metadata(config, dict);
+  boost::shared_ptr<Vocabulary> vocab;
+  FactoredMetadata metadata(config, vocab);
 
   EXPECT_NEAR(1, metadata.getClassBias().array().exp().sum(), EPS);
   EXPECT_EQ(36, metadata.getIndex()->getNumClasses());
@@ -26,8 +26,8 @@ TEST(FactoredMetadataTest, TestSerialization) {
   boost::shared_ptr<ModelData> config = boost::make_shared<ModelData>();
   config->training_file = "training.txt";
   config->class_file = "classes.txt";
-  Dict dict;
-  FactoredMetadata metadata(config, dict), metadata_copy;
+  boost::shared_ptr<Vocabulary> vocab;
+  FactoredMetadata metadata(config, vocab), metadata_copy;
 
   stringstream stream(ios_base::binary | ios_base::out | ios_base::in);
   ar::binary_oarchive oar(stream, ar::no_header);

@@ -7,12 +7,12 @@
 namespace oxlm {
 
 TEST(CdecRuleConverterTest, TestBasic) {
-  Dict dict;
+  boost::shared_ptr<Vocabulary> vocab = boost::make_shared<Vocabulary>();
   for (int i = 0; i < 20; ++i) {
-    dict.Convert(to_string(i));
+    vocab->convert(to_string(i));
   }
   boost::shared_ptr<CdecLBLMapper> mapper =
-      boost::make_shared<CdecLBLMapper>(dict);
+      boost::make_shared<CdecLBLMapper>(vocab);
   boost::shared_ptr<CdecStateConverter> state_converter =
       boost::make_shared<CdecStateConverter>(16);
   CdecRuleConverter rule_converter(mapper, state_converter);

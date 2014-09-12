@@ -1,10 +1,23 @@
 #include "lbl/metadata.h"
 
+#include <boost/make_shared.hpp>
+
+#include "lbl/parallel_vocabulary.h"
+
 namespace oxlm {
 
 Metadata::Metadata() {}
 
-Metadata::Metadata(const boost::shared_ptr<ModelData>& config, Dict& dict) : config(config) {}
+Metadata::Metadata(
+    const boost::shared_ptr<ModelData>& config,
+    boost::shared_ptr<Vocabulary>& vocab)
+    : config(config) {
+  if (config->source_order == 0) {
+    vocab = boost::make_shared<Vocabulary>();
+  } else {
+    vocab = boost::make_shared<ParallelVocabulary>();
+  }
+}
 
 void Metadata::initialize(const boost::shared_ptr<Corpus>& corpus) {
   unigram = VectorReal::Zero(config->vocab_size);

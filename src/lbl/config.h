@@ -44,7 +44,9 @@ struct ModelData {
   ModelData();
 
   string      training_file;
+  string      alignment_file;
   string      test_file;
+  string      test_alignment_file;
   int         iterations;
   int         minibatch_size;
   int         instances;
@@ -90,7 +92,9 @@ struct ModelData {
   template<class Archive>
   void serialize(Archive & ar, const unsigned int version) {
     ar & training_file;
+    ar & alignment_file;
     ar & test_file;
+    ar & test_alignment_file;
     ar & iterations;
     ar & minibatch_size;
     ar & instances;

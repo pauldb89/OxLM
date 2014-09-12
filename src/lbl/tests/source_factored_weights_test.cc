@@ -20,11 +20,11 @@ class SourceFactoredWeightsTest : public testing::Test {
     vector<int> classes = {0, 2, 4, 5};
     corpus = boost::make_shared<Corpus>(data);
     index = boost::make_shared<WordToClassIndex>(classes);
-    metadata = boost::make_shared<FactoredMetadata>(config, dict, index);
+    metadata = boost::make_shared<FactoredMetadata>(config, vocab, index);
   }
 
   boost::shared_ptr<ModelData> config;
-  Dict dict;
+  boost::shared_ptr<Vocabulary> vocab;
   boost::shared_ptr<WordToClassIndex> index;
   boost::shared_ptr<FactoredMetadata> metadata;
   boost::shared_ptr<Corpus> corpus;

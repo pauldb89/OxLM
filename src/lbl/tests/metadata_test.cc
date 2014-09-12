@@ -15,8 +15,8 @@ namespace oxlm {
 TEST(MetadataTest, TestUnigram) {
   boost::shared_ptr<ModelData> config = boost::make_shared<ModelData>();
   config->vocab_size = 5;
-  Dict dict;
-  Metadata metadata(config, dict);
+  boost::shared_ptr<Vocabulary> vocab;
+  Metadata metadata(config, vocab);
 
   vector<int> data = {2, 3, 2, 4, 1};
   boost::shared_ptr<Corpus> corpus = boost::make_shared<Corpus>(data);
@@ -28,8 +28,8 @@ TEST(MetadataTest, TestUnigram) {
 
 TEST(MetadataTest, TestSerialization) {
   boost::shared_ptr<ModelData> config = boost::make_shared<ModelData>();
-  Dict dict;
-  Metadata metadata(config, dict), metadata_copy;
+  boost::shared_ptr<Vocabulary> vocab;
+  Metadata metadata(config, vocab), metadata_copy;
 
   stringstream stream(ios_base::binary | ios_base::in | ios_base::out);
   ar::binary_oarchive oar(stream, ar::no_header);

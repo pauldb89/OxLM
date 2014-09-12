@@ -27,13 +27,13 @@ template<class GlobalWeights, class MinibatchWeights, class Metadata>
 Model<GlobalWeights, MinibatchWeights, Metadata>::Model(
     const boost::shared_ptr<ModelData>& config)
     : config(config) {
-  metadata = boost::make_shared<Metadata>(config, dict);
+  metadata = boost::make_shared<Metadata>(config, vocab);
   srand(1);
 }
 
 template<class GlobalWeights, class MinibatchWeights, class Metadata>
-Dict Model<GlobalWeights, MinibatchWeights, Metadata>::getDict() const {
-  return dict;
+boost::shared_ptr<Vocabulary> Model<GlobalWeights, MinibatchWeights, Metadata>::getVocab() const {
+  return vocab;
 }
 
 template<class GlobalWeights, class MinibatchWeights, class Metadata>
@@ -49,17 +49,17 @@ MatrixReal Model<GlobalWeights, MinibatchWeights, Metadata>::getWordVectors() co
 
 template<class GlobalWeights, class MinibatchWeights, class Metadata>
 void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
-  // Initialize the dictionary now, if it hasn't been initialized when the
+  // Initialize the vocabulary now, if it hasn't been initialized when the
   // vocabulary was partitioned in classes.
-  bool immutable_dict = config->classes > 0 || config->class_file.size();
+  bool immutable_vocab = config->classes > 0 || config->class_file.size();
   boost::shared_ptr<Corpus> training_corpus =
-      readCorpus(config->training_file, dict, immutable_dict);
-  config->vocab_size = dict.size();
+      readCorpus(config, vocab, immutable_vocab);
+  config->vocab_size = vocab->size();
   cout << "Done reading training corpus..." << endl;
 
   boost::shared_ptr<Corpus> test_corpus;
   if (config->test_file.size()) {
-    test_corpus = readCorpus(config->test_file, dict);
+    test_corpus = readCorpus(config, vocab);
     cout << "Done reading test corpus..." << endl;
   }
 
@@ -318,7 +318,7 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::save() const {
     ofstream fout(config->model_output_file);
     boost::archive::binary_oarchive oar(fout);
     oar << config;
-    oar << dict;
+    oar << vocab;
     oar << weights;
     oar << metadata;
     cout << "Done..." << endl;
@@ -333,7 +333,7 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::load(const string& filena
     ifstream fin(filename);
     boost::archive::binary_iarchive iar(fin);
     iar >> config;
-    iar >> dict;
+    iar >> vocab;
     iar >> weights;
     iar >> metadata;
     cerr << "Reading model took " << GetDuration(start_time, GetTime())

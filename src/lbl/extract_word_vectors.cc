@@ -17,12 +17,12 @@ void ExtractWordVectors(
   Model model;
   model.load(model_file);
 
-  Dict dict = model.getDict();
+  boost::shared_ptr<Vocabulary> vocab = model.getVocab();
   MatrixReal word_vectors = model.getWordVectors();
 
   ofstream fout(vocab_file);
   for (size_t i = 0; i < word_vectors.cols(); ++i) {
-    fout << dict.Convert(i) << endl;
+    fout << vocab->convert(i) << endl;
   }
 
 

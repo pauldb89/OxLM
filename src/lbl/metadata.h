@@ -4,9 +4,9 @@
 #include <boost/serialization/shared_ptr.hpp>
 #include <boost/shared_ptr.hpp>
 
-#include "corpus/corpus.h"
 #include "lbl/config.h"
 #include "lbl/utils.h"
+#include "lbl/vocabulary.h"
 #include "utils/serialization_helpers.h"
 
 namespace oxlm {
@@ -15,7 +15,9 @@ class Metadata {
  public:
   Metadata();
 
-  Metadata(const boost::shared_ptr<ModelData>& config, Dict& dict);
+  Metadata(
+      const boost::shared_ptr<ModelData>& config,
+      boost::shared_ptr<Vocabulary>& vocab);
 
   void initialize(const boost::shared_ptr<Corpus>& corpus);
 

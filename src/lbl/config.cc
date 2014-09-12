@@ -23,6 +23,7 @@ bool ModelData::operator==(const ModelData& other) const {
   }
 
   return training_file == other.training_file
+      && alignment_file == other.alignment_file
       && ngram_order == other.ngram_order
       && feature_context_size == other.feature_context_size
       && word_representation_size == other.word_representation_size

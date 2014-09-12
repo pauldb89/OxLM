@@ -12,8 +12,10 @@
 #include "lbl/minibatch_factored_maxent_weights.h"
 #include "lbl/minibatch_words.h"
 #include "lbl/model_utils.h"
+#include "lbl/parallel_vocabulary.h"
 #include "lbl/source_factored_weights.h"
 #include "lbl/utils.h"
+#include "lbl/vocabulary.h"
 #include "lbl/weights.h"
 
 namespace oxlm {
@@ -32,7 +34,7 @@ class Model {
 
   Model(const boost::shared_ptr<ModelData>& config);
 
-  Dict getDict() const;
+  boost::shared_ptr<Vocabulary> getVocab() const;
 
   boost::shared_ptr<ModelData> getConfig() const;
 
@@ -69,7 +71,7 @@ class Model {
       int minibatch_counter, Real& objective, Real& best_perplexity) const;
 
   boost::shared_ptr<ModelData> config;
-  Dict dict;
+  boost::shared_ptr<Vocabulary> vocab;
   boost::shared_ptr<Metadata> metadata;
   boost::shared_ptr<GlobalWeights> weights;
 };

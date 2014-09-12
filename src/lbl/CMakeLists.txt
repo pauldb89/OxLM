@@ -46,6 +46,7 @@ add_libraries(lbl
   sparse_global_feature_store.cc
   sparse_minibatch_feature_store.cc
   utils.cc
+  vocabulary.cc
   weights.cc
   word_context_extractor.cc
   word_context_hasher.cc

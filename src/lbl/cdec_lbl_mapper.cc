@@ -4,10 +4,11 @@
 
 namespace oxlm {
 
-CdecLBLMapper::CdecLBLMapper(const Dict& dict) : dict(dict) {
-  kUNKNOWN = this->dict.Convert("<unk>");
-  for (int i = 0; i < dict.size(); ++i) {
-    add(i, TD::Convert(dict.Convert(i)));
+CdecLBLMapper::CdecLBLMapper(
+    const boost::shared_ptr<Vocabulary>& vocab) : vocab(vocab) {
+  kUNKNOWN = this->vocab->convert("<unk>");
+  for (int i = 0; i < vocab->size(); ++i) {
+    add(i, TD::Convert(vocab->convert(i)));
   }
 }
 

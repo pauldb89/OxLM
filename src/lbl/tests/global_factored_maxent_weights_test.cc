@@ -55,7 +55,7 @@ class GlobalFactoredMaxentWeightsTest : public testing::Test {
   }
 
   boost::shared_ptr<ModelData> config;
-  Dict dict;
+  boost::shared_ptr<Vocabulary> vocab;
   boost::shared_ptr<Corpus> corpus;
   boost::shared_ptr<WordToClassIndex> index;
   boost::shared_ptr<FeatureContextMapper> mapper;
@@ -66,7 +66,7 @@ class GlobalFactoredMaxentWeightsTest : public testing::Test {
 
 TEST_F(GlobalFactoredMaxentWeightsTest, TestCheckGradientSparse) {
   metadata = boost::make_shared<FactoredMaxentMetadata>(
-      config, dict, index, mapper, populator, matcher);
+      config, vocab, index, mapper, populator, matcher);
   GlobalFactoredMaxentWeights weights(config, metadata, corpus);
 
   vector<int> indices = {0, 1, 2, 3, 4};
@@ -86,7 +86,7 @@ TEST_F(GlobalFactoredMaxentWeightsTest, TestCheckGradientSparse) {
 TEST_F(GlobalFactoredMaxentWeightsTest, TestCollisionsNoFilter) {
   config->hash_space = 100;
   metadata = boost::make_shared<FactoredMaxentMetadata>(
-      config, dict, index, mapper, populator, matcher);
+      config, vocab, index, mapper, populator, matcher);
   GlobalFactoredMaxentWeights weights(config, metadata, corpus);
 
   vector<int> indices = {0, 1, 2, 3, 4};
@@ -107,7 +107,7 @@ TEST_F(GlobalFactoredMaxentWeightsTest, TestCollisionExactFiltering) {
   config->hash_space = 100;
   config->filter_contexts = true;
   metadata = boost::make_shared<FactoredMaxentMetadata>(
-      config, dict, index, mapper, populator, matcher);
+      config, vocab, index, mapper, populator, matcher);
   GlobalFactoredMaxentWeights weights(config, metadata, corpus);
 
   vector<int> indices = {0, 1, 2, 3, 4};
@@ -130,7 +130,7 @@ TEST_F(GlobalFactoredMaxentWeightsTest, TestCollisionApproximateFiltering) {
   populator = boost::make_shared<BloomFilterPopulator>(
       corpus, index, mapper, config);
   metadata = boost::make_shared<FactoredMaxentMetadata>(
-      config, dict, index, mapper, populator, matcher);
+      config, vocab, index, mapper, populator, matcher);
   GlobalFactoredMaxentWeights weights(config, metadata, corpus);
 
   vector<int> indices = {0, 1, 2, 3, 4};
@@ -148,7 +148,7 @@ TEST_F(GlobalFactoredMaxentWeightsTest, TestCollisionApproximateFiltering) {
 
 TEST_F(GlobalFactoredMaxentWeightsTest, TestPredict) {
   metadata = boost::make_shared<FactoredMaxentMetadata>(
-      config, dict, index, mapper, populator, matcher);
+      config, vocab, index, mapper, populator, matcher);
   GlobalFactoredMaxentWeights weights(config, metadata, corpus);
   vector<int> indices = {0, 1, 2, 3};
 
@@ -161,7 +161,7 @@ TEST_F(GlobalFactoredMaxentWeightsTest, TestPredict) {
 
 TEST_F(GlobalFactoredMaxentWeightsTest, TestSerialization) {
   metadata = boost::make_shared<FactoredMaxentMetadata>(
-      config, dict, index, mapper, populator, matcher);
+      config, vocab, index, mapper, populator, matcher);
   GlobalFactoredMaxentWeights weights(config, metadata, corpus), weights_copy;
 
   stringstream stream(ios_base::binary | ios_base::out | ios_base::in);

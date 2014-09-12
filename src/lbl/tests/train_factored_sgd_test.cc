@@ -12,8 +12,8 @@ TEST_F(FactoredSGDTest, TestTrainFactoredSGD) {
   Model<FactoredWeights, FactoredWeights, FactoredMetadata> model(config);
   model.learn();
   config->test_file = "test.txt";
-  Dict dict = model.getDict();
-  boost::shared_ptr<Corpus> test_corpus = readCorpus(config->test_file, dict);
+  boost::shared_ptr<Vocabulary> vocab = model.getVocab();
+  boost::shared_ptr<Corpus> test_corpus = readCorpus(config, vocab);
   Real log_likelihood = 0;
   model.evaluate(test_corpus, log_likelihood);
   EXPECT_NEAR(61.6428031, perplexity(log_likelihood, test_corpus->size()), EPS);
@@ -24,8 +24,8 @@ TEST_F(FactoredSGDTest, TestTrainFactoredNCE) {
   Model<FactoredWeights, FactoredWeights, FactoredMetadata> model(config);
   model.learn();
   config->test_file = "test.txt";
-  Dict dict = model.getDict();
-  boost::shared_ptr<Corpus> test_corpus = readCorpus(config->test_file, dict);
+  boost::shared_ptr<Vocabulary> vocab = model.getVocab();
+  boost::shared_ptr<Corpus> test_corpus = readCorpus(config, vocab);
   Real log_likelihood = 0;
   model.evaluate(test_corpus, log_likelihood);
   EXPECT_NEAR(66.0725250, perplexity(log_likelihood, test_corpus->size()), EPS);

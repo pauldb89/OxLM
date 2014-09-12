@@ -50,15 +50,15 @@ class FF_LBLLM : public FeatureFunction {
     int max_state_size = (2 * context_width + 1) * sizeof(int) + 1;
     FeatureFunction::SetStateSize(max_state_size);
 
-    dict = model.getDict();
-    mapper = boost::make_shared<CdecLBLMapper>(dict);
+    vocab = model.getVocab();
+    mapper = boost::make_shared<CdecLBLMapper>(vocab);
     stateConverter = boost::make_shared<CdecStateConverter>(max_state_size - 1);
     ruleConverter = boost::make_shared<CdecRuleConverter>(mapper, stateConverter);
 
-    kSTART = dict.Convert("<s>");
-    kSTOP = dict.Convert("</s>");
-    kUNKNOWN = dict.Convert("<unk>");
-    kSTAR = dict.Convert("<{STAR}>");
+    kSTART = vocab->convert("<s>");
+    kSTOP = vocab->convert("</s>");
+    kUNKNOWN = vocab->convert("<unk>");
+    kSTAR = vocab->convert("<{STAR}>");
   }
 
   void savePersistentCache() {
@@ -249,7 +249,7 @@ class FF_LBLLM : public FeatureFunction {
   int fidOOV;
   string filename;
 
-  Dict dict;
+  boost::shared_ptr<Vocabulary> vocab;
   boost::shared_ptr<ModelData> config;
   Model model;
   boost::shared_ptr<CdecLBLMapper> mapper;

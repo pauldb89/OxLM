@@ -24,8 +24,8 @@ class TestWeights : public testing::Test {
 
     vector<int> data = {2, 3, 4, 1};
     corpus = boost::make_shared<Corpus>(data);
-    Dict dict;
-    metadata = boost::make_shared<Metadata>(config, dict);
+    boost::shared_ptr<Vocabulary> vocab;
+    metadata = boost::make_shared<Metadata>(config, vocab);
   }
 
   Real getPredictions(

@@ -13,13 +13,15 @@ class ModelUtilsTest : public FactoredSGDTest {
   void SetUp() {
     FactoredSGDTest::SetUp();
 
+    vocab = boost::make_shared<Vocabulary>();
+
     vector<string> words = {"<s>", "</s>", "anna", "has", "apples", "."};
     for (const string& word: words) {
-      dict.Convert(word);
+      vocab->convert(word);
     }
   }
 
-  Dict dict;
+  boost::shared_ptr<Vocabulary> vocab;
 };
 
 TEST_F(ModelUtilsTest, TestScatterMinibatch) {
@@ -39,10 +41,10 @@ TEST_F(ModelUtilsTest, TestScatterMinibatch) {
 
 TEST_F(ModelUtilsTest, TestLoadClassesFromFile) {
   vector<int> classes;
-  Dict dict;
+  boost::shared_ptr<Vocabulary> vocab = boost::make_shared<Vocabulary>();
   VectorReal class_bias;
   loadClassesFromFile(
-      config->class_file, config->training_file, classes, dict, class_bias);
+      config->class_file, config->training_file, classes, vocab, class_bias);
   EXPECT_EQ(37, classes.size());
   EXPECT_EQ(0, classes[0]);
   EXPECT_EQ(2, classes[1]);
@@ -50,21 +52,21 @@ TEST_F(ModelUtilsTest, TestLoadClassesFromFile) {
   EXPECT_EQ(17, classes[3]);
   EXPECT_EQ(1184, classes[36]);
 
-  EXPECT_EQ(1184, dict.size());
-  EXPECT_EQ(0, dict.Convert("<s>"));
-  EXPECT_EQ(1, dict.Convert("</s>"));
-  EXPECT_EQ(2, dict.Convert("question"));
-  EXPECT_EQ(7, dict.Convert("throughout"));
-  EXPECT_EQ(8, dict.Convert("limits"));
-  EXPECT_EQ(1183, dict.Convert("political"));
+  EXPECT_EQ(1184, vocab->size());
+  EXPECT_EQ(0, vocab->convert("<s>"));
+  EXPECT_EQ(1, vocab->convert("</s>"));
+  EXPECT_EQ(2, vocab->convert("question"));
+  EXPECT_EQ(7, vocab->convert("throughout"));
+  EXPECT_EQ(8, vocab->convert("limits"));
+  EXPECT_EQ(1183, vocab->convert("political"));
 
   WordId word_id = 0;
-  EXPECT_EQ("<s>", dict.Convert(word_id));
-  EXPECT_EQ("</s>", dict.Convert(1));
-  EXPECT_EQ("question", dict.Convert(2));
-  EXPECT_EQ("throughout", dict.Convert(7));
-  EXPECT_EQ("limits", dict.Convert(8));
-  EXPECT_EQ("political", dict.Convert(1183));
+  EXPECT_EQ("<s>", vocab->convert(word_id));
+  EXPECT_EQ("</s>", vocab->convert(1));
+  EXPECT_EQ("question", vocab->convert(2));
+  EXPECT_EQ("throughout", vocab->convert(7));
+  EXPECT_EQ("limits", vocab->convert(8));
+  EXPECT_EQ("political", vocab->convert(1183));
 
   EXPECT_NEAR(-3.299828887, class_bias(0), EPS);
   EXPECT_NEAR(-3.617283118, class_bias(1), EPS);
@@ -73,9 +75,9 @@ TEST_F(ModelUtilsTest, TestLoadClassesFromFile) {
 
 TEST_F(ModelUtilsTest, TestFrequnecyBinning) {
   vector<int> classes;
-  Dict dict;
+  boost::shared_ptr<Vocabulary> vocab;
   VectorReal class_bias;
-  frequencyBinning(config->training_file, 30, classes, dict, class_bias);
+  frequencyBinning(config->training_file, 30, classes, vocab, class_bias);
 
   EXPECT_EQ(31, classes.size());
   EXPECT_EQ(0, classes[0]);
@@ -85,19 +87,19 @@ TEST_F(ModelUtilsTest, TestFrequnecyBinning) {
   EXPECT_EQ(5, classes[4]);
   EXPECT_EQ(1184, classes[30]);
 
-  EXPECT_EQ(1184, dict.size());
-  EXPECT_EQ(0, dict.Convert("<s>"));
-  EXPECT_EQ(1, dict.Convert("</s>"));
-  EXPECT_EQ(2, dict.Convert("<unk>"));
-  EXPECT_EQ(3, dict.Convert("the"));
-  EXPECT_EQ(4, dict.Convert(","));
+  EXPECT_EQ(1184, vocab->size());
+  EXPECT_EQ(0, vocab->convert("<s>"));
+  EXPECT_EQ(1, vocab->convert("</s>"));
+  EXPECT_EQ(2, vocab->convert("<unk>"));
+  EXPECT_EQ(3, vocab->convert("the"));
+  EXPECT_EQ(4, vocab->convert(","));
 
   WordId word_id = 0;
-  EXPECT_EQ("<s>", dict.Convert(word_id));
-  EXPECT_EQ("</s>", dict.Convert(1));
-  EXPECT_EQ("<unk>", dict.Convert(2));
-  EXPECT_EQ("the", dict.Convert(3));
-  EXPECT_EQ(",", dict.Convert(4));
+  EXPECT_EQ("<s>", vocab->convert(word_id));
+  EXPECT_EQ("</s>", vocab->convert(1));
+  EXPECT_EQ("<unk>", vocab->convert(2));
+  EXPECT_EQ("the", vocab->convert(3));
+  EXPECT_EQ(",", vocab->convert(4));
 
   EXPECT_NEAR(-3.299828887, class_bias(0), EPS);
   EXPECT_NEAR(-2.021676685, class_bias(1), EPS);

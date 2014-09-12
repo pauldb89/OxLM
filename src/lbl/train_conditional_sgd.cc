@@ -19,8 +19,12 @@ int main(int argc, char** argv) {
   generic.add_options()
     ("input,i", value<string>()->required(),
         "corpus of sentences, one per line")
+    ("alignment", value<string>()->required(),
+        "Path to alignment file")
     ("test-set", value<string>(),
         "corpus of test sentences")
+    ("test-alignment", value<string>(),
+        "Path to test alignment file")
     ("iterations", value<int>()->default_value(10),
         "number of passes through the data")
     ("minibatch-size", value<int>()->default_value(10000),
@@ -75,8 +79,10 @@ int main(int argc, char** argv) {
 
   boost::shared_ptr<ModelData> config = boost::make_shared<ModelData>();
   config->training_file = vm["input"].as<string>();
-  if (vm.count("test-set")) {
+  config->alignment_file = vm["alignment"].as<string>();
+  if (vm.count("test-set") && vm.count("test-alignment")) {
     config->test_file = vm["test-set"].as<string>();
+    config->test_alignment_file = vm["test-alignment"].as<string>();
   }
   config->iterations = vm["iterations"].as<int>();
   config->minibatch_size = vm["minibatch-size"].as<int>();

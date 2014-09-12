@@ -25,7 +25,8 @@ vector<int> scatterMinibatch(const vector<int>& minibatch) {
 
 void loadClassesFromFile(
     const string& class_file, const string& training_file,
-    vector<int>& classes, Dict& dict, VectorReal& class_bias) {
+    vector<int>& classes, const boost::shared_ptr<Vocabulary>& vocab,
+    VectorReal& class_bias) {
   ifstream tin(training_file);
   string line;
   int num_eos_tokens = 0;
@@ -42,7 +43,7 @@ void loadClassesFromFile(
   ifstream in(class_file);
   string prev_class_str, class_str, token_str, freq_str;
   while (in >> class_str >> token_str >> freq_str) {
-    int w_id = dict.Convert(token_str);
+    int w_id = vocab->convert(token_str);
 
     if (!prev_class_str.empty() && class_str != prev_class_str) {
       class_freqs.push_back(mass);
@@ -58,23 +59,24 @@ void loadClassesFromFile(
   }
 
   class_freqs.push_back(mass);
-  classes.push_back(dict.size());
+  classes.push_back(vocab->size());
 
   class_bias = VectorReal::Zero(class_freqs.size());
   for (size_t i = 0; i < class_freqs.size(); ++i) {
     class_bias(i) = log(class_freqs.at(i)) - log(total_mass);
   }
 
-  cout << "Read " << dict.size() << " types in "
+  cout << "Read " << vocab->size() << " types in "
        << classes.size() - 1 << " classes with an average of "
-       << dict.size() / float(classes.size() - 1) << " types per bin." << endl;
+       << vocab->size() / float(classes.size() - 1) << " types per bin." << endl;
 
   in.close();
 }
 
 void frequencyBinning(
     const string& training_file, int num_classes,
-    vector<int>& classes, Dict& dict, VectorReal& class_bias) {
+    vector<int>& classes, const boost::shared_ptr<Vocabulary>& vocab,
+    VectorReal& class_bias) {
   ifstream in(training_file);
   string line, token;
 
@@ -115,7 +117,7 @@ void frequencyBinning(
   int bin_size = remaining_tokens / (num_classes - 1);
   int mass = 0;
   for (size_t i = 0; i < counts.size(); ++i) {
-    WordId id = dict.Convert(counts.at(i).first);
+    WordId id = vocab->convert(counts.at(i).first);
     mass += counts.at(i).second;
 
     if (mass > bin_size) {
@@ -127,16 +129,16 @@ void frequencyBinning(
     }
   }
 
-  if (classes.back() != int(dict.size())) {
-    classes.push_back(dict.size());
+  if (classes.back() != int(vocab->size())) {
+    classes.push_back(vocab->size());
   }
 
   assert(classes.size() == num_classes + 1);
   class_bias.array() -= log(num_eos_tokens + num_tokens);
 
-  cout << "Binned " << dict.size() << " types in "
+  cout << "Binned " << vocab->size() << " types in "
        << classes.size() - 1 << " classes with an average of "
-       << dict.size() / float(classes.size() - 1) << " types per bin." << endl;
+       << vocab->size() / float(classes.size() - 1) << " types per bin." << endl;
   in.close();
 }
 
@@ -157,24 +159,10 @@ int convert(
 }
 
 boost::shared_ptr<Corpus> readCorpus(
-    const string& filename, Dict& dict,
-    bool immutable_dict, bool convert_unknowns) {
-  boost::shared_ptr<Corpus> corpus = boost::make_shared<Corpus>();
-  int end_id = convert("</s>", dict, immutable_dict, convert_unknowns);
-
-  ifstream in(filename);
-  string line;
-  while (getline(in, line)) {
-    stringstream line_stream(line);
-    string token;
-    while (line_stream >> token) {
-      corpus->push_back(convert(token, dict, immutable_dict, convert_unknowns));
-    }
-    corpus->push_back(end_id);
-  }
-
-  return corpus;
-}
+    const boost::shared_ptr<ModelData>& config,
+    const boost::shared_ptr<Vocabulary>& vocab,
+    bool immutable_dict,
+    bool convert_unknowns) {}
 
 Real perplexity(Real log_likelihood, size_t corpus_size) {
   return exp(log_likelihood / corpus_size);

@@ -3,7 +3,9 @@
 #include <string>
 #include <vector>
 
-#include "corpus/corpus.h"
+#include <boost/shared_ptr.hpp>
+
+#include "lbl/vocabulary.h"
 
 using namespace std;
 
@@ -11,14 +13,14 @@ namespace oxlm {
 
 class CdecLBLMapper {
  public:
-  CdecLBLMapper(const Dict& dict);
+  CdecLBLMapper(const boost::shared_ptr<Vocabulary>& vocab);
 
   int convert(int cdec_id) const;
 
  private:
   void add(int lbl_id, int cdec_id);
 
-  Dict dict;
+  boost::shared_ptr<Vocabulary> vocab;
   vector<int> cdec2lbl;
   int kUNKNOWN;
 };
