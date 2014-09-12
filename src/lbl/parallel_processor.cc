@@ -10,11 +10,6 @@ ParallelProcessor::ParallelProcessor(
 vector<int> ParallelProcessor::extract(int index) const {
   vector<int> result = ContextProcessor::extract(index);
 
-  // Crap.
-  for (int i = 0; i < contextSize; ++i) {
-    result.push_back(result[i]);
-  }
-
   return result;
 }
 

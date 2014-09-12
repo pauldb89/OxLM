@@ -17,7 +17,7 @@
 #include "lbl/utils.h"
 #include "lbl/vocabulary.h"
 #include "lbl/weights.h"
-#include "lbl/ParallelCorpus.h"
+#include "lbl/parallel_corpus.h"
 
 namespace oxlm {
 

@@ -13,6 +13,7 @@ add_libraries(lbl
   config.cc
   context_cache.cc
   context_processor.cc
+  corpus.cc
   factored_maxent_metadata.cc
   factored_metadata.cc
   factored_weights.cc
@@ -43,7 +44,7 @@ add_libraries(lbl
   query_cache.cc
   parallel_processor.cc
   parallel_vocabulary.cc
-  ParallelCorpus.cc
+  parallel_corpus.cc
   source_factored_weights.cc
   sparse_global_feature_store.cc
   sparse_minibatch_feature_store.cc

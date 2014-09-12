@@ -9,7 +9,7 @@
 #include "lbl/utils.h"
 #include "lbl/vocabulary.h"
 #include "lbl/parallel_vocabulary.h"
-#include "lbl/ParallelCorpus.h"
+#include "lbl/parallel_corpus.h"
 
 // Helper functions for reading data, evaluating models, etc.
 

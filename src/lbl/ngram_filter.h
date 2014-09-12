@@ -4,7 +4,7 @@
 #include "lbl/feature_context_generator.h"
 #include "lbl/ngram.h"
 #include "lbl/word_to_class_index.h"
-#include "lbl/ParallelCorpus.h"
+#include "lbl/parallel_corpus.h"
 
 namespace oxlm {
 
