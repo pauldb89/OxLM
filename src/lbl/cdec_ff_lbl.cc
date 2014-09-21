@@ -141,6 +141,8 @@ class FF_LBLLM : public FeatureFunction {
 
  private:
   LBLFeatures scoreFullContexts(const vector<int>& symbols) const {
+    // Returns the sum of the scores of all the sequences of symbols other
+    // than kSTAR that has length of at least ngram_order, score.
     LBLFeatures ret;
     int last_star = -1;
     int context_width = config->ngram_order - 1;
@@ -158,18 +160,31 @@ class FF_LBLLM : public FeatureFunction {
   LBLFeatures scoreContext(const vector<int>& symbols, int position) const {
     int word = symbols[position];
     int context_width = config->ngram_order - 1;
+
+    // Push up to the last context_width words into the context vector.
+    // Note that the most recent context word is first, so if we're
+    // scoring the word "diplomatic" with a 4-gram context in the sentence
+    // "Australia is one of the few countries with diplomatic relations..."
+    // the context vector would be ["with", "countries", "few"].
     vector<int> context;
     for (int i = 1; i <= context_width && position - i >= 0; ++i) {
       assert(symbols[position - i] != kSTAR);
       context.push_back(symbols[position - i]);
     }
 
+    // If we haven't filled the full context, then pad it.
+    // If the context hits the <s>, then pad with more <s>'s.
+    // Otherwise, if the context is short due to a kSTAR,
+    // pad with UNKs.
     if (!context.empty() && context.back() == kSTART) {
       context.resize(context_width, kSTART);
     } else {
       context.resize(context_width, kUNKNOWN);
     }
 
+    // Check the cache for this context.
+    // If it's in there, use the saved values as score.
+    // Otherwise, run the full model to get the score value.
     double score;
     if (persistentCache) {
       NGram query(word, context);
@@ -186,6 +201,7 @@ class FF_LBLLM : public FeatureFunction {
       score = model.predict(word, context);
     }
 
+    // Return the score, along with the OOV indicator feature value
     return LBLFeatures(score, word == kUNKNOWN);
   }
 
@@ -221,6 +237,10 @@ class FF_LBLLM : public FeatureFunction {
   }
 
   LBLFeatures estimateScore(const vector<int>& symbols) const {
+    // Scores the symbols up to the first kSTAR, or up to the context_width,
+    // whichever is first, padding the context with kSTART or kUNKNOWN as
+    // needed. This offsets the fact that by scoreFullContexts() does not
+    // score the first context_width words of a sentence.
     LBLFeatures ret = scoreFullContexts(symbols);
 
     int context_width = config->ngram_order - 1;
