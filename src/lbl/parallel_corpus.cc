@@ -79,12 +79,20 @@ ParallelCorpus::ParallelCorpus(
   }
 }
 
-int ParallelCorpus::sourceAt(size_t index) const {
+size_t ParallelCorpus::sourceSize() const {
+  return srcData.size();
+}
+
+int ParallelCorpus::sourceAt(long long index) const {
   return srcData[index];
 }
 
-vector<size_t> ParallelCorpus::getLinks(size_t index) const {
+vector<long long> ParallelCorpus::getLinks(long long index) const {
   return alignments[index];
+}
+
+bool ParallelCorpus::isAligned(long long index) const {
+  return alignments[index].size() > 0;
 }
 
 } // namespace oxlm

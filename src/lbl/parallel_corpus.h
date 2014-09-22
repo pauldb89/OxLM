@@ -22,10 +22,13 @@ class ParallelCorpus : public Corpus {
 			bool immutable_dict,
 			bool convert_unknowns);
 
- protected:
-  int sourceAt(size_t index) const;
+  size_t sourceSize() const;
 
-  vector<size_t> getLinks(size_t index) const;
+  int sourceAt(long long index) const;
+
+  vector<long long> getLinks(long long index) const;
+
+  bool isAligned(long long index) const;
 
  private:
 	friend class boost::serialization::access;
@@ -39,7 +42,7 @@ class ParallelCorpus : public Corpus {
 
  protected:
   vector<int> srcData;
-  vector<vector<size_t>> alignments;
+  vector<vector<long long>> alignments;
 };
 
 } // namespace oxlm

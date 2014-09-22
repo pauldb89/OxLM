@@ -15,7 +15,7 @@ class ContextProcessor {
       const boost::shared_ptr<Corpus>& corpus, int context_size,
       int start_id = 0, int end_id = 1);
 
-  virtual vector<WordId> extract(int position) const;
+  virtual vector<WordId> extract(long long position) const;
 
  protected:
   boost::shared_ptr<Corpus> corpus;
