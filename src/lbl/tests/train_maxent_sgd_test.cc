@@ -16,9 +16,9 @@ TEST_F(FactoredSGDTest, TestTrainMaxentSGDSparseFeatures) {
 
   FactoredMaxentLM model(config);
   model.learn();
-  config->test_file = "test.txt";
+  config->test_file = "test.en";
   boost::shared_ptr<Vocabulary> vocab = model.getVocab();
-  boost::shared_ptr<Corpus> test_corpus = readCorpus(config, vocab);
+  boost::shared_ptr<Corpus> test_corpus = readTestCorpus(config, vocab);
   Real log_likelihood = 0;
   model.evaluate(test_corpus, log_likelihood);
   EXPECT_NEAR(56.5152015, perplexity(log_likelihood, test_corpus->size()), EPS);
@@ -31,9 +31,9 @@ TEST_F(FactoredSGDTest, TestTrainMaxentSGDCollisions) {
 
   FactoredMaxentLM model(config);
   model.learn();
-  config->test_file = "test.txt";
+  config->test_file = "test.en";
   boost::shared_ptr<Vocabulary> vocab = model.getVocab();
-  boost::shared_ptr<Corpus> test_corpus = readCorpus(config, vocab);
+  boost::shared_ptr<Corpus> test_corpus = readTestCorpus(config, vocab);
   Real log_likelihood = 0;
   model.evaluate(test_corpus, log_likelihood);
   EXPECT_NEAR(54.0801925, perplexity(log_likelihood, test_corpus->size()), EPS);
@@ -47,9 +47,9 @@ TEST_F(FactoredSGDTest, TestTrainMaxentSGDExactFiltering) {
 
   FactoredMaxentLM model(config);
   model.learn();
-  config->test_file = "test.txt";
+  config->test_file = "test.en";
   boost::shared_ptr<Vocabulary> vocab = model.getVocab();
-  boost::shared_ptr<Corpus> test_corpus = readCorpus(config, vocab);
+  boost::shared_ptr<Corpus> test_corpus = readTestCorpus(config, vocab);
   Real log_likelihood = 0;
   model.evaluate(test_corpus, log_likelihood);
   EXPECT_NEAR(56.5219650, perplexity(log_likelihood, test_corpus->size()), EPS);
@@ -64,9 +64,9 @@ TEST_F(FactoredSGDTest, TestTrainMaxentSGDApproximateFiltering) {
 
   Model<GlobalFactoredMaxentWeights, MinibatchFactoredMaxentWeights, FactoredMaxentMetadata> model(config);
   model.learn();
-  config->test_file = "test.txt";
+  config->test_file = "test.en";
   boost::shared_ptr<Vocabulary> vocab = model.getVocab();
-  boost::shared_ptr<Corpus> test_corpus = readCorpus(config, vocab);
+  boost::shared_ptr<Corpus> test_corpus = readTestCorpus(config, vocab);
   Real log_likelihood = 0;
   model.evaluate(test_corpus, log_likelihood);
   EXPECT_NEAR(56.4228439, perplexity(log_likelihood, test_corpus->size()), EPS);

@@ -13,7 +13,7 @@ namespace oxlm {
 
 TEST(FactoredMetadataTest, TestBasic) {
   boost::shared_ptr<ModelData> config = boost::make_shared<ModelData>();
-  config->training_file = "training.txt";
+  config->training_file = "training.en";
   config->class_file = "classes.txt";
   boost::shared_ptr<Vocabulary> vocab;
   FactoredMetadata metadata(config, vocab);
@@ -24,7 +24,7 @@ TEST(FactoredMetadataTest, TestBasic) {
 
 TEST(FactoredMetadataTest, TestSerialization) {
   boost::shared_ptr<ModelData> config = boost::make_shared<ModelData>();
-  config->training_file = "training.txt";
+  config->training_file = "training.en";
   config->class_file = "classes.txt";
   boost::shared_ptr<Vocabulary> vocab;
   FactoredMetadata metadata(config, vocab), metadata_copy;

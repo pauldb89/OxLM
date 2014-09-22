@@ -9,6 +9,7 @@ set(TESTS
     collision_minibatch_feature_store_test
     context_cache_test
     context_processor_test
+    corpus_test
     factored_metadata_test
     factored_weights_test
     feature_approximate_filter_test
@@ -28,6 +29,8 @@ set(TESTS
     ngram_test
     ngram_filter_test
     operators_test
+    parallel_corpus_test
+    parallel_processor_test
     query_cache_test
     source_factored_weights_test
     sparse_global_feature_store_test

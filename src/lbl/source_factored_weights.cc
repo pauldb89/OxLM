@@ -42,8 +42,6 @@ SourceFactoredWeights::SourceFactoredWeights(
 
 void SourceFactoredWeights::allocate() {
   int word_width = config->word_representation_size;
-  // Hack: Remove.
-  config->source_vocab_size = config->vocab_size;
   int num_source_words = config->source_vocab_size;
   int source_context_width = 2 * config->source_order - 1;
 

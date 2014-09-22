@@ -22,6 +22,11 @@ class ParallelCorpus : public Corpus {
 			bool immutable_dict,
 			bool convert_unknowns);
 
+  ParallelCorpus(
+      const vector<int>& source_data,
+      const vector<int>& target_data,
+      const vector<vector<long long>>& links);
+
   size_t sourceSize() const;
 
   int sourceAt(long long index) const;

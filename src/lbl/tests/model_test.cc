@@ -8,7 +8,7 @@ class ModelTest : public testing::Test {
  protected:
   void SetUp() {
     config = boost::make_shared<ModelData>();
-    config->training_file = "training.txt";
+    config->training_file = "training.en";
     config->class_file = "classes.txt";
     config->iterations = 3;
     config->minibatch_size = 10000;

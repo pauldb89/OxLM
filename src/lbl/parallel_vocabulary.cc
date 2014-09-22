@@ -6,4 +6,8 @@ int ParallelVocabulary::convertSource(const string& word, bool frozen) {
   return sourceDict.Convert(word, frozen);
 }
 
+size_t ParallelVocabulary::sourceSize() const {
+  return sourceDict.size();
+}
+
 } // namespace oxlm

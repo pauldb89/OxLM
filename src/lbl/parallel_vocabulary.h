@@ -5,6 +5,11 @@
 namespace oxlm {
 
 class ParallelVocabulary : public Vocabulary {
+ public:
+  int convertSource(const string& word, bool frozen=false);
+
+  size_t sourceSize() const;
+
  private:
   friend class boost::serialization::access;
 
@@ -15,9 +20,6 @@ class ParallelVocabulary : public Vocabulary {
   }
 
   Dict sourceDict;
-
- public:
-  int convertSource(const string& word, bool frozen=false);
 };
 
 } // namespace oxlm

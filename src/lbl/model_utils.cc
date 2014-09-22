@@ -172,16 +172,45 @@ int convertSource(
   }
   return w;
 }
-boost::shared_ptr<Corpus> readCorpus(
+
+boost::shared_ptr<Corpus> readTrainingCorpus(
     const boost::shared_ptr<ModelData>& config,
     const boost::shared_ptr<Vocabulary>& vocab,
     bool immutable_dict,
     bool convert_unknowns) {
-  if(config->source_order==0){
-	  return boost::make_shared<Corpus>(config->training_file, vocab, immutable_dict, convert_unknowns);
+  boost::shared_ptr<Corpus> corpus;
+  if (config->source_order == 0) {
+	  corpus = boost::make_shared<Corpus>(
+        config->training_file, vocab, immutable_dict, convert_unknowns);
+    config->vocab_size = vocab->size();
+  } else {
+    boost::shared_ptr<ParallelVocabulary> parallel_vocab =
+        dynamic_pointer_cast<ParallelVocabulary>(vocab);
+    assert(parallel_vocab != nullptr);
+
+	  corpus = boost::make_shared<ParallelCorpus>(
+        config->training_file, config->alignment_file, parallel_vocab,
+        immutable_dict, convert_unknowns);
+
+    config->vocab_size = parallel_vocab->size();
+    config->source_vocab_size = parallel_vocab->sourceSize();
   }
-  else{
-	  return boost::make_shared<ParallelCorpus>(config->training_file, config->alignment_file, vocab, immutable_dict, convert_unknowns);
+
+  return corpus;
+}
+
+boost::shared_ptr<Corpus> readTestCorpus(
+    const boost::shared_ptr<ModelData>& config,
+    const boost::shared_ptr<Vocabulary>& vocab,
+    bool immutable_dict,
+    bool convert_unknowns) {
+  if (config->source_order == 0){
+	  return boost::make_shared<Corpus>(
+        config->test_file, vocab, immutable_dict, convert_unknowns);
+  } else {
+	  return boost::make_shared<ParallelCorpus>(
+        config->test_file, config->test_alignment_file, vocab, immutable_dict,
+        convert_unknowns);
   }
 }
 

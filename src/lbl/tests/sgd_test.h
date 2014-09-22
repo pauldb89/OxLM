@@ -12,7 +12,7 @@ class SGDTest : public ::testing::Test {
  protected:
   virtual void SetUp() {
     config = boost::make_shared<ModelData>();
-    config->training_file = "training.txt";
+    config->training_file = "training.en";
     config->iterations = 3;
     config->minibatch_size = 10000;
     config->ngram_order = 5;

@@ -53,12 +53,12 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
   // vocabulary was partitioned in classes.
   bool immutable_vocab = config->classes > 0 || config->class_file.size();
   boost::shared_ptr<Corpus> training_corpus =
-      readCorpus(config, vocab, immutable_vocab);
+      readTrainingCorpus(config, vocab, immutable_vocab);
   cout << "Done reading training corpus..." << endl;
 
   boost::shared_ptr<Corpus> test_corpus;
   if (config->test_file.size()) {
-    test_corpus = readCorpus(config, vocab);
+    test_corpus = readTestCorpus(config, vocab);
     cout << "Done reading test corpus..." << endl;
   }
 

@@ -14,7 +14,7 @@ vector<WordId> ContextProcessor::extract(long long position) const {
   // The context is constructed starting from the most recent word:
   // context = [w_{n-1}, w_{n-2}, ...]
   bool sentence_start = position == 0;
-  for (int i = 0; i < contextSize; ++i) {
+  for (int i = 1; i <= contextSize; ++i) {
     long long index = position - i;
     sentence_start |= index < 0 || corpus->at(index) == endId;
     int word_id = sentence_start ? startId : corpus->at(index);

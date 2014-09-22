@@ -31,7 +31,13 @@ int convert(
     const string& file, const boost::shared_ptr<Vocabulary>& vocab,
     bool immutable_dict, bool convert_unknowns);
 
-boost::shared_ptr<Corpus> readCorpus(
+boost::shared_ptr<Corpus> readTrainingCorpus(
+    const boost::shared_ptr<ModelData>& config,
+    const boost::shared_ptr<Vocabulary>& vocabulary,
+    bool immutable_dict = true,
+    bool convert_unknowns = false);
+
+boost::shared_ptr<Corpus> readTestCorpus(
     const boost::shared_ptr<ModelData>& config,
     const boost::shared_ptr<Vocabulary>& vocabulary,
     bool immutable_dict = true,

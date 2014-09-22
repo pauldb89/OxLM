@@ -39,6 +39,7 @@ ParallelCorpus::ParallelCorpus(
 
     // Read a sentence pair.
     getline(tin, line);
+    tin >> ws;
     stringstream stream(line);
     string token;
     while (stream >> token) {
@@ -59,6 +60,7 @@ ParallelCorpus::ParallelCorpus(
     alignments.resize(data.size());
     // Read alignment links for previous sentence pair.
     getline(ain, line);
+    ain >> ws;
     stringstream astream(line);
     while (astream >> token) {
       size_t pos = token.find("-");
@@ -78,6 +80,12 @@ ParallelCorpus::ParallelCorpus(
     sort(links.begin(), links.end());
   }
 }
+
+ParallelCorpus::ParallelCorpus(
+    const vector<int>& source_data,
+    const vector<int>& target_data,
+    const vector<vector<long long>>& links)
+    : Corpus(target_data), srcData(source_data), alignments(links) {}
 
 size_t ParallelCorpus::sourceSize() const {
   return srcData.size();

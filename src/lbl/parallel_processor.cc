@@ -19,14 +19,14 @@ ParallelProcessor::ParallelProcessor(
 vector<int> ParallelProcessor::extract(long long index) const {
   vector<int> context = ContextProcessor::extract(index);
 
-  int aligned_index = findClosestAlignedWord(index);
+  long long aligned_index = findClosestAlignedWord(index);
 
   boost::shared_ptr<ParallelCorpus> parallel_corpus =
       dynamic_pointer_cast<ParallelCorpus>(corpus);
   assert(parallel_corpus != nullptr);
 
   vector<long long> source_links = parallel_corpus->getLinks(aligned_index);
-  // Round down just like the BBN paper.
+  // Round down just like in the BBN paper.
   long long affinity = source_links[(source_links.size() - 1) / 2];
 
   vector<int> source_context = extractSource(affinity);
@@ -71,6 +71,7 @@ long long ParallelProcessor::findClosestAlignedWord(long long index) const {
         break;
       }
     }
+    ++delta;
   }
 
   return relative_index;
@@ -83,24 +84,24 @@ vector<int> ParallelProcessor::extractSource(long long source_index) const {
 
   vector<int> source_context;
   bool sentence_start = false;
-  for (int i = 1; i < sourceContextSize; ++i) {
+  for (int i = 1; i <= sourceContextSize / 2; ++i) {
     long long index = source_index - i;
     sentence_start |=
         index < 0 || parallel_corpus->sourceAt(index) == sourceEndId;
     int word_id = sentence_start ?
         sourceStartId : parallel_corpus->sourceAt(index);
-    source_context.push_back(index);
+    source_context.push_back(word_id);
   }
   reverse(source_context.begin(), source_context.end());
 
   bool sentence_end = false;
-  for (int i = 0; i < sourceContextSize; ++i) {
+  for (int i = 0; i <= sourceContextSize / 2; ++i) {
     long long index = source_index + i;
     sentence_end |=
         index >= parallel_corpus->sourceSize() ||
         parallel_corpus->sourceAt(index) == sourceEndId;
     int word_id = sentence_end ? sourceEndId : parallel_corpus->sourceAt(index);
-    source_context.push_back(index);
+    source_context.push_back(word_id);
   }
 
   return source_context;

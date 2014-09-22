@@ -75,7 +75,7 @@ TEST_F(ModelUtilsTest, TestLoadClassesFromFile) {
 
 TEST_F(ModelUtilsTest, TestFrequnecyBinning) {
   vector<int> classes;
-  boost::shared_ptr<Vocabulary> vocab;
+  boost::shared_ptr<Vocabulary> vocab = boost::make_shared<Vocabulary>();
   VectorReal class_bias;
   frequencyBinning(config->training_file, 30, classes, vocab, class_bias);
 
