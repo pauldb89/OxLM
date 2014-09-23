@@ -3,6 +3,8 @@ OxLM
 
 Oxford Neural Language Modelling Toolkit.
 
+The way the toolkit works is described in this [paper](https://ufal.mff.cuni.cz/pbml/102/art-baltescu-blunsom-hoang.pdf).
+
 ### Getting started
 
 #### Dependecies
@@ -72,28 +74,35 @@ Partition the vocabulary using [agglomerative Brown clustering](https://github.c
 
 Set `num-clusters` to the square root of the size of the vocabulary. To train the model, run:
 
-    oxlm/train_factored_sgd -c oxlm.ini \
+    oxlm/bin/train_factored_sgd -c oxlm.ini \
                             --threads=8 \
                             --model-out=model.bin \
-                            --class-file=clusters/path
+                            --class-file=clusters/paths
 
 #### Train a factored model with direct n-gram features
 
 Append the following to the `oxlm.ini` configuration file:
 
-    sparse-features=true
     feature-context-size=5
     min-ngram-freq=2
     filter-contexts=true
 
 Run the following command to train the model:
 
-    oxlm/train_maxent_sgd -c oxlm.ini \
+    oxlm/bin/train_maxent_sgd -c oxlm.ini \
                           --threads=8 \
                           --model-out=model.bin \
-                          --class-file=clusters/path
+                          --class-file=clusters/paths
 
 This will use a one-to-one mapping from features to weights. If you want to use a lower dimensional feature space for the weights (i.e. collision stores), use the `--hash-space` parameter. Generally, setting the hash-space to 1/2 or 1/4 of the total number of features results in a negligible loss in perplexity. Collision store reduce the memory requirements significantly.
+
+### Perplexity
+
+To get the perplexity of a previously trained model on a test corpus, run:
+
+    oxlm/bin/evaluate -m model.bin -t <model-type> -d dev.unk.en
+
+where `model-type` is 1 for standard language models, 2 for factored language models and 3 for factored models with direct n-gram features.
 
 ### Decoding
 
