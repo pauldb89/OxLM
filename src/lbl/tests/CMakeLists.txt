@@ -35,6 +35,7 @@ set(TESTS
     source_factored_weights_test
     sparse_global_feature_store_test
     sparse_minibatch_feature_store_test
+    train_conditional_sgd_test
     train_factored_sgd_test
     train_maxent_sgd_test
     train_sgd_test

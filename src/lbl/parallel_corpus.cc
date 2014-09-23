@@ -27,7 +27,7 @@ ParallelCorpus::ParallelCorpus(
 	    dynamic_pointer_cast<ParallelVocabulary>(vocab_base);
 	assert(vocab != nullptr);
 
-	int src_end_id = convertSource("</s>", vocab, immutable_dict, convert_unknowns);
+	int src_end_id = convertSource("</s>", vocab);
 	int end_id = convert("</s>", vocab, immutable_dict, convert_unknowns);
 
 	ifstream tin(training_file);
@@ -46,7 +46,7 @@ ParallelCorpus::ParallelCorpus(
       if (token == "|||") {
         break;
       }
-      int word_id = convertSource(token, vocab, immutable_dict, convert_unknowns);
+      int word_id = convertSource(token, vocab);
       srcData.push_back(word_id);
     }
     srcData.push_back(src_end_id);

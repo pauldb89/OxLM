@@ -59,7 +59,7 @@ if __name__ == '__main__':
   first_in_stream = lambda: fileread(options.input.split(PATHSEP)[0])
 
   vocab = set([x.strip() for x in fileread(options.vocab).readlines()])
-  
+
   for (inf, outf) in zip(options.input.split(PATHSEP), options.output.split(PATHSEP)):
     map_tokens(fileread(inf), vocab, filewrite(outf), filewrite(outf+".transforms"))   
 

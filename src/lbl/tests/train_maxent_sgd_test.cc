@@ -10,10 +10,17 @@
 
 namespace oxlm {
 
-TEST_F(FactoredSGDTest, TestTrainMaxentSGDSparseFeatures) {
-  config->l2_maxent = 0.1;
-  config->feature_context_size = 3;
+class MaxentSGDTest : public FactoredSGDTest {
+ protected:
+  void SetUp() {
+    FactoredSGDTest::SetUp();
 
+    config->l2_maxent = 0.1;
+    config->feature_context_size = 3;
+  }
+};
+
+TEST_F(MaxentSGDTest, TestTrainMaxentSGDSparseFeatures) {
   FactoredMaxentLM model(config);
   model.learn();
   config->test_file = "test.en";
@@ -24,9 +31,7 @@ TEST_F(FactoredSGDTest, TestTrainMaxentSGDSparseFeatures) {
   EXPECT_NEAR(56.5152015, perplexity(log_likelihood, test_corpus->size()), EPS);
 }
 
-TEST_F(FactoredSGDTest, TestTrainMaxentSGDCollisions) {
-  config->l2_maxent = 0.1;
-  config->feature_context_size = 3;
+TEST_F(MaxentSGDTest, TestTrainMaxentSGDCollisions) {
   config->hash_space = 1000000;
 
   FactoredMaxentLM model(config);
@@ -39,9 +44,7 @@ TEST_F(FactoredSGDTest, TestTrainMaxentSGDCollisions) {
   EXPECT_NEAR(54.0801925, perplexity(log_likelihood, test_corpus->size()), EPS);
 }
 
-TEST_F(FactoredSGDTest, TestTrainMaxentSGDExactFiltering) {
-  config->l2_maxent = 0.1;
-  config->feature_context_size = 3;
+TEST_F(MaxentSGDTest, TestTrainMaxentSGDExactFiltering) {
   config->hash_space = 1000000;
   config->filter_contexts = true;
 
@@ -55,9 +58,7 @@ TEST_F(FactoredSGDTest, TestTrainMaxentSGDExactFiltering) {
   EXPECT_NEAR(56.5219650, perplexity(log_likelihood, test_corpus->size()), EPS);
 }
 
-TEST_F(FactoredSGDTest, TestTrainMaxentSGDApproximateFiltering) {
-  config->l2_maxent = 0.1;
-  config->feature_context_size = 3;
+TEST_F(MaxentSGDTest, TestTrainMaxentSGDApproximateFiltering) {
   config->hash_space = 1000000;
   config->filter_contexts = true;
   config->filter_error_rate = 0.01;

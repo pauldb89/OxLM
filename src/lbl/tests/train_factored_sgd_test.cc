@@ -9,7 +9,7 @@
 namespace oxlm {
 
 TEST_F(FactoredSGDTest, TestTrainFactoredSGD) {
-  Model<FactoredWeights, FactoredWeights, FactoredMetadata> model(config);
+  FactoredLM model(config);
   model.learn();
   config->test_file = "test.en";
   boost::shared_ptr<Vocabulary> vocab = model.getVocab();
@@ -21,7 +21,7 @@ TEST_F(FactoredSGDTest, TestTrainFactoredSGD) {
 
 TEST_F(FactoredSGDTest, TestTrainFactoredNCE) {
   config->noise_samples = 10;
-  Model<FactoredWeights, FactoredWeights, FactoredMetadata> model(config);
+  FactoredLM model(config);
   model.learn();
   config->test_file = "test.en";
   boost::shared_ptr<Vocabulary> vocab = model.getVocab();

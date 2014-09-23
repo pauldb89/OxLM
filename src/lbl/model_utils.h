@@ -44,8 +44,8 @@ boost::shared_ptr<Corpus> readTestCorpus(
     bool convert_unknowns = false);
 
 int convertSource(
-    const string& file, const boost::shared_ptr<ParallelVocabulary>& vocab,
-    bool immutable_dict, bool convert_unknowns);
+    const string& token,
+    const boost::shared_ptr<ParallelVocabulary>& vocab);
 
 Real perplexity(Real log_likelihood, size_t corpus_size);
 

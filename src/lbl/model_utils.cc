@@ -157,20 +157,11 @@ int convert(
   }
   return w;
 }
+
 int convertSource(
-    const string& token, const boost::shared_ptr<ParallelVocabulary>& vocab,
-    bool immutable_dict, bool convert_unknowns) {
-  int w = vocab->convertSource(token, immutable_dict);
-  if (w < 0) {
-    if (convert_unknowns) {
-      w = vocab->convertSource("<unk>", immutable_dict);
-      assert(w >= 0);
-    } else {
-      cout << token << " " << w << endl;
-      assert(!"Unknown word found in test corpus.");
-    }
-  }
-  return w;
+    const string& token,
+    const boost::shared_ptr<ParallelVocabulary>& vocab) {
+  return vocab->convertSource(token);
 }
 
 boost::shared_ptr<Corpus> readTrainingCorpus(
