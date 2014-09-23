@@ -104,3 +104,5 @@ bool ParallelCorpus::isAligned(long long index) const {
 }
 
 } // namespace oxlm
+
+BOOST_CLASS_EXPORT_IMPLEMENT(oxlm::ParallelCorpus)

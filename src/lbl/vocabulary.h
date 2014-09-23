@@ -1,6 +1,7 @@
 #pragma once
 
 #include "corpus/corpus.h"
+#include "lbl/archive_export.h"
 
 using namespace std;
 
@@ -26,3 +27,5 @@ class Vocabulary {
 };
 
 } // namespace oxlm
+
+BOOST_CLASS_EXPORT_KEY(oxlm::Vocabulary)

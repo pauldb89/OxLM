@@ -1,5 +1,6 @@
 #pragma once
 
+#include "lbl/archive_export.h"
 #include "lbl/vocabulary.h"
 
 namespace oxlm {
@@ -35,3 +36,5 @@ class Corpus {
 };
 
 } // namespace oxlm
+
+BOOST_CLASS_EXPORT_KEY(oxlm::Corpus)

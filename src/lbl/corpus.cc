@@ -39,3 +39,5 @@ size_t Corpus::size() const {
 Corpus::~Corpus() {}
 
 } // namespace oxlm
+
+BOOST_CLASS_EXPORT_IMPLEMENT(oxlm::Corpus)

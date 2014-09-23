@@ -40,7 +40,8 @@ class ParallelCorpus : public Corpus {
 
 	template<class Archive>
 	void serialize(Archive& ar, const unsigned int version) {
-	  ar & data;
+    ar & boost::serialization::base_object<Corpus>(*this);
+
 	  ar & srcData;
 	  ar & alignments;
 	}
@@ -51,3 +52,5 @@ class ParallelCorpus : public Corpus {
 };
 
 } // namespace oxlm
+
+BOOST_CLASS_EXPORT_KEY(oxlm::ParallelCorpus)

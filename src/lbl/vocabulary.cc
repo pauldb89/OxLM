@@ -15,3 +15,5 @@ size_t Vocabulary::size() const {
 }
 
 } // namespace oxlm
+
+BOOST_CLASS_EXPORT_IMPLEMENT(oxlm::Vocabulary)

@@ -121,11 +121,13 @@ int main(int argc, char** argv) {
   }
   cout << "# Config Summary" << endl;
   cout << "# order = " << config->ngram_order << endl;
+  cout << "# source order = " << config->source_order << endl;
   cout << "# word_width = " << config->word_representation_size << endl;
   if (config->model_output_file.size()) {
     cout << "# model-out = " << config->model_output_file << endl;
   }
   cout << "# input = " << config->training_file << endl;
+  cout << "# alignment file = " << config->alignment_file << endl;
   cout << "# minibatch size = " << config->minibatch_size << endl;
   cout << "# lambda = " << config->l2_lbl << endl;
   cout << "# step size = " << config->step_size << endl;

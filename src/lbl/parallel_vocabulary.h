@@ -16,6 +16,7 @@ class ParallelVocabulary : public Vocabulary {
   template<class Archive>
   void serialize(Archive& ar, const unsigned int version) {
     ar & boost::serialization::base_object<Vocabulary>(*this);
+
     ar & sourceDict;
   }
 
@@ -23,3 +24,5 @@ class ParallelVocabulary : public Vocabulary {
 };
 
 } // namespace oxlm
+
+BOOST_CLASS_EXPORT_KEY(oxlm::ParallelVocabulary)

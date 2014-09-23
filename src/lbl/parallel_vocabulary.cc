@@ -11,3 +11,5 @@ size_t ParallelVocabulary::sourceSize() const {
 }
 
 } // namespace oxlm
+
+BOOST_CLASS_EXPORT_IMPLEMENT(oxlm::ParallelVocabulary)
