@@ -349,6 +349,33 @@ void SourceFactoredWeights::clear(
   }
 }
 
+VectorReal SourceFactoredWeights::getPredictionVector(
+    const vector<int>& context) const {
+  int context_width = config->ngram_order - 1;
+  int source_context_width = 2 * config->source_order - 1;
+  int word_width = config->word_representation_size;
+
+  VectorReal prediction_vector = VectorReal::Zero(word_width);
+  for (int i = 0; i < context_width; ++i) {
+    if (config->diagonal_contexts) {
+      prediction_vector += C[i].asDiagonal() * Q.col(context[i]);
+    } else {
+      prediction_vector += C[i] * Q.col(context[i]);
+    }
+  }
+
+  for (int i = 0; i < source_context_width; ++i) {
+    int j = context_width + i;
+    if (config->diagonal_contexts) {
+      prediction_vector += SC[i].asDiagonal() * SQ.col(context[j]);
+    } else {
+      prediction_vector += SC[i] * Q.col(context[j]);
+    }
+  }
+
+  return config->sigmoid ? sigmoid(prediction_vector) : prediction_vector;
+}
+
 SourceFactoredWeights::~SourceFactoredWeights() {
   delete data;
 }

@@ -167,7 +167,7 @@ class Weights {
       Real& objective,
       MinibatchWords& words) const;
 
-  VectorReal getPredictionVector(const vector<int>& context) const;
+  virtual VectorReal getPredictionVector(const vector<int>& context) const;
 
  private:
   void allocate();

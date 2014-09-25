@@ -81,6 +81,8 @@ class SourceFactoredWeights : public FactoredWeights {
       int index, const MatrixReal& weighted_representations,
       bool transpose = false) const;
 
+  virtual VectorReal getPredictionVector(const vector<int>& context) const;
+
  private:
   void allocate();
 
