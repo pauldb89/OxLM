@@ -84,6 +84,29 @@ class SourceFactoredWeights : public FactoredWeights {
   virtual VectorReal getPredictionVector(const vector<int>& context) const;
 
  private:
+  friend class boost::serialization::access;
+
+  template<class Archive>
+  void save(Archive& ar, const unsigned int version) const {
+    ar << boost::serialization::base_object<FactoredWeights>(*this);
+
+    ar << size;
+    ar << boost::serialization::make_array(data, size);
+  }
+
+  template<class Archive>
+  void load(Archive& ar, const unsigned int version) {
+    ar >> boost::serialization::base_object<FactoredWeights>(*this);
+
+    ar >> size;
+    data = new Real[size];
+    ar >> boost::serialization::make_array(data, size);
+
+    setModelParameters();
+  }
+
+  BOOST_SERIALIZATION_SPLIT_MEMBER();
+
   void allocate();
 
   void setModelParameters();

@@ -77,6 +77,7 @@ endif(CDEC_FOUND)
 set(EXECUTABLES
   extract_word_vectors
   evaluate
+  evaluate_parallel
   predict
   train_conditional_sgd
   train_factored_sgd
