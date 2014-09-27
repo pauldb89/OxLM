@@ -31,6 +31,7 @@ set(TESTS
     operators_test
     parallel_corpus_test
     parallel_processor_test
+    parallel_vocabulary_test
     query_cache_test
     source_factored_weights_test
     sparse_global_feature_store_test
@@ -40,6 +41,7 @@ set(TESTS
     train_maxent_sgd_test
     train_sgd_test
     utils_test
+    vocabulary_test
     weights_test
     word_context_extractor_test
     word_context_hasher_test

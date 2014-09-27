@@ -6,7 +6,9 @@ namespace oxlm {
 
 class ParallelVocabulary : public Vocabulary {
  public:
-  int convertSource(const string& word, bool frozen=false);
+  int convertSource(const string& word, bool frozen = false);
+
+  string convertSource(int word_id);
 
   size_t sourceSize() const;
 
