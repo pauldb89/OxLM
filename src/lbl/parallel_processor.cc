@@ -12,7 +12,7 @@ ParallelProcessor::ParallelProcessor(
 
 /**
  * Returns the parallel conditioning context in the following format:
- * [t_{n-1}, ..., t_{n-m}, s_{a_n - sm}, s_{a_n - sm + 1}, .., s_{a_n + sm}]
+ * [t_{n-1}, ..., t_{n-m}, s_{a_n-sm}, s_{a_n-sm+1}, .., s_{a_n+sm}]
  * where n = current target index, a_n = t_n affinity, m = target n-gram order,
  * and sm = source order.
  */
