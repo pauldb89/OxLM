@@ -21,14 +21,18 @@ ParallelCorpus::ParallelCorpus(
 		const string& training_file,
 		const string& alignment_file,
 		const boost::shared_ptr<Vocabulary>& vocab_base,
-		bool immutable_dict,
 		bool convert_unknowns) {
 	boost::shared_ptr<ParallelVocabulary> vocab =
 	    dynamic_pointer_cast<ParallelVocabulary>(vocab_base);
 	assert(vocab != nullptr);
 
-	int src_end_id = convertSource("</s>", vocab);
-	int end_id = convert("</s>", vocab, immutable_dict, convert_unknowns);
+  // If any of the vocabularies has already been set (i.e. contains more than
+  // <s> and </s> and therefore has size > 2), make them immutable.
+  bool immutable_vocab = vocab->size() > 2;
+  bool immutable_source_vocab = vocab->sourceSize() > 2;
+	int src_end_id = convertSource(
+      "</s>", vocab, immutable_source_vocab, convert_unknowns);
+	int end_id = convert("</s>", vocab, immutable_vocab, convert_unknowns);
 
 	ifstream tin(training_file);
 	ifstream ain(alignment_file);
@@ -46,13 +50,14 @@ ParallelCorpus::ParallelCorpus(
       if (token == "|||") {
         break;
       }
-      int word_id = convertSource(token, vocab);
+      int word_id = convertSource(
+          token, vocab, immutable_source_vocab, convert_unknowns);
       srcData.push_back(word_id);
     }
     srcData.push_back(src_end_id);
 
     while (stream >> token) {
-      int word_id = convert(token, vocab, immutable_dict, convert_unknowns);
+      int word_id = convert(token, vocab, immutable_vocab, convert_unknowns);
       data.push_back(word_id);
     }
     data.push_back(end_id);

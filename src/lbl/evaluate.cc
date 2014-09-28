@@ -15,9 +15,10 @@ void evaluate(const string& model_file, const string& test_file, int num_threads
   Model model;
   model.load(model_file);
   boost::shared_ptr<ModelData> config = model.getConfig();
+  config->test_file = test_file;
   boost::shared_ptr<Vocabulary> vocab = model.getVocab();
   boost::shared_ptr<Corpus> test_corpus =
-      readTestCorpus(config, vocab, true, true);
+      readTestCorpus(config, vocab, true);
 
   Real accumulator = 0;
   #pragma omp parallel num_threads(num_threads)

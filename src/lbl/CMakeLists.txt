@@ -79,6 +79,8 @@ set(EXECUTABLES
   evaluate
   evaluate_parallel
   predict
+  score
+  score_parallel
   train_conditional_sgd
   train_factored_sgd
   train_maxent_sgd

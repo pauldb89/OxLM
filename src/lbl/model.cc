@@ -51,9 +51,8 @@ template<class GlobalWeights, class MinibatchWeights, class Metadata>
 void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
   // Initialize the vocabulary now, if it hasn't been initialized when the
   // vocabulary was partitioned in classes.
-  bool immutable_vocab = config->classes > 0 || config->class_file.size();
   boost::shared_ptr<Corpus> training_corpus =
-      readTrainingCorpus(config, vocab, immutable_vocab);
+      readTrainingCorpus(config, vocab);
   cout << "Done reading training corpus..." << endl;
 
   boost::shared_ptr<Corpus> test_corpus;

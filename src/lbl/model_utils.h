@@ -28,24 +28,26 @@ void frequencyBinning(
     VectorReal& class_bias);
 
 int convert(
-    const string& file, const boost::shared_ptr<Vocabulary>& vocab,
-    bool immutable_dict, bool convert_unknowns);
+    const string& file,
+    const boost::shared_ptr<Vocabulary>& vocab,
+    bool immutable_vocab,
+    bool convert_unknowns);
+
+int convertSource(
+    const string& token,
+    const boost::shared_ptr<ParallelVocabulary>& vocab,
+    bool immutable_vocab,
+    bool convert_unknowns);
 
 boost::shared_ptr<Corpus> readTrainingCorpus(
     const boost::shared_ptr<ModelData>& config,
     const boost::shared_ptr<Vocabulary>& vocabulary,
-    bool immutable_dict = true,
     bool convert_unknowns = false);
 
 boost::shared_ptr<Corpus> readTestCorpus(
     const boost::shared_ptr<ModelData>& config,
     const boost::shared_ptr<Vocabulary>& vocabulary,
-    bool immutable_dict = true,
     bool convert_unknowns = false);
-
-int convertSource(
-    const string& token,
-    const boost::shared_ptr<ParallelVocabulary>& vocab);
 
 Real perplexity(Real log_likelihood, size_t corpus_size);
 

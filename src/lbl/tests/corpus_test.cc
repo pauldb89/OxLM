@@ -8,7 +8,7 @@ namespace oxlm {
 
 TEST(CorpusTest, TestBasic) {
   boost::shared_ptr<Vocabulary> vocab = boost::make_shared<Vocabulary>();
-  Corpus corpus("training.en", vocab, false, false);
+  Corpus corpus("training.en", vocab, false);
 
   EXPECT_EQ(13554, corpus.size());
   EXPECT_EQ(vocab->convert("musharraf"), corpus.at(0));

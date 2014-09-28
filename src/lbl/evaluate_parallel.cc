@@ -37,7 +37,7 @@ int main(int argc, char** argv) {
 
   boost::shared_ptr<Vocabulary> vocab = model.getVocab();
   boost::shared_ptr<Corpus> test_corpus =
-      readTestCorpus(config, vocab, true, true);
+      readTestCorpus(config, vocab, true);
 
   Real accumulator = 0;
   int num_threads = vm["threads"].as<int>();

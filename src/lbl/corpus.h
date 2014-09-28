@@ -12,7 +12,6 @@ class Corpus {
 	Corpus(
       const string& filename,
       const boost::shared_ptr<Vocabulary>& vocab,
-	  	bool immutable_dict,
       bool convert_unknowns);
 
 	Corpus(const vector<int>& data);

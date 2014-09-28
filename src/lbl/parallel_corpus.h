@@ -19,7 +19,6 @@ class ParallelCorpus : public Corpus {
   		const string& training_file,
 		  const string& alignment_file,
 			const boost::shared_ptr<Vocabulary>& vocab,
-			bool immutable_dict,
 			bool convert_unknowns);
 
   ParallelCorpus(

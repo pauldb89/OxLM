@@ -144,35 +144,48 @@ void frequencyBinning(
 
 int convert(
     const string& token, const boost::shared_ptr<Vocabulary>& vocab,
-    bool immutable_dict, bool convert_unknowns) {
-  int w = vocab->convert(token, immutable_dict);
-  if (w < 0) {
+    bool immutable_vocab, bool convert_unknowns) {
+  int word_id = vocab->convert(token, immutable_vocab);
+  if (word_id < 0) {
     if (convert_unknowns) {
-      w = vocab->convert("<unk>", immutable_dict);
-      assert(w >= 0);
+      word_id = vocab->convert("<unk>", immutable_vocab);
+      assert(word_id >= 0);
     } else {
-      cout << token << " " << w << endl;
+      cout << token << " " << word_id << endl;
       assert(!"Unknown word found in test corpus.");
     }
   }
-  return w;
+
+  return word_id;
 }
 
 int convertSource(
     const string& token,
-    const boost::shared_ptr<ParallelVocabulary>& vocab) {
-  return vocab->convertSource(token);
+    const boost::shared_ptr<ParallelVocabulary>& vocab,
+    bool immutable_vocab,
+    bool convert_unknowns) {
+  int word_id = vocab->convertSource(token, immutable_vocab);
+  if (word_id < 0) {
+    if (convert_unknowns) {
+      word_id = vocab->convertSource("<unk>", immutable_vocab);
+      assert(word_id >= 0);
+    } else {
+      cout << token << " " << word_id << endl;
+      assert(!"Unknown source word found in test corpus.");
+    }
+  }
+
+  return word_id;
 }
 
 boost::shared_ptr<Corpus> readTrainingCorpus(
     const boost::shared_ptr<ModelData>& config,
     const boost::shared_ptr<Vocabulary>& vocab,
-    bool immutable_dict,
     bool convert_unknowns) {
   boost::shared_ptr<Corpus> corpus;
   if (config->source_order == 0) {
 	  corpus = boost::make_shared<Corpus>(
-        config->training_file, vocab, immutable_dict, convert_unknowns);
+        config->training_file, vocab, convert_unknowns);
     config->vocab_size = vocab->size();
   } else {
     boost::shared_ptr<ParallelVocabulary> parallel_vocab =
@@ -181,7 +194,7 @@ boost::shared_ptr<Corpus> readTrainingCorpus(
 
 	  corpus = boost::make_shared<ParallelCorpus>(
         config->training_file, config->alignment_file, parallel_vocab,
-        immutable_dict, convert_unknowns);
+        convert_unknowns);
 
     config->vocab_size = parallel_vocab->size();
     config->source_vocab_size = parallel_vocab->sourceSize();
@@ -193,14 +206,13 @@ boost::shared_ptr<Corpus> readTrainingCorpus(
 boost::shared_ptr<Corpus> readTestCorpus(
     const boost::shared_ptr<ModelData>& config,
     const boost::shared_ptr<Vocabulary>& vocab,
-    bool immutable_dict,
     bool convert_unknowns) {
   if (config->source_order == 0){
 	  return boost::make_shared<Corpus>(
-        config->test_file, vocab, immutable_dict, convert_unknowns);
+        config->test_file, vocab, convert_unknowns);
   } else {
 	  return boost::make_shared<ParallelCorpus>(
-        config->test_file, config->test_alignment_file, vocab, immutable_dict,
+        config->test_file, config->test_alignment_file, vocab,
         convert_unknowns);
   }
 }

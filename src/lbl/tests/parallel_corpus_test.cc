@@ -8,7 +8,7 @@ namespace oxlm {
 TEST(ParallelCorpusTest, TestBasic) {
   boost::shared_ptr<ParallelVocabulary> vocab =
       boost::make_shared<ParallelVocabulary>();
-  ParallelCorpus corpus("training.fr-en", "training.gdfa", vocab, false, false);
+  ParallelCorpus corpus("training.fr-en", "training.gdfa", vocab, false);
 
   EXPECT_EQ(13059, corpus.size());
   EXPECT_EQ(14441, corpus.sourceSize());
