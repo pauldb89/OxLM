@@ -1,5 +1,7 @@
 #include "gtest/gtest.h"
 
+#include <algorithm>
+
 #include "lbl/minibatch_words.h"
 
 namespace oxlm {
@@ -23,8 +25,13 @@ TEST(MinibatchWordsTest, TestBasic) {
 
   words.transform();
   vector<int> expected_words = {0, 1, 2, 3, 4};
-  EXPECT_EQ(expected_words, words.getContextWords());
-  EXPECT_EQ(expected_words, words.getOutputWords());
+  vector<int> actual_words = words.getContextWords();
+  sort(actual_words.begin(), actual_words.end());
+  EXPECT_EQ(expected_words, actual_words);
+
+  actual_words = words.getOutputWords();
+  sort(actual_words.begin(), actual_words.end());
+  EXPECT_EQ(expected_words, actual_words);
 }
 
 TEST(MinibatchWordsTest, TestMerge) {
@@ -48,8 +55,13 @@ TEST(MinibatchWordsTest, TestMerge) {
 
   w1.transform();
   vector<int> expected_words = {0, 1, 2, 3, 4};
-  EXPECT_EQ(expected_words, w1.getContextWords());
-  EXPECT_EQ(expected_words, w1.getOutputWords());
+  vector<int> actual_words = w1.getContextWords();
+  sort(actual_words.begin(), actual_words.end());
+  EXPECT_EQ(expected_words, actual_words);
+
+  actual_words = w1.getOutputWords();
+  sort(actual_words.begin(), actual_words.end());
+  EXPECT_EQ(expected_words, actual_words);
 }
 
 } // namespace oxlm
