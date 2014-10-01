@@ -1,51 +1,13 @@
-#include "gtest/gtest.h"
+#include "lbl/tests/factored_weights_test.h"
 
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
-#include <boost/make_shared.hpp>
 
-#include "lbl/context_processor.h"
-#include "lbl/factored_weights.h"
 #include "utils/constants.h"
 
 namespace ar = boost::archive;
 
 namespace oxlm {
-
-class FactoredWeightsTest : public testing::Test {
- protected:
-  void SetUp() {
-    config = boost::make_shared<ModelData>();
-    config->word_representation_size = 3;
-    config->vocab_size = 5;
-    config->ngram_order = 3;
-    config->sigmoid = true;
-
-    vector<int> data = {2, 3, 4, 1};
-    vector<int> classes = {0, 2, 4, 5};
-    corpus = boost::make_shared<Corpus>(data);
-    index = boost::make_shared<WordToClassIndex>(classes);
-    metadata = boost::make_shared<FactoredMetadata>(config, vocab, index);
-  }
-
-  Real getPredictions(
-      const FactoredWeights& weights, const vector<int>& indices) const {
-    Real ret = 0;
-    boost::shared_ptr<ContextProcessor> processor =
-        boost::make_shared<ContextProcessor>(corpus, config->ngram_order - 1);
-    for (int index: indices) {
-      vector<int> context = processor->extract(index);
-      ret -= weights.predict(corpus->at(index), context);
-    }
-    return ret;
-  }
-
-  boost::shared_ptr<ModelData> config;
-  boost::shared_ptr<Vocabulary> vocab;
-  boost::shared_ptr<WordToClassIndex> index;
-  boost::shared_ptr<FactoredMetadata> metadata;
-  boost::shared_ptr<Corpus> corpus;
-};
 
 TEST_F(FactoredWeightsTest, TestCheckGradient) {
   FactoredWeights weights(config, metadata, corpus);
@@ -81,9 +43,20 @@ TEST_F(FactoredWeightsTest, TestPredict) {
 
   Real objective = weights.getObjective(corpus, indices);
 
-  EXPECT_NEAR(objective, getPredictions(weights, indices), EPS);
+  EXPECT_NEAR(objective, getLogProbabilities(weights, indices), EPS);
   // Check cache values.
-  EXPECT_NEAR(objective, getPredictions(weights, indices), EPS);
+  EXPECT_NEAR(objective, getLogProbabilities(weights, indices), EPS);
+}
+
+TEST_F(FactoredWeightsTest, TestUnnormalizedScores) {
+  // Since we only get the sum of the word score and the class score, we can't
+  // use this information to uniquely identify the original log probabilities.
+  // The best I could think of is to check that the relative order of log
+  // probabilities and unnormalized scores is the same.
+  FactoredWeights weights(config, metadata, corpus);
+  vector<int> indices = {0, 1, 2, 3};
+
+  EXPECT_TRUE(checkScoreRelativeOrder(weights, indices));
 }
 
 TEST_F(FactoredWeightsTest, TestSerialization) {

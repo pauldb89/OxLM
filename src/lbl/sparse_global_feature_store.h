@@ -29,6 +29,8 @@ class SparseGlobalFeatureStore : public GlobalFeatureStore {
 
   virtual VectorReal get(const vector<int>& context) const;
 
+  virtual Real getValue(int feature_index, const vector<int>& context) const;
+
   virtual void l2GradientUpdate(
       const boost::shared_ptr<MinibatchFeatureStore>& base_minibatch_store,
       Real sigma);

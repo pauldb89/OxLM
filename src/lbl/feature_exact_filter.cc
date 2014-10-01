@@ -19,6 +19,17 @@ vector<int> FeatureExactFilter::getIndexes(
   }
 }
 
+bool FeatureExactFilter::hasIndex(
+    const FeatureContext& feature_context, int feature_index) const {
+  int feature_context_id = extractor->getFeatureContextId(feature_context);
+  if (feature_context_id == -1) {
+    return false;
+  }
+
+  const auto& indexes = featureIndexes->at(feature_context_id);
+  return find(indexes.begin(), indexes.end(), feature_index) != indexes.end();
+}
+
 FeatureExactFilter::~FeatureExactFilter() {}
 
 } // namespace oxlm

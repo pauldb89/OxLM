@@ -19,6 +19,9 @@ class FeatureFilter {
   virtual vector<int> getIndexes(
       const FeatureContext& feature_context) const = 0;
 
+  virtual bool hasIndex(
+      const FeatureContext& feature_context, int feature_index) const = 0;
+
   virtual ~FeatureFilter();
 
  private:

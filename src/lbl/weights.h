@@ -89,7 +89,9 @@ class Weights {
 
   void clear(const MinibatchWords& words, bool parallel_update);
 
-  Real predict(int word_id, vector<int> context) const;
+  virtual Real getLogProb(int word_id, vector<int> context) const;
+
+  virtual Real getUnnormalizedScore(int word, const vector<int>& context) const;
 
   void clearCache();
 

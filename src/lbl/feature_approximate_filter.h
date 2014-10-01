@@ -20,6 +20,8 @@ class FeatureApproximateFilter : public FeatureFilter {
 
   virtual vector<int> getIndexes(const FeatureContext& feature_context) const;
 
+  virtual bool hasIndex(const FeatureContext& feature_context, int feature_index) const;
+
   bool operator==(const FeatureApproximateFilter& other) const;
 
   virtual ~FeatureApproximateFilter();

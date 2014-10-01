@@ -13,6 +13,11 @@ vector<int> FeatureNoOpFilter::getIndexes(
   return indexes;
 }
 
+bool FeatureNoOpFilter::hasIndex(
+    const FeatureContext& feature_context, int feature_index) const {
+  return true;
+}
+
 bool FeatureNoOpFilter::operator==(const FeatureNoOpFilter& other) const {
   return groupSize == other.groupSize;
 }

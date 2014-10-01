@@ -19,6 +19,9 @@ TEST(FeatureNoOpFilterTest, TestBasic) {
   FeatureContext feature_context;
   vector<int> expected_indexes = {0, 1, 2};
   EXPECT_EQ(expected_indexes, filter.getIndexes(feature_context));
+  EXPECT_TRUE(filter.hasIndex(feature_context, 0));
+  EXPECT_TRUE(filter.hasIndex(feature_context, 1));
+  EXPECT_TRUE(filter.hasIndex(feature_context, 2));
 }
 
 TEST(FeatureNoOpFilterTest, TestSerialization) {

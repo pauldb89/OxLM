@@ -310,7 +310,7 @@ Real GlobalFactoredMaxentWeights::regularizerUpdate(
   return ret;
 }
 
-Real GlobalFactoredMaxentWeights::predict(
+Real GlobalFactoredMaxentWeights::getLogProb(
     int word_id, vector<int> context) const {
   int class_id = index->getClass(word_id);
   int word_class_id = index->getWordIndexInClass(word_id);
@@ -345,6 +345,22 @@ Real GlobalFactoredMaxentWeights::predict(
   }
 
   return class_prob + word_prob;
+}
+
+Real GlobalFactoredMaxentWeights::getUnnormalizedScore(
+    int word_id, const vector<int>& context) const {
+  int class_id = index->getClass(word_id);
+  int word_class_id = index->getWordIndexInClass(word_id);
+  VectorReal prediction_vector = getPredictionVector(context);
+
+  Real class_score =
+      S.col(class_id).dot(prediction_vector) + T(class_id) +
+      U->getValue(class_id, context);
+  Real word_score =
+      R.col(word_id).dot(prediction_vector) + B(word_id) +
+      V[class_id]->getValue(word_class_id, context);
+
+  return class_score + word_score;
 }
 
 bool GlobalFactoredMaxentWeights::operator==(

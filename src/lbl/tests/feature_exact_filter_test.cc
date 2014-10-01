@@ -17,9 +17,9 @@ class FeatureExactFilterTest : public testing::Test {
   void SetUp() {
     GlobalFeatureIndexesPtr feature_indexes =
         boost::make_shared<GlobalFeatureIndexes>(3);
-    (*feature_indexes)[0] = {0, 2, 5};
-    (*feature_indexes)[1] = {1, 6, 8};
-    (*feature_indexes)[2] = {2, 3, 5};
+    (*feature_indexes)[0] = {0, 2, 4};
+    (*feature_indexes)[1] = {1, 4};
+    (*feature_indexes)[2] = {2, 3};
 
     // Mini-corpus for producing a few feature contexts, unrelated to the feature
     // indexes defined above.
@@ -49,18 +49,35 @@ TEST_F(FeatureExactFilterTest, TestBasic) {
   // Context [0] maps to 0.
   vector<int> context = {0};
   FeatureContext feature_context(context);
-  vector<int> expected_indexes = {0, 2, 5};
+  vector<int> expected_indexes = {0, 2, 4};
   EXPECT_EQ(expected_indexes, filter->getIndexes(feature_context));
+  EXPECT_TRUE(filter->hasIndex(feature_context, 0));
+  EXPECT_FALSE(filter->hasIndex(feature_context, 1));
+  EXPECT_TRUE(filter->hasIndex(feature_context, 2));
+  EXPECT_FALSE(filter->hasIndex(feature_context, 3));
+  EXPECT_TRUE(filter->hasIndex(feature_context, 4));
+
   // Context [2] maps to 1.
   context = {2};
   feature_context = FeatureContext(context);
-  expected_indexes = {1, 6, 8};
+  expected_indexes = {1, 4};
   EXPECT_EQ(expected_indexes, filter->getIndexes(feature_context));
+  EXPECT_FALSE(filter->hasIndex(feature_context, 0));
+  EXPECT_TRUE(filter->hasIndex(feature_context, 1));
+  EXPECT_FALSE(filter->hasIndex(feature_context, 2));
+  EXPECT_FALSE(filter->hasIndex(feature_context, 3));
+  EXPECT_TRUE(filter->hasIndex(feature_context, 4));
+
   // Context [3] maps to 2.
   context = {3};
   feature_context = FeatureContext(context);
-  expected_indexes = {2, 3, 5};
+  expected_indexes = {2, 3};
   EXPECT_EQ(expected_indexes, filter->getIndexes(feature_context));
+  EXPECT_FALSE(filter->hasIndex(feature_context, 0));
+  EXPECT_FALSE(filter->hasIndex(feature_context, 1));
+  EXPECT_TRUE(filter->hasIndex(feature_context, 2));
+  EXPECT_TRUE(filter->hasIndex(feature_context, 3));
+  EXPECT_FALSE(filter->hasIndex(feature_context, 4));
 }
 
 TEST_F(FeatureExactFilterTest, TestSerialization) {
@@ -75,17 +92,17 @@ TEST_F(FeatureExactFilterTest, TestSerialization) {
   // Context [0] maps to 0.
   vector<int> context = {0};
   FeatureContext feature_context(context);
-  vector<int> expected_indexes = {0, 2, 5};
+  vector<int> expected_indexes = {0, 2, 4};
   EXPECT_EQ(expected_indexes, filter_copy->getIndexes(feature_context));
   // Context [2] maps to 1.
   context = {2};
   feature_context = FeatureContext(context);
-  expected_indexes = {1, 6, 8};
+  expected_indexes = {1, 4};
   EXPECT_EQ(expected_indexes, filter_copy->getIndexes(feature_context));
   // Context [3] maps to 2.
   context = {3};
   feature_context = FeatureContext(context);
-  expected_indexes = {2, 3, 5};
+  expected_indexes = {2, 3};
   EXPECT_EQ(expected_indexes, filter_copy->getIndexes(feature_context));
 }
 

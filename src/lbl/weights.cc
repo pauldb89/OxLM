@@ -560,7 +560,7 @@ VectorReal Weights::getPredictionVector(const vector<int>& context) const {
   return config->sigmoid ? sigmoid(prediction_vector) : prediction_vector;
 }
 
-Real Weights::predict(int word_id, vector<int> context) const {
+Real Weights::getLogProb(int word_id, vector<int> context) const {
   VectorReal prediction_vector = getPredictionVector(context);
 
   auto ret = normalizerCache.get(context);
@@ -573,6 +573,12 @@ Real Weights::predict(int word_id, vector<int> context) const {
     normalizerCache.set(context, normalizer);
     return word_probs(word_id);
   }
+}
+
+Real Weights::getUnnormalizedScore(
+    int word_id, const vector<int>& context) const {
+  VectorReal prediction_vector = getPredictionVector(context);
+  return R.col(word_id).dot(prediction_vector) + B(word_id);
 }
 
 void Weights::clearCache() {

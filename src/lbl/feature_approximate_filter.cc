@@ -20,6 +20,12 @@ vector<int> FeatureApproximateFilter::getIndexes(
   return indexes;
 }
 
+bool FeatureApproximateFilter::hasIndex(
+    const FeatureContext& feature_context, int feature_index) const {
+  return bloomFilter->contains(
+      hasher->getPrediction(feature_index, feature_context));
+}
+
 bool FeatureApproximateFilter::operator==(const FeatureApproximateFilter& other) const {
   return numCandidates == other.numCandidates && *bloomFilter == *other.bloomFilter;
 }

@@ -53,7 +53,9 @@ class Model {
   void evaluate(
       const boost::shared_ptr<Corpus>& corpus, Real& accumulator) const;
 
-  Real predict(int word_id, const vector<int>& context) const;
+  Real getLogProb(int word_id, const vector<int>& context) const;
+
+  Real getUnnormalizedScore(int word_id, const vector<int>& context) const;
 
   MatrixReal getWordVectors() const;
 

@@ -40,6 +40,15 @@ VectorReal SparseGlobalFeatureStore::get(const vector<int>& context) const {
   return result;
 }
 
+Real SparseGlobalFeatureStore::getValue(
+    int feature_index, const vector<int>& context) const {
+  Real result = 0;
+  for (int feature_context_id: extractor->getFeatureContextIds(context)) {
+    result += featureWeights[feature_context_id].coeff(feature_index);
+  }
+  return result;
+}
+
 void SparseGlobalFeatureStore::l2GradientUpdate(
     const boost::shared_ptr<MinibatchFeatureStore>& base_minibatch_store,
     Real sigma) {

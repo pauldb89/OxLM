@@ -31,9 +31,20 @@ TEST_F(FeatureApproximateFilterTest, TestBasic) {
   vector<int> context = {1, 2};
   vector<int> expected_indexes = {1, 3};
   EXPECT_EQ(expected_indexes, filter.getIndexes(context));
+  EXPECT_FALSE(filter.hasIndex(context, 0));
+  EXPECT_TRUE(filter.hasIndex(context, 1));
+  EXPECT_FALSE(filter.hasIndex(context, 2));
+  EXPECT_TRUE(filter.hasIndex(context, 3));
+  EXPECT_FALSE(filter.hasIndex(context, 4));
+
   context = {1, 5};
   expected_indexes = {2};
   EXPECT_EQ(expected_indexes, filter.getIndexes(context));
+  EXPECT_FALSE(filter.hasIndex(context, 0));
+  EXPECT_FALSE(filter.hasIndex(context, 1));
+  EXPECT_TRUE(filter.hasIndex(context, 2));
+  EXPECT_FALSE(filter.hasIndex(context, 3));
+  EXPECT_FALSE(filter.hasIndex(context, 4));
 }
 
 TEST_F(FeatureApproximateFilterTest, TestSerialization) {

@@ -304,9 +304,15 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::evaluate(
 }
 
 template<class GlobalWeights, class MinibatchWeights, class Metadata>
-Real Model<GlobalWeights, MinibatchWeights, Metadata>::predict(
+Real Model<GlobalWeights, MinibatchWeights, Metadata>::getLogProb(
     int word_id, const vector<int>& context) const {
-  return weights->predict(word_id, context);
+  return weights->getLogProb(word_id, context);
+}
+
+template<class GlobalWeights, class MinibatchWeights, class Metadata>
+Real Model<GlobalWeights, MinibatchWeights, Metadata>::getUnnormalizedScore(
+    int word_id, const vector<int>& context) const {
+  return weights->getUnnormalizedScore(word_id, context);
 }
 
 template<class GlobalWeights, class MinibatchWeights, class Metadata>

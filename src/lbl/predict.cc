@@ -33,7 +33,7 @@ void predict(const string& model_file, const string& contexts_file) {
     vector<pair<double, int>> outcomes;
     for (int word_id = 0; word_id < vocab->size(); ++word_id) {
       outcomes.push_back(make_pair(
-          exp(model.predict(word_id, context)), word_id));
+          exp(model.getLogProb(word_id, context)), word_id));
     }
 
     sort(outcomes.begin(), outcomes.end());

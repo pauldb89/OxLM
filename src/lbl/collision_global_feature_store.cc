@@ -27,6 +27,19 @@ VectorReal CollisionGlobalFeatureStore::get(const vector<int>& context) const {
   return result;
 }
 
+Real CollisionGlobalFeatureStore::getValue(
+    int feature_index, const vector<int>& context) const {
+  Real result = 0;
+  for (const auto& feature_context: generator.getFeatureContexts(context)) {
+    int key = hasher->getKey(feature_context);
+    if (filter->hasIndex(feature_context, feature_index)) {
+      result += space->featureWeights[(key + feature_index) % hashSpaceSize];
+    }
+  }
+
+  return result;
+}
+
 void CollisionGlobalFeatureStore::l2GradientUpdate(
     const boost::shared_ptr<MinibatchFeatureStore>& base_store, Real sigma) {
   boost::shared_ptr<CollisionMinibatchFeatureStore> store =

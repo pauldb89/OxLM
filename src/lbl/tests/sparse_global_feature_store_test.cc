@@ -84,8 +84,19 @@ TEST_F(SparseGlobalFeatureStoreTest, TestUpdateSquared) {
   VectorReal expected_values(5);
   expected_values << 25, 9, 0, 0, 0;
   EXPECT_MATRIX_NEAR(expected_values, store.get(context1), EPS);
+  EXPECT_NEAR(25, store.getValue(0, context1), EPS);
+  EXPECT_NEAR(9, store.getValue(1, context1), EPS);
+  EXPECT_NEAR(0, store.getValue(2, context1), EPS);
+  EXPECT_NEAR(0, store.getValue(3, context1), EPS);
+  EXPECT_NEAR(0, store.getValue(4, context1), EPS);
+
   expected_values << 0, 0, 4, 1, 0;
   EXPECT_MATRIX_NEAR(expected_values, store.get(context2), EPS);
+  EXPECT_NEAR(0, store.getValue(0, context2), EPS);
+  EXPECT_NEAR(0, store.getValue(1, context2), EPS);
+  EXPECT_NEAR(4, store.getValue(2, context2), EPS);
+  EXPECT_NEAR(1, store.getValue(3, context2), EPS);
+  EXPECT_NEAR(0, store.getValue(4, context2), EPS);
 }
 
 TEST_F(SparseGlobalFeatureStoreTest, TestUpdateAdaGrad) {
@@ -99,9 +110,19 @@ TEST_F(SparseGlobalFeatureStoreTest, TestUpdateAdaGrad) {
   VectorReal expected_values(5);
   expected_values << 24, 8, 0, 0, 0;
   EXPECT_MATRIX_NEAR(expected_values, store.get(context1), EPS);
+  EXPECT_NEAR(24, store.getValue(0, context1), EPS);
+  EXPECT_NEAR(8, store.getValue(1, context1), EPS);
+  EXPECT_NEAR(0, store.getValue(2, context1), EPS);
+  EXPECT_NEAR(0, store.getValue(3, context1), EPS);
+  EXPECT_NEAR(0, store.getValue(4, context1), EPS);
+
   expected_values << 0, 0, 3, 0, 0;
   EXPECT_MATRIX_NEAR(expected_values, store.get(context2), EPS);
-
+  EXPECT_NEAR(0, store.getValue(0, context2), EPS);
+  EXPECT_NEAR(0, store.getValue(1, context2), EPS);
+  EXPECT_NEAR(3, store.getValue(2, context2), EPS);
+  EXPECT_NEAR(0, store.getValue(3, context2), EPS);
+  EXPECT_NEAR(0, store.getValue(4, context2), EPS);
 }
 
 TEST_F(SparseGlobalFeatureStoreTest, TestUpdateRegularizer) {
@@ -112,8 +133,19 @@ TEST_F(SparseGlobalFeatureStoreTest, TestUpdateRegularizer) {
   VectorReal expected_values(5);
   expected_values << 12.5, 4.5, 0, 0, 0;
   EXPECT_MATRIX_NEAR(expected_values, store.get(context1), EPS);
+  EXPECT_NEAR(12.5, store.getValue(0, context1), EPS);
+  EXPECT_NEAR(4.5, store.getValue(1, context1), EPS);
+  EXPECT_NEAR(0, store.getValue(2, context1), EPS);
+  EXPECT_NEAR(0, store.getValue(3, context1), EPS);
+  EXPECT_NEAR(0, store.getValue(4, context1), EPS);
+
   expected_values << 0, 0, 2, 0.5, 0;
   EXPECT_MATRIX_NEAR(expected_values, store.get(context2), EPS);
+  EXPECT_NEAR(0, store.getValue(0, context2), EPS);
+  EXPECT_NEAR(0, store.getValue(1, context2), EPS);
+  EXPECT_NEAR(2, store.getValue(2, context2), EPS);
+  EXPECT_NEAR(0.5, store.getValue(3, context2), EPS);
+  EXPECT_NEAR(0, store.getValue(4, context2), EPS);
 }
 
 TEST_F(SparseGlobalFeatureStoreTest, TestSerialization) {

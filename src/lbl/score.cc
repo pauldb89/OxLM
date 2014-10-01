@@ -25,7 +25,7 @@ void score(const string& model_file, const string& data_file) {
   for (size_t i = 0; i < test_corpus->size(); ++i) {
     int word_id = test_corpus->at(i);
     vector<int> context = processor.extract(i);
-    double log_prob = model.predict(word_id, context);
+    double log_prob = model.getLogProb(word_id, context);
     total += log_prob;
     cout << "(" << vocab->convert(word_id) << " " << log_prob << ") ";
     if (word_id == eos) {

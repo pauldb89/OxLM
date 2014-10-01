@@ -35,11 +35,12 @@ class FF_LBLLM : public FeatureFunction {
   FF_LBLLM(
       const string& filename,
       const string& feature_name,
+      bool normalized,
       bool persistent_cache)
       : fid(FD::Convert(feature_name)),
         fidOOV(FD::Convert(feature_name + "_OOV")),
-        filename(filename), persistentCache(persistent_cache),
-        cacheHits(0), totalHits(0) {
+        filename(filename), normalized(normalized),
+        persistentCache(persistent_cache), cacheHits(0), totalHits(0) {
     model.load(filename);
 
     config = model.getConfig();
@@ -157,6 +158,14 @@ class FF_LBLLM : public FeatureFunction {
     return ret;
   }
 
+  Real getScore(int word, const vector<int>& context) const {
+    if (normalized) {
+      return model.getLogProb(word, context);
+    } else {
+      return model.getUnnormalizedScore(word, context);
+    }
+  }
+
   LBLFeatures scoreContext(const vector<int>& symbols, int position) const {
     int word = symbols[position];
     int context_width = config->ngram_order - 1;
@@ -194,11 +203,11 @@ class FF_LBLLM : public FeatureFunction {
         ++cacheHits;
         score = ret.first;
       } else {
-        score = model.predict(word, context);
+        score = getScore(word, context);
         cache.put(query, score);
       }
     } else {
-      score = model.predict(word, context);
+      score = getScore(word, context);
     }
 
     // Return the score, along with the OOV indicator feature value
@@ -281,6 +290,8 @@ class FF_LBLLM : public FeatureFunction {
   int kUNKNOWN;
   int kSTAR;
 
+  bool normalized;
+
   bool persistentCache;
   string cacheFile;
   mutable QueryCache cache;
@@ -291,7 +302,7 @@ class FF_LBLLM : public FeatureFunction {
 
 void ParseOptions(
     const string& input, string& filename, string& feature_name,
-    oxlm::ModelType& model_type, bool& persistent_cache) {
+    oxlm::ModelType& model_type, bool& normalized, bool& persistent_cache) {
   po::options_description options("LBL language model options");
   options.add_options()
       ("file,f", po::value<string>()->required(),
@@ -300,6 +311,8 @@ void ParseOptions(
           "Feature name")
       ("type,t", po::value<int>()->required(),
           "Model type")
+      ("normalized", po::value<bool>()->required()->default_value(true),
+          "Normalize the output of the neural network")
       ("persistent-cache",
           "Cache queries persistently between consecutive decoder runs");
 
@@ -312,6 +325,7 @@ void ParseOptions(
   filename = vm["file"].as<string>();
   feature_name = vm["name"].as<string>();
   model_type = static_cast<oxlm::ModelType>(vm["type"].as<int>());
+  normalized = vm["normalized"].as<bool>();
   persistent_cache = vm.count("persistent-cache");
 }
 
@@ -324,17 +338,20 @@ class UnknownModelException : public exception {
 extern "C" FeatureFunction* create_ff(const string& str) {
   string filename, feature_name;
   oxlm::ModelType model_type;
-  bool persistent_cache;
-  ParseOptions(str, filename, feature_name, model_type, persistent_cache);
+  bool normalized, persistent_cache;
+  ParseOptions(
+      str, filename, feature_name, model_type, normalized, persistent_cache);
 
   switch (model_type) {
     case NLM:
-      return new FF_LBLLM<LM>(filename, feature_name, persistent_cache);
+      return new FF_LBLLM<LM>(
+          filename, feature_name, normalized, persistent_cache);
     case FACTORED_NLM:
-      return new FF_LBLLM<FactoredLM>(filename, feature_name, persistent_cache);
+      return new FF_LBLLM<FactoredLM>(
+          filename, feature_name, normalized, persistent_cache);
     case FACTORED_MAXENT_NLM:
       return new FF_LBLLM<FactoredMaxentLM>(
-          filename, feature_name, persistent_cache);
+          filename, feature_name, normalized, persistent_cache);
     default:
       throw UnknownModelException();
   }
