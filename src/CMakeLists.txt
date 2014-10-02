@@ -106,6 +106,6 @@ add_subdirectory(lbl)
 add_subdirectory(utils)
 
 # Third party libraries
-add_subdirectory(third_party/eigen)
+# add_subdirectory(third_party/eigen)
 add_subdirectory(third_party/gtest)
 add_subdirectory(third_party/smhasher)
