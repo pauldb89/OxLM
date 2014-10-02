@@ -110,7 +110,7 @@ where `model-type` is 1 for standard language models, 2 for factored language mo
 
 To incorporate our neural language models as a normalized feature in the `cdec` decoder (in the beam search), simply edit the `cdec.ini` configuration file to include the following line:
 
-    feature_function=External oxlm/lib/libcdec_ff_lbl.so --file model.bin --name LM2 --type model-type
+    feature_function=External oxlm/lib/libcdec_ff_lbl.so --file /absolute/path/to/model.bin --name LM2 --type model-type
 
 `model-type` must be set to 1 if you are using a standard language model, 2 for factored language models and 3 for factored models with direct n-gram features.
 
