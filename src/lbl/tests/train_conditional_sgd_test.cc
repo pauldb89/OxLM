@@ -40,7 +40,7 @@ TEST_F(ConditionalSGDTest, TestTrainConditionalNCE) {
   boost::shared_ptr<Corpus> test_corpus = readTestCorpus(config, vocab);
   Real log_likelihood = 0;
   model.evaluate(test_corpus, log_likelihood);
-  EXPECT_NEAR(49.6571464, perplexity(log_likelihood, test_corpus->size()), EPS);
+  EXPECT_NEAR(49.657169, perplexity(log_likelihood, test_corpus->size()), EPS);
 }
 
 } // namespace oxlm

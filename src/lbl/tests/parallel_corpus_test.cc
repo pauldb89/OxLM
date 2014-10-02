@@ -13,9 +13,9 @@ TEST(ParallelCorpusTest, TestBasic) {
   EXPECT_EQ(13059, corpus.size());
   EXPECT_EQ(14441, corpus.sourceSize());
 
-  EXPECT_EQ(vocab->convert("$"), corpus.at(0));
-  EXPECT_EQ(vocab->convert("10,000"), corpus.at(1));
-  EXPECT_EQ(vocab->convert("gold"), corpus.at(2));
+  EXPECT_EQ(vocab->convert("<unk>"), corpus.at(0));
+  EXPECT_EQ(vocab->convert("<unk>"), corpus.at(1));
+  EXPECT_EQ(vocab->convert("<unk>"), corpus.at(2));
   EXPECT_EQ(vocab->convert("?"), corpus.at(3));
   EXPECT_EQ(vocab->convert("</s>"), corpus.at(4));
 
