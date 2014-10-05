@@ -16,12 +16,12 @@ TEST(CdecStateConverterTest, TestConvertFromState) {
   state[16] = 3;
 
   vector<int> expected_symbols = {5, 10, 7};
-  EXPECT_EQ(expected_symbols, converter.convert(state));
+  EXPECT_EQ(expected_symbols, converter.getTerminals(state));
 
   new_state[3] = 19;
   state[16] = 4;
   expected_symbols = {5, 10, 7, 19};
-  EXPECT_EQ(expected_symbols, converter.convert(state));
+  EXPECT_EQ(expected_symbols, converter.getTerminals(state));
 
   delete state;
 }
@@ -32,14 +32,14 @@ TEST(CdecStateConverterTest, TestConvertToState) {
   int* new_state = reinterpret_cast<int*>(state);
 
   vector<int> symbols = {5, 10, 7};
-  converter.convert(symbols, state);
+  converter.convert(state, symbols);
   EXPECT_EQ(5, new_state[0]);
   EXPECT_EQ(10, new_state[1]);
   EXPECT_EQ(7, new_state[2]);
   EXPECT_EQ(3, state[16]);
 
   symbols = {5, 10, 7, 19};
-  converter.convert(symbols, state);
+  converter.convert(state, symbols);
   EXPECT_EQ(5, new_state[0]);
   EXPECT_EQ(10, new_state[1]);
   EXPECT_EQ(7, new_state[2]);

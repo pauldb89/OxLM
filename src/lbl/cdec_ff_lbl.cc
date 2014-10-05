@@ -114,7 +114,7 @@ class FF_LBLLM : public FeatureFunction {
     }
 
     constructNextState(symbols, next_state);
-    symbols = stateConverter->convert(next_state);
+    symbols = stateConverter->getTerminals(next_state);
 
     LBLFeatures estimated_scores = estimateScore(symbols);
     if (estimated_scores.LMScore) {
@@ -127,7 +127,7 @@ class FF_LBLLM : public FeatureFunction {
 
   virtual void FinalTraversalFeatures(
       const void* prev_state, SparseVector<double>* features) const {
-    vector<int> symbols = stateConverter->convert(prev_state);
+    vector<int> symbols = stateConverter->getTerminals(prev_state);
     symbols.insert(symbols.begin(), kSTART);
     symbols.push_back(kSTOP);
 
@@ -242,7 +242,7 @@ class FF_LBLLM : public FeatureFunction {
       }
     }
 
-    stateConverter->convert(next_state, state);
+    stateConverter->convert(state, next_state);
   }
 
   LBLFeatures estimateScore(const vector<int>& symbols) const {

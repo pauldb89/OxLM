@@ -60,14 +60,22 @@ add_libraries(lbl
 target_link_libs(lbl murmurhash rt ${Boost_LIBRARIES})
 
 if(CDEC_FOUND)
-  include_directories(cdec_ff_lbl PRIVATE ${CDEC_INCLUDE_DIRS})
+  include_directories(cdec_ff_lbl_with_src cdec_ff_lbl PRIVATE ${CDEC_INCLUDE_DIRS})
   add_libraries(cdec_ff_lbl
       cdec_ff_lbl.cc
       cdec_lbl_mapper.cc
       cdec_rule_converter.cc
       cdec_state_converter.cc
       lbl_features.cc)
-  target_link_libs(cdec_ff_lbl lbl)
+
+ add_libraries(cdec_ff_lbl_with_src
+      cdec_ff_lbl_with_src.cc
+      cdec_lbl_mapper.cc
+      cdec_rule_converter.cc
+      cdec_state_converter.cc
+      lbl_features.cc)
+
+  target_link_libs(cdec_ff_lbl_with_src cdec_ff_lbl lbl)
 endif(CDEC_FOUND)
 
 #############################################
@@ -79,8 +87,6 @@ set(EXECUTABLES
   evaluate
   evaluate_parallel
   predict
-  score
-  score_parallel
   train_conditional_sgd
   train_factored_sgd
   train_maxent_sgd
