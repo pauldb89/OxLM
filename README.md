@@ -72,7 +72,7 @@ Partition the vocabulary using [agglomerative Brown clustering](https://github.c
                            --text training.unk.en \
                            --output_dir=clusters
 
-Set `num-clusters` to the square root of the size of the vocabulary. To train the model, run:
+For optimal performance, set `num-clusters` to `3 * sqrt(vocabulary_size)`. To train the model, run:
 
     oxlm/bin/train_factored_sgd -c oxlm.ini \
                             --threads=8 \
