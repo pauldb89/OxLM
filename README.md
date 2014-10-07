@@ -69,6 +69,7 @@ Unless your vocabulary is really small, you probably want to look at factored mo
 Partition the vocabulary using [agglomerative Brown clustering](https://github.com/percyliang/brown-cluster):
 
     brown-cluster/wcluster --c num-clusters \
+                           --threads=8
                            --text training.unk.en \
                            --output_dir=clusters
 
