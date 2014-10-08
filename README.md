@@ -124,13 +124,13 @@ To incorporate our neural language models as a normalized feature in the `cdec` 
 
 Similarly, if you want to incorporate our language models in the `Moses` decoder, you first need to compile `Moses` as follows:
 
-    ./bjam --with-lbllm=<path/to/oxlm>
+    ./bjam --with-oxlm=<path/to/oxlm>
 
 You also need to specify the feature in the `Moses` configuration file under the `[feature]` section:
 
     FeatureType name=LM1 path=model.bin order=5
 
-where `FeatureType` is one of `LBLLM-LM`, `LBLLM-FactoredLM` or `LBLLM-FactoredMaxentLM`. You must also specify the initial language model weight under the `[weight]` section:
+where `FeatureType` is one of `OxLM`, `OxFactoredLM` or `OxFactoredMaxentLM`. You must also specify the initial language model weight under the `[weight]` section:
 
     LM1= 0.5
 
