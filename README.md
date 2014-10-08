@@ -78,11 +78,15 @@ Partition the vocabulary using [agglomerative Brown clustering](https://github.c
                            --text training.unk.en \
                            --output_dir=clusters
 
-For optimal performance, set `num-clusters` to `3 * sqrt(vocabulary_size)`. To train the model, run:
+For optimal performance, set `num-clusters` to `3 * sqrt(vocabulary_size)`.
 
-    oxlm/bin/train_factored_sgd -c oxlm.ini \
-                            --model-out=model.bin \
-                            --class-file=clusters/paths
+Append the class file to the `oxlm.ini` configuration file:
+
+    class-file=clusters/paths
+
+To train the model, run:
+
+    oxlm/bin/train_factored_sgd -c oxlm.ini --model-out=model.bin
 
 #### Train a factored model with direct n-gram features
 
@@ -94,9 +98,7 @@ Append the following to the `oxlm.ini` configuration file:
 
 Run the following command to train the model:
 
-    oxlm/bin/train_maxent_sgd -c oxlm.ini \
-                          --model-out=model.bin \
-                          --class-file=clusters/paths
+    oxlm/bin/train_maxent_sgd -c oxlm.ini --model-out=model.bin
 
 This will use a one-to-one mapping from features to weights. If you want to use a lower dimensional feature space for the weights (i.e. collision stores), use the `--hash-space` parameter. Generally, setting the hash-space to 1/2 or 1/4 of the total number of features results in a negligible loss in perplexity. Collision store reduce the memory requirements significantly.
 
