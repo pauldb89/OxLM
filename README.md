@@ -53,14 +53,19 @@ Create a `oxlm.ini` file with the following contents:
     diagonal-contexts=true
     sigmoid=true
 
+    threads=12
+
     input=training.unk.en
     test-set=dev.unk.en
 
 Run:
 
-    oxlm/bin/train_sgd -c oxlm.ini --threads=8 --model-out=model.bin
+    oxlm/bin/train_sgd -c oxlm.ini --model-out=model.bin
 
-Set the `--noise-samples` argument, if you want to train the models using noise contrastive estimation instead of minibatch stochastic gradient descent.
+Set the `--noise-samples` argument, if you want to train the models using noise
+contrastive estimation instead of minibatch stochastic gradient descent. The
+optimal number of threads for stochastic gradient descent is 12, while the
+optimal number of threads for noise contrastive estimation is 8.
 
 Unless your vocabulary is really small, you probably want to look at factored models instead.
 
@@ -69,14 +74,13 @@ Unless your vocabulary is really small, you probably want to look at factored mo
 Partition the vocabulary using [agglomerative Brown clustering](https://github.com/percyliang/brown-cluster):
 
     brown-cluster/wcluster --c num-clusters \
-                           --threads=8 \
+                           --threads=10 \
                            --text training.unk.en \
                            --output_dir=clusters
 
 For optimal performance, set `num-clusters` to `3 * sqrt(vocabulary_size)`. To train the model, run:
 
     oxlm/bin/train_factored_sgd -c oxlm.ini \
-                            --threads=8 \
                             --model-out=model.bin \
                             --class-file=clusters/paths
 
@@ -91,7 +95,6 @@ Append the following to the `oxlm.ini` configuration file:
 Run the following command to train the model:
 
     oxlm/bin/train_maxent_sgd -c oxlm.ini \
-                          --threads=8 \
                           --model-out=model.bin \
                           --class-file=clusters/paths
 
