@@ -36,15 +36,11 @@ ParallelCorpus::ParallelCorpus(
 
 	ifstream tin(training_file);
 	ifstream ain(alignment_file);
-  string line;
-	while (tin.good() && ain.good()) {
+  string training_line, alignment_line;
+	while (getline(tin, training_line) && getline(ain, alignment_line)) {
     int prev_source_size = srcData.size();
     int prev_target_size = data.size();
-
-    // Read a sentence pair.
-    getline(tin, line);
-    tin >> ws;
-    stringstream stream(line);
+    stringstream stream(training_line);
     string token;
     while (stream >> token) {
       if (token == "|||") {
@@ -63,10 +59,7 @@ ParallelCorpus::ParallelCorpus(
     data.push_back(end_id);
 
     alignments.resize(data.size());
-    // Read alignment links for previous sentence pair.
-    getline(ain, line);
-    ain >> ws;
-    stringstream astream(line);
+    stringstream astream(alignment_line);
     while (astream >> token) {
       size_t pos = token.find("-");
       int src_pos = stoi(token.substr(0, pos));

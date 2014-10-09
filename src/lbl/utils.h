@@ -63,6 +63,14 @@ inline Array2DReal sigmoidDerivative(const MatrixReal& v) {
   return v.array() * (1 - v.array());
 }
 
+inline Real LogAdd(Real log_a, Real log_b) {
+  if (log_a >= log_b) {
+    return log_a + log1p(exp(log_b - log_a));
+  } else {
+    return log_b + log1p(exp(log_a - log_b));
+  }
+}
+
 // Helper functions for time measurement.
 
 Time GetTime();

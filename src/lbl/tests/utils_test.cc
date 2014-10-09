@@ -63,6 +63,11 @@ TEST(UtilsTest, TestSigmoidDerivative) {
   EXPECT_MATRIX_NEAR(expected_w, w, EPS);
 }
 
+TEST(UtilsTest, LogAddTest) {
+  EXPECT_NEAR(log(7), LogAdd(log(3), log(4)), EPS);
+  EXPECT_NEAR(log(9), LogAdd(log(5), log(4)), EPS);
+}
+
 TEST(UtilsTest, TestMurmurHash) {
   vector<int> data = {0};
   EXPECT_EQ(14961230494313510588ULL, MurmurHash(data, 0));

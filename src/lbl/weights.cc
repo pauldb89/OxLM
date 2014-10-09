@@ -379,34 +379,37 @@ void Weights::estimateProjectionGradient(
     }
   }
 
+  Real log_num_samples = log(noise_samples);
   weighted_representations = MatrixReal::Zero(word_width, indices.size());
   for (size_t i = 0; i < indices.size(); ++i) {
     int word_id = corpus->at(indices[i]);
-    Real log_pos_prob = R.col(word_id).dot(prediction_vectors.col(i)) + B(word_id);
-    Real pos_prob = exp(log_pos_prob);
-    assert(pos_prob <= numeric_limits<Real>::max());
+    Real log_score = R.col(word_id).dot(prediction_vectors.col(i)) + B(word_id);
+    Real log_noise = log_num_samples + log(unigram(word_id));
+    Real log_norm = LogAdd(log_score, log_noise);
 
-    Real pos_weight = (noise_samples * unigram(word_id)) / (pos_prob + noise_samples * unigram(word_id));
-    weighted_representations.col(i) -= pos_weight * R.col(word_id);
+    objective -= log_score - log_norm;
 
-    objective -= log(1 - pos_weight);
+    Real prob = exp(log_noise - log_norm);
+    assert(prob <= numeric_limits<Real>::max());
+    weighted_representations.col(i) -= prob * R.col(word_id);
 
-    gradient->R.col(word_id) -= pos_weight * prediction_vectors.col(i);
-    gradient->B(word_id) -= pos_weight;
+    gradient->R.col(word_id) -= prob * prediction_vectors.col(i);
+    gradient->B(word_id) -= prob;
 
     for (int j = 0; j < noise_samples; ++j) {
       int noise_word_id = noise_words[i][j];
-      Real log_neg_prob = R.col(noise_word_id).dot(prediction_vectors.col(i)) + B(noise_word_id);
-      Real neg_prob = exp(log_neg_prob);
-      assert(neg_prob <= numeric_limits<Real>::max());
+      Real log_score = R.col(noise_word_id).dot(prediction_vectors.col(i)) + B(noise_word_id);
+      Real log_noise = log_num_samples + log(unigram(noise_word_id));
+      Real log_norm = LogAdd(log_score, log_noise);
 
-      Real neg_weight = neg_prob / (neg_prob + noise_samples * unigram(noise_word_id));
-      weighted_representations.col(i) += neg_weight * R.col(noise_word_id);
+      objective -= log_noise - log_norm;
 
-      objective -= log(1 - neg_weight);
+      Real prob = exp(log_score - log_norm);
+      assert(prob <= numeric_limits<Real>::max());
+      weighted_representations.col(i) += prob * R.col(noise_word_id);
 
-      gradient->R.col(noise_word_id) += neg_weight * prediction_vectors.col(i);
-      gradient->B(noise_word_id) += neg_weight;
+      gradient->R.col(noise_word_id) += prob * prediction_vectors.col(i);
+      gradient->B(noise_word_id) += prob;
     }
   }
 }

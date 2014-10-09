@@ -53,14 +53,19 @@ Create a `oxlm.ini` file with the following contents:
     diagonal-contexts=true
     sigmoid=true
 
+    threads=12
+
     input=training.unk.en
     test-set=dev.unk.en
 
 Run:
 
-    oxlm/bin/train_sgd -c oxlm.ini --threads=8 --model-out=model.bin
+    oxlm/bin/train_sgd -c oxlm.ini --model-out=model.bin
 
-Set the `--noise-samples` argument, if you want to train the models using noise contrastive estimation instead of minibatch stochastic gradient descent.
+Set the `--noise-samples` argument, if you want to train the models using noise
+contrastive estimation instead of minibatch stochastic gradient descent. The
+optimal number of threads for stochastic gradient descent is 12, while the
+optimal number of threads for noise contrastive estimation is 8.
 
 Unless your vocabulary is really small, you probably want to look at factored models instead.
 
@@ -69,15 +74,19 @@ Unless your vocabulary is really small, you probably want to look at factored mo
 Partition the vocabulary using [agglomerative Brown clustering](https://github.com/percyliang/brown-cluster):
 
     brown-cluster/wcluster --c num-clusters \
+                           --threads=10 \
                            --text training.unk.en \
                            --output_dir=clusters
 
-Set `num-clusters` to the square root of the size of the vocabulary. To train the model, run:
+For optimal performance, set `num-clusters` to `3 * sqrt(vocabulary_size)`.
 
-    oxlm/bin/train_factored_sgd -c oxlm.ini \
-                            --threads=8 \
-                            --model-out=model.bin \
-                            --class-file=clusters/paths
+Append the class file to the `oxlm.ini` configuration file:
+
+    class-file=clusters/paths
+
+To train the model, run:
+
+    oxlm/bin/train_factored_sgd -c oxlm.ini --model-out=model.bin
 
 #### Train a factored model with direct n-gram features
 
@@ -89,10 +98,7 @@ Append the following to the `oxlm.ini` configuration file:
 
 Run the following command to train the model:
 
-    oxlm/bin/train_maxent_sgd -c oxlm.ini \
-                          --threads=8 \
-                          --model-out=model.bin \
-                          --class-file=clusters/paths
+    oxlm/bin/train_maxent_sgd -c oxlm.ini --model-out=model.bin
 
 This will use a one-to-one mapping from features to weights. If you want to use a lower dimensional feature space for the weights (i.e. collision stores), use the `--hash-space` parameter. Generally, setting the hash-space to 1/2 or 1/4 of the total number of features results in a negligible loss in perplexity. Collision store reduce the memory requirements significantly.
 
@@ -110,7 +116,7 @@ where `model-type` is 1 for standard language models, 2 for factored language mo
 
 To incorporate our neural language models as a normalized feature in the `cdec` decoder (in the beam search), simply edit the `cdec.ini` configuration file to include the following line:
 
-    feature_function=External oxlm/lib/libcdec_ff_lbl.so --file model.bin --name LM2 --type model-type
+    feature_function=External oxlm/lib/libcdec_ff_lbl.so --file /absolute/path/to/model.bin --name LM2 --type model-type
 
 `model-type` must be set to 1 if you are using a standard language model, 2 for factored language models and 3 for factored models with direct n-gram features.
 
@@ -118,13 +124,13 @@ To incorporate our neural language models as a normalized feature in the `cdec` 
 
 Similarly, if you want to incorporate our language models in the `Moses` decoder, you first need to compile `Moses` as follows:
 
-    ./bjam --with-lbllm=<path/to/oxlm>
+    ./bjam --with-oxlm=<path/to/oxlm>
 
 You also need to specify the feature in the `Moses` configuration file under the `[feature]` section:
 
     FeatureType name=LM1 path=model.bin order=5
 
-where `FeatureType` is one of `LBLLM-LM`, `LBLLM-FactoredLM` or `LBLLM-FactoredMaxentLM`. You must also specify the initial language model weight under the `[weight]` section:
+where `FeatureType` is one of `OxLM`, `OxFactoredLM` or `OxFactoredMaxentLM`. You must also specify the initial language model weight under the `[weight]` section:
 
     LM1= 0.5
 
