@@ -15,15 +15,14 @@ class CdecRuleConverter {
  public:
   CdecRuleConverter(
       const boost::shared_ptr<CdecLBLMapper>& mapper,
-      const boost::shared_ptr<CdecStateConverter>& state_converter);
+      const boost::shared_ptr<CdecStateConverterBase>& state_converter);
 
   vector<int> convertTargetSide(
-      const vector<int>& target, const vector<const void*>& prev_states,
-      bool hasSourceSideInfo = false) const;
+      const vector<int>& target, const vector<const void*>& prev_states) const;
 
  private:
   boost::shared_ptr<CdecLBLMapper> mapper;
-  boost::shared_ptr<CdecStateConverter> stateConverter;
+  boost::shared_ptr<CdecStateConverterBase> stateConverter;
 };
 
 } // namespace oxlm

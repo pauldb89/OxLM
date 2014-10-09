@@ -76,7 +76,7 @@ class FF_SourceLBLLM : public FeatureFunction {
 
     vocab = dynamic_pointer_cast<ParallelVocabulary>(model.getVocab());
     mapper = boost::make_shared<CdecLBLMapper>(vocab);
-    stateConverter = boost::make_shared<CdecStateConverter>(max_state_size - 1);
+    stateConverter = boost::make_shared<CdecConditionalStateConverter>(max_state_size - 1);
     ruleConverter = boost::make_shared<CdecRuleConverter>(mapper, stateConverter);
 
     kSTART = vocab->convert("<s>");
@@ -474,8 +474,7 @@ class FF_SourceLBLLM : public FeatureFunction {
     
     // This unrolls non-terminals, giving us a list of all the terminals covered
     // by this rule, including those under NTs.
-    vector<int> symbols = ruleConverter->convertTargetSide(
-      target, prev_states, true);
+    vector<int> symbols = ruleConverter->convertTargetSide(target, prev_states);
 
     // Work out the affiliations for all the covered terminals, including
     // terminals covered by child NTs.
@@ -506,7 +505,7 @@ class FF_SourceLBLLM : public FeatureFunction {
 
     // Convert the next state into a list of terminals, and use it to do
     // future cost estimation.
-    symbols = stateConverter->getTerminals(next_state, true);
+    symbols = stateConverter->getTerminals(next_state);
     const vector<int>& next_state_affiliations = stateConverter->getAffiliations(next_state);
     LBLFeatures estimated_scores = estimateScore(symbols, next_state_affiliations);
     if (estimated_scores.LMScore) {
@@ -523,7 +522,7 @@ class FF_SourceLBLLM : public FeatureFunction {
     // surrounding the sentence with <s> and </s>.
     // Note: <s> and </s> are always affiliated with the first and last
     // words of the source sentence, respectively.
-    vector<int> symbols = stateConverter->getTerminals(prev_state, true);
+    vector<int> symbols = stateConverter->getTerminals(prev_state);
     symbols.insert(symbols.begin(), kSTART);
     symbols.push_back(kSTOP);
 
@@ -767,7 +766,7 @@ class FF_SourceLBLLM : public FeatureFunction {
   Model model;
   boost::shared_ptr<CdecLBLMapper> mapper;
   boost::shared_ptr<CdecRuleConverter> ruleConverter;
-  boost::shared_ptr<CdecStateConverter> stateConverter;
+  boost::shared_ptr<CdecConditionalStateConverter> stateConverter;
 
   int kSTART;
   int kSTOP;
