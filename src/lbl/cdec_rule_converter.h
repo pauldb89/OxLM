@@ -21,7 +21,7 @@ class CdecRuleConverter {
       const vector<int>& target, const vector<const void*>& prev_states,
       bool hasSourceSideInfo = false) const;
 
-// private:
+ private:
   boost::shared_ptr<CdecLBLMapper> mapper;
   boost::shared_ptr<CdecStateConverter> stateConverter;
 };

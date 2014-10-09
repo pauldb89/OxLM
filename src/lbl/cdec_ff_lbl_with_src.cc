@@ -44,9 +44,9 @@ bool alignment_point_compare (const AlignmentPoint& lhs, const AlignmentPoint& r
 }
 
 template<class Model>
-class FF_LBLLM2 : public FeatureFunction {
+class FF_SourceLBLLM : public FeatureFunction {
  public:
-  FF_LBLLM2(
+  FF_SourceLBLLM(
       const string& filename,
       const string& feature_name,
       bool persistent_cache)
@@ -207,9 +207,9 @@ class FF_LBLLM2 : public FeatureFunction {
       int targetWordIndex) const {
     assert (targetWordIndex < target.size());
     assert (target[targetWordIndex] > 0);
-    vector<int> alignment_by_index(target.size(), -1);
+    vector<vector<int>> alignment_by_index(target.size());
     for (AlignmentPoint ap : alignment) {
-      alignment_by_index[ap.t_] = ap.s_;
+      alignment_by_index[ap.t_].push_back(ap.s_);
     }
 
     vector<const void*> state_by_index(target.size(), NULL); 
@@ -221,8 +221,10 @@ class FF_LBLLM2 : public FeatureFunction {
 
     // If the target word at the desired index is aligned
     // we can short circuit and just return the word it's aligned to.
-    if (alignment_by_index[targetWordIndex] != -1) {
-      return sourcePositions[alignment_by_index[targetWordIndex]];
+    // If there's more than one, we return the middle one.
+    if (alignment_by_index[targetWordIndex].size() != 0) {
+      int middle = (alignment_by_index[targetWordIndex].size() - 1)/ 2;
+      return sourcePositions[alignment_by_index[targetWordIndex][middle]];
     }
 
     int left_index = targetWordIndex - 1;
@@ -230,12 +232,20 @@ class FF_LBLLM2 : public FeatureFunction {
     int right_index = targetWordIndex + 1;
     int right_offset = 1;
 
+    // We iteratively look at a word either to the left or right of the target word,
+    // always looking at the terminal closest to the target terminal. In the case
+    // that we haven't looked at a word to the right and a word to the left that are
+    // both equidistant from the target, we arbitrarily look to the right.
     while (left_index >= 0 || right_index < target.size()) {
+      // If we want to look at the word at target[targetWordIndex - left_offset]
       if (left_index >= 0 && (left_offset < right_offset || right_index == target.size())) {
         // Aligned terminal
-        if (alignment_by_index[left_index] != -1) {
+        if (alignment_by_index[left_index].size() != 0) {
           assert (target[left_index] > 0);
-          return sourcePositions[alignment_by_index[left_index]];
+          // If this word has multiple alignments, we want the rightmost one (i.e. the max)
+          vector<int>& alignments = alignment_by_index[left_index];
+          int a = *max_element(alignments.begin(), alignments.end());
+          return sourcePositions[a];
         }
         else if (target[left_index] <= 0) {
           const void* state = state_by_index[left_index];
@@ -257,11 +267,15 @@ class FF_LBLLM2 : public FeatureFunction {
           left_index--;
         }
       }
+      // Otherwise we want to look at the word at target[targetWordIndex + right_offset + 1]
       else {
         // Aligned terminal
-        if (alignment_by_index[right_index] != -1) {
+        if (alignment_by_index[right_index].size() != 0) {
           assert (target[right_index] > 0);
-          return sourcePositions[alignment_by_index[right_index]];
+          // If this word has multiple alignments, we want the leftmost one (i.e. the min)
+          vector<int>& alignments = alignment_by_index[right_index];
+          int a = *min_element(alignments.begin(), alignments.end());
+          return sourcePositions[a];
         }
         else if (target[right_index] <= 0) {
           const void* state = state_by_index[right_index];
@@ -359,9 +373,9 @@ class FF_LBLLM2 : public FeatureFunction {
         if (nt_rightmost_link_source != -1) {
           int offset = stateConverter->getRightmostLinkDistance(state);
           ret.sourceIndex = nt_rightmost_link_source;
-          // length of span - amount of stuff that came before us - 1 = amount of stuff after us
+          // length of span - (amount of stuff that came before us + our length) = amount of stuff after us
           ret.targetDistanceFromEdge = getTargetLength(target, prev_states)
-            - countTerminalsCovered(i, target, prev_states) + offset - 1;
+            - countTerminalsCovered(i + 1, target, prev_states) + offset;
           return ret;
         }
       }
@@ -377,14 +391,14 @@ class FF_LBLLM2 : public FeatureFunction {
     else {
       ret.sourceIndex = sourceOffsets[sorted_alignment[0].s_];
       ret.targetDistanceFromEdge = getTargetLength(target, prev_states)
-        - countTerminalsCovered(rightMostAlignedTerminal, target, prev_states) - 1;
+        - countTerminalsCovered(rightMostAlignedTerminal + 1, target, prev_states);
       return ret;
     }
   }
 
-  // Counts the number of target terminals covered by a rule, up to a given
-  // index into the target vector. If you want the number of target terminals
-  // covered by the whole rule, set index=target.size().
+  // Counts the number of target terminals covered by a rule, up to (but not
+  // including) a given index into the target vector. If you want the number
+  //  of target terminals covered by the whole rule, set index=target.size().
   int countTerminalsCovered(int index,
       const vector<int>& target, const vector<const void*>& prev_states) const {
     int targetLength = 0;
@@ -573,6 +587,15 @@ class FF_LBLLM2 : public FeatureFunction {
     }
 
     assert (context.size() == context_width);
+    /*if (affiliation == -1) {
+      cerr << "WARNING: Target word \"" << vocab->convert(symbols[position]) << "\" has an affiliation of -1. Using 0 instead." << endl;
+      affiliation = 0;
+    }
+    else */if (affiliation < 0 || affiliation >= sourceSentence.size()){
+      cerr << "ERROR: Target word \"" << vocab->convert(symbols[position]) << "\" has an affiliation of " << affiliation << ".";
+      cerr << " Source sentence has length " << sourceSentence.size() << ". Using 0 instead." << endl;
+      affiliation = 0;
+    } 
     assert (affiliation >= 0 && affiliation < sourceSentence.size());
 
     // Extract the words in the source window, padding with <s> and </s>
@@ -727,7 +750,7 @@ class FF_LBLLM2 : public FeatureFunction {
     return ret;
   }
 
-  ~FF_LBLLM2() {
+  ~FF_SourceLBLLM() {
     savePersistentCache();
     if (persistentCache) {
       cerr << "Cache hit ratio: " << 100.0 * cacheHits / totalHits
@@ -801,14 +824,14 @@ extern "C" FeatureFunction* create_ff(const string& str) {
 
   switch (model_type) {
     case NLM:
-      return new FF_LBLLM2<LM>(filename, feature_name, persistent_cache);
+      return new FF_SourceLBLLM<LM>(filename, feature_name, persistent_cache);
     case FACTORED_NLM:
-      return new FF_LBLLM2<FactoredLM>(filename, feature_name, persistent_cache);
+      return new FF_SourceLBLLM<FactoredLM>(filename, feature_name, persistent_cache);
     case FACTORED_MAXENT_NLM:
-      return new FF_LBLLM2<FactoredMaxentLM>(
+      return new FF_SourceLBLLM<FactoredMaxentLM>(
           filename, feature_name, persistent_cache);
     case SOURCE_FACTORED_NLM:
-      return new FF_LBLLM2<SourceFactoredLM>(
+      return new FF_SourceLBLLM<SourceFactoredLM>(
           filename, feature_name, persistent_cache);
     default:
       throw UnknownModelException();
