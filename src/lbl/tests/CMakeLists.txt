@@ -52,6 +52,7 @@ set(LIBRARIES murmurhash lbl)
 
 if(CDEC_FOUND AND CDEC_LIBRARIES_FOUND)
   set(TESTS ${TESTS}
+      cdec_conditional_state_converter_test
       cdec_lbl_mapper_test
       cdec_rule_converter_test
       cdec_state_converter_test
