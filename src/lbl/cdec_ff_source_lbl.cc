@@ -141,7 +141,6 @@ vector<int> FF_SourceLBLLM::findSourceSidePositions(
   }
   sort(nt_spans.begin(), nt_spans.end());
 
-
   int i = spanStart; // Index into the source sentence
   int j = 0; // Index into the source vector (of a particular hyperedge)
   int ntcount = 0; // The number of NTs we've seen so far in this hyperedge
@@ -158,8 +157,7 @@ vector<int> FF_SourceLBLLM::findSourceSidePositions(
       // Jump past the span covered by the NT
       i += ntLength;
       ++ntcount;
-    }
-    else {
+    } else {
       // All terminals have length 1.
       i += 1;
     }
@@ -283,7 +281,6 @@ int FF_SourceLBLLM::findAffiliation(
 // the distance will be 0. Otherwise it will be the number of target
 // terminals we must skip to find the first aligned target terminal.
 AlignmentLinkInfo FF_SourceLBLLM::findLeftMostLink(
-    const vector<int> sourceOffsets,
     const vector<int>& target,
     const vector<AlignmentPoint>& alignment,
     const vector<int>& affiliations,
@@ -316,9 +313,8 @@ AlignmentLinkInfo FF_SourceLBLLM::findLeftMostLink(
     ret.sourceIndex = -1;
     ret.targetDistanceFromEdge = -1;
     return ret;
-  }
-  else {
-    ret.sourceIndex = sourceOffsets[affiliations[sorted_alignment[0].t_]];
+  } else {
+    ret.sourceIndex = affiliations[leftMostAlignedTerminal];
     ret.targetDistanceFromEdge = countTerminalsCovered(leftMostAlignedTerminal, target, prev_states);
     return ret;
   }
@@ -331,7 +327,6 @@ AlignmentLinkInfo FF_SourceLBLLM::findLeftMostLink(
 // the distance will be 0. Otherwise it will be the number of target
 // terminals we must skip to find the lastaligned target terminal.
 AlignmentLinkInfo FF_SourceLBLLM::findRightMostLink(
-    const vector<int> sourceOffsets,
     const vector<int>& target,
     const vector<AlignmentPoint>& alignment,
     const vector<int>& affiliations,
@@ -369,7 +364,7 @@ AlignmentLinkInfo FF_SourceLBLLM::findRightMostLink(
     return ret;
   }
   else {
-    ret.sourceIndex = sourceOffsets[affiliations[sorted_alignment[0].t_]];
+    ret.sourceIndex = affiliations[sorted_alignment[0].t_];
     ret.targetDistanceFromEdge = getTargetLength(target, prev_states)
       - countTerminalsCovered(rightMostAlignedTerminal + 1, target, prev_states);
     return ret;
@@ -478,10 +473,12 @@ void FF_SourceLBLLM::TraversalFeaturesImpl(
   // Gather up a bunch of info needed to create the state that will be stored
   // for this NT.
   int targetLength = getTargetLength(target, prev_states);
-  AlignmentLinkInfo leftmost = findLeftMostLink(
-      sourcePositions, target, alignment, affiliations, prev_states);
-  AlignmentLinkInfo rightmost = findRightMostLink(
-      sourcePositions, target, alignment, affiliations, prev_states);
+  AlignmentLinkInfo leftmost =
+      findLeftMostLink(target, alignment, affiliations, prev_states);
+  AlignmentLinkInfo rightmost =
+      findRightMostLink(target, alignment, affiliations, prev_states);
+  assert(0 <= leftmost.sourceIndex && leftmost.sourceIndex < sourceSentence.size());
+  assert(0 <= rightmost.sourceIndex && rightmost.sourceIndex < sourceSentence.size());
 
   constructNextState(
       next_state, symbols, symbol_affiliations,
@@ -491,7 +488,7 @@ void FF_SourceLBLLM::TraversalFeaturesImpl(
 
   // Convert the next state into a list of terminals, and use it to do
   // future cost estimation.
-  LBLFeatures estimated_scores = estimateScore(symbols, affiliations);
+  LBLFeatures estimated_scores = estimateScore(symbols, symbol_affiliations);
   if (estimated_scores.LMScore) {
     estimated_features->set_value(fid, estimated_scores.LMScore);
   }
@@ -580,7 +577,8 @@ LBLFeatures FF_SourceLBLLM::scoreContext(
 
   assert (context.size() == context_width);
   if (affiliation < 0 || affiliation >= sourceSentence.size()){
-    cerr << "ERROR: Target word \"" << vocab->convert(symbols[position]) << "\" has an affiliation of " << affiliation << ".";
+    cerr << "ERROR: Target word \"" << vocab->convert(symbols[position])
+         << "\" has an affiliation of " << affiliation << ".";
     cerr << " Source sentence has length " << sourceSentence.size() << endl;
     assert (affiliation >= 0 && affiliation < sourceSentence.size());
   }

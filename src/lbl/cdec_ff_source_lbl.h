@@ -75,14 +75,12 @@ class FF_SourceLBLLM : public FeatureFunction {
       int targetWordIndex) const;
 
   AlignmentLinkInfo findLeftMostLink(
-      const vector<int> sourceOffsets,
       const vector<int>& target,
       const vector<AlignmentPoint>& alignment,
       const vector<int>& affiliations,
       const vector<const void*>& prev_states) const;
 
   AlignmentLinkInfo findRightMostLink(
-      const vector<int> sourceOffsets,
       const vector<int>& target,
       const vector<AlignmentPoint>& alignment,
       const vector<int>& affiliations,
