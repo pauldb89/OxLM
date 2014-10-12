@@ -65,7 +65,9 @@ Run:
 Set the `--noise-samples` argument, if you want to train the models using noise
 contrastive estimation instead of minibatch stochastic gradient descent. The
 optimal number of threads for stochastic gradient descent is 12, while the
-optimal number of threads for noise contrastive estimation is 8.
+optimal number of threads for noise contrastive estimation is 8. If noise
+contrastive estimation is used, we recommend disabling the hidden layer
+non-linearity for better results (`sigmoid=false`).
 
 Unless your vocabulary is really small, you probably want to look at factored models instead.
 
