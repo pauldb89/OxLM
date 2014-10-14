@@ -15,6 +15,7 @@ class SGDTest : public ::testing::Test {
     config->training_file = "training.en";
     config->iterations = 3;
     config->minibatch_size = 10000;
+    config->minibatch_threshold = 20000;
     config->ngram_order = 5;
     config->l2_lbl = 2;
     config->word_representation_size = 100;

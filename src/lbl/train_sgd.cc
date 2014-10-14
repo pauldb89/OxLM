@@ -25,6 +25,10 @@ int main(int argc, char** argv) {
         "number of passes through the data")
     ("minibatch-size", value<int>()->default_value(10000),
         "number of sentences per minibatch")
+    ("minibatch-threshold", value<int>()->default_value(20000),
+        "Stop training if the test perplexity did not improve in the last "
+        "N minibatches. Note that test perplexities are calculated only "
+        "every 1000 minibatches")
     ("order,n", value<int>()->default_value(4),
         "ngram order")
     ("model-out,o", value<string>(),
@@ -71,6 +75,7 @@ int main(int argc, char** argv) {
   }
   config->iterations = vm["iterations"].as<int>();
   config->minibatch_size = vm["minibatch-size"].as<int>();
+  config->minibatch_threshold = vm["minibatch-threshold"].as<int>();
   config->ngram_order = vm["order"].as<int>();
 
   if (vm.count("model-out")) {
@@ -102,6 +107,7 @@ int main(int argc, char** argv) {
   }
   cout << "# input = " << config->training_file << endl;
   cout << "# minibatch size = " << config->minibatch_size << endl;
+  cout << "# minibatch threshold = " << config->minibatch_threshold << endl;
   cout << "# lambda = " << config->l2_lbl << endl;
   cout << "# step size = " << config->step_size << endl;
   cout << "# iterations = " << config->iterations << endl;

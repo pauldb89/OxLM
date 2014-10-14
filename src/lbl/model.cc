@@ -78,6 +78,7 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
   vector<int> indices(training_corpus->size());
   iota(indices.begin(), indices.end(), 0);
 
+  int best_minibatch = 0;
   Real best_perplexity = numeric_limits<Real>::infinity();
   Real global_objective = 0, test_objective = 0;
   boost::shared_ptr<MinibatchWeights> global_gradient =
@@ -95,10 +96,13 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
   {
     int minibatch_counter = 1;
     int minibatch_size = config->minibatch_size;
+    int minibatch_threshold = config->minibatch_threshold;
     boost::shared_ptr<MinibatchWeights> gradient =
         boost::make_shared<MinibatchWeights>(config, metadata);
 
-    for (int iter = 0; iter < config->iterations; ++iter) {
+    int iter = 0;
+    while (iter < config->iterations &&
+           minibatch_counter - best_minibatch <= minibatch_threshold) {
       auto iteration_start = GetTime();
 
       #pragma omp master
@@ -112,7 +116,8 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
       #pragma omp barrier
 
       size_t start = 0;
-      while (start < training_corpus->size()) {
+      while (start < training_corpus->size() &&
+             minibatch_counter - best_minibatch <= minibatch_threshold) {
         size_t end = min(training_corpus->size(), start + minibatch_size);
 
         vector<int> minibatch(
@@ -199,7 +204,7 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
         if ((minibatch_counter % 100 == 0 && minibatch_counter <= 1000) ||
             minibatch_counter % 1000 == 0) {
           evaluate(test_corpus, iteration_start, minibatch_counter,
-                   test_objective, best_perplexity);
+                   test_objective, best_perplexity, best_minibatch);
         }
 
         ++minibatch_counter;
@@ -207,7 +212,7 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
       }
 
       evaluate(test_corpus, iteration_start, minibatch_counter,
-               test_objective, best_perplexity);
+               test_objective, best_perplexity, best_minibatch);
       #pragma omp master
       {
         Real iteration_time = GetDuration(iteration_start, GetTime());
@@ -217,6 +222,8 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
              << endl;
         cout << endl;
       }
+
+      ++iter;
     }
   }
 
@@ -280,7 +287,8 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::evaluate(
 template<class GlobalWeights, class MinibatchWeights, class Metadata>
 void Model<GlobalWeights, MinibatchWeights, Metadata>::evaluate(
     const boost::shared_ptr<Corpus>& test_corpus, const Time& iteration_start,
-    int minibatch_counter, Real& log_likelihood, Real& best_perplexity) const {
+    int minibatch_counter, Real& log_likelihood,
+    Real& best_perplexity, int& best_minibatch) const {
   if (test_corpus != nullptr) {
     evaluate(test_corpus, log_likelihood);
 
@@ -294,6 +302,7 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::evaluate(
 
       if (test_perplexity < best_perplexity) {
         best_perplexity = test_perplexity;
+        best_minibatch = minibatch_counter;
         save();
       }
     }

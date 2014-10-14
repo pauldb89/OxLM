@@ -49,6 +49,7 @@ struct ModelData {
   string      test_alignment_file;
   int         iterations;
   int         minibatch_size;
+  int         minibatch_threshold;
   int         instances;
   int         ngram_order;
   int         feature_context_size;

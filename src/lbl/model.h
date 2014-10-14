@@ -71,7 +71,8 @@ class Model {
  private:
   void evaluate(
       const boost::shared_ptr<Corpus>& corpus, const Time& iteration_start,
-      int minibatch_counter, Real& objective, Real& best_perplexity) const;
+      int minibatch_counter, Real& objective,
+      Real& best_perplexity, int& best_minibatch) const;
 
   boost::shared_ptr<ModelData> config;
   boost::shared_ptr<Vocabulary> vocab;
