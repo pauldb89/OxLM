@@ -23,7 +23,7 @@ int main(int argc, char **argv) {
     ("test-set", value<string>(),
         "corpus of test sentences")
     ("iterations", value<int>()->default_value(10),
-        "number of passes through the data")
+        "Maximum number of passes through the data.")
     ("minibatch-size", value<int>()->default_value(100),
         "number of sentences per minibatch")
     ("minibatch-threshold", value<int>()->default_value(20000),
