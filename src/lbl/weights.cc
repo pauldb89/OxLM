@@ -194,6 +194,10 @@ MatrixReal Weights::getPredictionVectors(
     for (size_t i = 0; i < indices.size(); ++i) {
       prediction_vectors.col(i) = sigmoid(prediction_vectors.col(i));
     }
+  } else if (config->rectifier) {
+    for (size_t i = 0; i < indices.size(); ++i) {
+      prediction_vectors.col(i) = rectifier(prediction_vectors.col(i));
+    }
   }
 
   return prediction_vectors;
@@ -235,6 +239,8 @@ MatrixReal Weights::getWeightedRepresentations(
 
   if (config->sigmoid) {
     weighted_representations.array() *= sigmoidDerivative(prediction_vectors);
+  } else if (config->rectifier) {
+    weighted_representations.array() *= rectifierDerivative(prediction_vectors);
   }
 
   return weighted_representations;
@@ -436,6 +442,8 @@ void Weights::estimateGradient(
 
   if (config->sigmoid) {
     weighted_representations.array() *= sigmoidDerivative(prediction_vectors);
+  } else if (config->rectifier) {
+    weighted_representations.array() *= rectifierDerivative(prediction_vectors);
   }
 
   getContextGradient(
@@ -560,7 +568,13 @@ VectorReal Weights::getPredictionVector(const vector<int>& context) const {
     }
   }
 
-  return config->sigmoid ? sigmoid(prediction_vector) : prediction_vector;
+  if (config->sigmoid) {
+    return sigmoid(prediction_vector);
+  } else if (config->rectifier) {
+    return rectifier(prediction_vector);
+  } else {
+    return prediction_vector;
+  }
 }
 
 Real Weights::getLogProb(int word_id, vector<int> context) const {

@@ -26,4 +26,22 @@ TEST(OperatorsTest, TestAdagradUpdateOp) {
   EXPECT_MATRIX_NEAR(expected_result, result, EPS);
 }
 
+TEST(OperatorsTest, TestCwiseRectifierOp) {
+  VectorReal v(5);
+  v << -2, 1, 0, 2, -1;
+  VectorReal result = v.unaryExpr(CwiseRectifierOp<Real>());
+  VectorReal expected_result(5);
+  expected_result << 0, 1, 0, 2, 0;
+  EXPECT_MATRIX_NEAR(expected_result, result, EPS);
+}
+
+TEST(OperatorsTest, TestCwiseRectifierDerivativeOp) {
+  VectorReal v(5);
+  v << -2, 1, 0, 2, -1;
+  VectorReal result = v.unaryExpr(CwiseRectifierDerivativeOp<Real>());
+  VectorReal expected_result(5);
+  expected_result << 0, 1, 0, 1, 0;
+  EXPECT_MATRIX_NEAR(expected_result, result, EPS);
+}
+
 } // namespace oxlm

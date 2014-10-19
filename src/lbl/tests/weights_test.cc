@@ -45,6 +45,23 @@ TEST_F(WeightsTest, TestGradientCheckDiagonal) {
   EXPECT_TRUE(weights.checkGradient(corpus, indices, gradient, 1e-3));
 }
 
+TEST_F(WeightsTest, TestGradientCheckRectifier) {
+  config->sigmoid = false;
+  config->rectifier = true;
+
+  Weights weights(config, metadata, corpus);
+  vector<int> indices = {0, 1, 2, 3};
+  Real objective;
+  MinibatchWords words;
+  boost::shared_ptr<Weights> gradient =
+      boost::make_shared<Weights>(config, metadata);
+  weights.getGradient(corpus, indices, gradient, objective, words);
+
+  // See the comment above if you suspect the gradient is not computed
+  // correctly.
+  EXPECT_TRUE(weights.checkGradient(corpus, indices, gradient, 1e-3));
+}
+
 TEST_F(WeightsTest, TestGetLogProb) {
   Weights weights(config, metadata, corpus);
   vector<int> indices = {0, 1, 2, 3};

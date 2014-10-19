@@ -31,4 +31,18 @@ struct CwiseAdagradUpdateOp {
   Scalar step_size, eps;
 };
 
+template<class Scalar>
+struct CwiseRectifierOp {
+  const Scalar operator()(const Scalar& x) const {
+    return x >= 0 ? x : 0;
+  }
+};
+
+template<class Scalar>
+struct CwiseRectifierDerivativeOp {
+  const Scalar operator()(const Scalar& x) const {
+    return x > 0 ? 1 : 0;
+  }
+};
+
 } // namespace oxlm

@@ -47,6 +47,8 @@ int main(int argc, char** argv) {
         "Use diagonal context matrices (usually faster).")
     ("sigmoid", value<bool>()->default_value(true),
         "Apply a sigmoid non-linearity to the prediction (hidden) layer.")
+    ("rectifier", value<bool>()->default_value(false),
+        "Apply a linear rectifier to the prediction (hidden) layer.")
     ("noise-samples", value<int>()->default_value(0),
         "Number of noise samples for noise contrastive estimation. "
         "If zero, minibatch gradient descent is used instead.");
@@ -92,6 +94,7 @@ int main(int argc, char** argv) {
   config->randomise = vm["randomise"].as<bool>();
   config->diagonal_contexts = vm["diagonal-contexts"].as<bool>();
   config->sigmoid = vm["sigmoid"].as<bool>();
+  config->rectifier = vm["rectifier"].as<bool>();
 
   config->noise_samples = vm["noise-samples"].as<int>();
 
@@ -115,6 +118,7 @@ int main(int argc, char** argv) {
   cout << "# randomise = " << config->randomise << endl;
   cout << "# diagonal contexts = " << config->diagonal_contexts << endl;
   cout << "# sigmoid = " << config->sigmoid << endl;
+  cout << "# rectifier = " << config->rectifier << endl;
   cout << "# noise samples = " << config->noise_samples << endl;
   cout << "################################" << endl;
 

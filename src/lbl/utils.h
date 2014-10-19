@@ -10,6 +10,8 @@
 #include "third_party/eigen/Eigen/Sparse"
 #include "third_party/smhasher/MurmurHash3.h"
 
+#include "lbl/operators.h"
+
 using namespace std;
 using namespace chrono;
 
@@ -61,6 +63,14 @@ inline VectorReal sigmoid(const VectorReal& v) {
 
 inline Array2DReal sigmoidDerivative(const MatrixReal& v) {
   return v.array() * (1 - v.array());
+}
+
+inline VectorReal rectifier(const VectorReal& v) {
+  return v.unaryExpr(CwiseRectifierOp<Real>());
+}
+
+inline Array2DReal rectifierDerivative(const MatrixReal& v) {
+  return v.unaryExpr(CwiseRectifierDerivativeOp<Real>()).array();
 }
 
 inline Real LogAdd(Real log_a, Real log_b) {

@@ -12,34 +12,6 @@ using namespace std;
 
 namespace oxlm {
 
-struct UnigramDistribution {
-  map<double, string> prob_to_token;
-  map<string, double> token_to_prob;
-
-  void read(const string& filename) {
-    ifstream file(filename.c_str());
-    cerr << "Reading unigram distribution from "
-      << filename.c_str() << "." << endl;
-
-    double sum=0;
-    string key, value;
-    while (file >> value >> key) {
-      double v = boost::lexical_cast<double>(value);
-      sum += v;
-      prob_to_token.insert(make_pair(sum, key));
-      token_to_prob.insert(make_pair(key, v));
-    }
-  }
-
-  double prob(const string& s) const {
-   map<string, double>::const_iterator it
-     = token_to_prob.find(s);
-   return it != token_to_prob.end() ? it->second : 0.0;
- }
-
-  bool empty() const { return prob_to_token.empty(); }
-};
-
 struct ModelData {
   ModelData();
 
@@ -84,6 +56,7 @@ struct ModelData {
   int         vocab_size;
   int         noise_samples;
   bool        sigmoid;
+  bool        rectifier;
   int         source_vocab_size;
   int         source_order;
 
@@ -117,6 +90,7 @@ struct ModelData {
     ar & vocab_size;
     ar & noise_samples;
     ar & sigmoid;
+    ar & rectifier;
     ar & source_vocab_size;
     ar & source_order;
   }
