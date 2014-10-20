@@ -51,7 +51,7 @@ Create a `oxlm.ini` file with the following contents:
     order=5
     randomise=true
     diagonal-contexts=true
-    sigmoid=true
+    activation=2
 
     threads=12
 
@@ -65,8 +65,7 @@ Run:
 Set the `--noise-samples` argument, if you want to train the models using noise
 contrastive estimation instead of minibatch stochastic gradient descent. In most
 circumstances, setting the number of noise samples to more than 10 only leads to
-marginal improvements. If noise contrastive estimation is used, we recommend
-disabling the hidden layer non-linearity for better results (`sigmoid=false`).
+marginal improvements.
 
 The recommended number of threads for stochastic gradient descent is 12, while the
 recommended number of threads for noise contrastive estimation is 8 (other
