@@ -201,9 +201,8 @@ MatrixReal FactoredWeights::getWeightedRepresentations(
     weighted_representations.col(i) -= S.col(class_id) + R.col(word_id);
   }
 
-  if (config->sigmoid) {
-    weighted_representations.array() *= sigmoidDerivative(prediction_vectors);
-  }
+  weighted_representations.array() *=
+      activationDerivative(config, prediction_vectors);
 
   return weighted_representations;
 }
@@ -388,9 +387,8 @@ void FactoredWeights::estimateGradient(
       corpus, indices, prediction_vectors, gradient,
       weighted_representations, objective, words);
 
-  if (config->sigmoid) {
-    weighted_representations.array() *= sigmoidDerivative(prediction_vectors);
-  }
+  weighted_representations.array() *=
+      activationDerivative(config, prediction_vectors);
 
   getContextGradient(
       indices, contexts, context_vectors, weighted_representations, gradient);

@@ -12,6 +12,12 @@ using namespace std;
 
 namespace oxlm {
 
+enum Activation {
+  IDENTITY = 0,
+  SIGMOID = 1,
+  RECTIFIER = 2,
+};
+
 struct ModelData {
   ModelData();
 
@@ -55,8 +61,7 @@ struct ModelData {
   int         min_ngram_freq;
   int         vocab_size;
   int         noise_samples;
-  bool        sigmoid;
-  bool        rectifier;
+  Activation  activation;
   int         source_vocab_size;
   int         source_order;
 
@@ -89,8 +94,7 @@ struct ModelData {
     ar & filter_error_rate;
     ar & vocab_size;
     ar & noise_samples;
-    ar & sigmoid;
-    ar & rectifier;
+    ar & activation;
     ar & source_vocab_size;
     ar & source_order;
   }

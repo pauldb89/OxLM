@@ -10,6 +10,8 @@
 #include "third_party/eigen/Eigen/Sparse"
 #include "third_party/smhasher/MurmurHash3.h"
 
+#include "lbl/config.h"
+#include "lbl/exceptions.h"
 #include "lbl/operators.h"
 
 using namespace std;
@@ -71,6 +73,36 @@ inline VectorReal rectifier(const VectorReal& v) {
 
 inline Array2DReal rectifierDerivative(const MatrixReal& v) {
   return v.unaryExpr(CwiseRectifierDerivativeOp<Real>()).array();
+}
+
+inline VectorReal activation(
+    const boost::shared_ptr<ModelData>& config, const VectorReal& v) {
+  switch (config->activation) {
+    case IDENTITY:
+      return v;
+    case SIGMOID:
+      return sigmoid(v);
+    case RECTIFIER:
+      return rectifier(v);
+    default:
+      throw UnknownActivationException();
+  }
+}
+
+// Note: v here is the hidden layer after the activation has been applied.
+// Be careful how you define future activations.
+inline Array2DReal activationDerivative(
+    const boost::shared_ptr<ModelData>& config, const MatrixReal& v) {
+  switch (config->activation) {
+    case IDENTITY:
+      return v.array();
+    case SIGMOID:
+      return sigmoidDerivative(v);
+    case RECTIFIER:
+      return rectifierDerivative(v);
+    default:
+      throw UnknownActivationException();
+  }
 }
 
 inline Real LogAdd(Real log_a, Real log_b) {

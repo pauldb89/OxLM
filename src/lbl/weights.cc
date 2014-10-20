@@ -190,14 +190,8 @@ MatrixReal Weights::getPredictionVectors(
     prediction_vectors += getContextProduct(i, context_vectors[i]);
   }
 
-  if (config->sigmoid) {
-    for (size_t i = 0; i < indices.size(); ++i) {
-      prediction_vectors.col(i) = sigmoid(prediction_vectors.col(i));
-    }
-  } else if (config->rectifier) {
-    for (size_t i = 0; i < indices.size(); ++i) {
-      prediction_vectors.col(i) = rectifier(prediction_vectors.col(i));
-    }
+  for (size_t i = 0; i < indices.size(); ++i) {
+    prediction_vectors.col(i) = activation(config, prediction_vectors.col(i));
   }
 
   return prediction_vectors;
@@ -237,11 +231,8 @@ MatrixReal Weights::getWeightedRepresentations(
     weighted_representations.col(i) -= R.col(corpus->at(indices[i]));
   }
 
-  if (config->sigmoid) {
-    weighted_representations.array() *= sigmoidDerivative(prediction_vectors);
-  } else if (config->rectifier) {
-    weighted_representations.array() *= rectifierDerivative(prediction_vectors);
-  }
+  weighted_representations.array() *=
+      activationDerivative(config, prediction_vectors);
 
   return weighted_representations;
 }
@@ -440,11 +431,8 @@ void Weights::estimateGradient(
       corpus, indices, prediction_vectors, gradient,
       weighted_representations, objective, words);
 
-  if (config->sigmoid) {
-    weighted_representations.array() *= sigmoidDerivative(prediction_vectors);
-  } else if (config->rectifier) {
-    weighted_representations.array() *= rectifierDerivative(prediction_vectors);
-  }
+  weighted_representations.array() *=
+      activationDerivative(config, prediction_vectors);
 
   getContextGradient(
       indices, contexts, context_vectors, weighted_representations, gradient);
@@ -568,13 +556,7 @@ VectorReal Weights::getPredictionVector(const vector<int>& context) const {
     }
   }
 
-  if (config->sigmoid) {
-    return sigmoid(prediction_vector);
-  } else if (config->rectifier) {
-    return rectifier(prediction_vector);
-  } else {
-    return prediction_vector;
-  }
+  return activation(config, prediction_vector);
 }
 
 Real Weights::getLogProb(int word_id, vector<int> context) const {

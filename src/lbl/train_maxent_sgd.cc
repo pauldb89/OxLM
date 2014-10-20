@@ -57,8 +57,9 @@ int main(int argc, char **argv) {
         "Visit the training tokens in random order.")
     ("diagonal-contexts", value<bool>()->default_value(true),
         "Use diagonal context matrices (usually faster).")
-    ("sigmoid", value<bool>()->default_value(true),
-        "Apply a sigmoid non-linearity to the prediction (hidden) layer.")
+    ("activation", value<int>()->default_value(2),
+        "Activation function for the prediction (hidden) layer. "
+        "0: Identity, 1: Sigmoid, 2: Rectifier.")
     ("max-ngrams", value<int>()->default_value(0),
         "Define maxent features only for the most frequent max-ngrams ngrams.")
     ("min-ngram-freq", value<int>()->default_value(1),
@@ -124,7 +125,7 @@ int main(int argc, char **argv) {
   config->randomise = vm["randomise"].as<bool>();
   config->diagonal_contexts = vm["diagonal-contexts"].as<bool>();
   config->classes = vm["classes"].as<int>();
-  config->sigmoid = vm["sigmoid"].as<bool>();
+  config->activation = static_cast<Activation>(vm["activation"].as<int>());
 
   config->max_ngrams = vm["max-ngrams"].as<int>();
   config->min_ngram_freq = vm["min-ngram-freq"].as<int>();
@@ -142,8 +143,6 @@ int main(int argc, char **argv) {
   cout << "# order = " << config->ngram_order << endl;
   cout << "# feature context size = " << config->feature_context_size << endl;
   cout << "# word_width = " << config->word_representation_size << endl;
-  cout << "# diagonal contexts = " << config->diagonal_contexts << endl;
-  cout << "# sigmiod = " << config->sigmoid << endl;
   if (config->model_output_file.size()) {
     cout << "# model-out = " << config->model_output_file << endl;
   }
@@ -155,7 +154,9 @@ int main(int argc, char **argv) {
   cout << "# step size = " << config->step_size << endl;
   cout << "# iterations = " << config->iterations << endl;
   cout << "# threads = " << config->threads << endl;
-  cout << "# classes = " << config->classes << endl;
+  cout << "# randomise = " << config->randomise << endl;
+  cout << "# diagonal contexts = " << config->diagonal_contexts << endl;
+  cout << "# activation = " << config->activation << endl;
   cout << "# max n-grams = " << config->max_ngrams << endl;
   cout << "# min n-gram frequency = " << config->min_ngram_freq << endl;
   cout << "# hash space = " << config->hash_space << endl;

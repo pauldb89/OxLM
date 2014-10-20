@@ -19,7 +19,6 @@ TEST_F(SGDTest, TestBasic) {
   EXPECT_NEAR(72.2445220, perplexity(log_likelihood, test_corpus->size()), EPS);
 }
 
-/*
 TEST_F(SGDTest, TestNCE) {
   config->noise_samples = 10;
   Model<Weights, Weights, Metadata> model(config);
@@ -31,6 +30,5 @@ TEST_F(SGDTest, TestNCE) {
   model.evaluate(test_corpus, log_likelihood);
   EXPECT_NEAR(67.7361526, perplexity(log_likelihood, test_corpus->size()), EPS);
 }
-*/
 
 } // namespace oxlm

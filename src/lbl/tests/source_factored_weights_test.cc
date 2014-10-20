@@ -15,7 +15,7 @@ class SourceFactoredWeightsTest : public testing::Test {
     config->source_vocab_size = 6;
     config->ngram_order = 4;
     config->source_order = 2;
-    config->sigmoid = true;
+    config->activation = SIGMOID;
 
     vector<int> source_data = {2, 3, 4, 5, 1};
     vector<int> target_data = {2, 3, 4, 5, 1};

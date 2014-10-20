@@ -1,10 +1,9 @@
-#include <exception>
-
 #include <boost/algorithm/string.hpp>
 #include <boost/program_options.hpp>
 
 #include "lbl/cdec_ff_lbl.h"
 #include "lbl/cdec_ff_source_lbl.h"
+#include "lbl/exceptions.h"
 
 using namespace std;
 using namespace oxlm;
@@ -38,12 +37,6 @@ void ParseOptions(
   normalized = vm["normalized"].as<bool>();
   persistent_cache = vm.count("persistent-cache");
 }
-
-class UnknownModelException : public exception {
-  virtual const char* what() const throw() {
-    return "Unknown model type";
-  }
-};
 
 extern "C" FeatureFunction* create_ff(const string& str) {
   string filename, feature_name;

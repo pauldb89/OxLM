@@ -47,8 +47,9 @@ int main(int argc, char** argv) {
         "Visit the training tokens in random order.")
     ("diagonal-contexts", value<bool>()->default_value(true),
         "Use diagonal context matrices (usually faster).")
-    ("sigmoid", value<bool>()->default_value(true),
-        "Apply a sigmoid non-linearity to the prediction (hidden) layer.")
+    ("activation", value<int>()->default_value(2),
+        "Activation function for the prediction (hidden) layer. "
+        "0: Identity, 1: Sigmoid, 2: Rectifier.")
     ("noise-samples", value<int>()->default_value(0),
         "Number of noise samples for noise contrastive estimation. "
         "If zero, minibatch gradient descent is used instead.")
@@ -102,7 +103,7 @@ int main(int argc, char** argv) {
   config->step_size = vm["step-size"].as<float>();
   config->randomise = vm["randomise"].as<bool>();
   config->diagonal_contexts = vm["diagonal-contexts"].as<bool>();
-  config->sigmoid = vm["sigmoid"].as<bool>();
+  config->activation = static_cast<Activation>(vm["activation"].as<int>());
 
   config->noise_samples = vm["noise-samples"].as<int>();
 
@@ -130,7 +131,7 @@ int main(int argc, char** argv) {
   cout << "# threads = " << config->threads << endl;
   cout << "# randomise = " << config->randomise << endl;
   cout << "# diagonal contexts = " << config->diagonal_contexts << endl;
-  cout << "# sigmoid = " << config->sigmoid << endl;
+  cout << "# activation = " << config->activation << endl;
   cout << "# noise samples = " << config->noise_samples << endl;
   cout << "################################" << endl;
 

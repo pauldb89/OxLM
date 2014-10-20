@@ -168,10 +168,8 @@ MatrixReal SourceFactoredWeights::getPredictionVectors(
         getSourceContextProduct(i, context_vectors[context_width + i]);
   }
 
-  if (config->sigmoid) {
-    for (size_t i = 0; i < indices.size(); ++i) {
-      prediction_vectors.col(i) = sigmoid(prediction_vectors.col(i));
-    }
+  for (size_t i = 0; i < indices.size(); ++i) {
+    prediction_vectors.col(i) = activation(config, prediction_vectors.col(i));
   }
 
   return prediction_vectors;
@@ -373,7 +371,7 @@ VectorReal SourceFactoredWeights::getPredictionVector(
     }
   }
 
-  return config->sigmoid ? sigmoid(prediction_vector) : prediction_vector;
+  return activation(config, prediction_vector);
 }
 
 SourceFactoredWeights::~SourceFactoredWeights() {

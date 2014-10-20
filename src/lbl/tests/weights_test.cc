@@ -46,8 +46,7 @@ TEST_F(WeightsTest, TestGradientCheckDiagonal) {
 }
 
 TEST_F(WeightsTest, TestGradientCheckRectifier) {
-  config->sigmoid = false;
-  config->rectifier = true;
+  config->activation = RECTIFIER;
 
   Weights weights(config, metadata, corpus);
   vector<int> indices = {0, 1, 2, 3};
