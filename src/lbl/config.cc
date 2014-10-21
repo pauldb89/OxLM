@@ -5,7 +5,8 @@
 namespace oxlm {
 
 ModelData::ModelData()
-    : iterations(0), minibatch_size(0), minibatch_threshold(0), instances(0),
+    : iterations(0), evaluate_frequency(1), minibatch_size(0),
+      minibatch_threshold(0), instances(0),
       ngram_order(0), feature_context_size(0), l2_lbl(0), l2_maxent(0),
       word_representation_size(0), threads(1), step_size(0), classes(0),
       randomise(false), reclass(false), diagonal_contexts(false),

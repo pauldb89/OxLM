@@ -26,6 +26,7 @@ struct ModelData {
   string      test_file;
   string      test_alignment_file;
   int         iterations;
+  int         evaluate_frequency;
   int         minibatch_size;
   int         minibatch_threshold;
   int         instances;

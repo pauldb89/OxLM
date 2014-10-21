@@ -201,8 +201,7 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
         // words are reset only after the global gradient is fully cleared.
         #pragma omp barrier
 
-        if ((minibatch_counter % 100 == 0 && minibatch_counter <= 1000) ||
-            minibatch_counter % 1000 == 0) {
+        if (minibatch_counter % config->evaluate_frequency == 0) {
           evaluate(test_corpus, iteration_start, minibatch_counter,
                    test_objective, best_perplexity, best_minibatch);
         }

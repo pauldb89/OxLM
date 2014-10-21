@@ -24,12 +24,14 @@ int main(int argc, char **argv) {
         "corpus of test sentences")
     ("iterations", value<int>()->default_value(10),
         "Maximum number of passes through the data.")
+    ("evaluate-frequency", value<int>()->default_value(1000),
+        "Evaluate models every N minibatches")
     ("minibatch-size", value<int>()->default_value(100),
         "number of sentences per minibatch")
     ("minibatch-threshold", value<int>()->default_value(20000),
         "Stop training if the test perplexity did not improve in the last "
         "N minibatches. Note that test perplexities are calculated only "
-        "every 1000 minibatches")
+        "every evaluate-frequency minibatches")
     ("order,n", value<int>()->default_value(5),
         "ngram order")
     ("model-in", value<string>(),
@@ -98,6 +100,7 @@ int main(int argc, char **argv) {
     config->test_file = vm["test-set"].as<string>();
   }
   config->iterations = vm["iterations"].as<int>();
+  config->evaluate_frequency = vm["evaluate-frequency"].as<int>();
   config->minibatch_size = vm["minibatch-size"].as<int>();
   config->minibatch_threshold = vm["minibatch-threshold"].as<int>();
   config->ngram_order = vm["order"].as<int>();
@@ -153,6 +156,7 @@ int main(int argc, char **argv) {
   cout << "# lambda maxent = " << config->l2_maxent << endl;
   cout << "# step size = " << config->step_size << endl;
   cout << "# iterations = " << config->iterations << endl;
+  cout << "# evaluate frequency = " << config->evaluate_frequency << endl;
   cout << "# threads = " << config->threads << endl;
   cout << "# randomise = " << config->randomise << endl;
   cout << "# diagonal contexts = " << config->diagonal_contexts << endl;
