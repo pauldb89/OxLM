@@ -59,24 +59,27 @@ inline VectorReal logSoftMax(const VectorReal& v, Real& log_z) {
   return v.array() - log_z;
 }
 
-inline VectorReal sigmoid(const VectorReal& v) {
-  return (1.0 + (-v).array().exp()).inverse();
+template<class Matrix>
+inline Matrix sigmoid(const Matrix& v) {
+  return (1.0 + (-v).array().exp()).inverse().matrix();
 }
 
 inline Array2DReal sigmoidDerivative(const MatrixReal& v) {
   return v.array() * (1 - v.array());
 }
 
-inline VectorReal rectifier(const VectorReal& v) {
+template<class Matrix>
+inline Matrix rectifier(const Matrix& v) {
   return v.unaryExpr(CwiseRectifierOp<Real>());
 }
 
 inline Array2DReal rectifierDerivative(const MatrixReal& v) {
-  return v.unaryExpr(CwiseRectifierDerivativeOp<Real>()).array();
+  return v.unaryExpr(CwiseRectifierDerivativeOp<Real>());
 }
 
-inline VectorReal activation(
-    const boost::shared_ptr<ModelData>& config, const VectorReal& v) {
+template<class Matrix>
+inline Matrix activation(
+    const boost::shared_ptr<ModelData>& config, const Matrix& v) {
   switch (config->activation) {
     case IDENTITY:
       return v;

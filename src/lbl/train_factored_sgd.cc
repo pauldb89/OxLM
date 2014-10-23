@@ -50,11 +50,13 @@ int main(int argc, char** argv) {
     ("diagonal-contexts", value<bool>()->default_value(true),
         "Use diagonal context matrices (usually faster).")
     ("activation", value<int>()->default_value(2),
-        "Activation function for the prediction (hidden) layer. "
+        "Activation function for the hidden layers. "
         "0: Identity, 1: Sigmoid, 2: Rectifier.")
     ("noise-samples", value<int>()->default_value(0),
         "Number of noise samples for noise contrastive estimation. "
         "If zero, minibatch gradient descent is used instead.")
+    ("hidden-layers", value<int>()->default_value(0),
+        "Number of hidden layers.")
     ("classes", value<int>()->default_value(100),
         "Number of classes for factored output using frequency binning.")
     ("class-file", value<string>(),
@@ -110,6 +112,8 @@ int main(int argc, char** argv) {
 
   config->noise_samples = vm["noise-samples"].as<int>();
 
+  config->hidden_layers = vm["hidden-layers"].as<int>();
+
   config->classes = vm["classes"].as<int>();
   if (vm.count("class-file")) {
     config->class_file = vm["class-file"].as<string>();
@@ -126,6 +130,9 @@ int main(int argc, char** argv) {
     cout << "# model-out = " << config->model_output_file << endl;
   }
   cout << "# input = " << config->training_file << endl;
+  if (config->class_file.size()) {
+    cout << "# class file = " << config->class_file << endl;
+  }
   cout << "# minibatch size = " << config->minibatch_size << endl;
   cout << "# minibatch threshold = " << config->minibatch_threshold << endl;
   cout << "# lambda = " << config->l2_lbl << endl;
@@ -137,6 +144,7 @@ int main(int argc, char** argv) {
   cout << "# diagonal contexts = " << config->diagonal_contexts << endl;
   cout << "# activation = " << config->activation << endl;
   cout << "# noise samples = " << config->noise_samples << endl;
+  cout << "# hidden layers = " << config->hidden_layers << endl;
   cout << "################################" << endl;
 
   if (config->model_input_file.size() == 0) {

@@ -20,13 +20,26 @@ Corpus::Corpus(
 
   ifstream in(filename);
   string line;
+  int line_id = 1;
   while (getline(in, line)) {
+    if (line_id % 100000 == 0) {
+      cerr << ".";
+      if (line_id % 10000000 == 0) {
+        cerr << " [" << line_id << "]" << endl;
+      }
+    }
+    ++line_id;
+
     stringstream line_stream(line);
     string token;
     while (line_stream >> token) {
       data.push_back(convert(token, vocab, immutable_vocab, convert_unknowns));
     }
     data.push_back(end_id);
+  }
+
+  if ((line_id / 100000) % 100 != 0) {
+    cerr << endl;
   }
 }
 

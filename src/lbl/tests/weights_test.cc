@@ -13,11 +13,11 @@ namespace oxlm {
 TEST_F(WeightsTest, TestGradientCheck) {
   Weights weights(config, metadata, corpus);
   vector<int> indices = {0, 1, 2, 3};
-  Real objective;
+  Real log_likelihood;
   MinibatchWords words;
   boost::shared_ptr<Weights> gradient =
       boost::make_shared<Weights>(config, metadata);
-  weights.getGradient(corpus, indices, gradient, objective, words);
+  weights.getGradient(corpus, indices, gradient, log_likelihood, words);
 
   // In truth, using float for model parameters instead of double seriously
   // degrades the gradient computation, but has no negative effect on the
@@ -34,11 +34,11 @@ TEST_F(WeightsTest, TestGradientCheckDiagonal) {
 
   Weights weights(config, metadata, corpus);
   vector<int> indices = {0, 1, 2, 3};
-  Real objective;
+  Real log_likelihood;
   MinibatchWords words;
   boost::shared_ptr<Weights> gradient =
       boost::make_shared<Weights>(config, metadata);
-  weights.getGradient(corpus, indices, gradient, objective, words);
+  weights.getGradient(corpus, indices, gradient, log_likelihood, words);
 
   // See the comment above if you suspect the gradient is not computed
   // correctly.
@@ -50,11 +50,28 @@ TEST_F(WeightsTest, TestGradientCheckRectifier) {
 
   Weights weights(config, metadata, corpus);
   vector<int> indices = {0, 1, 2, 3};
-  Real objective;
+  Real log_likelihood;
   MinibatchWords words;
   boost::shared_ptr<Weights> gradient =
       boost::make_shared<Weights>(config, metadata);
-  weights.getGradient(corpus, indices, gradient, objective, words);
+  weights.getGradient(corpus, indices, gradient, log_likelihood, words);
+
+  // See the comment above if you suspect the gradient is not computed
+  // correctly.
+  EXPECT_TRUE(weights.checkGradient(corpus, indices, gradient, 1e-3));
+}
+
+TEST_F(WeightsTest, TestGradientCheckExtraHiddenLayers) {
+  config->activation = RECTIFIER;
+  config->hidden_layers = 2;
+
+  Weights weights(config, metadata, corpus);
+  vector<int> indices = {0, 1, 2, 3};
+  Real log_likelihood;
+  MinibatchWords words;
+  boost::shared_ptr<Weights> gradient =
+      boost::make_shared<Weights>(config, metadata);
+  weights.getGradient(corpus, indices, gradient, log_likelihood, words);
 
   // See the comment above if you suspect the gradient is not computed
   // correctly.
@@ -64,11 +81,11 @@ TEST_F(WeightsTest, TestGradientCheckRectifier) {
 TEST_F(WeightsTest, TestGetLogProb) {
   Weights weights(config, metadata, corpus);
   vector<int> indices = {0, 1, 2, 3};
-  Real objective = weights.getObjective(corpus, indices);
+  Real log_likelihood = weights.getLogLikelihood(corpus, indices);
 
-  EXPECT_NEAR(objective, getLogProbabilities(weights, indices), EPS);
+  EXPECT_NEAR(log_likelihood, getLogProbabilities(weights, indices), EPS);
   // Check cache values.
-  EXPECT_NEAR(objective, getLogProbabilities(weights, indices), EPS);
+  EXPECT_NEAR(log_likelihood, getLogProbabilities(weights, indices), EPS);
 }
 
 TEST_F(WeightsTest, TestUnnormalizedScores) {

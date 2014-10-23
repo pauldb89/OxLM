@@ -182,6 +182,7 @@ boost::shared_ptr<Corpus> readTrainingCorpus(
     const boost::shared_ptr<ModelData>& config,
     const boost::shared_ptr<Vocabulary>& vocab,
     bool convert_unknowns) {
+  cerr << "Reading training corpus..." << endl;
   boost::shared_ptr<Corpus> corpus;
   if (config->source_order == 0) {
 	  corpus = boost::make_shared<Corpus>(
@@ -199,6 +200,7 @@ boost::shared_ptr<Corpus> readTrainingCorpus(
     config->vocab_size = parallel_vocab->size();
     config->source_vocab_size = parallel_vocab->sourceSize();
   }
+  cerr << "Done reading training corpus..." << endl;
 
   return corpus;
 }
@@ -207,14 +209,19 @@ boost::shared_ptr<Corpus> readTestCorpus(
     const boost::shared_ptr<ModelData>& config,
     const boost::shared_ptr<Vocabulary>& vocab,
     bool convert_unknowns) {
-  if (config->source_order == 0){
-	  return boost::make_shared<Corpus>(
+  cerr << "Reading test corpus..." << endl;
+  boost::shared_ptr<Corpus> corpus;
+  if (config->source_order == 0) {
+	  corpus = boost::make_shared<Corpus>(
         config->test_file, vocab, convert_unknowns);
   } else {
-	  return boost::make_shared<ParallelCorpus>(
+	  corpus = boost::make_shared<ParallelCorpus>(
         config->test_file, config->test_alignment_file, vocab,
         convert_unknowns);
   }
+  cerr << "Done reading test corpus..." << endl;
+
+  return corpus;
 }
 
 Real perplexity(Real log_likelihood, size_t corpus_size) {

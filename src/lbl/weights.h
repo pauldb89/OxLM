@@ -19,6 +19,8 @@ typedef Eigen::Map<MatrixReal> ContextTransformType;
 typedef vector<ContextTransformType> ContextTransformsType;
 typedef Eigen::Map<MatrixReal> WordVectorsType;
 typedef Eigen::Map<VectorReal> WeightsType;
+typedef Eigen::Map<MatrixReal> HiddenLayer;
+typedef vector<HiddenLayer> HiddenLayers;
 
 typedef boost::shared_ptr<mutex> Mutex;
 typedef pair<size_t, size_t> Block;
@@ -53,7 +55,7 @@ class Weights {
       Real& objective,
       MinibatchWords& words) const;
 
-  virtual Real getObjective(
+  virtual Real getLogLikelihood(
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices) const;
 
@@ -107,7 +109,7 @@ class Weights {
       const vector<int>& indices,
       vector<vector<int>>& contexts,
       vector<MatrixReal>& context_vectors,
-      MatrixReal& prediction_vectors,
+      vector<MatrixReal>& forward_weights,
       MatrixReal& word_probs) const;
 
   virtual void getContextVectors(
@@ -124,36 +126,47 @@ class Weights {
       const vector<int>& indices,
       const vector<MatrixReal>& context_vectors) const;
 
+  virtual vector<MatrixReal> propagateForwards(
+      const vector<int>& indices,
+      const vector<MatrixReal>& context_vectors) const;
+
   MatrixReal getContextProduct(
       int index, const MatrixReal& representations,
       bool transpose = false) const;
 
   MatrixReal getProbabilities(
       const vector<int>& indices,
-      const MatrixReal& prediction_vectors) const;
-
-  MatrixReal getWeightedRepresentations(
-      const boost::shared_ptr<Corpus>& corpus,
-      const vector<int>& indices,
-      const MatrixReal& prediction_vectors,
-      const MatrixReal& word_probs) const;
+      const vector<MatrixReal>& forward_weights) const;
 
   void getFullGradient(
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices,
       const vector<vector<int>>& contexts,
       const vector<MatrixReal>& context_vectors,
-      const MatrixReal& prediction_vectors,
-      const MatrixReal& weighted_representations,
-      MatrixReal& word_probs,
+      const vector<MatrixReal>& forward_weights,
+      const MatrixReal& word_probs,
       const boost::shared_ptr<Weights>& gradient,
+      MinibatchWords& words) const;
+
+  void propagateBackwards(
+      const vector<MatrixReal>& forward_weights,
+      MatrixReal& backward_weights,
+      const boost::shared_ptr<Weights>& gradient) const;
+
+  void getProjectionGradient(
+      const boost::shared_ptr<Corpus>& corpus,
+      const vector<int>& indices,
+      const vector<MatrixReal>& forward_weights,
+      const MatrixReal& word_probs,
+      const boost::shared_ptr<Weights>& gradient,
+      MatrixReal& backward_weights,
       MinibatchWords& words) const;
 
   virtual void getContextGradient(
       const vector<int>& indices,
       const vector<vector<int>>& contexts,
       const vector<MatrixReal>& context_vectors,
-      const MatrixReal& weighted_representations,
+      const MatrixReal& backward_weights,
       const boost::shared_ptr<Weights>& gradient) const;
 
   virtual vector<vector<int>> getNoiseWords(
@@ -163,11 +176,21 @@ class Weights {
   void estimateProjectionGradient(
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices,
-      const MatrixReal& prediction_vectors,
+      const vector<MatrixReal>& forward_weights,
       const boost::shared_ptr<Weights>& gradient,
-      MatrixReal& weighted_representations,
+      MatrixReal& backward_weights,
       Real& objective,
       MinibatchWords& words) const;
+
+  void estimateFullGradient(
+    const boost::shared_ptr<Corpus>& corpus,
+    const vector<int>& indices,
+    const vector<vector<int>>& contexts,
+    const vector<MatrixReal>& context_vectors,
+    const vector<MatrixReal>& forward_weights,
+    const boost::shared_ptr<Weights>& gradient,
+    Real& log_likelihood,
+    MinibatchWords& words) const;
 
   virtual VectorReal getPredictionVector(const vector<int>& context) const;
 
@@ -212,6 +235,8 @@ class Weights {
   WordVectorsType       Q;
   WordVectorsType       R;
   WeightsType           B;
+  HiddenLayers          H;
+ public:
   WeightsType           W;
 
   mutable ContextCache normalizerCache;
@@ -222,6 +247,7 @@ class Weights {
   vector<Mutex> mutexesC;
   vector<Mutex> mutexesQ;
   vector<Mutex> mutexesR;
+  vector<Mutex> mutexesH;
   Mutex mutexB;
 };
 

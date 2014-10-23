@@ -158,7 +158,8 @@ MatrixReal SourceFactoredWeights::getPredictionVectors(
   int context_width = config->ngram_order - 1;
   int source_context_width = 2 * config->source_order - 1;
 
-  MatrixReal prediction_vectors = MatrixReal::Zero(word_width, indices.size());
+  MatrixReal prediction_vectors =
+      MatrixReal::Zero(word_width, indices.size());
   for (int i = 0; i < context_width; ++i) {
     prediction_vectors += getContextProduct(i, context_vectors[i]);
   }
@@ -168,11 +169,7 @@ MatrixReal SourceFactoredWeights::getPredictionVectors(
         getSourceContextProduct(i, context_vectors[context_width + i]);
   }
 
-  for (size_t i = 0; i < indices.size(); ++i) {
-    prediction_vectors.col(i) = activation(config, prediction_vectors.col(i));
-  }
-
-  return prediction_vectors;
+  return activation(config, prediction_vectors);
 }
 
 void SourceFactoredWeights::getContextGradient(
@@ -235,14 +232,14 @@ bool SourceFactoredWeights::checkGradient(
 
   for (int i = 0; i < size; ++i) {
     SW(i) += eps;
-    Real objective_plus = getObjective(corpus, indices);
+    Real log_likelihood_plus = getLogLikelihood(corpus, indices);
     SW(i) -= eps;
 
     SW(i) -= eps;
-    Real objective_minus = getObjective(corpus, indices);
+    Real log_likelihood_minus = getLogLikelihood(corpus, indices);
     SW(i) += eps;
 
-    double est_gradient = (objective_plus - objective_minus) / (2 * eps);
+    double est_gradient = (log_likelihood_plus - log_likelihood_minus) / (2 * eps);
     if (fabs(gradient->SW(i) - est_gradient) > eps) {
       cout << i << " " << gradient->SW(i) << " " << est_gradient << endl;
       return false;
@@ -371,7 +368,14 @@ VectorReal SourceFactoredWeights::getPredictionVector(
     }
   }
 
-  return activation(config, prediction_vector);
+  prediction_vector = activation(config, prediction_vector);
+
+  for (int j = 0; j < config->hidden_layers; ++j) {
+    prediction_vector =
+        activation<VectorReal>(config, H[j] * prediction_vector);
+  }
+
+  return prediction_vector;
 }
 
 SourceFactoredWeights::~SourceFactoredWeights() {

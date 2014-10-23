@@ -12,11 +12,11 @@ namespace oxlm {
 TEST_F(FactoredWeightsTest, TestCheckGradient) {
   FactoredWeights weights(config, metadata, corpus);
   vector<int> indices = {0, 1, 2, 3};
-  Real objective;
+  Real log_likelihood;
   MinibatchWords words;
   boost::shared_ptr<FactoredWeights> gradient =
       boost::make_shared<FactoredWeights>(config, metadata);
-  weights.getGradient(corpus, indices, gradient, objective, words);
+  weights.getGradient(corpus, indices, gradient, log_likelihood, words);
   // See the comment in weights_test.cc if you suspect the gradient is not
   // computed correctly.
   EXPECT_TRUE(weights.checkGradient(corpus, indices, gradient, 1e-3));
@@ -26,11 +26,27 @@ TEST_F(FactoredWeightsTest, TestCheckGradientDiagonal) {
   config->diagonal_contexts = true;
   FactoredWeights weights(config, metadata, corpus);
   vector<int> indices = {0, 1, 2, 3};
-  Real objective;
+  Real log_likelihood;
   MinibatchWords words;
   boost::shared_ptr<FactoredWeights> gradient =
       boost::make_shared<FactoredWeights>(config, metadata);
-  weights.getGradient(corpus, indices, gradient, objective, words);
+  weights.getGradient(corpus, indices, gradient, log_likelihood, words);
+
+  // See the comment in weights_test.cc if you suspect the gradient is not
+  // computed correctly.
+  EXPECT_TRUE(weights.checkGradient(corpus, indices, gradient, 1e-3));
+}
+
+TEST_F(FactoredWeightsTest, TestCheckGradientExtraHiddenLayers) {
+  config->hidden_layers = 2;
+
+  FactoredWeights weights(config, metadata, corpus);
+  vector<int> indices = {0, 1, 2, 3};
+  Real log_likelihood;
+  MinibatchWords words;
+  boost::shared_ptr<FactoredWeights> gradient =
+      boost::make_shared<FactoredWeights>(config, metadata);
+  weights.getGradient(corpus, indices, gradient, log_likelihood, words);
 
   // See the comment in weights_test.cc if you suspect the gradient is not
   // computed correctly.
@@ -41,11 +57,11 @@ TEST_F(FactoredWeightsTest, TestPredict) {
   FactoredWeights weights(config, metadata, corpus);
   vector<int> indices = {0, 1, 2, 3};
 
-  Real objective = weights.getObjective(corpus, indices);
+  Real log_likelihood = weights.getLogLikelihood(corpus, indices);
 
-  EXPECT_NEAR(objective, getLogProbabilities(weights, indices), EPS);
+  EXPECT_NEAR(log_likelihood, getLogProbabilities(weights, indices), EPS);
   // Check cache values.
-  EXPECT_NEAR(objective, getLogProbabilities(weights, indices), EPS);
+  EXPECT_NEAR(log_likelihood, getLogProbabilities(weights, indices), EPS);
 }
 
 TEST_F(FactoredWeightsTest, TestUnnormalizedScores) {

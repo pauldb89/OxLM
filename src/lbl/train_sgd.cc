@@ -48,11 +48,13 @@ int main(int argc, char** argv) {
     ("diagonal-contexts", value<bool>()->default_value(true),
         "Use diagonal context matrices (usually faster).")
     ("activation", value<int>()->default_value(2),
-        "Activation function for the prediction (hidden) layer. "
+        "Activation function for the hidden layers. "
         "0: Identity, 1: Sigmoid, 2: Rectifier.")
     ("noise-samples", value<int>()->default_value(0),
         "Number of noise samples for noise contrastive estimation. "
-        "If zero, minibatch gradient descent is used instead.");
+        "If zero, minibatch gradient descent is used instead.")
+    ("hidden-layers", value<int>()->default_value(0),
+        "Number of hidden layers");
   options_description config_options, cmdline_options;
   config_options.add(generic);
   cmdline_options.add(generic).add(cmdline_specific);
@@ -99,6 +101,32 @@ int main(int argc, char** argv) {
 
   config->noise_samples = vm["noise-samples"].as<int>();
 
+  config->hidden_layers = vm["hidden-layers"].as<int>();
+
+  cout << "################################" << endl;
+  if (strlen(GIT_REVISION) > 0) {
+    cout << "# Git revision: " << GIT_REVISION << endl;
+  }
+  cout << "# Config Summary" << endl;
+  cout << "# order = " << config->ngram_order << endl;
+  cout << "# word_width = " << config->word_representation_size << endl;
+  if (config->model_output_file.size()) {
+    cout << "# model-out = " << config->model_output_file << endl;
+  }
+  cout << "# input = " << config->training_file << endl;
+  cout << "# minibatch size = " << config->minibatch_size << endl;
+  cout << "# minibatch threshold = " << config->minibatch_threshold << endl;
+  cout << "# lambda = " << config->l2_lbl << endl;
+  cout << "# step size = " << config->step_size << endl;
+  cout << "# iterations = " << config->iterations << endl;
+  cout << "# evaluate frequency = " << config->evaluate_frequency << endl;
+  cout << "# threads = " << config->threads << endl;
+  cout << "# randomise = " << config->randomise << endl;
+  cout << "# diagonal contexts = " << config->diagonal_contexts << endl;
+  cout << "# activation = " << config->activation << endl;
+  cout << "# noise samples = " << config->noise_samples << endl;
+  cout << "# hidden layers = " << config->hidden_layers << endl;
+  cout << "################################" << endl;
 
   Model<Weights, Weights, Metadata> model(config);
   model.learn();

@@ -28,7 +28,7 @@ class GlobalFactoredMaxentWeights : public FactoredWeights {
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices,
       const vector<vector<int>>& contexts,
-      const MatrixReal& prediction_vectors,
+      const vector<MatrixReal>& forward_weights,
       MatrixReal& class_probs,
       vector<VectorReal>& word_probs) const;
 
@@ -44,8 +44,7 @@ class GlobalFactoredMaxentWeights : public FactoredWeights {
       const vector<int>& indices,
       const vector<vector<int>>& contexts,
       const vector<MatrixReal>& context_vectors,
-      const MatrixReal& prediction_vectors,
-      const MatrixReal& weighted_representations,
+      const vector<MatrixReal>& forward_weights,
       MatrixReal& class_probs,
       vector<VectorReal>& word_probs,
       const boost::shared_ptr<MinibatchFactoredMaxentWeights>& gradient,

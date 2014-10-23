@@ -31,4 +31,19 @@ TEST_F(SGDTest, TestNCE) {
   EXPECT_NEAR(67.7361526, perplexity(log_likelihood, test_corpus->size()), EPS);
 }
 
+TEST_F(SGDTest, TestSGDExtraHiddenLayers) {
+  config->hidden_layers = 2;
+  config->activation = RECTIFIER;
+  Model<Weights, Weights, Metadata> model(config);
+  model.learn();
+  config->test_file = "test.en";
+  boost::shared_ptr<Vocabulary> vocab = model.getVocab();
+  boost::shared_ptr<Corpus> test_corpus = readTestCorpus(config, vocab);
+  Real log_likelihood = 0;
+  model.evaluate(test_corpus, log_likelihood);
+  EXPECT_NEAR(111.8916702, perplexity(log_likelihood, test_corpus->size()), EPS);
+}
+
+
+
 } // namespace oxlm

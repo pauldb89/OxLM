@@ -65,6 +65,7 @@ struct ModelData {
   Activation  activation;
   int         source_vocab_size;
   int         source_order;
+  int         hidden_layers;
 
   bool operator==(const ModelData& other) const;
 
@@ -98,6 +99,7 @@ struct ModelData {
     ar & activation;
     ar & source_vocab_size;
     ar & source_order;
+    ar & hidden_layers;
   }
 };
 

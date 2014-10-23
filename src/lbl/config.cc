@@ -6,8 +6,8 @@ namespace oxlm {
 
 ModelData::ModelData()
     : iterations(0), evaluate_frequency(1), minibatch_size(0),
-      minibatch_threshold(0), instances(0),
-      ngram_order(0), feature_context_size(0), l2_lbl(0), l2_maxent(0),
+      minibatch_threshold(0), instances(0), ngram_order(0),
+      feature_context_size(0), l2_lbl(0), l2_maxent(0),
       word_representation_size(0), threads(1), step_size(0), classes(0),
       randomise(false), reclass(false), diagonal_contexts(false),
       uniform(false), pseudo_likelihood_cne(false), mixture(false),
@@ -15,7 +15,8 @@ ModelData::ModelData()
       eta(0), multinomial_step_size(0), random_weights(false), hash_space(0),
       count_collisions(false), filter_contexts(false), filter_error_rate(0),
       max_ngrams(0), min_ngram_freq(0), vocab_size(0), noise_samples(0),
-      activation(IDENTITY), source_order(0), source_vocab_size(0) {}
+      activation(IDENTITY), source_order(0), source_vocab_size(0),
+      hidden_layers(0) {}
 
 bool ModelData::operator==(const ModelData& other) const {
   if (fabs(l2_lbl - other.l2_lbl) > EPS ||
@@ -35,7 +36,8 @@ bool ModelData::operator==(const ModelData& other) const {
       && filter_contexts == other.filter_contexts
       && fabs(filter_error_rate - other.filter_error_rate) < EPS
       && activation == other.activation
-      && source_order == other.source_order;
+      && source_order == other.source_order
+      && hidden_layers == other.hidden_layers;
 }
 
 ostream& operator<<(ostream& out, const ModelData& config) {

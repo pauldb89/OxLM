@@ -63,4 +63,19 @@ TEST_F(SourceFactoredWeightsTest, TestCheckGradientDiagonal) {
   EXPECT_TRUE(weights.checkGradient(corpus, indices, gradient, 1e-3));
 }
 
+TEST_F(SourceFactoredWeightsTest, TestCheckGradientExtraHiddenLayers) {
+  config->hidden_layers = 2;
+  SourceFactoredWeights weights(config, metadata, corpus);
+  vector<int> indices = {0, 1, 2, 3};
+  Real objective;
+  MinibatchWords words;
+  boost::shared_ptr<SourceFactoredWeights> gradient =
+      boost::make_shared<SourceFactoredWeights>(config, metadata);
+  weights.getGradient(corpus, indices, gradient, objective, words);
+
+  // See the comment in weights_test.cc if you suspect the gradient is not
+  // computed correctly.
+  EXPECT_TRUE(weights.checkGradient(corpus, indices, gradient, 1e-3));
+}
+
 } // namespace oxlm

@@ -59,9 +59,11 @@ void Weights::allocate() {
   int Q_size = word_width * num_context_words;
   int R_size = word_width * num_output_words;
   int C_size = config->diagonal_contexts ? word_width : word_width * word_width;
+  int H_size = word_width * word_width;
   int B_size = num_output_words;
 
-  size = Q_size + R_size + context_width * C_size + B_size;
+  size = Q_size + R_size + context_width * C_size
+       + config->hidden_layers * H_size + B_size;
   data = new Real[size];
 
   for (int i = 0; i < num_context_words; ++i) {
@@ -69,6 +71,9 @@ void Weights::allocate() {
   }
   for (int i = 0; i < num_output_words; ++i) {
     mutexesR.push_back(boost::make_shared<mutex>());
+  }
+  for (int i = 0; i < config->hidden_layers; ++i) {
+    mutexesH.push_back(boost::make_shared<mutex>());
   }
   for (int i = 0; i < context_width; ++i) {
     mutexesC.push_back(boost::make_shared<mutex>());
@@ -87,6 +92,7 @@ void Weights::setModelParameters() {
   int Q_size = word_width * num_context_words;
   int R_size = word_width * num_output_words;
   int C_size = config->diagonal_contexts ? word_width : word_width * word_width;
+  int H_size = word_width * word_width;
   int B_size = num_output_words;
 
   new (&W) WeightsType(data, size);
@@ -102,6 +108,11 @@ void Weights::setModelParameters() {
       C.push_back(ContextTransformType(start, word_width, word_width));
     }
     start += C_size;
+  }
+
+  for (int i = 0; i < config->hidden_layers; ++i) {
+    H.push_back(HiddenLayer(start, word_width, word_width));
+    start += H_size;
   }
 
   new (&B) WeightsType(start, B_size);
@@ -128,24 +139,20 @@ void Weights::getGradient(
     const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& indices,
     const boost::shared_ptr<Weights>& gradient,
-    Real& objective,
+    Real& log_likelihood,
     MinibatchWords& words) const {
   vector<vector<int>> contexts;
   vector<MatrixReal> context_vectors;
-  MatrixReal prediction_vectors;
+  vector<MatrixReal> forward_weights;
   MatrixReal word_probs;
-  objective += getObjective(
-      corpus, indices, contexts, context_vectors,
-      prediction_vectors, word_probs);
+  log_likelihood += getObjective(
+      corpus, indices, contexts, context_vectors, forward_weights, word_probs);
 
   setContextWords(contexts, words);
 
-  MatrixReal weighted_representations = getWeightedRepresentations(
-      corpus, indices, prediction_vectors, word_probs);
-
   getFullGradient(
-      corpus, indices, contexts, context_vectors, prediction_vectors,
-      weighted_representations, word_probs, gradient, words);
+      corpus, indices, contexts, context_vectors, forward_weights,
+      word_probs, gradient, words);
 }
 
 void Weights::getContextVectors(
@@ -184,17 +191,29 @@ MatrixReal Weights::getPredictionVectors(
     const vector<MatrixReal>& context_vectors) const {
   int context_width = config->ngram_order - 1;
   int word_width = config->word_representation_size;
-  MatrixReal prediction_vectors = MatrixReal::Zero(word_width, indices.size());
 
+  MatrixReal prediction_vectors = MatrixReal::Zero(word_width, indices.size());
   for (int i = 0; i < context_width; ++i) {
     prediction_vectors += getContextProduct(i, context_vectors[i]);
   }
 
-  for (size_t i = 0; i < indices.size(); ++i) {
-    prediction_vectors.col(i) = activation(config, prediction_vectors.col(i));
+  return activation<MatrixReal>(config, prediction_vectors);
+}
+
+vector<MatrixReal> Weights::propagateForwards(
+    const vector<int>& indices,
+    const vector<MatrixReal>& context_vectors) const {
+  int word_width = config->word_representation_size;
+  vector<MatrixReal> forward_weights(
+      config->hidden_layers + 1, MatrixReal::Zero(word_width, indices.size()));
+
+  forward_weights[0] = getPredictionVectors(indices, context_vectors);
+  for (size_t i = 0; i < config->hidden_layers; ++i) {
+    forward_weights[i + 1] =
+        activation<MatrixReal>(config, H[i] * forward_weights[i]);
   }
 
-  return prediction_vectors;
+  return forward_weights;
 }
 
 MatrixReal Weights::getContextProduct(
@@ -211,8 +230,9 @@ MatrixReal Weights::getContextProduct(
 }
 
 MatrixReal Weights::getProbabilities(
-    const vector<int>& indices, const MatrixReal& prediction_vectors) const {
-  MatrixReal word_probs = R.transpose() * prediction_vectors + B * MatrixReal::Ones(1, indices.size());
+    const vector<int>& indices,
+    const vector<MatrixReal>& forward_weights) const {
+  MatrixReal word_probs = R.transpose() * forward_weights.back() + B * MatrixReal::Ones(1, indices.size());
   for (size_t i = 0; i < indices.size(); ++i) {
     word_probs.col(i) = softMax(word_probs.col(i));
   }
@@ -220,21 +240,42 @@ MatrixReal Weights::getProbabilities(
   return word_probs;
 }
 
-MatrixReal Weights::getWeightedRepresentations(
+void Weights::propagateBackwards(
+    const vector<MatrixReal>& forward_weights,
+    MatrixReal& backward_weights,
+    const boost::shared_ptr<Weights>& gradient) const {
+  for (int i = config->hidden_layers - 1; i >= 0; --i) {
+    gradient->H[i] += backward_weights * forward_weights[i].transpose();
+
+    backward_weights = H[i].transpose() * backward_weights;
+    backward_weights.array() *=
+        activationDerivative(config, forward_weights[i]);
+  }
+}
+
+void Weights::getProjectionGradient(
     const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& indices,
-    const MatrixReal& prediction_vectors,
-    const MatrixReal& word_probs) const {
-  MatrixReal weighted_representations = R * word_probs;
-
-  for (size_t i = 0; i < indices.size(); ++i) {
-    weighted_representations.col(i) -= R.col(corpus->at(indices[i]));
+    const vector<MatrixReal>& forward_weights,
+    const MatrixReal& word_probs,
+    const boost::shared_ptr<Weights>& gradient,
+    MatrixReal& backward_weights,
+    MinibatchWords& words) const {
+  for (size_t word_id = 0; word_id < config->vocab_size; ++word_id) {
+    words.addOutputWord(word_id);
   }
 
-  weighted_representations.array() *=
-      activationDerivative(config, prediction_vectors);
+  backward_weights = word_probs;
+  for (size_t i = 0; i < indices.size(); ++i) {
+    backward_weights(corpus->at(indices[i]), i) -= 1;
+  }
 
-  return weighted_representations;
+  gradient->R += forward_weights.back() * backward_weights.transpose();
+  gradient->B += backward_weights.rowwise().sum();
+
+  backward_weights = R * backward_weights;
+  backward_weights.array() *=
+      activationDerivative(config, forward_weights.back());
 }
 
 void Weights::getFullGradient(
@@ -242,45 +283,40 @@ void Weights::getFullGradient(
     const vector<int>& indices,
     const vector<vector<int>>& contexts,
     const vector<MatrixReal>& context_vectors,
-    const MatrixReal& prediction_vectors,
-    const MatrixReal& weighted_representations,
-    MatrixReal& word_probs,
+    const vector<MatrixReal>& forward_weights,
+    const MatrixReal& word_probs,
     const boost::shared_ptr<Weights>& gradient,
     MinibatchWords& words) const {
-  for (size_t i = 0; i < indices.size(); ++i) {
-    word_probs(corpus->at(indices[i]), i) -= 1;
-  }
+  MatrixReal backward_weights;
+  getProjectionGradient(
+      corpus, indices, forward_weights, word_probs, gradient,
+      backward_weights, words);
 
-  for (size_t word_id = 0; word_id < config->vocab_size; ++word_id) {
-    words.addOutputWord(word_id);
-  }
-
-  gradient->R += prediction_vectors * word_probs.transpose();
-  gradient->B += word_probs.rowwise().sum();
+  propagateBackwards(forward_weights, backward_weights, gradient);
 
   getContextGradient(
-      indices, contexts, context_vectors, weighted_representations, gradient);
+      indices, contexts, context_vectors, backward_weights, gradient);
 }
 
 void Weights::getContextGradient(
     const vector<int>& indices,
     const vector<vector<int>>& contexts,
     const vector<MatrixReal>& context_vectors,
-    const MatrixReal& weighted_representations,
+    const MatrixReal& backward_weights,
     const boost::shared_ptr<Weights>& gradient) const {
   int context_width = config->ngram_order - 1;
   int word_width = config->word_representation_size;
   MatrixReal context_gradients = MatrixReal::Zero(word_width, indices.size());
   for (int j = 0; j < context_width; ++j) {
-    context_gradients = getContextProduct(j, weighted_representations, true);
+    context_gradients = getContextProduct(j, backward_weights, true);
     for (size_t i = 0; i < indices.size(); ++i) {
       gradient->Q.col(contexts[i][j]) += context_gradients.col(i);
     }
 
     if (config->diagonal_contexts) {
-      gradient->C[j] += context_vectors[j].cwiseProduct(weighted_representations).rowwise().sum();
+      gradient->C[j] += context_vectors[j].cwiseProduct(backward_weights).rowwise().sum();
     } else {
-      gradient->C[j] += weighted_representations * context_vectors[j].transpose();
+      gradient->C[j] += backward_weights * context_vectors[j].transpose();
     }
   }
 }
@@ -290,21 +326,16 @@ bool Weights::checkGradient(
     const vector<int>& indices,
     const boost::shared_ptr<Weights>& gradient,
     double eps) {
-  vector<vector<int>> contexts;
-  vector<MatrixReal> context_vectors;
-  MatrixReal prediction_vectors;
-  MatrixReal word_probs;
-
   for (int i = 0; i < size; ++i) {
     W(i) += eps;
-    Real objective_plus = getObjective(corpus, indices);
+    Real log_likelihood_plus = getLogLikelihood(corpus, indices);
     W(i) -= eps;
 
     W(i) -= eps;
-    Real objective_minus = getObjective(corpus, indices);
+    Real log_likelihood_minus = getLogLikelihood(corpus, indices);
     W(i) += eps;
 
-    double est_gradient = (objective_plus - objective_minus) / (2 * eps);
+    double est_gradient = (log_likelihood_plus - log_likelihood_minus) / (2 * eps);
     if (fabs(gradient->W(i) - est_gradient) > eps) {
       cout << i << " " << gradient->W(i) << " " << est_gradient << endl;
       return false;
@@ -314,14 +345,14 @@ bool Weights::checkGradient(
   return true;
 }
 
-Real Weights::getObjective(
+Real Weights::getLogLikelihood(
     const boost::shared_ptr<Corpus>& corpus, const vector<int>& indices) const {
   vector<vector<int>> contexts;
   vector<MatrixReal> context_vectors;
-  MatrixReal prediction_vectors;
+  vector<MatrixReal> forward_weights;
   MatrixReal word_probs;
   return getObjective(
-      corpus, indices, contexts, context_vectors, prediction_vectors, word_probs);
+      corpus, indices, contexts, context_vectors, forward_weights, word_probs);
 }
 
 Real Weights::getObjective(
@@ -329,18 +360,18 @@ Real Weights::getObjective(
     const vector<int>& indices,
     vector<vector<int>>& contexts,
     vector<MatrixReal>& context_vectors,
-    MatrixReal& prediction_vectors,
+    vector<MatrixReal>& forward_weights,
     MatrixReal& word_probs) const {
   getContextVectors(corpus, indices, contexts, context_vectors);
-  prediction_vectors = getPredictionVectors(indices, context_vectors);
-  word_probs = getProbabilities(indices, prediction_vectors);
+  forward_weights = propagateForwards(indices, context_vectors);
+  word_probs = getProbabilities(indices, forward_weights);
 
-  Real objective = 0;
+  Real log_likelihood = 0;
   for (size_t i = 0; i < indices.size(); ++i) {
-    objective -= log(word_probs(corpus->at(indices[i]), i));
+    log_likelihood -= log(word_probs(corpus->at(indices[i]), i));
   }
 
-  return objective;
+  return log_likelihood;
 }
 
 vector<vector<int>> Weights::getNoiseWords(
@@ -359,10 +390,10 @@ vector<vector<int>> Weights::getNoiseWords(
 void Weights::estimateProjectionGradient(
     const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& indices,
-    const MatrixReal& prediction_vectors,
+    const vector<MatrixReal>& forward_weights,
     const boost::shared_ptr<Weights>& gradient,
-    MatrixReal& weighted_representations,
-    Real& objective,
+    MatrixReal& backward_weights,
+    Real& log_likelihood,
     MinibatchWords& words) const {
   int noise_samples = config->noise_samples;
   int word_width = config->word_representation_size;
@@ -377,45 +408,71 @@ void Weights::estimateProjectionGradient(
   }
 
   Real log_num_samples = log(noise_samples);
-  weighted_representations = MatrixReal::Zero(word_width, indices.size());
+  backward_weights = MatrixReal::Zero(word_width, indices.size());
   for (size_t i = 0; i < indices.size(); ++i) {
     int word_id = corpus->at(indices[i]);
-    Real log_score = R.col(word_id).dot(prediction_vectors.col(i)) + B(word_id);
+    Real log_score = R.col(word_id).dot(forward_weights.back().col(i)) + B(word_id);
     Real log_noise = log_num_samples + log(unigram(word_id));
     Real log_norm = LogAdd(log_score, log_noise);
 
-    objective -= log_score - log_norm;
+    log_likelihood -= log_score - log_norm;
 
     Real prob = exp(log_noise - log_norm);
     assert(prob <= numeric_limits<Real>::max());
-    weighted_representations.col(i) -= prob * R.col(word_id);
+    backward_weights.col(i) -= prob * R.col(word_id);
 
-    gradient->R.col(word_id) -= prob * prediction_vectors.col(i);
+    gradient->R.col(word_id) -= prob * forward_weights.back().col(i);
     gradient->B(word_id) -= prob;
 
     for (int j = 0; j < noise_samples; ++j) {
       int noise_word_id = noise_words[i][j];
-      Real log_score = R.col(noise_word_id).dot(prediction_vectors.col(i)) + B(noise_word_id);
+      Real log_score = R.col(noise_word_id).dot(forward_weights.back().col(i)) + B(noise_word_id);
       Real log_noise = log_num_samples + log(unigram(noise_word_id));
       Real log_norm = LogAdd(log_score, log_noise);
 
-      objective -= log_noise - log_norm;
+      log_likelihood -= log_noise - log_norm;
 
       Real prob = exp(log_score - log_norm);
       assert(prob <= numeric_limits<Real>::max());
-      weighted_representations.col(i) += prob * R.col(noise_word_id);
+      backward_weights.col(i) += prob * R.col(noise_word_id);
 
-      gradient->R.col(noise_word_id) += prob * prediction_vectors.col(i);
+      gradient->R.col(noise_word_id) += prob * forward_weights.back().col(i);
       gradient->B(noise_word_id) += prob;
     }
   }
+}
+
+void Weights::estimateFullGradient(
+    const boost::shared_ptr<Corpus>& corpus,
+    const vector<int>& indices,
+    const vector<vector<int>>& contexts,
+    const vector<MatrixReal>& context_vectors,
+    const vector<MatrixReal>& forward_weights,
+    const boost::shared_ptr<Weights>& gradient,
+    Real& log_likelihood,
+    MinibatchWords& words) const {
+  MatrixReal backward_weights;
+  estimateProjectionGradient(
+      corpus, indices, forward_weights, gradient,
+      backward_weights, log_likelihood, words);
+
+  // In FactoredWeights, the backward_weights add up contributions from both
+  // word and class predictions. If the following non-linearity derivative was
+  // applied in estimateProjectionGradient, that method would have to be
+  // reimplemented in FactoredWeights, resulting in a lot of code duplication.
+  backward_weights.array() *=
+      activationDerivative(config, forward_weights.back());
+  propagateBackwards(forward_weights, backward_weights, gradient);
+
+  getContextGradient(
+      indices, contexts, context_vectors, backward_weights, gradient);
 }
 
 void Weights::estimateGradient(
     const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& indices,
     const boost::shared_ptr<Weights>& gradient,
-    Real& objective,
+    Real& log_likelihood,
     MinibatchWords& words) const {
   vector<vector<int>> contexts;
   vector<MatrixReal> context_vectors;
@@ -423,19 +480,12 @@ void Weights::estimateGradient(
 
   setContextWords(contexts, words);
 
-  MatrixReal prediction_vectors =
-      getPredictionVectors(indices, context_vectors);
+  vector<MatrixReal> forward_weights =
+      propagateForwards(indices, context_vectors);
 
-  MatrixReal weighted_representations;
-  estimateProjectionGradient(
-      corpus, indices, prediction_vectors, gradient,
-      weighted_representations, objective, words);
-
-  weighted_representations.array() *=
-      activationDerivative(config, prediction_vectors);
-
-  getContextGradient(
-      indices, contexts, context_vectors, weighted_representations, gradient);
+  estimateFullGradient(
+      corpus, indices, contexts, context_vectors, forward_weights, gradient,
+      log_likelihood, words);
 }
 
 void Weights::syncUpdate(
@@ -451,9 +501,14 @@ void Weights::syncUpdate(
     R.col(word_id) += gradient->R.col(word_id);
   }
 
-  for (int i = 0; i < C.size(); ++i) {
+  for (size_t i = 0; i < C.size(); ++i) {
     lock_guard<mutex> lock(*mutexesC[i]);
     C[i] += gradient->C[i];
+  }
+
+  for (size_t i = 0; i < H.size(); ++i) {
+    lock_guard<mutex> lock(*mutexesH[i]);
+    H[i] += gradient->H[i];
   }
 
   lock_guard<mutex> lock(*mutexB);
@@ -556,7 +611,14 @@ VectorReal Weights::getPredictionVector(const vector<int>& context) const {
     }
   }
 
-  return activation(config, prediction_vector);
+  prediction_vector = activation(config, prediction_vector);
+
+  for (int j = 0; j < config->hidden_layers; ++j) {
+    prediction_vector =
+        activation<VectorReal>(config, H[j] * prediction_vector);
+  }
+
+  return prediction_vector;
 }
 
 Real Weights::getLogProb(int word_id, vector<int> context) const {

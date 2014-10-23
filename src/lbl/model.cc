@@ -53,12 +53,10 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
   // vocabulary was partitioned in classes.
   boost::shared_ptr<Corpus> training_corpus =
       readTrainingCorpus(config, vocab);
-  cout << "Done reading training corpus..." << endl;
 
   boost::shared_ptr<Corpus> test_corpus;
   if (config->test_file.size()) {
     test_corpus = readTestCorpus(config, vocab);
-    cout << "Done reading test corpus..." << endl;
   }
 
   if (config->model_input_file.size() == 0) {
@@ -269,9 +267,9 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::evaluate(
           indices.begin() + start, min(indices.begin() + end, indices.end()));
       minibatch = scatterMinibatch(minibatch);
 
-      Real objective = weights->getObjective(test_corpus, minibatch);
+      Real log_likelihood = weights->getLogLikelihood(test_corpus, minibatch);
       #pragma omp critical
-      accumulator += objective;
+      accumulator += log_likelihood;
 
       start = end;
     }
