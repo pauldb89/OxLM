@@ -101,4 +101,6 @@ struct ModelData {
   }
 };
 
+ostream& operator<<(ostream& out, const ModelData& config);
+
 } // namespace oxlm

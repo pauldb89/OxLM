@@ -39,6 +39,8 @@ int main(int argc, char** argv) {
   boost::shared_ptr<Corpus> test_corpus =
       readTestCorpus(config, vocab, true);
 
+  cout << *config << endl;
+
   Real accumulator = 0;
   int num_threads = vm["threads"].as<int>();
   #pragma omp parallel num_threads(num_threads)

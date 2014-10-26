@@ -20,6 +20,8 @@ void evaluate(const string& model_file, const string& test_file, int num_threads
   boost::shared_ptr<Corpus> test_corpus =
       readTestCorpus(config, vocab, true);
 
+  cout << *config << endl;
+
   Real accumulator = 0;
   #pragma omp parallel num_threads(num_threads)
   model.evaluate(test_corpus, accumulator);

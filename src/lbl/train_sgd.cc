@@ -99,29 +99,6 @@ int main(int argc, char** argv) {
 
   config->noise_samples = vm["noise-samples"].as<int>();
 
-  cout << "################################" << endl;
-  if (strlen(GIT_REVISION) > 0) {
-    cout << "# Git revision: " << GIT_REVISION << endl;
-  }
-  cout << "# Config Summary" << endl;
-  cout << "# order = " << config->ngram_order << endl;
-  cout << "# word_width = " << config->word_representation_size << endl;
-  if (config->model_output_file.size()) {
-    cout << "# model-out = " << config->model_output_file << endl;
-  }
-  cout << "# input = " << config->training_file << endl;
-  cout << "# minibatch size = " << config->minibatch_size << endl;
-  cout << "# minibatch threshold = " << config->minibatch_threshold << endl;
-  cout << "# lambda = " << config->l2_lbl << endl;
-  cout << "# step size = " << config->step_size << endl;
-  cout << "# iterations = " << config->iterations << endl;
-  cout << "# evaluate frequency = " << config->evaluate_frequency << endl;
-  cout << "# threads = " << config->threads << endl;
-  cout << "# randomise = " << config->randomise << endl;
-  cout << "# diagonal contexts = " << config->diagonal_contexts << endl;
-  cout << "# activation = " << config->activation << endl;
-  cout << "# noise samples = " << config->noise_samples << endl;
-  cout << "################################" << endl;
 
   Model<Weights, Weights, Metadata> model(config);
   model.learn();

@@ -38,4 +38,53 @@ bool ModelData::operator==(const ModelData& other) const {
       && source_order == other.source_order;
 }
 
+ostream& operator<<(ostream& out, const ModelData& config) {
+  out << "################################" << endl;
+
+  out << "# Input/Output files:" << endl;
+  out << "# input = " << config.training_file << endl;
+  out << "# test file = " << config.test_file << endl;
+  if (config.class_file.size()) {
+    out << "# class file = " << config.class_file << endl;
+  }
+  out << "# model-out = " << config.model_output_file << endl;
+  out << endl;
+
+  out << "# General config: " << endl;
+  out << "# vocab size = " << config.vocab_size << endl;
+  out << "# order = " << config.ngram_order << endl;
+  out << "# word_width = " << config.word_representation_size << endl;
+  out << "# iterations = " << config.iterations << endl;
+  out << "# minibatch size = " << config.minibatch_size << endl;
+  out << "# evaluate frequency = " << config.evaluate_frequency << endl;
+  out << "# minibatch threshold = " << config.minibatch_threshold << endl;
+  out << "# lambda = " << config.l2_lbl << endl;
+  out << "# step size = " << config.step_size << endl;
+  out << "# threads = " << config.threads << endl;
+  out << "# randomise = " << config.randomise << endl;
+  out << "# diagonal contexts = " << config.diagonal_contexts << endl;
+  out << "# activation = " << config.activation << endl;
+  out << "# noise samples = " << config.noise_samples << endl;
+
+  if (config.l2_maxent > 0 || config.hash_space > 0) {
+    out << "# Direct n-grams config: " << endl;
+    out << "# lambda maxent = " << config.l2_maxent << endl;
+    out << "# max n-grams = " << config.max_ngrams << endl;
+    out << "# min n-gram frequency = " << config.min_ngram_freq << endl;
+    out << "# hash space = " << config.hash_space << endl;
+    out << "# filter contexts = " << config.filter_contexts << endl;
+    out << "# filter error rate = " << config.filter_error_rate << endl;
+  }
+
+  if (config.source_vocab_size > 0 || config.source_order > 0) {
+    out << "Source conditioning config:" << endl;
+    out << "# source vocab size = " << config.source_vocab_size << endl;
+    out << "# source order = " << config.source_order << endl;
+    out << "# alignment file = " << config.alignment_file << endl;
+    out << "# test alignment file = " << config.test_alignment_file << endl;
+  }
+
+  out << "################################" << endl;
+}
+
 } // namespace oxlm
