@@ -16,7 +16,7 @@ TEST_F(FactoredSGDTest, TestTrainFactoredSGD) {
   boost::shared_ptr<Corpus> test_corpus = readTestCorpus(config, vocab);
   Real log_likelihood = 0;
   model.evaluate(test_corpus, log_likelihood);
-  EXPECT_NEAR(61.6428031, perplexity(log_likelihood, test_corpus->size()), EPS);
+  EXPECT_NEAR(61.6432151, perplexity(log_likelihood, test_corpus->size()), EPS);
 }
 
 TEST_F(FactoredSGDTest, TestTrainFactoredNCE) {

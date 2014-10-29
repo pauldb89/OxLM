@@ -261,8 +261,9 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::evaluate(
     vector<int> indices(test_corpus->size());
     iota(indices.begin(), indices.end(), 0);
     size_t start = 0;
+    int minibatch_size = sqrt(config->minibatch_size);
     while (start < test_corpus->size()) {
-      size_t end = min(start + config->minibatch_size, test_corpus->size());
+      size_t end = min(start + minibatch_size, test_corpus->size());
       vector<int> minibatch(
           indices.begin() + start, min(indices.begin() + end, indices.end()));
       minibatch = scatterMinibatch(minibatch);

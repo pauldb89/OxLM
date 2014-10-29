@@ -28,7 +28,7 @@ TEST_F(MaxentSGDTest, TestTrainMaxentSGDSparseFeatures) {
   boost::shared_ptr<Corpus> test_corpus = readTestCorpus(config, vocab);
   Real log_likelihood = 0;
   model.evaluate(test_corpus, log_likelihood);
-  EXPECT_NEAR(56.5152015, perplexity(log_likelihood, test_corpus->size()), EPS);
+  EXPECT_NEAR(56.5158233, perplexity(log_likelihood, test_corpus->size()), EPS);
 }
 
 TEST_F(MaxentSGDTest, TestTrainMaxentSGDCollisions) {
@@ -41,7 +41,7 @@ TEST_F(MaxentSGDTest, TestTrainMaxentSGDCollisions) {
   boost::shared_ptr<Corpus> test_corpus = readTestCorpus(config, vocab);
   Real log_likelihood = 0;
   model.evaluate(test_corpus, log_likelihood);
-  EXPECT_NEAR(54.0801925, perplexity(log_likelihood, test_corpus->size()), EPS);
+  EXPECT_NEAR(54.0808258, perplexity(log_likelihood, test_corpus->size()), EPS);
 }
 
 TEST_F(MaxentSGDTest, TestTrainMaxentSGDExactFiltering) {
@@ -55,7 +55,7 @@ TEST_F(MaxentSGDTest, TestTrainMaxentSGDExactFiltering) {
   boost::shared_ptr<Corpus> test_corpus = readTestCorpus(config, vocab);
   Real log_likelihood = 0;
   model.evaluate(test_corpus, log_likelihood);
-  EXPECT_NEAR(56.5219650, perplexity(log_likelihood, test_corpus->size()), EPS);
+  EXPECT_NEAR(56.5224494, perplexity(log_likelihood, test_corpus->size()), EPS);
 }
 
 TEST_F(MaxentSGDTest, TestTrainMaxentSGDApproximateFiltering) {
@@ -70,7 +70,7 @@ TEST_F(MaxentSGDTest, TestTrainMaxentSGDApproximateFiltering) {
   boost::shared_ptr<Corpus> test_corpus = readTestCorpus(config, vocab);
   Real log_likelihood = 0;
   model.evaluate(test_corpus, log_likelihood);
-  EXPECT_NEAR(56.4228439, perplexity(log_likelihood, test_corpus->size()), EPS);
+  EXPECT_NEAR(56.4237861, perplexity(log_likelihood, test_corpus->size()), EPS);
 }
 
 } // namespace oxlm
