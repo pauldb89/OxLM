@@ -98,7 +98,7 @@ inline Array2DReal activationDerivative(
     const boost::shared_ptr<ModelData>& config, const MatrixReal& v) {
   switch (config->activation) {
     case IDENTITY:
-      return v.array();
+      return Array2DReal::Ones(v.rows(), v.cols());
     case SIGMOID:
       return sigmoidDerivative(v);
     case RECTIFIER:
