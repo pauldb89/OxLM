@@ -52,12 +52,6 @@ size_t FactoredWeights::numParameters() const {
   return Weights::numParameters() + size;
 }
 
-void FactoredWeights::init(
-    const boost::shared_ptr<Corpus>& corpus,
-    const vector<int>& minibatch) {
-  Weights::init(corpus, minibatch);
-}
-
 void FactoredWeights::allocate() {
   int num_classes = index->getNumClasses();
   int word_width = config->word_representation_size;

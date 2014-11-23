@@ -19,8 +19,25 @@ TEST_F(FactoredTreeWeightsTest, TestCheckGradient) {
   weights.getGradient(corpus, indices, gradient, log_likelihood, words);
 
   // See comment in weights_test.
-  EXPECT_TRUE(weights.checkGradient(corpus, indices, gradient, 1e-3));
+  EXPECT_TRUE(weights.checkGradient(corpus, indices, gradient, 2e-3));
 }
+
+TEST_F(FactoredTreeWeightsTest, TestGradientCheckExtraHiddenLayers) {
+  config->activation = RECTIFIER;
+  config->hidden_layers = 2;
+
+  FactoredTreeWeights weights(config, metadata, corpus);
+  vector<int> indices = {0, 1, 2, 3, 4, 5, 6};
+  Real log_likelihood;
+  MinibatchWords words;
+  boost::shared_ptr<FactoredTreeWeights> gradient =
+      boost::make_shared<FactoredTreeWeights>(config, metadata);
+  weights.getGradient(corpus, indices, gradient, log_likelihood, words);
+
+  // See comment in weights_test.
+  EXPECT_TRUE(weights.checkGradient(corpus, indices, gradient, 2e-3));
+}
+
 
 TEST_F(FactoredTreeWeightsTest, TestSerialization) {
   FactoredTreeWeights weights(config, metadata, corpus), weights_copy;

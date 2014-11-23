@@ -28,10 +28,6 @@ class FactoredWeights : public Weights {
 
   virtual size_t numParameters() const;
 
-  void init(
-      const boost::shared_ptr<Corpus>& corpus,
-      const vector<int>& minibatch);
-
   void getGradient(
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices,

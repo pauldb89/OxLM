@@ -2,6 +2,7 @@
 
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
+#include <boost/make_shared.hpp>
 
 #include "lbl/class_tree.h"
 
@@ -10,7 +11,7 @@ namespace ar = boost::archive;
 namespace oxlm {
 
 TEST(ClassTreeTest, TestBasic) {
-  boost::shared_ptr<Vocabulary> vocab;
+  boost::shared_ptr<Vocabulary> vocab = boost::make_shared<Vocabulary>();
   ClassTree tree("tree.txt", vocab);
 
   EXPECT_EQ(7, vocab->size());
@@ -75,7 +76,7 @@ TEST(ClassTreeTest, TestBasic) {
 }
 
 TEST(ClassTreeTest, TestSerialization) {
-  boost::shared_ptr<Vocabulary> vocab;
+  boost::shared_ptr<Vocabulary> vocab = boost::make_shared<Vocabulary>();
   ClassTree tree("tree.txt", vocab), tree_copy;
 
   stringstream stream(ios_base::in | ios_base::out | ios_base::binary);

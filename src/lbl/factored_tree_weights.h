@@ -29,6 +29,8 @@ class FactoredTreeWeights : public Weights {
       const boost::shared_ptr<Corpus>& training_corpus,
       const vector<int>& indices);
 
+  virtual void printInfo() const;
+
   void getGradient(
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices,
@@ -43,34 +45,13 @@ class FactoredTreeWeights : public Weights {
       Real& objective,
       MinibatchWords& words) const;
 
-  bool checkGradient(
-      const boost::shared_ptr<Corpus>& corpus,
-      const vector<int>& indices,
-      const boost::shared_ptr<FactoredTreeWeights>& gradient,
-      Real eps);
-
-  Real getObjective(
+  Real getLogLikelihood(
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices) const;
 
-  void update(const boost::shared_ptr<FactoredTreeWeights>& gradient);
+  virtual Real getLogProb(int word_id, vector<int> context) const;
 
-  void updateSquared(
-      const MinibatchWords& global_words,
-      const boost::shared_ptr<FactoredTreeWeights>& global_gradient);
-
-  void updateAdaGrad(
-      const MinibatchWords& global_words,
-      const boost::shared_ptr<FactoredTreeWeights>& global_gradient,
-      const boost::shared_ptr<FactoredTreeWeights>& adagrad);
-
-  Real regularizerUpdate(
-      const boost::shared_ptr<FactoredTreeWeights>& global_gradient,
-      Real minibatch_factor);
-
-  Real predict(int word_id, const vector<int>& context) const;
-
-  void clearCache();
+  virtual Real getUnnormalizedScore(int word, const vector<int>& context) const;
 
   MatrixReal getWordVectors() const;
 
@@ -79,20 +60,6 @@ class FactoredTreeWeights : public Weights {
   ~FactoredTreeWeights();
 
  protected:
-  void getContextVectors(
-      const boost::shared_ptr<Corpus>& corpus,
-      const vector<int>& indices,
-      vector<vector<int>>& contexts,
-      vector<MatrixReal>& context_vectors) const;
-
-  MatrixReal getPredictionVectors(
-      const vector<int>& indices,
-      const vector<MatrixReal>& context_vectors) const;
-
-  MatrixReal getContextProduct(
-      int index, const MatrixReal& representations,
-      bool transpose = false) const;
-
   const Eigen::Block<const WordVectorsType> classR(int node) const;
 
   Eigen::Block<WordVectorsType> classR(int node);
@@ -104,37 +71,34 @@ class FactoredTreeWeights : public Weights {
   vector<vector<VectorReal>> getProbabilities(
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices,
-      const MatrixReal& prediction_vectors) const;
+      const vector<MatrixReal>& forward_weights) const;
 
   Real getObjective(
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices,
       vector<vector<int>>& contexts,
       vector<MatrixReal>& context_vectors,
-      MatrixReal& prediction_vectors,
+      vector<MatrixReal>& forward_weights,
       vector<vector<VectorReal>>& probs) const;
 
-  MatrixReal getWeightedRepresentations(
-      const boost::shared_ptr<Corpus>& corpus,
-      const vector<int>& indices,
-      const MatrixReal& prediction_vectors,
-      vector<vector<VectorReal>>& probs) const;
-
-  boost::shared_ptr<FactoredTreeWeights> getFullGradient(
+  void getFullGradient(
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices,
       const vector<vector<int>>& contexts,
       const vector<MatrixReal>& context_vectors,
-      const MatrixReal& prediction_vectors,
-      const vector<vector<VectorReal>>& probs,
-      const MatrixReal& weighted_representations) const;
+      const vector<MatrixReal>& forward_weights,
+      vector<vector<VectorReal>>& probs,
+      const boost::shared_ptr<FactoredTreeWeights>& gradient,
+      MinibatchWords& words) const;
 
-  void getContextGradient(
+  void getProjectionGradient(
+      const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices,
-      const vector<vector<int>>& contexts,
-      const vector<MatrixReal>& context_vectors,
-      const MatrixReal& weighted_representations,
-      const boost::shared_ptr<FactoredTreeWeights>& gradient) const;
+      const vector<MatrixReal>& forward_weights,
+      vector<vector<VectorReal>>& probs,
+      const boost::shared_ptr<FactoredTreeWeights>& gradient,
+      MatrixReal& backward_weights,
+      MinibatchWords& words) const;
 
  private:
   void allocate();
@@ -172,19 +136,8 @@ class FactoredTreeWeights : public Weights {
   BOOST_SERIALIZATION_SPLIT_MEMBER();
 
  protected:
-  boost::shared_ptr<ModelData> config;
   boost::shared_ptr<TreeMetadata> metadata;
   boost::shared_ptr<ClassTree> tree;
-
-  ContextTransformsType C;
-  WordVectorsType       Q;
-  WordVectorsType       R;
-  WeightsType           B;
-  WeightsType           W;
-
- private:
-  int size;
-  Real *data;
 };
 
 } // namespace oxlm

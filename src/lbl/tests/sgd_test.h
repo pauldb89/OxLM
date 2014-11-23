@@ -36,4 +36,12 @@ class FactoredSGDTest : public SGDTest {
   }
 };
 
+class TreeSGDTest : public SGDTest {
+ protected:
+  virtual void SetUp() {
+    SGDTest::SetUp();
+    config->tree_file = "huffman_tree.txt";
+  }
+};
+
 } // namespace oxlm

@@ -29,6 +29,8 @@ class Weights {
  public:
   Weights();
 
+  Weights(const boost::shared_ptr<ModelData>& config);
+
   Weights(
       const boost::shared_ptr<ModelData>& config,
       const boost::shared_ptr<Metadata>& metadata);
@@ -241,7 +243,7 @@ class Weights {
 
   mutable ContextCache normalizerCache;
 
- private:
+ protected:
   int size;
   Real* data;
   vector<Mutex> mutexesC;

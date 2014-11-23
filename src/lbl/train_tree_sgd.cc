@@ -23,8 +23,14 @@ int main(int argc, char** argv) {
         "corpus of test sentences")
     ("iterations", value<int>()->default_value(10),
         "number of passes through the data")
+    ("evaluate-frequency", value<int>()->default_value(1000),
+        "Evaluate models every N minibatches")
     ("minibatch-size", value<int>()->default_value(10000),
         "number of sentences per minibatch")
+    ("minibatch-threshold", value<int>()->default_value(20000),
+        "Stop training if the test perplexity did not improve in the last "
+        "N minibatches. Note that test perplexities are calculated only every "
+        "evaluate-frequency minibatches")
     ("order,n", value<int>()->default_value(4),
         "ngram order")
     ("model-in", value<string>(),
@@ -49,6 +55,8 @@ int main(int argc, char** argv) {
     ("noise-samples", value<int>()->default_value(0),
         "Number of noise samples for noise contrastive estimation. "
         "If zero, minibatch gradient descent is used instead.")
+    ("hidden-layers", value<int>()->default_value(0),
+        "Number of hidden layers.")
     ("tree-file", value<string>()->required(),
         "File containing the tree structure");
   options_description config_options, cmdline_options;
@@ -75,7 +83,9 @@ int main(int argc, char** argv) {
     config->test_file = vm["test-set"].as<string>();
   }
   config->iterations = vm["iterations"].as<int>();
+  config->evaluate_frequency = vm["evaluate-frequency"].as<int>();
   config->minibatch_size = vm["minibatch-size"].as<int>();
+  config->minibatch_threshold = vm["minibatch-threshold"].as<int>();
   config->ngram_order = vm["order"].as<int>();
 
   if (vm.count("model-in")) {
@@ -99,6 +109,8 @@ int main(int argc, char** argv) {
 
   config->noise_samples = vm["noise-samples"].as<int>();
 
+  config->hidden_layers = vm["hidden-layers"].as<int>();
+
   config->tree_file = vm["tree-file"].as<string>();
 
   cout << "################################" << endl;
@@ -114,14 +126,17 @@ int main(int argc, char** argv) {
   cout << "# input = " << config->training_file << endl;
   cout << "# tree file = " << config->tree_file << endl;
   cout << "# minibatch size = " << config->minibatch_size << endl;
+  cout << "# minibatch threshold = " << config->minibatch_threshold << endl;
   cout << "# lambda = " << config->l2_lbl << endl;
   cout << "# step size = " << config->step_size << endl;
   cout << "# iterations = " << config->iterations << endl;
+  cout << "# evaluate frequency = " << config->evaluate_frequency << endl;
   cout << "# threads = " << config->threads << endl;
   cout << "# randomise = " << config->randomise << endl;
   cout << "# diagonal contexts = " << config->diagonal_contexts << endl;
   cout << "# activation = " << config->activation << endl;
   cout << "# noise samples = " << config->noise_samples << endl;
+  cout << "# hidden layers = " << config->hidden_layers << endl;
   cout << "################################" << endl;
 
   if (config->model_input_file.size() == 0) {

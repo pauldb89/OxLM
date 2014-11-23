@@ -6,19 +6,18 @@
 #include "lbl/class_tree.h"
 #include "lbl/config.h"
 #include "lbl/corpus.h"
+#include "lbl/metadata.h"
 #include "lbl/utils.h"
 
 namespace oxlm {
 
-class TreeMetadata {
+class TreeMetadata : public Metadata {
  public:
   TreeMetadata();
 
   TreeMetadata(
       const boost::shared_ptr<ModelData>& config,
       boost::shared_ptr<Vocabulary>& vocab);
-
-  void initialize(const boost::shared_ptr<Corpus>& corpus);
 
   boost::shared_ptr<ClassTree> getTree() const;
 
@@ -29,11 +28,10 @@ class TreeMetadata {
 
   template<class Archive>
   void serialize(Archive& ar, const unsigned int version) {
-    ar & config;
+    ar & boost::serialization::base_object<Metadata>(*this);
     ar & classTree;
   }
 
-  boost::shared_ptr<ModelData> config;
   boost::shared_ptr<ClassTree> classTree;
 };
 

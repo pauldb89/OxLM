@@ -42,6 +42,7 @@ set(TESTS
     train_factored_sgd_test
     train_maxent_sgd_test
     train_sgd_test
+    train_tree_sgd_test
     utils_test
     vocabulary_test
     weights_test
