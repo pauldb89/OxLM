@@ -88,7 +88,6 @@ void frequencyBinning(
   while (getline(in, line)) {
     stringstream line_stream(line);
     while (line_stream >> token) {
-      if (token == eos) continue;
       int w_id = tmp_dict.insert(make_pair(token, tmp_dict.size())).first->second;
       assert (w_id <= int(counts.size()));
       if (w_id == int(counts.size())) {
@@ -109,7 +108,6 @@ void frequencyBinning(
   classes.clear();
   classes.push_back(0);
   classes.push_back(2);
-
   class_bias = VectorReal::Zero(num_classes);
   class_bias(0) = log(num_eos_tokens);
 
@@ -125,16 +123,18 @@ void frequencyBinning(
       bin_size = remaining_tokens / (num_classes - classes.size());
       class_bias(classes.size() - 1) = log(mass);
       classes.push_back(id + 1);
-      mass=0;
+      mass = 0;
     }
   }
 
   if (classes.back() != int(vocab->size())) {
+    class_bias(classes.size() - 1) = log(mass);
     classes.push_back(vocab->size());
   }
 
+
   assert(classes.size() == num_classes + 1);
-  class_bias.array() -= log(num_eos_tokens + num_tokens);
+  class_bias.array() -= log(num_tokens + num_eos_tokens);
 
   cout << "Binned " << vocab->size() << " types in "
        << classes.size() - 1 << " classes with an average of "
