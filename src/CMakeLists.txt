@@ -99,7 +99,21 @@ endmacro()
 # Compiler Settings
 #############################################
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -O3")
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+  execute_process(
+      COMMAND ${CMAKE_CXX_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION)
+  if(GCC_VERSION VERSION_GREATER 4.7 OR GCC_VERSION VERSION_EQUAL 4.7)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+  elseif(GCC_VERSION VERSION_GREATER 4.6 OR GCC_VERSION VERSION_EQUAL 4.6)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+  else()
+    message(FATAL_ERROR "Your GCC version is not supported. Please upgrade.")
+  endif()
+else()
+  message(FATAL_ERROR "Your compiler is currently not supported. Open an issue if you'd like us to support it or go ahead and do it yourself.")
+endif()
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 
 add_subdirectory(lbl)
