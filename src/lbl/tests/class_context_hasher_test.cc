@@ -1,8 +1,9 @@
 #include "gtest/gtest.h"
 
+#include <boost/make_shared.hpp>
 #include <boost/serialization/extended_type_info.hpp>
 #include <boost/serialization/singleton.hpp>
-#include <boost/make_shared.hpp>
+#include <boost/serialization/type_info_implementation.hpp>
 #include <boost/serialization/shared_ptr.hpp>
 
 #include "lbl/class_context_hasher.h"
