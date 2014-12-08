@@ -1,6 +1,8 @@
 #pragma once
 
+#include <boost/serialization/extended_type_info.hpp>
 #include <boost/serialization/serialization.hpp>
+#include <boost/serialization/singleton.hpp>
 #include <boost/serialization/shared_ptr.hpp>
 #include <boost/shared_ptr.hpp>
 

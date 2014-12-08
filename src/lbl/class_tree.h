@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 
+#include <boost/shared_ptr.hpp>
+
 #include "lbl/vocabulary.h"
 
 using namespace std;
