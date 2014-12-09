@@ -7,6 +7,9 @@ namespace oxlm {
 TEST(VocabularyTest, TestBasic) {
   Vocabulary vocab;
 
+  EXPECT_TRUE(vocab.contains("<s>"));
+  EXPECT_TRUE(vocab.contains("</s>"));
+
   EXPECT_EQ(2, vocab.convert("anna"));
   EXPECT_EQ(3, vocab.convert("has"));
   EXPECT_EQ(4, vocab.convert("apples"));

@@ -15,6 +15,8 @@ class Vocabulary {
 
   virtual string convert(int word_id);
 
+  bool contains(const string& word);
+
  private:
   friend class boost::serialization::access;
 

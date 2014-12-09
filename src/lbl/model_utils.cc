@@ -187,7 +187,6 @@ boost::shared_ptr<Corpus> readTrainingCorpus(
   if (config->source_order == 0) {
 	  corpus = boost::make_shared<Corpus>(
         config->training_file, vocab, convert_unknowns);
-    config->vocab_size = vocab->size();
   } else {
     boost::shared_ptr<ParallelVocabulary> parallel_vocab =
         dynamic_pointer_cast<ParallelVocabulary>(vocab);
@@ -197,10 +196,17 @@ boost::shared_ptr<Corpus> readTrainingCorpus(
         config->training_file, config->alignment_file, parallel_vocab,
         convert_unknowns);
 
-    config->vocab_size = parallel_vocab->size();
     config->source_vocab_size = parallel_vocab->sourceSize();
   }
   cerr << "Done reading training corpus..." << endl;
+
+  if (!vocab->contains("<unk>")) {
+    cerr << "WARNING: The training data does not contain <unk> tokens. "
+         << "You will not learn a distributed representation for unknown words."
+         << endl;
+    vocab->convert("<unk>");
+  }
+  config->vocab_size = vocab->size();
 
   return corpus;
 }
