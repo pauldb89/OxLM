@@ -41,7 +41,7 @@ find_package(OpenMP QUIET)
 find_package(Cdec QUIET)
 
 # Git
-find_package(Git REQUIRED)
+find_package(Git QUIET)
 
 #############################################
 # Hackery courtesy of Karl Moritz

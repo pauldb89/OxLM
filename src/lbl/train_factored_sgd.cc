@@ -97,7 +97,7 @@ int main(int argc, char** argv) {
 
   if (vm.count("model-out")) {
     config->model_output_file = vm["model-out"].as<string>();
-    if (GIT_REVISION) {
+    if (strlen(GIT_REVISION) > 0) {
       config->model_output_file += "." + string(GIT_REVISION);
     }
   }

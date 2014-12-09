@@ -62,6 +62,10 @@ Run:
 
     oxlm/bin/train_sgd -c oxlm.ini --model-out=model.bin
 
+If Git is avaiable, the Git revision hash is appended to the model output
+filename. This is may be helpful later to remember which version of the code
+was used to train a particular model.
+
 Set the `--noise-samples` argument, if you want to train the models using noise
 contrastive estimation instead of minibatch stochastic gradient descent. In most
 circumstances, setting the number of noise samples to more than 10 only leads to
