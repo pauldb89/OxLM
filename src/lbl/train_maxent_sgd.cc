@@ -69,10 +69,6 @@ int main(int argc, char **argv) {
     ("hash-space", value<Real>()->default_value(0),
         "The size of the space in which the maxent features are mapped to "
         "(in millions).")
-    ("filter-contexts", value<bool>()->default_value(true),
-        "Prevent false contexts from being hashed.")
-    ("filter-error-rate", value<Real>()->default_value(0),
-        "Error rate for filtering false contexts (in bloom filter)")
     ("count-collisions", value<bool>()->default_value(true),
         "Print collision statistics (leads to a memory usage spike)");
 
@@ -134,8 +130,6 @@ int main(int argc, char **argv) {
   config->min_ngram_freq = vm["min-ngram-freq"].as<int>();
 
   config->hash_space = vm["hash-space"].as<Real>() * 1000000;
-  config->filter_contexts = vm["filter-contexts"].as<bool>();
-  config->filter_error_rate = vm["filter-error-rate"].as<Real>();
   config->count_collisions = vm["count-collisions"].as<bool>();
 
   cout << "################################" << endl;
@@ -164,8 +158,6 @@ int main(int argc, char **argv) {
   cout << "# max n-grams = " << config->max_ngrams << endl;
   cout << "# min n-gram frequency = " << config->min_ngram_freq << endl;
   cout << "# hash space = " << config->hash_space << endl;
-  cout << "# filter contexts = " << config->filter_contexts << endl;
-  cout << "# filter error rate = " << config->filter_error_rate << endl;
   cout << "################################" << endl;
 
   if (config->model_input_file.size() == 0) {

@@ -2,7 +2,6 @@
 
 #include <unordered_set>
 
-#include "lbl/bloom_filter_populator.h"
 #include "lbl/config.h"
 #include "lbl/feature_context_mapper.h"
 #include "lbl/feature_matcher.h"
@@ -19,7 +18,6 @@ class CollisionCounter {
       const boost::shared_ptr<WordToClassIndex>& index,
       const boost::shared_ptr<FeatureContextMapper>& mapper,
       const boost::shared_ptr<FeatureMatcher>& matcher,
-      const boost::shared_ptr<BloomFilterPopulator>& populator,
       const boost::shared_ptr<ModelData>& config);
 
   int count() const;
@@ -30,7 +28,6 @@ class CollisionCounter {
   boost::shared_ptr<WordToClassIndex> index;
   boost::shared_ptr<FeatureContextMapper> mapper;
   boost::shared_ptr<FeatureMatcher> matcher;
-  boost::shared_ptr<BloomFilterPopulator> populator;
   unordered_set<NGram> observedClassQueries;
   vector<unordered_set<NGram>> observedWordQueries;
   unordered_set<int> observedKeys;

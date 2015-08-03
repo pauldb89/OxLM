@@ -1,6 +1,4 @@
 set(TESTS
-    bloom_filter_populator_test
-    bloom_filter_test
     class_context_extractor_test
     class_context_hasher_test
     class_distribution_test
@@ -14,13 +12,11 @@ set(TESTS
     factored_metadata_test
     factored_tree_weights_test
     factored_weights_test
-    feature_approximate_filter_test
     feature_context_test
     feature_context_generator_test
     feature_context_mapper_test
     feature_exact_filter_test
     feature_matcher_test
-    feature_no_op_filter_test
     global_factored_maxent_weights_test
     global_feature_indexes_pair_test
     metadata_test

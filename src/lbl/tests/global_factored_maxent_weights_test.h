@@ -1,6 +1,5 @@
 #include "lbl/tests/factored_weights_test.h"
 
-#include "lbl/bloom_filter_populator.h"
 #include "lbl/context_processor.h"
 #include "lbl/factored_maxent_metadata.h"
 #include "lbl/feature_matcher.h"
@@ -33,7 +32,6 @@ class GlobalFactoredMaxentWeightsTest : public FactoredWeightsTest {
   }
 
   boost::shared_ptr<FeatureContextMapper> mapper;
-  boost::shared_ptr<BloomFilterPopulator> populator;
   boost::shared_ptr<FeatureMatcher> matcher;
   boost::shared_ptr<FactoredMaxentMetadata> metadata;
 };

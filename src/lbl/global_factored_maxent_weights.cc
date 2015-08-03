@@ -4,17 +4,13 @@
 
 #include <boost/make_shared.hpp>
 
-#include "lbl/bloom_filter.h"
-#include "lbl/bloom_filter_populator.h"
 #include "lbl/class_context_extractor.h"
 #include "lbl/class_context_hasher.h"
 #include "lbl/collision_global_feature_store.h"
-#include "lbl/feature_approximate_filter.h"
 #include "lbl/feature_context_mapper.h"
 #include "lbl/feature_exact_filter.h"
 #include "lbl/feature_filter.h"
 #include "lbl/feature_matcher.h"
-#include "lbl/feature_no_op_filter.h"
 #include "lbl/sparse_global_feature_store.h"
 #include "lbl/word_context_extractor.h"
 #include "lbl/word_context_hasher.h"
@@ -42,7 +38,6 @@ void GlobalFactoredMaxentWeights::initialize() {
   int num_classes = index->getNumClasses();
   V.resize(num_classes);
   boost::shared_ptr<FeatureContextMapper> mapper = metadata->getMapper();
-  boost::shared_ptr<BloomFilterPopulator> populator = metadata->getPopulator();
   boost::shared_ptr<FeatureMatcher> matcher = metadata->getMatcher();
 
   if (config->hash_space) {
@@ -51,22 +46,11 @@ void GlobalFactoredMaxentWeights::initialize() {
     boost::shared_ptr<FeatureContextHasher> hasher =
         boost::make_shared<ClassContextHasher>(config->hash_space);
     GlobalFeatureIndexesPairPtr feature_indexes_pair;
-    boost::shared_ptr<BloomFilter<NGram>> bloom_filter;
     boost::shared_ptr<FeatureFilter> filter;
-    if (config->filter_contexts) {
-      if (config->filter_error_rate > 0) {
-        bloom_filter = populator->get();
-        filter = boost::make_shared<FeatureApproximateFilter>(
-            num_classes, hasher, bloom_filter);
-      } else {
-        feature_indexes_pair = matcher->getGlobalFeatures();
-        filter = boost::make_shared<FeatureExactFilter>(
-            feature_indexes_pair->getClassIndexes(),
-            boost::make_shared<ClassContextExtractor>(mapper));
-      }
-    } else {
-      filter = boost::make_shared<FeatureNoOpFilter>(num_classes);
-    }
+    feature_indexes_pair = matcher->getGlobalFeatures();
+    filter = boost::make_shared<FeatureExactFilter>(
+        feature_indexes_pair->getClassIndexes(),
+        boost::make_shared<ClassContextExtractor>(mapper));
 
     U = boost::make_shared<CollisionGlobalFeatureStore>(
         num_classes, config->hash_space, config->feature_context_size,
@@ -75,18 +59,9 @@ void GlobalFactoredMaxentWeights::initialize() {
     for (int i = 0; i < num_classes; ++i) {
       int class_size = index->getClassSize(i);
       hasher = boost::make_shared<WordContextHasher>(i, config->hash_space);
-      if (config->filter_contexts) {
-        if (config->filter_error_rate) {
-          filter = boost::make_shared<FeatureApproximateFilter>(
-              class_size, hasher, bloom_filter);
-        } else {
-          filter = boost::make_shared<FeatureExactFilter>(
-              feature_indexes_pair->getWordIndexes(i),
-              boost::make_shared<WordContextExtractor>(i, mapper));
-        }
-      } else {
-        filter = boost::make_shared<FeatureNoOpFilter>(class_size);
-      }
+      filter = boost::make_shared<FeatureExactFilter>(
+          feature_indexes_pair->getWordIndexes(i),
+          boost::make_shared<WordContextExtractor>(i, mapper));
       V[i] = boost::make_shared<CollisionGlobalFeatureStore>(
           class_size, config->hash_space, config->feature_context_size,
           space, hasher, filter);

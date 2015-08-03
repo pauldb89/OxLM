@@ -34,8 +34,6 @@ bool ModelData::operator==(const ModelData& other) const {
       && tree_file == other.tree_file
       && diagonal_contexts == other.diagonal_contexts
       && hash_space == other.hash_space
-      && filter_contexts == other.filter_contexts
-      && fabs(filter_error_rate - other.filter_error_rate) < EPS
       && activation == other.activation
       && source_order == other.source_order
       && hidden_layers == other.hidden_layers;
@@ -75,8 +73,6 @@ ostream& operator<<(ostream& out, const ModelData& config) {
     out << "# max n-grams = " << config.max_ngrams << endl;
     out << "# min n-gram frequency = " << config.min_ngram_freq << endl;
     out << "# hash space = " << config.hash_space << endl;
-    out << "# filter contexts = " << config.filter_contexts << endl;
-    out << "# filter error rate = " << config.filter_error_rate << endl;
   }
 
   if (config.source_vocab_size > 0 || config.source_order > 0) {

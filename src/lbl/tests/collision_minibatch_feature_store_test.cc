@@ -2,9 +2,16 @@
 
 #include <boost/make_shared.hpp>
 
+#include "lbl/class_context_extractor.h"
 #include "lbl/class_context_hasher.h"
 #include "lbl/collision_minibatch_feature_store.h"
-#include "lbl/feature_no_op_filter.h"
+#include "lbl/context_processor.h"
+#include "lbl/corpus.h"
+#include "lbl/feature_context_mapper.h"
+#include "lbl/feature_exact_filter.h"
+#include "lbl/feature_matcher.h"
+#include "lbl/ngram_filter.h"
+#include "lbl/word_to_class_index.h"
 #include "utils/constants.h"
 #include "utils/testing.h"
 
@@ -15,10 +22,32 @@ class CollisionMinibatchFeatureStoreTest : public testing::Test {
   void SetUp() {
     int vector_size = 3;
     int hash_space = 10;
+    vector<int> data = {4, 3, 2, 1, 4, 3, 2, 2, 4, 3, 2, 3};
+    vector<int> classes = {0, 2, 3, 5};
+    boost::shared_ptr<Corpus> corpus = boost::make_shared<Corpus>(data);
+    boost::shared_ptr<WordToClassIndex> index =
+        boost::make_shared<WordToClassIndex>(classes);
+    boost::shared_ptr<ContextProcessor> processor =
+        boost::make_shared<ContextProcessor>(corpus, 3);
+    boost::shared_ptr<FeatureContextGenerator> generator =
+        boost::make_shared<FeatureContextGenerator>(3);
+    boost::shared_ptr<NGramFilter> ngram_filter =
+        boost::make_shared<NGramFilter>(corpus, index, processor, generator);
+    boost::shared_ptr<FeatureContextMapper> mapper =
+        boost::make_shared<FeatureContextMapper>(
+            corpus, index, processor, generator, ngram_filter);
+    boost::shared_ptr<ClassContextExtractor> extractor =
+        boost::make_shared<ClassContextExtractor>(mapper);
     boost::shared_ptr<ClassContextHasher> hasher =
         boost::make_shared<ClassContextHasher>(hash_space);
-    boost::shared_ptr<FeatureNoOpFilter> filter =
-        boost::make_shared<FeatureNoOpFilter>(vector_size);
+    boost::shared_ptr<FeatureMatcher> feature_matcher =
+        boost::make_shared<FeatureMatcher>(
+            corpus, index, processor, generator, ngram_filter, mapper);
+
+    auto feature_indexes_pair = feature_matcher->getGlobalFeatures();
+    auto feature_indexes = feature_indexes_pair->getClassIndexes();
+    boost::shared_ptr<FeatureExactFilter> filter =
+        boost::make_shared<FeatureExactFilter>(feature_indexes, extractor);
 
     store = boost::make_shared<CollisionMinibatchFeatureStore>(
         vector_size, hash_space, 3, hasher, filter);
@@ -26,7 +55,7 @@ class CollisionMinibatchFeatureStoreTest : public testing::Test {
     g_store = boost::make_shared<CollisionMinibatchFeatureStore>(
         vector_size, hash_space, 3, hasher, filter);
 
-    context = {1, 2, 3};
+    context = {2, 3, 4};
     VectorReal values(3);
     values << 4, 2, 5;
     g_store->update(context, values);
@@ -45,22 +74,22 @@ TEST_F(CollisionMinibatchFeatureStoreTest, TestBasic) {
   values << 4, 2, 5;
   store->update(context, values);
   // Due to collisions we don't get 3 x values.
-  expected_values << 24, 28, 29;
+  expected_values << 17, 6, 19;
   EXPECT_MATRIX_NEAR(expected_values, store->get(context), EPS);
-  EXPECT_EQ(4, store->size());
+  EXPECT_EQ(8, store->size());
 }
 
 TEST_F(CollisionMinibatchFeatureStoreTest, TestGradientUpdate) {
   store->update(g_store);
 
   VectorReal expected_values(3);
-  expected_values << 24, 28, 29;
+  expected_values << 17, 6, 19;
   EXPECT_MATRIX_NEAR(expected_values, store->get(context), EPS);
-  EXPECT_EQ(4, store->size());
+  EXPECT_EQ(8, store->size());
 }
 
 TEST_F(CollisionMinibatchFeatureStoreTest, TestClear) {
-  EXPECT_EQ(4, g_store->size());
+  EXPECT_EQ(8, g_store->size());
 
   g_store->clear();
   EXPECT_EQ(0, g_store->size());

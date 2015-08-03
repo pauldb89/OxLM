@@ -29,7 +29,6 @@ class ModelTest : public testing::Test {
 
 TEST_F(ModelTest, TestSerializationCollisionStores) {
   config->hash_space = 1000000;
-  config->filter_contexts = true;
 
   FactoredMaxentLM model(config);
   model.learn();

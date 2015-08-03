@@ -3,7 +3,6 @@
 #############################################
 
 add_libraries(lbl
-  bloom_filter_populator.cc
   class_context_extractor.cc
   class_context_hasher.cc
   class_distribution.cc
@@ -19,7 +18,6 @@ add_libraries(lbl
   factored_metadata.cc
   factored_tree_weights.cc
   factored_weights.cc
-  feature_approximate_filter.cc
   feature_context.cc
   feature_context_extractor.cc
   feature_context_generator.cc
@@ -27,7 +25,6 @@ add_libraries(lbl
   feature_context_hasher.cc
   feature_exact_filter.cc
   feature_filter.cc
-  feature_no_op_filter.cc
   feature_matcher.cc
   feature_store.cc
   global_collision_space.cc

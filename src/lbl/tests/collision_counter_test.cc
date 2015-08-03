@@ -14,7 +14,7 @@ TEST(CollisionCounterTest, TestBasic) {
       boost::make_shared<WordToClassIndex>(classes);
   boost::shared_ptr<ModelData> config = boost::make_shared<ModelData>();
   config->ngram_order = 4;
-  config->feature_context_size = 4;
+  config->feature_context_size = 3;
   config->hash_space = 100;
   boost::shared_ptr<ContextProcessor> processor =
       boost::make_shared<ContextProcessor>(corpus, config->ngram_order - 1);
@@ -28,10 +28,9 @@ TEST(CollisionCounterTest, TestBasic) {
   boost::shared_ptr<FeatureMatcher> matcher =
       boost::make_shared<FeatureMatcher>(
           corpus, index, processor, generator, filter, mapper);
-  boost::shared_ptr<BloomFilterPopulator> populator;
-  CollisionCounter counter(corpus, index, mapper, matcher, populator, config);
+  CollisionCounter counter(corpus, index, mapper, matcher, config);
 
-  EXPECT_EQ(33, counter.count());
+  EXPECT_EQ(6, counter.count());
 }
 
 } // namespace oxlm

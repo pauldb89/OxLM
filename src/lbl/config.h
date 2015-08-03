@@ -57,7 +57,9 @@ struct ModelData {
   bool        random_weights;
   int         hash_space;
   bool        count_collisions;
+  // Deprecated.
   bool        filter_contexts;
+  // Deprecated.
   float       filter_error_rate;
   int         max_ngrams;
   int         min_ngram_freq;
