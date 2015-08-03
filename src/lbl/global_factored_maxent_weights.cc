@@ -146,7 +146,7 @@ void GlobalFactoredMaxentWeights::getGradient(
   vector<MatrixReal> forward_weights;
   MatrixReal class_probs;
   vector<VectorReal> word_probs;
-  log_likelihood = getObjective(
+  log_likelihood += getObjective(
       corpus, indices, contexts, context_vectors, forward_weights,
       class_probs, word_probs);
 
