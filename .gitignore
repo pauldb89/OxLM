@@ -11,3 +11,4 @@ git_revision.cc
 *pyc
 .*project
 *.pyc
+.*rc
