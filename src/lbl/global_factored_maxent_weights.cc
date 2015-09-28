@@ -216,13 +216,181 @@ bool GlobalFactoredMaxentWeights::checkGradientStore(
   return true;
 }
 
+void GlobalFactoredMaxentWeights::estimateProjectionGradientForWords(
+    const boost::shared_ptr<Corpus>& corpus,
+    const vector<int>& indices,
+    const vector<vector<int>>& contexts,
+    const vector<MatrixReal>& forward_weights,
+    const boost::shared_ptr<MinibatchFactoredMaxentWeights>& gradient,
+    MatrixReal& backward_weights,
+    Real& log_likelihood,
+    MinibatchWords& words) const {
+  int noise_samples = config->noise_samples;
+  int word_width = config->word_representation_size;
+  VectorReal unigram = metadata->getUnigram();
+  vector<vector<int>> noise_words = getNoiseWords(corpus, indices);
+
+  for (size_t i = 0; i < indices.size(); ++i) {
+    words.addOutputWord(corpus->at(indices[i]));
+    for (int word_id: noise_words[i]) {
+      words.addOutputWord(word_id);
+    }
+  }
+
+  Real log_num_samples = log(noise_samples);
+  backward_weights = MatrixReal::Zero(word_width, indices.size());
+  for (size_t i = 0; i < indices.size(); ++i) {
+    int word_id = corpus->at(indices[i]);
+    int class_id = index->getClass(word_id);
+    int word_class_id = index->getWordIndexInClass(word_id);
+
+    Real log_score = R.col(word_id).dot(forward_weights.back().col(i)) + B(word_id) + V[class_id]->getValue(word_class_id, contexts[i]);
+    Real log_noise = log_num_samples + log(unigram(word_id));
+    Real log_norm = LogAdd(log_score, log_noise);
+
+    log_likelihood -= log_score - log_norm;
+
+    Real prob = exp(log_noise - log_norm);
+    assert(prob <= numeric_limits<Real>::max());
+    backward_weights.col(i) -= prob * R.col(word_id);
+
+    gradient->R.col(word_id) -= prob * forward_weights.back().col(i);
+    gradient->B(word_id) -= prob;
+    gradient->V[class_id]->updateValue(word_class_id, contexts[i], -prob);
+
+    for (int j = 0; j < noise_samples; ++j) {
+      int noise_word_id = noise_words[i][j];
+      int noise_word_class_id = index->getWordIndexInClass(noise_word_id);
+      Real log_score = R.col(noise_word_id).dot(forward_weights.back().col(i)) + B(noise_word_id) + V[class_id]->getValue(noise_word_class_id, contexts[i]);
+      Real log_noise = log_num_samples + log(unigram(noise_word_id));
+      Real log_norm = LogAdd(log_score, log_noise);
+
+      log_likelihood -= log_noise - log_norm;
+
+      Real prob = exp(log_score - log_norm);
+      assert(prob <= numeric_limits<Real>::max());
+      backward_weights.col(i) += prob * R.col(noise_word_id);
+
+      gradient->R.col(noise_word_id) += prob * forward_weights.back().col(i);
+      gradient->B(noise_word_id) += prob;
+      gradient->V[class_id]->updateValue(noise_word_class_id, contexts[i], prob);
+    }
+  }
+}
+
+
+void GlobalFactoredMaxentWeights::estimateProjectionGradientForClasses(
+    const boost::shared_ptr<Corpus>& corpus,
+    const vector<int>& indices,
+    const vector<vector<int>>& contexts,
+    const vector<MatrixReal>& forward_weights,
+    const boost::shared_ptr<MinibatchFactoredMaxentWeights>& gradient,
+    MatrixReal& backward_weights,
+    Real& log_likelihood,
+    MinibatchWords& words) const {
+  int word_width = config->word_representation_size;
+  int noise_samples = config->noise_samples;
+  Real log_num_samples = log(noise_samples);
+  VectorReal class_unigram = metadata->getClassBias().array().exp();
+  vector<vector<int>> noise_classes = getNoiseClasses(corpus, indices);
+  for (size_t i = 0; i < indices.size(); ++i) {
+    int word_id = corpus->at(indices[i]);
+    int class_id = index->getClass(word_id);
+    Real log_score = S.col(class_id).dot(forward_weights.back().col(i)) + T(class_id) + U->getValue(class_id, contexts[i]);
+    Real log_noise = log_num_samples + log(class_unigram(class_id));
+    Real log_norm = LogAdd(log_score, log_noise);
+
+    log_likelihood -= log_score - log_norm;
+
+    Real prob = exp(log_noise - log_norm);
+    assert(prob <= numeric_limits<Real>::max());
+    backward_weights.col(i) -= prob * S.col(class_id);
+
+    gradient->S.col(class_id) -= prob * forward_weights.back().col(i);
+    gradient->T(class_id) -= prob;
+    gradient->U->updateValue(class_id, contexts[i], -prob);
+
+    for (int j = 0; j < noise_samples; ++j) {
+      int noise_class_id = noise_classes[i][j];
+      Real log_score = S.col(noise_class_id).dot(forward_weights.back().col(i)) + T(noise_class_id) + U->getValue(noise_class_id, contexts[i]);
+      Real log_noise = log_num_samples + log(class_unigram(noise_class_id));
+      Real log_norm = LogAdd(log_score, log_noise);
+
+      log_likelihood -= log_noise - log_norm;
+
+      Real prob = exp(log_score - log_norm);
+      assert(prob <= numeric_limits<Real>::max());
+
+      backward_weights.col(i) += prob * S.col(noise_class_id);
+
+      gradient->S.col(noise_class_id) += prob * forward_weights.back().col(i);
+      gradient->T(noise_class_id) += prob;
+      gradient->U->updateValue(noise_class_id, contexts[i], prob);
+    }
+  }
+}
+
+void GlobalFactoredMaxentWeights::estimateProjectionGradient(
+    const boost::shared_ptr<Corpus>& corpus,
+    const vector<int>& indices,
+    const vector<vector<int>>& contexts,
+    const vector<MatrixReal>& forward_weights,
+    const boost::shared_ptr<MinibatchFactoredMaxentWeights>& gradient,
+    MatrixReal& backward_weights,
+    Real& log_likelihood,
+    MinibatchWords& words) const {
+  estimateProjectionGradientForWords(
+      corpus, indices, contexts, forward_weights, gradient, backward_weights,
+      log_likelihood, words);
+  estimateProjectionGradientForClasses(
+      corpus, indices, contexts, forward_weights, gradient, backward_weights,
+      log_likelihood, words);
+}
+
+void GlobalFactoredMaxentWeights::estimateFullGradient(
+    const boost::shared_ptr<Corpus>& corpus,
+    const vector<int>& indices,
+    const vector<vector<int>>& contexts,
+    const vector<MatrixReal>& context_vectors,
+    const vector<MatrixReal>& forward_weights,
+    const boost::shared_ptr<MinibatchFactoredMaxentWeights>& gradient,
+    Real& log_likelihood,
+    MinibatchWords& words) const {
+  MatrixReal backward_weights;
+  estimateProjectionGradient(
+      corpus, indices, contexts, forward_weights, gradient,
+      backward_weights, log_likelihood, words);
+
+  // In FactoredWeights, the backward_weights add up contributions from both
+  // word and class predictions. If the following non-linearity derivative was
+  // applied in estimateProjectionGradient, that method would have to be
+  // reimplemented in FactoredWeights, resulting in a lot of code duplication.
+  backward_weights.array() *=
+      activationDerivative(config, forward_weights.back());
+  propagateBackwards(forward_weights, backward_weights, gradient);
+
+  getContextGradient(
+      indices, contexts, context_vectors, backward_weights, gradient);
+}
+
 void GlobalFactoredMaxentWeights::estimateGradient(
     const boost::shared_ptr<Corpus>& corpus,
     const vector<int>& indices,
     const boost::shared_ptr<MinibatchFactoredMaxentWeights>& gradient,
     Real& log_likelihood,
     MinibatchWords& words) const {
-  throw NotImplementedException();
+  vector<vector<int>> contexts;
+  vector<MatrixReal> context_vectors;
+  getContextVectors(corpus, indices, contexts, context_vectors);
+
+  setContextWords(contexts, words);
+
+  vector<MatrixReal> forward_weights =
+      propagateForwards(indices, context_vectors);
+
+  estimateFullGradient(
+      corpus, indices, contexts, context_vectors, forward_weights, gradient,
+      log_likelihood, words);
 }
 
 void GlobalFactoredMaxentWeights::updateSquared(

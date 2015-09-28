@@ -25,6 +25,16 @@ VectorReal CollisionMinibatchFeatureStore::get(
   return result;
 }
 
+void CollisionMinibatchFeatureStore::updateValue(
+    int feature_index, const vector<int>& context, Real value) {
+  for (const auto& feature_context: generator.getFeatureContexts(context)) {
+    int key = hasher->getKey(feature_context);
+    if (filter->hasIndex(feature_context, feature_index)) {
+      featureWeights[(key + feature_index) % hashSpace] += value;
+    }
+  }
+}
+
 void CollisionMinibatchFeatureStore::update(
     const vector<int>& context, const VectorReal& values) {
   for (const auto& feature_context: generator.getFeatureContexts(context)) {
