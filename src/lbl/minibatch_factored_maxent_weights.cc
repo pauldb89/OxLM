@@ -36,53 +36,50 @@ void MinibatchFactoredMaxentWeights::init(
   // compared to the number of parameters updated in the base (factored)
   // bilinear model, so it's okay to let a single thread handle this
   // initialization. Adding parallelization here is not trivial.
-  #pragma omp master
-  {
-    int num_classes = index->getNumClasses();
-    boost::shared_ptr<FeatureContextMapper> mapper = metadata->getMapper();
-    boost::shared_ptr<FeatureMatcher> matcher = metadata->getMatcher();
+  int num_classes = index->getNumClasses();
+  boost::shared_ptr<FeatureContextMapper> mapper = metadata->getMapper();
+  boost::shared_ptr<FeatureMatcher> matcher = metadata->getMatcher();
 
-    if (config->hash_space) {
-      boost::shared_ptr<FeatureContextHasher> hasher =
-          boost::make_shared<ClassContextHasher>(config->hash_space);
-      // It's fine to use the global feature indexes here because the stores are
-      // not constructed based on these indices. At filtering time, we just want
-      // to know which feature indexes match which contexts.
-      GlobalFeatureIndexesPairPtr feature_indexes_pair;
-      boost::shared_ptr<FeatureFilter> filter;
-      feature_indexes_pair = matcher->getGlobalFeatures();
+  if (config->hash_space) {
+    boost::shared_ptr<FeatureContextHasher> hasher =
+        boost::make_shared<ClassContextHasher>(config->hash_space);
+    // It's fine to use the global feature indexes here because the stores are
+    // not constructed based on these indices. At filtering time, we just want
+    // to know which feature indexes match which contexts.
+    GlobalFeatureIndexesPairPtr feature_indexes_pair;
+    boost::shared_ptr<FeatureFilter> filter;
+    feature_indexes_pair = matcher->getGlobalFeatures();
+    filter = boost::make_shared<FeatureExactFilter>(
+        feature_indexes_pair->getClassIndexes(),
+        boost::make_shared<ClassContextExtractor>(mapper));
+    U = boost::make_shared<CollisionMinibatchFeatureStore>(
+        num_classes, config->hash_space, config->feature_context_size,
+        hasher, filter);
+
+    for (int i = 0; i < num_classes; ++i) {
+      int class_size = index->getClassSize(i);
+      hasher = boost::make_shared<WordContextHasher>(
+          i, config->hash_space);
       filter = boost::make_shared<FeatureExactFilter>(
-          feature_indexes_pair->getClassIndexes(),
-          boost::make_shared<ClassContextExtractor>(mapper));
-      U = boost::make_shared<CollisionMinibatchFeatureStore>(
-          num_classes, config->hash_space, config->feature_context_size,
+          feature_indexes_pair->getWordIndexes(i),
+          boost::make_shared<WordContextExtractor>(i, mapper));
+      V[i] = boost::make_shared<CollisionMinibatchFeatureStore>(
+          class_size, config->hash_space, config->feature_context_size,
           hasher, filter);
+    }
+  } else {
+    auto feature_indexes_pair = matcher->getMinibatchFeatures(
+        corpus, config->feature_context_size, minibatch_indices);
+    U = boost::make_shared<SparseMinibatchFeatureStore>(
+        num_classes,
+        feature_indexes_pair->getClassIndexes(),
+        boost::make_shared<ClassContextExtractor>(mapper));
 
-      for (int i = 0; i < num_classes; ++i) {
-        int class_size = index->getClassSize(i);
-        hasher = boost::make_shared<WordContextHasher>(
-            i, config->hash_space);
-        filter = boost::make_shared<FeatureExactFilter>(
-            feature_indexes_pair->getWordIndexes(i),
-            boost::make_shared<WordContextExtractor>(i, mapper));
-        V[i] = boost::make_shared<CollisionMinibatchFeatureStore>(
-            class_size, config->hash_space, config->feature_context_size,
-            hasher, filter);
-      }
-    } else {
-      auto feature_indexes_pair = matcher->getMinibatchFeatures(
-          corpus, config->feature_context_size, minibatch_indices);
-      U = boost::make_shared<SparseMinibatchFeatureStore>(
-          num_classes,
-          feature_indexes_pair->getClassIndexes(),
-          boost::make_shared<ClassContextExtractor>(mapper));
-
-      for (int i = 0; i < num_classes; ++i) {
-        V[i] = boost::make_shared<SparseMinibatchFeatureStore>(
-           index->getClassSize(i),
-           feature_indexes_pair->getWordIndexes(i),
-           boost::make_shared<WordContextExtractor>(i, mapper));
-      }
+    for (int i = 0; i < num_classes; ++i) {
+      V[i] = boost::make_shared<SparseMinibatchFeatureStore>(
+         index->getClassSize(i),
+         feature_indexes_pair->getWordIndexes(i),
+         boost::make_shared<WordContextExtractor>(i, mapper));
     }
   }
 }

@@ -50,6 +50,26 @@ class GlobalFactoredMaxentWeights : public FactoredWeights {
       const boost::shared_ptr<MinibatchFactoredMaxentWeights>& gradient,
       MinibatchWords& words) const;
 
+  void estimateProjectionGradient(
+      const boost::shared_ptr<Corpus>& corpus,
+      const vector<int>& indices,
+      const vector<vector<int>>& contexts,
+      const vector<MatrixReal>& forward_weights,
+      const boost::shared_ptr<MinibatchFactoredMaxentWeights>& gradient,
+      MatrixReal& backward_weights,
+      Real& log_likelihood,
+      MinibatchWords& words) const;
+
+  void estimateFullGradient(
+      const boost::shared_ptr<Corpus>& corpus,
+      const vector<int>& indices,
+      const vector<vector<int>>& contexts,
+      const vector<MatrixReal>& context_vectors,
+      const vector<MatrixReal>& forward_weights,
+      const boost::shared_ptr<MinibatchFactoredMaxentWeights>& gradient,
+      Real& log_likelihood,
+      MinibatchWords& words) const;
+
   void estimateGradient(
       const boost::shared_ptr<Corpus>& corpus,
       const vector<int>& indices,
@@ -104,6 +124,26 @@ class GlobalFactoredMaxentWeights : public FactoredWeights {
   }
 
   void initialize();
+
+  void estimateProjectionGradientForWords(
+      const boost::shared_ptr<Corpus>& corpus,
+      const vector<int>& indices,
+      const vector<vector<int>>& contexts,
+      const vector<MatrixReal>& forward_weights,
+      const boost::shared_ptr<MinibatchFactoredMaxentWeights>& gradient,
+      MatrixReal& backward_weights,
+      Real& log_likelihood,
+      MinibatchWords& words) const;
+
+  void estimateProjectionGradientForClasses(
+      const boost::shared_ptr<Corpus>& corpus,
+      const vector<int>& indices,
+      const vector<vector<int>>& contexts,
+      const vector<MatrixReal>& forward_weights,
+      const boost::shared_ptr<MinibatchFactoredMaxentWeights>& gradient,
+      MatrixReal& backward_weights,
+      Real& log_likelihood,
+      MinibatchWords& words) const;
 
  protected:
   boost::shared_ptr<FactoredMaxentMetadata> metadata;

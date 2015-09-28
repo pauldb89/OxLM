@@ -32,18 +32,29 @@ FactoredMetadata::initialize(corpus);
   boost::shared_ptr<FeatureContextGenerator> generator =
       boost::make_shared<FeatureContextGenerator>(
           config->feature_context_size);
+
+  auto start_time = GetTime();
   boost::shared_ptr<NGramFilter> filter =
       boost::make_shared<NGramFilter>(
           corpus, index, processor, generator, config->max_ngrams,
           config->min_ngram_freq);
   cout << "Done creating the n-gram filter..." << endl;
+  cout << "Creating the n-gram filter took " << GetDuration(start_time, GetTime())
+       << " seconds..." << endl;
 
+  start_time = GetTime();
   mapper = boost::make_shared<FeatureContextMapper>(
       corpus, index, processor, generator, filter);
   cout << "Done creating the feature context mapper..." << endl;
+  cout << "Creating the feature context mapper took " << GetDuration(start_time, GetTime())
+       << " seconds..." << endl;
+
+  start_time = GetTime();
   matcher = boost::make_shared<FeatureMatcher>(
       corpus, index, processor, generator, filter, mapper);
   cout << "Done creating the feature matcher..." << endl;
+  cout << "Creating the feature matcher took " << GetDuration(start_time, GetTime())
+       << " seconds..." << endl;
 
   if (config->hash_space > 0 && config->count_collisions) {
       CollisionCounter counter(

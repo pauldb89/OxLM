@@ -121,10 +121,10 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
         vector<int> minibatch(
             indices.begin() + start,
             min(indices.begin() + end, indices.end()));
-        global_gradient->init(training_corpus, minibatch);
         // Reset the set of minibatch words shared across all threads.
         #pragma omp master
         {
+          global_gradient->init(training_corpus, minibatch);
           global_words = MinibatchWords();
           shared_index = 0;
         }

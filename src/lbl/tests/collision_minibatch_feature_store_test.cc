@@ -79,6 +79,15 @@ TEST_F(CollisionMinibatchFeatureStoreTest, TestBasic) {
   EXPECT_EQ(8, store->size());
 }
 
+TEST_F(CollisionMinibatchFeatureStoreTest, TestUpdateValue) {
+  VectorReal expected_values = VectorReal::Zero(3);
+  EXPECT_MATRIX_NEAR(expected_values, store->get(context), EPS);
+
+  store->updateValue(0, context, 3);
+  expected_values << 9, 0, 3;
+  EXPECT_MATRIX_NEAR(expected_values, store->get(context), EPS);
+}
+
 TEST_F(CollisionMinibatchFeatureStoreTest, TestGradientUpdate) {
   store->update(g_store);
 

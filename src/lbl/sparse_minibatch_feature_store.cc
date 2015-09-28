@@ -35,6 +35,20 @@ VectorReal SparseMinibatchFeatureStore::get(const vector<int>& context) const {
   return result;
 }
 
+void SparseMinibatchFeatureStore::updateValue(
+    int feature_index, const vector<int>& context, Real value) {
+  for (int feature_context_id: extractor->getFeatureContextIds(context)) {
+    auto it = featureWeights.find(feature_context_id);
+    if (it != featureWeights.end()) {
+      it->second.coeffRef(feature_index) += value;
+    } else {
+      SparseVectorReal weights(vectorMaxSize);
+      weights.coeffRef(feature_index) = value;
+      featureWeights.insert(make_pair(feature_context_id, weights));
+    }
+  }
+}
+
 void SparseMinibatchFeatureStore::update(
     const vector<int>& context, const VectorReal& values) {
   for (int feature_context_id: extractor->getFeatureContextIds(context)) {

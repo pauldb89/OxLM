@@ -107,6 +107,25 @@ TEST_F(SparseMinibatchFeatureStoreTest, TestBasic) {
   EXPECT_MATRIX_NEAR(expected_values, feature_store.get(context1), EPS);
 }
 
+TEST_F(SparseMinibatchFeatureStoreTest, TestUpdateValue) {
+  SparseMinibatchFeatureStore feature_store(5, extractor);
+
+  EXPECT_MATRIX_NEAR(VectorReal::Zero(5), feature_store.get(context1), EPS);
+
+  VectorReal expected_values(5);
+  feature_store.updateValue(1, context1, 3);
+  expected_values << 0, 3, 0, 0, 0;
+  EXPECT_MATRIX_NEAR(expected_values, feature_store.get(context1), EPS);
+
+  feature_store.updateValue(3, context1, 9);
+  expected_values << 0, 3, 0, 9, 0;
+  EXPECT_MATRIX_NEAR(expected_values, feature_store.get(context1), EPS);
+
+  feature_store.updateValue(1, context1, 2);
+  expected_values << 0, 5, 0, 9, 0;
+  EXPECT_MATRIX_NEAR(expected_values, feature_store.get(context1), EPS);
+}
+
 TEST_F(SparseMinibatchFeatureStoreTest, TestUpdateStore) {
   store.update(gradient_store);
 

@@ -62,6 +62,9 @@ int main(int argc, char **argv) {
     ("activation", value<int>()->default_value(2),
         "Activation function for the prediction (hidden) layer. "
         "0: Identity, 1: Sigmoid, 2: Rectifier.")
+    ("noise-samples", value<int>()->default_value(0),
+        "Number of noise samples for noise contrastive estimation. "
+        "If zero, minibatch gradient descent is used instead.")
     ("max-ngrams", value<int>()->default_value(0),
         "Define maxent features only for the most frequent max-ngrams ngrams.")
     ("min-ngram-freq", value<int>()->default_value(1),
@@ -126,6 +129,8 @@ int main(int argc, char **argv) {
   config->classes = vm["classes"].as<int>();
   config->activation = static_cast<Activation>(vm["activation"].as<int>());
 
+  config->noise_samples = vm["noise-samples"].as<int>();
+
   config->max_ngrams = vm["max-ngrams"].as<int>();
   config->min_ngram_freq = vm["min-ngram-freq"].as<int>();
 
@@ -155,6 +160,7 @@ int main(int argc, char **argv) {
   cout << "# randomise = " << config->randomise << endl;
   cout << "# diagonal contexts = " << config->diagonal_contexts << endl;
   cout << "# activation = " << config->activation << endl;
+  cout << "# noise samples = " << config->noise_samples << endl;
   cout << "# max n-grams = " << config->max_ngrams << endl;
   cout << "# min n-gram frequency = " << config->min_ngram_freq << endl;
   cout << "# hash space = " << config->hash_space << endl;

@@ -18,6 +18,9 @@ class CollisionMinibatchFeatureStore : public MinibatchFeatureStore {
 
   virtual VectorReal get(const vector<int>& context) const;
 
+  virtual void updateValue(
+      int feature_index, const vector<int>& context, Real value);
+
   virtual void update(const vector<int>& context, const VectorReal& values);
 
   virtual void update(const boost::shared_ptr<MinibatchFeatureStore>& store);

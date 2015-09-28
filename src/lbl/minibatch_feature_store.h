@@ -6,6 +6,9 @@ namespace oxlm {
 
 class MinibatchFeatureStore : virtual public FeatureStore {
  public:
+  virtual void updateValue(
+      int feature_index, const vector<int>& context, Real value) = 0;
+
   virtual void update(
       const vector<int>& context, const VectorReal& values) = 0;
 
