@@ -88,6 +88,12 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
   int shared_index = 0;
   // For no particular reason. It just looks like this works best.
   int task_size = sqrt(config->minibatch_size);
+  double init_time = 0;
+  double gradient_comp_time = 0;
+  double gradient_sync_update_time = 0;
+  double update_time = 0;
+  double reg_clear_time = 0;
+  double evaluate_time = 0;
 
   omp_set_num_threads(config->threads);
   #pragma omp parallel
@@ -116,6 +122,8 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
       size_t start = 0;
       while (start < training_corpus->size() &&
              minibatch_counter - best_minibatch <= minibatch_threshold) {
+        #pragma omp barrier
+        auto start_time = GetTime();
         size_t end = min(training_corpus->size(), start + minibatch_size);
 
         vector<int> minibatch(
@@ -134,6 +142,9 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
         // Wait until the global gradient is initialized. Otherwise, some
         // gradient updates may be ignored.
         #pragma omp barrier
+        #pragma omp master
+        init_time += GetDuration(start_time, GetTime());
+        start_time = GetTime();
 
         Real objective = 0;
         MinibatchWords words;
@@ -161,6 +172,11 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
           }
         }
 
+        #pragma omp barrier
+        #pragma omp master
+        gradient_comp_time += GetDuration(start_time, GetTime());
+        start_time = GetTime();
+
         global_gradient->syncUpdate(words, gradient);
         #pragma omp critical
         {
@@ -171,6 +187,9 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
         // Wait until the global gradient is fully updated by all threads and
         // the global words are fully merged.
         #pragma omp barrier
+        #pragma omp master
+        gradient_sync_update_time += GetDuration(start_time, GetTime());
+        start_time = GetTime();
 
         // Prepare minibatch words for parallel processing.
         #pragma omp master
@@ -184,6 +203,9 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
 
         // Wait for all threads to finish making the model gradient update.
         #pragma omp barrier
+        #pragma omp master
+        update_time += GetDuration(start_time, GetTime());
+        start_time = GetTime();
 
         Real minibatch_factor =
             static_cast<Real>(end - start) / training_corpus->size();
@@ -198,20 +220,42 @@ void Model<GlobalWeights, MinibatchWeights, Metadata>::learn() {
         // Wait the regularization update to finish and make sure the global
         // words are reset only after the global gradient is fully cleared.
         #pragma omp barrier
+        #pragma omp master
+        reg_clear_time += GetDuration(start_time, GetTime());
 
         if (minibatch_counter % config->evaluate_frequency == 0) {
+          start_time = GetTime();
           evaluate(test_corpus, iteration_start, minibatch_counter,
                    test_objective, best_perplexity, best_minibatch);
+          #pragma omp barrier
+          #pragma omp master
+          {
+            evaluate_time += GetDuration(start_time, GetTime());
+            cout << "init time: " << init_time << endl;
+            cout << "gradient computation time: " << gradient_comp_time << endl;
+            cout << "gradient sync update time: " << gradient_sync_update_time << endl;
+            cout << "gradient update time: " << update_time << endl;
+            cout << "regularizer + clear time: " << reg_clear_time << endl;
+            cout << "evaluate_time: " << evaluate_time << endl;
+            init_time = 0;
+            gradient_comp_time = 0;
+            gradient_sync_update_time = 0;
+            update_time = 0;
+            reg_clear_time = 0;
+            evaluate_time = 0;
+          }
         }
 
         ++minibatch_counter;
         start = end;
       }
 
+      auto start_time = GetTime();
       evaluate(test_corpus, iteration_start, minibatch_counter,
                test_objective, best_perplexity, best_minibatch);
       #pragma omp master
       {
+
         Real iteration_time = GetDuration(iteration_start, GetTime());
         cout << "Iteration: " << iter << ", "
              << "Time: " << iteration_time << " seconds, "
