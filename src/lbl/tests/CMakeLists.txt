@@ -20,7 +20,6 @@ set(TESTS
     global_factored_maxent_weights_test
     global_feature_indexes_pair_test
     metadata_test
-    minibatch_feature_indexes_pair_test
     minibatch_words_test
     model_test
     model_utils_test
@@ -32,8 +31,6 @@ set(TESTS
     parallel_vocabulary_test
     query_cache_test
     source_factored_weights_test
-    sparse_global_feature_store_test
-    sparse_minibatch_feature_store_test
     train_conditional_sgd_test
     train_factored_sgd_test
     train_maxent_sgd_test

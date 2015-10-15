@@ -39,14 +39,4 @@ TEST_F(ModelTest, TestSerializationCollisionStores) {
   EXPECT_EQ(model, model_copy);
 }
 
-TEST_F(ModelTest, TestSerializationSparseStores) {
-  FactoredMaxentLM model(config);
-  model.learn();
-  model.save();
-
-  FactoredMaxentLM model_copy;
-  model_copy.load(config->model_output_file);
-  EXPECT_EQ(model, model_copy);
-}
-
 } // namespace oxlm

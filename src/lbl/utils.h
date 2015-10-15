@@ -34,7 +34,6 @@ typedef Eigen::Matrix<Real, Eigen::Dynamic, 1>              VectorReal;
 typedef Eigen::Map<VectorReal>                              VectorRealMap;
 typedef Eigen::Array<Real, Eigen::Dynamic, 1>               ArrayReal;
 typedef Eigen::Array<Real, Eigen::Dynamic, Eigen::Dynamic>  Array2DReal;
-typedef Eigen::SparseVector<Real>                           SparseVectorReal;
 
 typedef high_resolution_clock Clock;
 typedef Clock::time_point     Time;

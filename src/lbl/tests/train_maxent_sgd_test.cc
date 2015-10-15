@@ -17,23 +17,11 @@ class MaxentSGDTest : public FactoredSGDTest {
 
     config->l2_maxent = 0.1;
     config->feature_context_size = 3;
+    config->hash_space = 1000000;
   }
 };
 
-TEST_F(MaxentSGDTest, TestTrainMaxentSGDSparseFeatures) {
-  FactoredMaxentLM model(config);
-  model.learn();
-  config->test_file = "test.en";
-  boost::shared_ptr<Vocabulary> vocab = model.getVocab();
-  boost::shared_ptr<Corpus> test_corpus = readTestCorpus(config, vocab);
-  Real log_likelihood = 0;
-  model.evaluate(test_corpus, log_likelihood);
-  EXPECT_NEAR(56.5158233, perplexity(log_likelihood, test_corpus->size()), EPS);
-}
-
 TEST_F(MaxentSGDTest, TestTrainMaxentSGDExactFiltering) {
-  config->hash_space = 1000000;
-
   FactoredMaxentLM model(config);
   model.learn();
   config->test_file = "test.en";
@@ -54,7 +42,7 @@ TEST_F(MaxentSGDTest, TestTrainMaxentNCE) {
   boost::shared_ptr<Corpus> test_corpus = readTestCorpus(config, vocab);
   Real log_likelihood = 0;
   model.evaluate(test_corpus, log_likelihood);
-  EXPECT_NEAR(56.9159393, perplexity(log_likelihood, test_corpus->size()), EPS);
+  EXPECT_NEAR(61.6847038, perplexity(log_likelihood, test_corpus->size()), EPS);
 }
 
 } // namespace oxlm

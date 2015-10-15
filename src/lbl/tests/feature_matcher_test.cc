@@ -110,40 +110,4 @@ TEST_F(FeatureMatcherTest, TestGlobal) {
   checkFeatureContexts(feature_indexes, word_context_ids, 0);
 }
 
-TEST_F(FeatureMatcherTest, TestSubset) {
-  vector<int> minibatch_indexes = {1, 4};
-
-  vector<int> history;
-  vector<int> class_context_ids, word_context_ids;
-  boost::shared_ptr<MinibatchFeatureIndexesPair> feature_indexes_pair =
-      feature_matcher->getMinibatchFeatures(corpus, 2, minibatch_indexes);
-  boost::shared_ptr<MinibatchFeatureIndexes> feature_indexes =
-      feature_indexes_pair->getClassIndexes();
-  EXPECT_EQ(4, feature_indexes->size());
-  history = {2, 0};
-  class_context_ids = mapper->getClassContextIds(history);
-  checkFeatureContexts(feature_indexes, class_context_ids, 2);
-  history = {0, 0};
-  class_context_ids = mapper->getClassContextIds(history);
-  // The starting 2 (belonging to class 1) is not explicitly selected, but it
-  // follows the context [0, 0].
-  checkFeatureContexts(feature_indexes, class_context_ids, 1);
-  checkFeatureContexts(feature_indexes, class_context_ids, 2);
-
-  feature_indexes = feature_indexes_pair->getWordIndexes(0);
-  EXPECT_EQ(0, feature_indexes->size());
-
-  feature_indexes = feature_indexes_pair->getWordIndexes(1);
-  EXPECT_EQ(0, feature_indexes->size());
-
-  feature_indexes = feature_indexes_pair->getWordIndexes(2);
-  EXPECT_EQ(4, feature_indexes->size());
-  history = {0, 0};
-  word_context_ids = mapper->getWordContextIds(2, history);
-  checkFeatureContexts(feature_indexes, word_context_ids, 0);
-  history = {2, 0};
-  word_context_ids = mapper->getWordContextIds(2, history);
-  checkFeatureContexts(feature_indexes, word_context_ids, 0);
-}
-
 } // namespace oxlm

@@ -33,7 +33,6 @@ add_libraries(lbl
   global_feature_store.cc
   metadata.cc
   minibatch_factored_maxent_weights.cc
-  minibatch_feature_indexes_pair.cc
   minibatch_feature_store.cc
   minibatch_words.cc
   model.cc
@@ -45,8 +44,6 @@ add_libraries(lbl
   parallel_vocabulary.cc
   parallel_corpus.cc
   source_factored_weights.cc
-  sparse_global_feature_store.cc
-  sparse_minibatch_feature_store.cc
   tree_metadata.cc
   utils.cc
   vocabulary.cc

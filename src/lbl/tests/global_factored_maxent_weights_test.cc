@@ -11,27 +11,7 @@ namespace ar = boost::archive;
 
 namespace oxlm {
 
-TEST_F(GlobalFactoredMaxentWeightsTest, TestCheckGradientSparse) {
-  metadata = boost::make_shared<FactoredMaxentMetadata>(
-      config, vocab, index, mapper, matcher);
-  GlobalFactoredMaxentWeights weights(config, metadata, corpus);
-
-  vector<int> indices = {0, 1, 2, 3, 4};
-
-  Real log_likelihood;
-  MinibatchWords words;
-  boost::shared_ptr<MinibatchFactoredMaxentWeights> gradient =
-       boost::make_shared<MinibatchFactoredMaxentWeights>(config, metadata);
-  gradient->init(corpus, indices);
-  weights.getGradient(corpus, indices, gradient, log_likelihood, words);
-
-  // See the comment in weights_test.cc if you suspect the gradient is not
-  // computed correctly.
-  EXPECT_TRUE(weights.checkGradient(corpus, indices, gradient, 1e-3));
-}
-
 TEST_F(GlobalFactoredMaxentWeightsTest, TestCollisionsNoFilter) {
-  config->hash_space = 100;
   metadata = boost::make_shared<FactoredMaxentMetadata>(
       config, vocab, index, mapper, matcher);
   GlobalFactoredMaxentWeights weights(config, metadata, corpus);
@@ -51,7 +31,6 @@ TEST_F(GlobalFactoredMaxentWeightsTest, TestCollisionsNoFilter) {
 }
 
 TEST_F(GlobalFactoredMaxentWeightsTest, TestCollisionExactFiltering) {
-  config->hash_space = 100;
   metadata = boost::make_shared<FactoredMaxentMetadata>(
       config, vocab, index, mapper, matcher);
   GlobalFactoredMaxentWeights weights(config, metadata, corpus);
@@ -71,6 +50,7 @@ TEST_F(GlobalFactoredMaxentWeightsTest, TestCollisionExactFiltering) {
 
 TEST_F(GlobalFactoredMaxentWeightsTest, TestCheckGradientExtraHiddenLayers) {
   config->hidden_layers = 2;
+
   metadata = boost::make_shared<FactoredMaxentMetadata>(
       config, vocab, index, mapper, matcher);
   GlobalFactoredMaxentWeights weights(config, metadata, corpus);

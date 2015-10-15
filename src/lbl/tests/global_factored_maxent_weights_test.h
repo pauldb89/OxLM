@@ -12,6 +12,7 @@ class GlobalFactoredMaxentWeightsTest : public FactoredWeightsTest {
   void SetUp() {
     FactoredWeightsTest::SetUp();
     config->feature_context_size = 2;
+    config->hash_space = 100;
 
     vector<int> data = {2, 3, 2, 4, 1};
     vector<int> classes = {0, 2, 4, 5};
