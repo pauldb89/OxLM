@@ -2,7 +2,6 @@
 
 #include "lbl/factored_metadata.h"
 #include "lbl/feature_context_generator.h"
-#include "lbl/feature_context_mapper.h"
 #include "lbl/feature_matcher.h"
 #include "lbl/ngram_filter.h"
 
@@ -20,12 +19,9 @@ class FactoredMaxentMetadata : public FactoredMetadata {
       const boost::shared_ptr<ModelData>& config,
       boost::shared_ptr<Vocabulary>& vocab,
       const boost::shared_ptr<WordToClassIndex>& index,
-      const boost::shared_ptr<FeatureContextMapper>& mapper,
       const boost::shared_ptr<FeatureMatcher>& matcher);
 
   void initialize(const boost::shared_ptr<Corpus>& corpus);
-
-  boost::shared_ptr<FeatureContextMapper> getMapper() const;
 
   boost::shared_ptr<FeatureMatcher> getMatcher() const;
 
@@ -36,12 +32,10 @@ class FactoredMaxentMetadata : public FactoredMetadata {
   void serialize(Archive& ar, const unsigned int version) {
     ar & boost::serialization::base_object<FactoredMetadata>(*this);
 
-    ar & mapper;
     ar & matcher;
   }
 
  protected:
-  boost::shared_ptr<FeatureContextMapper> mapper;
   boost::shared_ptr<FeatureMatcher> matcher;
 };
 

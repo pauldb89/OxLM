@@ -7,9 +7,6 @@ add_libraries(lbl
   class_context_hasher.cc
   class_distribution.cc
   class_tree.cc
-  collision_counter.cc
-  collision_global_feature_store.cc
-  collision_minibatch_feature_store.cc
   config.cc
   context_cache.cc
   context_processor.cc
@@ -23,14 +20,15 @@ add_libraries(lbl
   feature_context_generator.cc
   feature_context_mapper.cc
   feature_context_hasher.cc
-  feature_exact_filter.cc
   feature_filter.cc
+  feature_indexes_pair.cc
   feature_matcher.cc
   feature_store.cc
   global_collision_space.cc
   global_factored_maxent_weights.cc
-  global_feature_indexes_pair.cc
   global_feature_store.cc
+  hash_builder.cc
+  hashed_ngram.cc
   metadata.cc
   minibatch_factored_maxent_weights.cc
   minibatch_feature_store.cc

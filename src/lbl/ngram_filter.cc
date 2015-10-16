@@ -73,4 +73,23 @@ vector<FeatureContext> NGramFilter::filter(
   return ret;
 }
 
+
+vector<Hash> NGramFilter::filter(
+    int word_id, int class_id, const vector<Hash>& context_hashes) const {
+  if (!enabled) {
+    return context_hashes;
+  }
+
+  vector<Hash> ret;
+  for (Hash context_hash: context_hashes) {
+    HashedNGram ngram(word_id, class_id, context_hash);
+    size_t ngram_hash = hasher(ngram);
+    if (ngramFrequencies.count(ngram_hash)) {
+      ret.push_back(context_hash);
+    }
+  }
+
+  return ret;
+}
+
 } // namespace oxlm

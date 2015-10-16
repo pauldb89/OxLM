@@ -42,7 +42,7 @@ class GlobalCollisionSpace {
 
   BOOST_SERIALIZATION_SPLIT_MEMBER();
 
-  friend class CollisionGlobalFeatureStore;
+  friend class GlobalFeatureStore;
 
   int hashSpaceSize;
   Real* featureWeights;

@@ -13,7 +13,7 @@ namespace oxlm {
 
 TEST_F(GlobalFactoredMaxentWeightsTest, TestCollisionsNoFilter) {
   metadata = boost::make_shared<FactoredMaxentMetadata>(
-      config, vocab, index, mapper, matcher);
+      config, vocab, index, matcher);
   GlobalFactoredMaxentWeights weights(config, metadata, corpus);
 
   vector<int> indices = {0, 1, 2, 3, 4};
@@ -32,7 +32,7 @@ TEST_F(GlobalFactoredMaxentWeightsTest, TestCollisionsNoFilter) {
 
 TEST_F(GlobalFactoredMaxentWeightsTest, TestCollisionExactFiltering) {
   metadata = boost::make_shared<FactoredMaxentMetadata>(
-      config, vocab, index, mapper, matcher);
+      config, vocab, index, matcher);
   GlobalFactoredMaxentWeights weights(config, metadata, corpus);
 
   vector<int> indices = {0, 1, 2, 3, 4};
@@ -52,7 +52,7 @@ TEST_F(GlobalFactoredMaxentWeightsTest, TestCheckGradientExtraHiddenLayers) {
   config->hidden_layers = 2;
 
   metadata = boost::make_shared<FactoredMaxentMetadata>(
-      config, vocab, index, mapper, matcher);
+      config, vocab, index, matcher);
   GlobalFactoredMaxentWeights weights(config, metadata, corpus);
 
   vector<int> indices = {0, 1, 2, 3, 4};
@@ -71,7 +71,7 @@ TEST_F(GlobalFactoredMaxentWeightsTest, TestCheckGradientExtraHiddenLayers) {
 
 TEST_F(GlobalFactoredMaxentWeightsTest, TestPredict) {
   metadata = boost::make_shared<FactoredMaxentMetadata>(
-      config, vocab, index, mapper, matcher);
+      config, vocab, index, matcher);
   GlobalFactoredMaxentWeights weights(config, metadata, corpus);
   vector<int> indices = {0, 1, 2, 3};
 
@@ -88,7 +88,7 @@ TEST_F(GlobalFactoredMaxentWeightsTest, TestUnnormalizedScores) {
   // The best I could think of is to check that the relative order of log
   // probabilities and unnormalized scores is the same.
   metadata = boost::make_shared<FactoredMaxentMetadata>(
-      config, vocab, index, mapper, matcher);
+      config, vocab, index, matcher);
 
   GlobalFactoredMaxentWeights weights(config, metadata, corpus);
   vector<int> indices = {0, 1, 2, 3};
@@ -98,7 +98,7 @@ TEST_F(GlobalFactoredMaxentWeightsTest, TestUnnormalizedScores) {
 
 TEST_F(GlobalFactoredMaxentWeightsTest, TestSerialization) {
   metadata = boost::make_shared<FactoredMaxentMetadata>(
-      config, vocab, index, mapper, matcher);
+      config, vocab, index, matcher);
   GlobalFactoredMaxentWeights weights(config, metadata, corpus), weights_copy;
 
   stringstream stream(ios_base::binary | ios_base::out | ios_base::in);

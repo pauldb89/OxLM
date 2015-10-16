@@ -17,97 +17,80 @@ class FeatureMatcherTest : public testing::Test {
         boost::make_shared<WordToClassIndex>(class_markers);
     boost::shared_ptr<ContextProcessor> processor =
         boost::make_shared<ContextProcessor>(corpus, 2, 0, 1);
-    boost::shared_ptr<FeatureContextGenerator> generator =
-        boost::make_shared<FeatureContextGenerator>(2);
+    generator = boost::make_shared<FeatureContextGenerator>(2);
     boost::shared_ptr<NGramFilter> filter =
         boost::make_shared<NGramFilter>(corpus, index, processor, generator);
-    mapper = boost::make_shared<FeatureContextMapper>(
-        corpus, index, processor, generator, filter);
     feature_matcher = boost::make_shared<FeatureMatcher>(
-        corpus, index, processor, generator, filter, mapper);
+        corpus, index, processor, generator, filter);
   }
 
   void checkFeatureContexts(
-      GlobalFeatureIndexesPtr feature_indexes,
-      const vector<int>& feature_context_ids,
+      FeatureIndexesPtr feature_indexes,
+      const vector<Hash>& context_hashes,
       int feature_index) const {
-    for (int context_id: feature_context_ids) {
-      EXPECT_TRUE(0 <= context_id && context_id < feature_indexes->size());
-      vector<int>& indexes = feature_indexes->at(context_id);
-      EXPECT_TRUE(
-          find(indexes.begin(), indexes.end(), feature_index) != indexes.end());
-    }
-  }
-
-  void checkFeatureContexts(
-      MinibatchFeatureIndexesPtr feature_indexes,
-      const vector<int>& feature_context_ids,
-      int feature_index) const {
-    for (int context_id: feature_context_ids) {
-      EXPECT_TRUE(feature_indexes->count(context_id));
-      vector<int>& indexes = feature_indexes->at(context_id);
-      EXPECT_TRUE(
-          find(indexes.begin(), indexes.end(), feature_index) != indexes.end());
+    for (Hash context_hash: context_hashes) {
+      vector<int>& indexes = feature_indexes->at(context_hash);
+      EXPECT_TRUE(find(indexes.begin(), indexes.end(), feature_index) != indexes.end());
     }
   }
 
   boost::shared_ptr<Corpus> corpus;
-  boost::shared_ptr<FeatureContextMapper> mapper;
+  boost::shared_ptr<FeatureContextGenerator> generator;
   boost::shared_ptr<FeatureMatcher> feature_matcher;
 };
 
 TEST_F(FeatureMatcherTest, TestGlobal) {
   vector<int> history;
-  vector<int> class_context_ids, word_context_ids;
-  auto feature_indexes_pair = feature_matcher->getGlobalFeatures();
+  vector<Hash> context_hashes;
+  auto feature_indexes_pair = feature_matcher->getFeatureIndexes();
 
-  GlobalFeatureIndexesPtr feature_indexes = feature_indexes_pair->getClassIndexes();
+  FeatureIndexesPtr feature_indexes = feature_indexes_pair->getClassIndexes();
   EXPECT_EQ(8, feature_indexes->size());
   history = {0, 0};
-  class_context_ids = mapper->getClassContextIds(history);
-  checkFeatureContexts(feature_indexes, class_context_ids, 1);
+  context_hashes = generator->getFeatureContextHashes(history);
+  checkFeatureContexts(feature_indexes, context_hashes, 1);
   history = {2, 0};
-  class_context_ids = mapper->getClassContextIds(history);
-  checkFeatureContexts(feature_indexes, class_context_ids, 2);
+  context_hashes = generator->getFeatureContextHashes(history);
+  checkFeatureContexts(feature_indexes, context_hashes, 2);
   history = {3, 2};
-  class_context_ids = mapper->getClassContextIds(history);
-  checkFeatureContexts(feature_indexes, class_context_ids, 2);
+  context_hashes = generator->getFeatureContextHashes(history);
+  checkFeatureContexts(feature_indexes, context_hashes, 2);
   history = {3, 3};
-  class_context_ids = mapper->getClassContextIds(history);
-  checkFeatureContexts(feature_indexes, class_context_ids, 0);
+  context_hashes = generator->getFeatureContextHashes(history);
+  checkFeatureContexts(feature_indexes, context_hashes, 0);
   history = {0, 0};
-  class_context_ids = mapper->getClassContextIds(history);
-  checkFeatureContexts(feature_indexes, class_context_ids, 2);
+  context_hashes = generator->getFeatureContextHashes(history);
+  checkFeatureContexts(feature_indexes, context_hashes, 2);
   history = {3, 0};
-  class_context_ids = mapper->getClassContextIds(history);
-  checkFeatureContexts(feature_indexes, class_context_ids, 1);
+  context_hashes = generator->getFeatureContextHashes(history);
+  checkFeatureContexts(feature_indexes, context_hashes, 1);
 
   feature_indexes = feature_indexes_pair->getWordIndexes(0);
   EXPECT_EQ(2, feature_indexes->size());
   history = {3, 3};
-  word_context_ids = mapper->getWordContextIds(0, history);
-  checkFeatureContexts(feature_indexes, word_context_ids, 1);
+  context_hashes = generator->getFeatureContextHashes(history);
+  checkFeatureContexts(feature_indexes, context_hashes, 1);
 
   feature_indexes = feature_indexes_pair->getWordIndexes(1);
   EXPECT_EQ(4, feature_indexes->size());
   history = {0, 0};
-  word_context_ids = mapper->getWordContextIds(1, history);
-  checkFeatureContexts(feature_indexes, word_context_ids, 0);
+  context_hashes = generator->getFeatureContextHashes(history);
+  checkFeatureContexts(feature_indexes, context_hashes, 0);
   history = {3, 0};
-  word_context_ids = mapper->getWordContextIds(1, history);
-  checkFeatureContexts(feature_indexes, word_context_ids, 0);
+  context_hashes = generator->getFeatureContextHashes(history);
+  checkFeatureContexts(feature_indexes, context_hashes, 0);
 
   feature_indexes = feature_indexes_pair->getWordIndexes(2);
   EXPECT_EQ(6, feature_indexes->size());
   history = {2, 0};
-  word_context_ids = mapper->getWordContextIds(2, history);
-  checkFeatureContexts(feature_indexes, word_context_ids, 0);
+  context_hashes = generator->getFeatureContextHashes(history);
+  checkFeatureContexts(feature_indexes, context_hashes, 0);
   history = {3, 2};
-  word_context_ids = mapper->getWordContextIds(2, history);
-  checkFeatureContexts(feature_indexes, word_context_ids, 0);
+  context_hashes = generator->getFeatureContextHashes(history);
+  checkFeatureContexts(feature_indexes, context_hashes, 0);
   history = {0, 0};
-  word_context_ids = mapper->getWordContextIds(2, history);
-  checkFeatureContexts(feature_indexes, word_context_ids, 0);
+  context_hashes = generator->getFeatureContextHashes(history);
+  checkFeatureContexts(feature_indexes, context_hashes, 0);
 }
 
 } // namespace oxlm

@@ -6,11 +6,10 @@
 
 #include "lbl/class_context_extractor.h"
 #include "lbl/class_context_hasher.h"
-#include "lbl/collision_global_feature_store.h"
-#include "lbl/feature_context_mapper.h"
-#include "lbl/feature_exact_filter.h"
+#include "lbl/feature_filter.h"
 #include "lbl/feature_filter.h"
 #include "lbl/feature_matcher.h"
+#include "lbl/global_feature_store.h"
 #include "lbl/word_context_extractor.h"
 #include "lbl/word_context_hasher.h"
 
@@ -36,31 +35,28 @@ GlobalFactoredMaxentWeights::GlobalFactoredMaxentWeights(
 void GlobalFactoredMaxentWeights::initialize() {
   int num_classes = index->getNumClasses();
   V.resize(num_classes);
-  boost::shared_ptr<FeatureContextMapper> mapper = metadata->getMapper();
   boost::shared_ptr<FeatureMatcher> matcher = metadata->getMatcher();
 
   boost::shared_ptr<GlobalCollisionSpace> space =
       boost::make_shared<GlobalCollisionSpace>(config->hash_space);
   boost::shared_ptr<FeatureContextHasher> hasher =
       boost::make_shared<ClassContextHasher>(config->hash_space);
-  GlobalFeatureIndexesPairPtr feature_indexes_pair;
+  FeatureIndexesPairPtr feature_indexes_pair;
   boost::shared_ptr<FeatureFilter> filter;
-  feature_indexes_pair = matcher->getGlobalFeatures();
-  filter = boost::make_shared<FeatureExactFilter>(
-      feature_indexes_pair->getClassIndexes(),
-      boost::make_shared<ClassContextExtractor>(mapper));
+  feature_indexes_pair = matcher->getFeatureIndexes();
+  filter = boost::make_shared<FeatureFilter>(
+      feature_indexes_pair->getClassIndexes());
 
-  U = boost::make_shared<CollisionGlobalFeatureStore>(
+  U = boost::make_shared<GlobalFeatureStore>(
       num_classes, config->hash_space, config->feature_context_size,
       space, hasher, filter);
 
   for (int i = 0; i < num_classes; ++i) {
     int class_size = index->getClassSize(i);
     hasher = boost::make_shared<WordContextHasher>(i, config->hash_space);
-    filter = boost::make_shared<FeatureExactFilter>(
-        feature_indexes_pair->getWordIndexes(i),
-        boost::make_shared<WordContextExtractor>(i, mapper));
-    V[i] = boost::make_shared<CollisionGlobalFeatureStore>(
+    filter = boost::make_shared<FeatureFilter>(
+        feature_indexes_pair->getWordIndexes(i));
+    V[i] = boost::make_shared<GlobalFeatureStore>(
         class_size, config->hash_space, config->feature_context_size,
         space, hasher, filter);
   }

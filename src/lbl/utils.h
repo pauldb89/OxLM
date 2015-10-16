@@ -23,11 +23,10 @@ typedef float Real;
 
 typedef int            WordId;
 typedef vector<WordId> Sentence;
+typedef size_t         Hash;
 
-typedef vector<vector<int>>                        GlobalFeatureIndexes;
-typedef boost::shared_ptr<GlobalFeatureIndexes>    GlobalFeatureIndexesPtr;
-typedef unordered_map<int, vector<int>>            MinibatchFeatureIndexes;
-typedef boost::shared_ptr<MinibatchFeatureIndexes> MinibatchFeatureIndexesPtr;
+typedef unordered_map<Hash, vector<int>>  FeatureIndexes;
+typedef boost::shared_ptr<FeatureIndexes> FeatureIndexesPtr;
 
 typedef Eigen::Matrix<Real, Eigen::Dynamic, Eigen::Dynamic> MatrixReal;
 typedef Eigen::Matrix<Real, Eigen::Dynamic, 1>              VectorReal;

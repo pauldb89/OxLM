@@ -44,7 +44,7 @@ template<> class hash<oxlm::NGram> {
  public:
   hash<oxlm::NGram>(int seed = 0) : seed(seed) {}
 
-  inline size_t operator()(const oxlm::NGram query) const {
+  inline size_t operator()(const oxlm::NGram& query) const {
     vector<int> data;
     data.push_back(query.word);
     data.push_back(query.classId);

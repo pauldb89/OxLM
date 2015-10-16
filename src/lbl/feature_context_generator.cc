@@ -20,6 +20,19 @@ vector<FeatureContext> FeatureContextGenerator::getFeatureContexts(
   return feature_contexts;
 }
 
+// TODO(pauldb): Add tests.
+vector<Hash> FeatureContextGenerator::getFeatureContextHashes(
+    const vector<int>& history) const {
+  Hash h = 1;
+  vector<Hash> hashes;
+  for (size_t i = 0; i < min(featureContextSize, history.size()); ++i) {
+    h = hashBuilder.compose(h, history[i]);
+    hashes.push_back(h);
+  }
+
+  return hashes;
+}
+
 bool FeatureContextGenerator::operator==(
     const FeatureContextGenerator& other) const {
   return featureContextSize == other.featureContextSize;

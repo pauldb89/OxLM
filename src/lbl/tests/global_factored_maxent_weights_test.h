@@ -3,7 +3,6 @@
 #include "lbl/context_processor.h"
 #include "lbl/factored_maxent_metadata.h"
 #include "lbl/feature_matcher.h"
-#include "lbl/feature_context_mapper.h"
 
 namespace oxlm {
 
@@ -26,13 +25,10 @@ class GlobalFactoredMaxentWeightsTest : public FactoredWeightsTest {
             config->feature_context_size);
     boost::shared_ptr<NGramFilter> filter =
         boost::make_shared<NGramFilter>(corpus, index, processor, generator);
-    mapper = boost::make_shared<FeatureContextMapper>(
-        corpus, index, processor, generator, filter);
     matcher = boost::make_shared<FeatureMatcher>(
-        corpus, index, processor, generator, filter, mapper);
+        corpus, index, processor, generator, filter);
   }
 
-  boost::shared_ptr<FeatureContextMapper> mapper;
   boost::shared_ptr<FeatureMatcher> matcher;
   boost::shared_ptr<FactoredMaxentMetadata> metadata;
 };

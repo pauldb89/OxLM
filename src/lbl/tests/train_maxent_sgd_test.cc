@@ -29,7 +29,7 @@ TEST_F(MaxentSGDTest, TestTrainMaxentSGDExactFiltering) {
   boost::shared_ptr<Corpus> test_corpus = readTestCorpus(config, vocab);
   Real log_likelihood = 0;
   model.evaluate(test_corpus, log_likelihood);
-  EXPECT_NEAR(56.5224494, perplexity(log_likelihood, test_corpus->size()), EPS);
+  EXPECT_NEAR(56.89786911, perplexity(log_likelihood, test_corpus->size()), EPS);
 }
 
 TEST_F(MaxentSGDTest, TestTrainMaxentNCE) {
@@ -42,7 +42,7 @@ TEST_F(MaxentSGDTest, TestTrainMaxentNCE) {
   boost::shared_ptr<Corpus> test_corpus = readTestCorpus(config, vocab);
   Real log_likelihood = 0;
   model.evaluate(test_corpus, log_likelihood);
-  EXPECT_NEAR(61.6847038, perplexity(log_likelihood, test_corpus->size()), EPS);
+  EXPECT_NEAR(62.33262252, perplexity(log_likelihood, test_corpus->size()), EPS);
 }
 
 } // namespace oxlm

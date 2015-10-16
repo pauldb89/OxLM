@@ -2,8 +2,6 @@
 
 #include <boost/make_shared.hpp>
 
-#include "lbl/collision_counter.h"
-
 namespace oxlm {
 
 FactoredMaxentMetadata::FactoredMaxentMetadata() {}
@@ -17,10 +15,8 @@ FactoredMaxentMetadata::FactoredMaxentMetadata(
     const boost::shared_ptr<ModelData>& config,
     boost::shared_ptr<Vocabulary>& vocab,
     const boost::shared_ptr<WordToClassIndex>& index,
-    const boost::shared_ptr<FeatureContextMapper>& mapper,
     const boost::shared_ptr<FeatureMatcher>& matcher)
-    : FactoredMetadata(config, vocab, index),
-      mapper(mapper), matcher(matcher) {}
+    : FactoredMetadata(config, vocab, index), matcher(matcher) {}
 
 void FactoredMaxentMetadata::initialize(
   const boost::shared_ptr<Corpus>& corpus) {
@@ -43,28 +39,11 @@ FactoredMetadata::initialize(corpus);
        << " seconds..." << endl;
 
   start_time = GetTime();
-  mapper = boost::make_shared<FeatureContextMapper>(
-      corpus, index, processor, generator, filter);
-  cout << "Done creating the feature context mapper..." << endl;
-  cout << "Creating the feature context mapper took " << GetDuration(start_time, GetTime())
-       << " seconds..." << endl;
-
-  start_time = GetTime();
   matcher = boost::make_shared<FeatureMatcher>(
-      corpus, index, processor, generator, filter, mapper);
+      corpus, index, processor, generator, filter);
   cout << "Done creating the feature matcher..." << endl;
   cout << "Creating the feature matcher took " << GetDuration(start_time, GetTime())
        << " seconds..." << endl;
-
-  if (config->hash_space > 0 && config->count_collisions) {
-      CollisionCounter counter(
-          corpus, index, mapper, matcher, config);
-      counter.count();
-  }
-}
-
-boost::shared_ptr<FeatureContextMapper> FactoredMaxentMetadata::getMapper() const {
-  return mapper;
 }
 
 boost::shared_ptr<FeatureMatcher> FactoredMaxentMetadata::getMatcher() const {

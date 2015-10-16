@@ -3,9 +3,6 @@ set(TESTS
     class_context_hasher_test
     class_distribution_test
     class_tree_test
-    collision_counter_test
-    collision_global_feature_store_test
-    collision_minibatch_feature_store_test
     context_cache_test
     context_processor_test
     corpus_test
@@ -15,11 +12,13 @@ set(TESTS
     feature_context_test
     feature_context_generator_test
     feature_context_mapper_test
-    feature_exact_filter_test
+    feature_filter_test
+    feature_indexes_pair_test
     feature_matcher_test
     global_factored_maxent_weights_test
-    global_feature_indexes_pair_test
+    global_feature_store_test
     metadata_test
+    minibatch_feature_store_test
     minibatch_words_test
     model_test
     model_utils_test

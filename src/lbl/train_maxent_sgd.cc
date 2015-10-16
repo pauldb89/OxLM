@@ -71,9 +71,7 @@ int main(int argc, char **argv) {
         "Define maxent features only for n-grams above this frequency.")
     ("hash-space", value<Real>()->default_value(0),
         "The size of the space in which the maxent features are mapped to "
-        "(in millions).")
-    ("count-collisions", value<bool>()->default_value(true),
-        "Print collision statistics (leads to a memory usage spike)");
+        "(in millions).");
 
   options_description config_options, cmdline_options;
   config_options.add(generic);
@@ -135,7 +133,6 @@ int main(int argc, char **argv) {
   config->min_ngram_freq = vm["min-ngram-freq"].as<int>();
 
   config->hash_space = vm["hash-space"].as<Real>() * 1000000;
-  config->count_collisions = vm["count-collisions"].as<bool>();
 
   cout << "################################" << endl;
   if (strlen(GIT_REVISION) > 0) {

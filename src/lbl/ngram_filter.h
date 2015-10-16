@@ -2,6 +2,7 @@
 
 #include "lbl/context_processor.h"
 #include "lbl/feature_context_generator.h"
+#include "lbl/hashed_ngram.h"
 #include "lbl/ngram.h"
 #include "lbl/word_to_class_index.h"
 #include "lbl/parallel_corpus.h"
@@ -21,9 +22,13 @@ class NGramFilter {
       int word_id, int class_id,
       const vector<FeatureContext>& feature_contexts) const;
 
+  vector<Hash> filter(
+      int word_id, int class_id, const vector<Hash>& context_hashes) const;
+
  private:
   bool enabled;
   hash<NGram> hashFunction;
+  hash<HashedNGram> hasher;
   unordered_map<size_t, int> ngramFrequencies;
 };
 

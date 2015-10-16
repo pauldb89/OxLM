@@ -1,34 +1,43 @@
 #pragma once
 
-#include <vector>
-
+#include <boost/serialization/extended_type_info.hpp>
 #include <boost/serialization/serialization.hpp>
+#include <boost/serialization/singleton.hpp>
+#include <boost/serialization/type_info_implementation.hpp>
+#include <boost/serialization/shared_ptr.hpp>
+#include <boost/serialization/vector.hpp>
+#include <boost/shared_ptr.hpp>
 
-#include "lbl/feature_context.h"
-
-using namespace std;
+#include "lbl/archive_export.h"
+#include "lbl/feature_filter.h"
+#include "lbl/utils.h"
+#include "utils/serialization_helpers.h"
 
 namespace oxlm {
 
-/**
- * @Interface.
- * Feature filters are used to identify what words may follow a given context.
- */
 class FeatureFilter {
  public:
-  virtual vector<int> getIndexes(
-      const FeatureContext& feature_context) const = 0;
+  FeatureFilter();
 
-  virtual bool hasIndex(
-      const FeatureContext& feature_context, int feature_index) const = 0;
+  FeatureFilter(const FeatureIndexesPtr& feature_indexes);
 
-  virtual ~FeatureFilter();
+  virtual vector<int> getIndexes(Hash context_hash) const;
+
+  virtual bool hasIndex(Hash context_hash, int feature_index) const;
+
+  ~FeatureFilter();
 
  private:
   friend class boost::serialization::access;
 
   template<class Archive>
-  void serialize(Archive& ar, const unsigned int version) {}
+  void serialize(Archive& ar, const unsigned int version) {
+    ar & featureIndexes;
+  }
+
+  FeatureIndexesPtr featureIndexes;
 };
 
 } // namespace oxlm
+
+BOOST_CLASS_EXPORT_KEY(oxlm::FeatureFilter)
