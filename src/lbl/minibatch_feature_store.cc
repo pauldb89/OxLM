@@ -13,6 +13,7 @@ VectorReal MinibatchFeatureStore::get(
     const vector<int>& context) const {
   VectorReal result = VectorReal::Zero(vectorSize);
   for (Hash context_hash: generator.getFeatureContextHashes(context)) {
+    context_hash = hasher->getKey(context_hash);
     for (int i: filter->getIndexes(context_hash)) {
       auto it = featureWeights.find((context_hash + i) % hashSpace);
       if (it != featureWeights.end()) {
@@ -26,7 +27,8 @@ VectorReal MinibatchFeatureStore::get(
 
 void MinibatchFeatureStore::updateValue(
     int feature_index, const vector<int>& context, Real value) {
-  for (const auto& context_hash: generator.getFeatureContextHashes(context)) {
+  for (Hash context_hash: generator.getFeatureContextHashes(context)) {
+    context_hash = hasher->getKey(context_hash);
     if (filter->hasIndex(context_hash, feature_index)) {
       featureWeights[(context_hash + feature_index) % hashSpace] += value;
     }
@@ -36,6 +38,7 @@ void MinibatchFeatureStore::updateValue(
 void MinibatchFeatureStore::update(
     const vector<int>& context, const VectorReal& values) {
   for (Hash context_hash: generator.getFeatureContextHashes(context)) {
+    context_hash = hasher->getKey(context_hash);
     for (int i: filter->getIndexes(context_hash)) {
       featureWeights[(context_hash + i) % hashSpace] += values(i);
     }

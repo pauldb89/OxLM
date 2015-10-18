@@ -17,10 +17,9 @@ NGramFilter::NGramFilter(
     int word_id = corpus->at(i);
     int class_id = index->getClass(word_id);
     vector<int> context = processor->extract(i);
-    for (const auto& feature_context: generator->getFeatureContexts(context)) {
-      NGram ngram(word_id, class_id, feature_context.data);
-      size_t ngram_hash = hashFunction(ngram);
-      ++ngramFrequencies[ngram_hash];
+    for (Hash context_hash: generator->getFeatureContextHashes(context)) {
+      HashedNGram ngram(word_id, class_id, context_hash);
+      ++ngramFrequencies[hasher(ngram)];
     }
   }
 
@@ -53,26 +52,6 @@ NGramFilter::NGramFilter(
     ngramFrequencies[ngram.second] = ngram.first;
   }
 }
-
-vector<FeatureContext> NGramFilter::filter(
-    int word_id, int class_id,
-    const vector<FeatureContext>& feature_contexts) const {
-  if (!enabled) {
-    return feature_contexts;
-  }
-
-  vector<FeatureContext> ret;
-  for (const auto& feature_context: feature_contexts) {
-    NGram ngram(word_id, class_id, feature_context.data);
-    size_t ngram_hash = hashFunction(ngram);
-    if (ngramFrequencies.count(ngram_hash)) {
-      ret.push_back(feature_context);
-    }
-  }
-
-  return ret;
-}
-
 
 vector<Hash> NGramFilter::filter(
     int word_id, int class_id, const vector<Hash>& context_hashes) const {

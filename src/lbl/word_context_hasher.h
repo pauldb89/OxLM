@@ -2,7 +2,7 @@
 
 #include "lbl/archive_export.h"
 #include "lbl/feature_context_hasher.h"
-#include "lbl/ngram.h"
+#include "lbl/hashed_ngram.h"
 
 namespace oxlm {
 
@@ -10,12 +10,9 @@ class WordContextHasher : public FeatureContextHasher {
  public:
   WordContextHasher();
 
-  WordContextHasher(int class_id, int hash_space_size);
+  WordContextHasher(int class_id);
 
-  virtual int getKey(const FeatureContext& feature_context) const;
-
-  virtual NGram getPrediction(
-      int candidate, const FeatureContext& feature_context) const;
+  virtual size_t getKey(Hash context_hash) const;
 
   bool operator==(const WordContextHasher& other) const;
 
@@ -28,11 +25,10 @@ class WordContextHasher : public FeatureContextHasher {
   void serialize(Archive& ar, const unsigned int version) {
     ar & boost::serialization::base_object<FeatureContextHasher>(*this);
     ar & classId;
-    ar & hashSpaceSize;
   }
 
-  int classId, hashSpaceSize;
-  hash<NGram> hash_function;
+  int classId;
+  hash<HashedNGram> hashFunction;
 };
 
 } // namespace oxlm

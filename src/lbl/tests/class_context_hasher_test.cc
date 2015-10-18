@@ -13,21 +13,15 @@ namespace ar = boost::archive;
 namespace oxlm {
 
 TEST(ClassContextHasherTest, TestBasic) {
-  ClassContextHasher hasher(100);
-  vector<int> context = {1};
-  EXPECT_EQ(54, hasher.getKey(context));
-  context = {1, 2};
-  EXPECT_EQ(4, hasher.getKey(context));
-  context = {1, 2, 3};
-  EXPECT_EQ(73, hasher.getKey(context));
-
-  NGram expected_prediction(3, context);
-  EXPECT_EQ(expected_prediction, hasher.getPrediction(3, context));
+  ClassContextHasher hasher;
+  EXPECT_EQ(1, hasher.getKey(1));
+  EXPECT_EQ(12, hasher.getKey(12));
+  EXPECT_EQ(123, hasher.getKey(123));
 }
 
 TEST(ClassContextHasherTest, TestSerialization) {
   boost::shared_ptr<FeatureContextHasher> hasher_ptr =
-      boost::make_shared<ClassContextHasher>(100);
+      boost::make_shared<ClassContextHasher>();
 
   stringstream stream(ios_base::binary | ios_base::out | ios_base::in);
   ar::binary_oarchive oar(stream, ar::no_header);

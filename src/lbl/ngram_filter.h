@@ -18,16 +18,11 @@ class NGramFilter {
       const boost::shared_ptr<FeatureContextGenerator>& generator,
       int max_ngrams = 0, int min_ngram_freq = 1);
 
-  vector<FeatureContext> filter(
-      int word_id, int class_id,
-      const vector<FeatureContext>& feature_contexts) const;
-
   vector<Hash> filter(
       int word_id, int class_id, const vector<Hash>& context_hashes) const;
 
  private:
   bool enabled;
-  hash<NGram> hashFunction;
   hash<HashedNGram> hasher;
   unordered_map<size_t, int> ngramFrequencies;
 };

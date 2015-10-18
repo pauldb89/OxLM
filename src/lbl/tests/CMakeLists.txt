@@ -1,5 +1,4 @@
 set(TESTS
-    class_context_extractor_test
     class_context_hasher_test
     class_distribution_test
     class_tree_test
@@ -11,7 +10,6 @@ set(TESTS
     factored_weights_test
     feature_context_test
     feature_context_generator_test
-    feature_context_mapper_test
     feature_filter_test
     feature_indexes_pair_test
     feature_matcher_test
@@ -39,7 +37,6 @@ set(TESTS
     utils_test
     vocabulary_test
     weights_test
-    word_context_extractor_test
     word_context_hasher_test
     word_distributions_test
     word_to_class_index_test)

@@ -23,6 +23,7 @@ class NGramFilterTest : public testing::Test {
   boost::shared_ptr<FeatureContextGenerator> generator;
 };
 
+/*
 TEST_F(NGramFilterTest, TestFilterMaxCount) {
   NGramFilter filter(corpus, index, processor, generator, 3);
 
@@ -97,5 +98,6 @@ TEST_F(NGramFilterTest, TestDisabled) {
   EXPECT_EQ(1, filter.filter(3, 2, feature_contexts).size());
   EXPECT_EQ(1, filter.filter(4, 2, feature_contexts).size());
 }
+*/
 
 } // namespace oxlm

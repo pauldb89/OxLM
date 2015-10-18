@@ -18,6 +18,7 @@ GlobalFeatureStore::GlobalFeatureStore(
 VectorReal GlobalFeatureStore::get(const vector<int>& context) const {
   VectorReal result = VectorReal::Zero(vectorSize);
   for (Hash context_hash: generator.getFeatureContextHashes(context)) {
+    context_hash = hasher->getKey(context_hash);
     for (int i: filter->getIndexes(context_hash)) {
       result(i) += space->featureWeights[(context_hash + i) % hashSpaceSize];
     }
@@ -30,6 +31,7 @@ Real GlobalFeatureStore::getValue(
     int feature_index, const vector<int>& context) const {
   Real result = 0;
   for (Hash context_hash: generator.getFeatureContextHashes(context)) {
+    context_hash = hasher->getKey(context_hash);
     if (filter->hasIndex(context_hash, feature_index)) {
       result += space->featureWeights[(context_hash + feature_index) % hashSpaceSize];
     }

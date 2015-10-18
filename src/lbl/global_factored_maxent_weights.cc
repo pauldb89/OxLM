@@ -4,13 +4,11 @@
 
 #include <boost/make_shared.hpp>
 
-#include "lbl/class_context_extractor.h"
 #include "lbl/class_context_hasher.h"
 #include "lbl/feature_filter.h"
 #include "lbl/feature_filter.h"
 #include "lbl/feature_matcher.h"
 #include "lbl/global_feature_store.h"
-#include "lbl/word_context_extractor.h"
 #include "lbl/word_context_hasher.h"
 
 namespace oxlm {
@@ -40,7 +38,7 @@ void GlobalFactoredMaxentWeights::initialize() {
   boost::shared_ptr<GlobalCollisionSpace> space =
       boost::make_shared<GlobalCollisionSpace>(config->hash_space);
   boost::shared_ptr<FeatureContextHasher> hasher =
-      boost::make_shared<ClassContextHasher>(config->hash_space);
+      boost::make_shared<ClassContextHasher>();
   FeatureIndexesPairPtr feature_indexes_pair;
   boost::shared_ptr<FeatureFilter> filter;
   feature_indexes_pair = matcher->getFeatureIndexes();
@@ -53,7 +51,7 @@ void GlobalFactoredMaxentWeights::initialize() {
 
   for (int i = 0; i < num_classes; ++i) {
     int class_size = index->getClassSize(i);
-    hasher = boost::make_shared<WordContextHasher>(i, config->hash_space);
+    hasher = boost::make_shared<WordContextHasher>(i);
     filter = boost::make_shared<FeatureFilter>(
         feature_indexes_pair->getWordIndexes(i));
     V[i] = boost::make_shared<GlobalFeatureStore>(

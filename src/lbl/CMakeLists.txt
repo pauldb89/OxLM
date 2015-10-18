@@ -3,7 +3,6 @@
 #############################################
 
 add_libraries(lbl
-  class_context_extractor.cc
   class_context_hasher.cc
   class_distribution.cc
   class_tree.cc
@@ -16,9 +15,7 @@ add_libraries(lbl
   factored_tree_weights.cc
   factored_weights.cc
   feature_context.cc
-  feature_context_extractor.cc
   feature_context_generator.cc
-  feature_context_mapper.cc
   feature_context_hasher.cc
   feature_filter.cc
   feature_indexes_pair.cc
@@ -46,7 +43,6 @@ add_libraries(lbl
   utils.cc
   vocabulary.cc
   weights.cc
-  word_context_extractor.cc
   word_context_hasher.cc
   word_distributions.cc
   word_to_class_index.cc

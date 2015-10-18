@@ -29,7 +29,7 @@ TEST_F(MaxentSGDTest, TestTrainMaxentSGDExactFiltering) {
   boost::shared_ptr<Corpus> test_corpus = readTestCorpus(config, vocab);
   Real log_likelihood = 0;
   model.evaluate(test_corpus, log_likelihood);
-  EXPECT_NEAR(56.89786911, perplexity(log_likelihood, test_corpus->size()), EPS);
+  EXPECT_NEAR(56.97410202, perplexity(log_likelihood, test_corpus->size()), EPS);
 }
 
 TEST_F(MaxentSGDTest, TestTrainMaxentNCE) {
@@ -42,7 +42,21 @@ TEST_F(MaxentSGDTest, TestTrainMaxentNCE) {
   boost::shared_ptr<Corpus> test_corpus = readTestCorpus(config, vocab);
   Real log_likelihood = 0;
   model.evaluate(test_corpus, log_likelihood);
-  EXPECT_NEAR(62.33262252, perplexity(log_likelihood, test_corpus->size()), EPS);
+  EXPECT_NEAR(61.53352737, perplexity(log_likelihood, test_corpus->size()), EPS);
+}
+
+TEST_F(MaxentSGDTest, TestTrainMaxentNCEFilteredNGrams) {
+  config->noise_samples = 10;
+  config->min_ngram_freq = 3;
+
+  FactoredMaxentLM model(config);
+  model.learn();
+  config->test_file = "test.en";
+  boost::shared_ptr<Vocabulary> vocab = model.getVocab();
+  boost::shared_ptr<Corpus> test_corpus = readTestCorpus(config, vocab);
+  Real log_likelihood = 0;
+  model.evaluate(test_corpus, log_likelihood);
+  EXPECT_NEAR(62.75772857, perplexity(log_likelihood, test_corpus->size()), EPS);
 }
 
 } // namespace oxlm

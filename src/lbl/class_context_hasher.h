@@ -9,12 +9,7 @@ class ClassContextHasher : public FeatureContextHasher {
  public:
   ClassContextHasher();
 
-  ClassContextHasher(int hash_space);
-
-  virtual int getKey(const FeatureContext& feature_context) const;
-
-  virtual NGram getPrediction(
-      int candidate, const FeatureContext& feature_context) const;
+  virtual size_t getKey(Hash context_hash) const;
 
   bool operator==(const ClassContextHasher& other) const;
 
@@ -26,11 +21,7 @@ class ClassContextHasher : public FeatureContextHasher {
   template<class Archive>
   void serialize(Archive& ar, const unsigned int version) {
     ar & boost::serialization::base_object<FeatureContextHasher>(*this);
-    ar & hashSpace;
   }
-
-  int hashSpace;
-  hash<FeatureContext> hash_function;
 };
 
 } // namespace oxlm

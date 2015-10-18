@@ -32,7 +32,7 @@ class MinibatchFeatureStoreTest : public testing::Test {
     boost::shared_ptr<NGramFilter> ngram_filter =
         boost::make_shared<NGramFilter>(corpus, index, processor, generator);
     boost::shared_ptr<ClassContextHasher> hasher =
-        boost::make_shared<ClassContextHasher>(hash_space);
+        boost::make_shared<ClassContextHasher>();
     boost::shared_ptr<FeatureMatcher> feature_matcher =
         boost::make_shared<FeatureMatcher>(
             corpus, index, processor, generator, ngram_filter);

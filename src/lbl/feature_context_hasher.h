@@ -9,10 +9,7 @@ namespace oxlm {
 
 class FeatureContextHasher {
  public:
-  virtual int getKey(const FeatureContext& feature_context) const = 0;
-
-  virtual NGram getPrediction(
-      int candidate, const FeatureContext& feature_context) const = 0;
+  virtual size_t getKey(Hash context_hash) const = 0;
 
   virtual ~FeatureContextHasher();
 

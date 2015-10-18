@@ -5,11 +5,9 @@
 #include <boost/make_shared.hpp>
 #include <boost/serialization/shared_ptr.hpp>
 
-#include "lbl/class_context_extractor.h"
 #include "lbl/class_context_hasher.h"
 #include "lbl/context_processor.h"
 #include "lbl/corpus.h"
-#include "lbl/feature_context_mapper.h"
 #include "lbl/feature_filter.h"
 #include "lbl/feature_matcher.h"
 #include "lbl/global_feature_store.h"
@@ -49,7 +47,7 @@ class GlobalFeatureStoreTest : public testing::Test {
     boost::shared_ptr<FeatureFilter> filter =
         boost::make_shared<FeatureFilter>(feature_indexes);
     boost::shared_ptr<ClassContextHasher> hasher =
-        boost::make_shared<ClassContextHasher>(hash_space);
+        boost::make_shared<ClassContextHasher>();
 
     MinibatchFeatureStore g_store(
         vector_size, hash_space, 3, hasher, filter);

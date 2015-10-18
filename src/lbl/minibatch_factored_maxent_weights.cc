@@ -2,12 +2,10 @@
 
 #include <boost/make_shared.hpp>
 
-#include "lbl/class_context_extractor.h"
 #include "lbl/class_context_hasher.h"
 #include "lbl/feature_filter.h"
 #include "lbl/feature_matcher.h"
 #include "lbl/minibatch_feature_store.h"
-#include "lbl/word_context_extractor.h"
 #include "lbl/word_context_hasher.h"
 
 namespace oxlm {
@@ -37,7 +35,7 @@ void MinibatchFactoredMaxentWeights::init(
   boost::shared_ptr<FeatureMatcher> matcher = metadata->getMatcher();
 
   boost::shared_ptr<FeatureContextHasher> hasher =
-      boost::make_shared<ClassContextHasher>(config->hash_space);
+      boost::make_shared<ClassContextHasher>();
   // It's fine to use the global feature indexes here because the stores are
   // not constructed based on these indices. At filtering time, we just want
   // to know which feature indexes match which contexts.
@@ -52,8 +50,7 @@ void MinibatchFactoredMaxentWeights::init(
 
   for (int i = 0; i < num_classes; ++i) {
     int class_size = index->getClassSize(i);
-    hasher = boost::make_shared<WordContextHasher>(
-        i, config->hash_space);
+    hasher = boost::make_shared<WordContextHasher>(i);
     filter = boost::make_shared<FeatureFilter>(
         feature_indexes_pair->getWordIndexes(i));
     V[i] = boost::make_shared<MinibatchFeatureStore>(

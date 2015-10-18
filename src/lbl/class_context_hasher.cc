@@ -4,20 +4,12 @@ namespace oxlm {
 
 ClassContextHasher::ClassContextHasher() {}
 
-ClassContextHasher::ClassContextHasher(int hash_space)
-    : hashSpace(hash_space) {}
-
-int ClassContextHasher::getKey(const FeatureContext& feature_context) const {
-  return hash_function(feature_context) % hashSpace;
-}
-
-NGram ClassContextHasher::getPrediction(
-    int candidate, const FeatureContext& feature_context) const {
-  return NGram(candidate, feature_context.data);
+size_t ClassContextHasher::getKey(Hash context_hash) const {
+  return context_hash;
 }
 
 bool ClassContextHasher::operator==(const ClassContextHasher& other) const {
-  return hashSpace == other.hashSpace;
+  return true;
 }
 
 ClassContextHasher::~ClassContextHasher() {}
