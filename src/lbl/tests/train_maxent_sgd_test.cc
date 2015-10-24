@@ -47,7 +47,7 @@ TEST_F(MaxentSGDTest, TestTrainMaxentNCE) {
 
 TEST_F(MaxentSGDTest, TestTrainMaxentNCEFilteredNGrams) {
   config->noise_samples = 10;
-  config->min_ngram_freq = 3;
+  config->ngram_file = "ngrams.txt";
 
   FactoredMaxentLM model(config);
   model.learn();

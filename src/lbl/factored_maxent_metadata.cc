@@ -34,8 +34,7 @@ FactoredMetadata::initialize(corpus);
   if (config->ngram_file.size()) {
     filter = boost::make_shared<NGramFilter>(config->ngram_file);
   } else {
-    filter = boost::make_shared<NGramFilter>(
-        corpus, index, processor, generator, config->max_ngrams, config->min_ngram_freq);
+    filter = boost::make_shared<NGramFilter>();
   }
   cout << "Done creating the n-gram filter..." << endl;
   cout << "Creating the n-gram filter took " << GetDuration(start_time, GetTime())

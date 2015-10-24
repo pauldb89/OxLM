@@ -18,8 +18,7 @@ class FeatureMatcherTest : public testing::Test {
     boost::shared_ptr<ContextProcessor> processor =
         boost::make_shared<ContextProcessor>(corpus, 2, 0, 1);
     generator = boost::make_shared<FeatureContextGenerator>(2);
-    boost::shared_ptr<NGramFilter> filter =
-        boost::make_shared<NGramFilter>(corpus, index, processor, generator);
+    boost::shared_ptr<NGramFilter> filter = boost::make_shared<NGramFilter>();
     feature_matcher = boost::make_shared<FeatureMatcher>(
         corpus, index, processor, generator, filter);
   }

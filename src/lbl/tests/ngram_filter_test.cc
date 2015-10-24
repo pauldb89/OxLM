@@ -6,98 +6,34 @@
 
 namespace oxlm {
 
-class NGramFilterTest : public testing::Test {
- protected:
-  void SetUp() {
-    vector<int> data = {2, 3, 2, 3, 1, 3, 3, 4, 2, 2, 4, 3, 3, 2, 2, 1};
-    vector<int> classes = {0, 2, 3, 5};
-    corpus = boost::make_shared<Corpus>(data);
-    index = boost::make_shared<WordToClassIndex>(classes);
-    processor = boost::make_shared<ContextProcessor>(corpus, 1);
-    generator = boost::make_shared<FeatureContextGenerator>(1);
+TEST(NGramFilterTest, TestFilterEnabled) {
+  vector<Hash> context_hashes = {1, 2, 3};
+
+  hash<HashedNGram> hasher;
+  unordered_set<size_t> valid_ngrams;
+  for (size_t i = 0; i < context_hashes.size(); ++i) {
+    size_t ngram_hash = hasher(HashedNGram(1, 1, context_hashes[i]));
+    valid_ngrams.insert(ngram_hash);
   }
 
-  boost::shared_ptr<Corpus> corpus;
-  boost::shared_ptr<WordToClassIndex> index;
-  boost::shared_ptr<ContextProcessor> processor;
-  boost::shared_ptr<FeatureContextGenerator> generator;
-};
+  NGramFilter filter(valid_ngrams);
 
-/*
-TEST_F(NGramFilterTest, TestFilterMaxCount) {
-  NGramFilter filter(corpus, index, processor, generator, 3);
-
-  vector<int> context = {2};
-  FeatureContext feature_context(context);
-  vector<FeatureContext> feature_contexts = {feature_context};
-  EXPECT_EQ(0, filter.filter(2, 1, feature_contexts).size());
-  EXPECT_EQ(1, filter.filter(3, 2, feature_contexts).size());
-  EXPECT_EQ(0, filter.filter(4, 2, feature_contexts).size());
-
-  context = {3};
-  feature_context = FeatureContext(context);
-  feature_contexts = {feature_context};
-  EXPECT_EQ(1, filter.filter(2, 1, feature_contexts).size());
-  EXPECT_EQ(1, filter.filter(3, 2, feature_contexts).size());
-  EXPECT_EQ(0, filter.filter(4, 2, feature_contexts).size());
-
-  context = {4};
-  feature_context = FeatureContext(context);
-  feature_contexts = {feature_context};
-  EXPECT_EQ(0, filter.filter(2, 1, feature_contexts).size());
-  EXPECT_EQ(0, filter.filter(3, 2, feature_contexts).size());
-  EXPECT_EQ(0, filter.filter(4, 2, feature_contexts).size());
+  EXPECT_EQ(3, filter.filter(1, 1, context_hashes).size());
+  EXPECT_EQ(0, filter.filter(0, 1, context_hashes).size());
+  EXPECT_EQ(0, filter.filter(1, 0, context_hashes).size());
+  vector<size_t> other_hashes = {4, 5, 6};
+  EXPECT_EQ(0, filter.filter(1, 1, other_hashes).size());
+  vector<size_t> mixed_hashes = {1, 5, 3};
+  EXPECT_EQ(2, filter.filter(1, 1, mixed_hashes).size());
 }
 
-TEST_F(NGramFilterTest, TestFilterMinFreq) {
-  NGramFilter filter(corpus, index, processor, generator, 0, 2);
+TEST(NGramFilterTest, TestDisabled) {
+  NGramFilter filter;
 
-  vector<int> context = {2};
-  FeatureContext feature_context(context);
-  vector<FeatureContext> feature_contexts = {feature_context};
-  EXPECT_EQ(1, filter.filter(2, 1, feature_contexts).size());
-  EXPECT_EQ(1, filter.filter(3, 2, feature_contexts).size());
-  EXPECT_EQ(0, filter.filter(4, 2, feature_contexts).size());
-
-  context = {3};
-  feature_context = FeatureContext(context);
-  feature_contexts = {feature_context};
-  EXPECT_EQ(1, filter.filter(2, 1, feature_contexts).size());
-  EXPECT_EQ(1, filter.filter(3, 2, feature_contexts).size());
-  EXPECT_EQ(0, filter.filter(4, 2, feature_contexts).size());
-
-  context = {4};
-  feature_context = FeatureContext(context);
-  feature_contexts = {feature_context};
-  EXPECT_EQ(0, filter.filter(2, 1, feature_contexts).size());
-  EXPECT_EQ(0, filter.filter(3, 2, feature_contexts).size());
-  EXPECT_EQ(0, filter.filter(4, 2, feature_contexts).size());
+  vector<Hash> context_hashes = {2};
+  EXPECT_EQ(1, filter.filter(2, 1, context_hashes).size());
+  EXPECT_EQ(1, filter.filter(3, 2, context_hashes).size());
+  EXPECT_EQ(1, filter.filter(4, 2, context_hashes).size());
 }
-
-TEST_F(NGramFilterTest, TestDisabled) {
-  NGramFilter filter(corpus, index, processor, generator);
-
-  vector<int> context = {2};
-  FeatureContext feature_context(context);
-  vector<FeatureContext> feature_contexts = {feature_context};
-  EXPECT_EQ(1, filter.filter(2, 1, feature_contexts).size());
-  EXPECT_EQ(1, filter.filter(3, 2, feature_contexts).size());
-  EXPECT_EQ(1, filter.filter(4, 2, feature_contexts).size());
-
-  context = {3};
-  feature_context = FeatureContext(context);
-  feature_contexts = {feature_context};
-  EXPECT_EQ(1, filter.filter(2, 1, feature_contexts).size());
-  EXPECT_EQ(1, filter.filter(3, 2, feature_contexts).size());
-  EXPECT_EQ(1, filter.filter(4, 2, feature_contexts).size());
-
-  context = {4};
-  feature_context = FeatureContext(context);
-  feature_contexts = {feature_context};
-  EXPECT_EQ(1, filter.filter(2, 1, feature_contexts).size());
-  EXPECT_EQ(1, filter.filter(3, 2, feature_contexts).size());
-  EXPECT_EQ(1, filter.filter(4, 2, feature_contexts).size());
-}
-*/
 
 } // namespace oxlm

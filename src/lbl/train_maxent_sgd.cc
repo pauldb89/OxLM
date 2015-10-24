@@ -66,10 +66,6 @@ int main(int argc, char **argv) {
     ("noise-samples", value<int>()->default_value(0),
         "Number of noise samples for noise contrastive estimation. "
         "If zero, minibatch gradient descent is used instead.")
-    ("max-ngrams", value<int>()->default_value(0),
-        "Define maxent features only for the most frequent max-ngrams ngrams.")
-    ("min-ngram-freq", value<int>()->default_value(1),
-        "Define maxent features only for n-grams above this frequency.")
     ("hash-space", value<Real>()->default_value(0),
         "The size of the space in which the maxent features are mapped to "
         "(in millions).");
@@ -133,9 +129,6 @@ int main(int argc, char **argv) {
 
   config->noise_samples = vm["noise-samples"].as<int>();
 
-  config->max_ngrams = vm["max-ngrams"].as<int>();
-  config->min_ngram_freq = vm["min-ngram-freq"].as<int>();
-
   config->hash_space = vm["hash-space"].as<Real>() * 1000000;
 
   cout << "################################" << endl;
@@ -168,8 +161,6 @@ int main(int argc, char **argv) {
   cout << "# diagonal contexts = " << config->diagonal_contexts << endl;
   cout << "# activation = " << config->activation << endl;
   cout << "# noise samples = " << config->noise_samples << endl;
-  cout << "# max n-grams = " << config->max_ngrams << endl;
-  cout << "# min n-gram frequency = " << config->min_ngram_freq << endl;
   cout << "# hash space = " << config->hash_space << endl;
   cout << "################################" << endl;
 

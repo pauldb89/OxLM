@@ -24,7 +24,7 @@ class GlobalFactoredMaxentWeightsTest : public FactoredWeightsTest {
         boost::make_shared<FeatureContextGenerator>(
             config->feature_context_size);
     boost::shared_ptr<NGramFilter> filter =
-        boost::make_shared<NGramFilter>(corpus, index, processor, generator);
+        boost::make_shared<NGramFilter>();
     matcher = boost::make_shared<FeatureMatcher>(
         corpus, index, processor, generator, filter);
   }
