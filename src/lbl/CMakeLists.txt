@@ -74,6 +74,7 @@ set(EXECUTABLES
   extract_word_vectors
   evaluate
   evaluate_parallel
+  extract_ngrams
   predict
   score
   score_parallel

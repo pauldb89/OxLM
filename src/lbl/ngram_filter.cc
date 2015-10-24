@@ -2,6 +2,17 @@
 
 namespace oxlm {
 
+NGramFilter::NGramFilter(const string& ngram_file) {
+  ifstream fin(ngram_file);
+  size_t ngram_hash;
+  while (fin >> ngram_hash) {
+    validNGrams.insert(ngram_hash);
+  }
+
+  enabled = validNGrams.size() > 0;
+  cerr << "Read " << validNGrams.size() << " n-grams..." << endl;
+}
+
 NGramFilter::NGramFilter(
     const boost::shared_ptr<Corpus>& corpus,
     const boost::shared_ptr<WordToClassIndex>& index,
@@ -63,7 +74,11 @@ vector<Hash> NGramFilter::filter(
   for (Hash context_hash: context_hashes) {
     HashedNGram ngram(word_id, class_id, context_hash);
     size_t ngram_hash = hasher(ngram);
-    if (ngramFrequencies.count(ngram_hash)) {
+    if (validNGrams.size() > 0) {
+      if (validNGrams.count(ngram_hash)) {
+        ret.push_back(context_hash);
+      }
+    } else if (ngramFrequencies.count(ngram_hash)) {
       ret.push_back(context_hash);
     }
   }

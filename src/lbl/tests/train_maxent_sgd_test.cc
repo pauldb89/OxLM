@@ -59,4 +59,18 @@ TEST_F(MaxentSGDTest, TestTrainMaxentNCEFilteredNGrams) {
   EXPECT_NEAR(62.75772857, perplexity(log_likelihood, test_corpus->size()), EPS);
 }
 
+TEST_F(MaxentSGDTest, TestTrainMaxentNCEExtractedNGrams) {
+  config->noise_samples = 10;
+  config->ngram_file = "ngrams.txt";
+
+  FactoredMaxentLM model(config);
+  model.learn();
+  config->test_file = "test.en";
+  boost::shared_ptr<Vocabulary> vocab = model.getVocab();
+  boost::shared_ptr<Corpus> test_corpus = readTestCorpus(config, vocab);
+  Real log_likelihood = 0;
+  model.evaluate(test_corpus, log_likelihood);
+  EXPECT_NEAR(62.75772857, perplexity(log_likelihood, test_corpus->size()), EPS);
+}
+
 } // namespace oxlm

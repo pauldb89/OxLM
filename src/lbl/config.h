@@ -25,6 +25,7 @@ struct ModelData {
   string      alignment_file;
   string      test_file;
   string      test_alignment_file;
+  string      ngram_file;
   int         iterations;
   int         evaluate_frequency;
   int         minibatch_size;
@@ -79,6 +80,7 @@ struct ModelData {
     ar & alignment_file;
     ar & test_file;
     ar & test_alignment_file;
+    ar & ngram_file;
     ar & iterations;
     ar & minibatch_size;
     ar & instances;

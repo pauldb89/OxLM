@@ -48,6 +48,9 @@ ostream& operator<<(ostream& out, const ModelData& config) {
   if (config.class_file.size()) {
     out << "# class file = " << config.class_file << endl;
   }
+  if (config.ngram_file.size()) {
+    out << "# ngram file = " << config.ngram_file << endl;
+  }
   out << "# model-out = " << config.model_output_file << endl;
   out << endl;
 

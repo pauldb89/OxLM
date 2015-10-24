@@ -22,6 +22,7 @@ int main(int argc, char **argv) {
         "corpus of sentences, one per line")
     ("test-set", value<string>(),
         "corpus of test sentences")
+    ("ngram-file", value<string>(), "File containing whitelisted maxent n-grams.")
     ("iterations", value<int>()->default_value(10),
         "Maximum number of passes through the data.")
     ("evaluate-frequency", value<int>()->default_value(1000),
@@ -40,7 +41,7 @@ int main(int argc, char **argv) {
         "base filename of model output files")
     ("lambda-lbl,r", value<float>()->default_value(2.0),
         "LBL regularisation strength parameter")
-    ("feature-context-size", value<int>()->default_value(5),
+    ("feature-context-size", value<int>()->default_value(4),
         "size of the window for maximum entropy features")
     ("lambda-maxent", value<float>()->default_value(2.0),
         "maxent regularisation strength parameter")
@@ -116,6 +117,9 @@ int main(int argc, char **argv) {
   if (vm.count("class-file")) {
     config->class_file = vm["class-file"].as<string>();
   }
+  if (vm.count("ngram-file")) {
+    config->ngram_file = vm["ngram-file"].as<string>();
+  }
 
   config->l2_lbl = vm["lambda-lbl"].as<float>();
   config->l2_maxent = vm["lambda-maxent"].as<float>();
@@ -146,6 +150,12 @@ int main(int argc, char **argv) {
     cout << "# model-out = " << config->model_output_file << endl;
   }
   cout << "# input = " << config->training_file << endl;
+  if (config->class_file.size()) {
+    cout << "# class file = " << config->class_file << endl;
+  }
+  if (config->ngram_file.size()) {
+    cout << "# ngram whitelist file = " << config->ngram_file << endl;
+  }
   cout << "# minibatch size = " << config->minibatch_size << endl;
   cout << "# minibatch threshold = " << config->minibatch_threshold << endl;
   cout << "# lambda LBL = " << config->l2_lbl << endl;

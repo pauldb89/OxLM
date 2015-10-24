@@ -30,8 +30,6 @@ FeatureMatcher::FeatureMatcher(
       featureIndexes->addWordIndex(class_id, context_hash, word_class_id);
     }
   }
-
-  cerr << "class indexes size: " << featureIndexes->getClassIndexes()->size() << endl;
 }
 
 FeatureIndexesPairPtr FeatureMatcher::getFeatureIndexes() const {
