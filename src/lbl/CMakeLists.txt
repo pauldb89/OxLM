@@ -75,6 +75,7 @@ set(EXECUTABLES
   evaluate
   evaluate_parallel
   extract_ngrams
+  memory_checker
   predict
   score
   score_parallel
