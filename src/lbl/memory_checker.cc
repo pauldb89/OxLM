@@ -1,31 +1,21 @@
 #include <iostream>
 #include <string>
 
-#include <boost/algorithm/string.hpp>
 #include <boost/program_options.hpp>
 
 #include "lbl/model.h"
 
-using namespace boost::algorithm;
 using namespace boost::program_options;
 using namespace oxlm;
 using namespace std;
 
 
 template<class Model>
-void PrintUsage(const string& model_file) {
+void loadModel(const string& model_file) {
   Model model;
   model.load(model_file);
-  unordered_set<string> headers = {"VmPeak:", "VmRSS:"};
 
-  ifstream metadata("/proc/self/status", ios::in);
-  string header, value;
-  while ((metadata >> header) && getline(metadata, value)) {
-    if (headers.count(header)) {
-      trim(value);
-      cout << header << " " << value << endl;
-    }
-  }
+  printMemoryUsage();
 }
 
 
@@ -51,16 +41,16 @@ int main(int argc, char** argv) {
 
   switch (model_type) {
     case NLM:
-      PrintUsage<LM>(model_file);
+      loadModel<LM>(model_file);
       return 0;
     case FACTORED_NLM:
-      PrintUsage<FactoredLM>(model_file);
+      loadModel<FactoredLM>(model_file);
       return 0;
     case FACTORED_MAXENT_NLM:
-      PrintUsage<FactoredMaxentLM>(model_file);
+      loadModel<FactoredMaxentLM>(model_file);
       return 0;
     case FACTORED_TREE_NLM:
-      PrintUsage<FactoredTreeLM>(model_file);
+      loadModel<FactoredTreeLM>(model_file);
       return 0;
     default:
       cout << "Unknown model type" << endl;
