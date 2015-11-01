@@ -4,26 +4,15 @@ namespace oxlm {
 
 FeatureFilter::FeatureFilter() {}
 
-FeatureFilter::FeatureFilter(const FeatureIndexesPtr& feature_indexes)
-    : featureIndexes(feature_indexes) {}
+FeatureFilter::FeatureFilter(const FeatureIndexPtr& feature_indexes)
+    : featureIndex(feature_indexes) {}
 
 vector<int> FeatureFilter::getIndexes(Hash context_hash) const {
-  auto it = featureIndexes->find(context_hash);
-  if (it == featureIndexes->end()) {
-    return vector<int>();
-  }
-
-  return it->second;
+  return featureIndex->get(context_hash);
 }
 
 bool FeatureFilter::hasIndex(Hash context_hash, int feature_index) const {
-  auto it = featureIndexes->find(context_hash);
-  if (it == featureIndexes->end()) {
-    return false;
-  }
-
-  const auto& indexes = it->second;
-  return find(indexes.begin(), indexes.end(), feature_index) != indexes.end();
+  return featureIndex->contains(context_hash, feature_index);
 }
 
 FeatureFilter::~FeatureFilter() {}

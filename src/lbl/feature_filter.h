@@ -9,7 +9,7 @@
 #include <boost/shared_ptr.hpp>
 
 #include "lbl/archive_export.h"
-#include "lbl/feature_filter.h"
+#include "lbl/feature_index.h"
 #include "lbl/utils.h"
 #include "utils/serialization_helpers.h"
 
@@ -19,7 +19,7 @@ class FeatureFilter {
  public:
   FeatureFilter();
 
-  FeatureFilter(const FeatureIndexesPtr& feature_indexes);
+  FeatureFilter(const FeatureIndexPtr& feature_indexes);
 
   virtual vector<int> getIndexes(Hash context_hash) const;
 
@@ -32,10 +32,10 @@ class FeatureFilter {
 
   template<class Archive>
   void serialize(Archive& ar, const unsigned int version) {
-    ar & featureIndexes;
+    ar & featureIndex;
   }
 
-  FeatureIndexesPtr featureIndexes;
+  FeatureIndexPtr featureIndex;
 };
 
 } // namespace oxlm

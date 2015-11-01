@@ -11,6 +11,7 @@ set(TESTS
     feature_context_test
     feature_context_generator_test
     feature_filter_test
+    feature_index_test
     feature_indexes_pair_test
     feature_matcher_test
     global_factored_maxent_weights_test

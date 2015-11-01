@@ -43,7 +43,7 @@ void GlobalFactoredMaxentWeights::initialize() {
   boost::shared_ptr<FeatureFilter> filter;
   feature_indexes_pair = matcher->getFeatureIndexes();
   filter = boost::make_shared<FeatureFilter>(
-      feature_indexes_pair->getClassIndexes());
+      feature_indexes_pair->getClassIndex());
 
   U = boost::make_shared<GlobalFeatureStore>(
       num_classes, config->hash_space, config->feature_context_size,

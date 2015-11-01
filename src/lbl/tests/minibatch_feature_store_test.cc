@@ -38,7 +38,7 @@ class MinibatchFeatureStoreTest : public testing::Test {
             corpus, index, processor, generator, ngram_filter);
 
     auto feature_indexes_pair = feature_matcher->getFeatureIndexes();
-    auto feature_indexes = feature_indexes_pair->getClassIndexes();
+    auto feature_indexes = feature_indexes_pair->getClassIndex();
     boost::shared_ptr<FeatureFilter> filter =
         boost::make_shared<FeatureFilter>(feature_indexes);
 

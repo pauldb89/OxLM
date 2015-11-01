@@ -2,6 +2,7 @@
 
 #include <vector>
 
+#include "lbl/feature_index.h"
 #include "lbl/word_to_class_index.h"
 #include "lbl/utils.h"
 
@@ -15,9 +16,9 @@ class FeatureIndexesPair {
 
   FeatureIndexesPair(const boost::shared_ptr<WordToClassIndex>& index);
 
-  FeatureIndexesPtr getClassIndexes() const;
+  FeatureIndexPtr getClassIndex() const;
 
-  FeatureIndexesPtr getWordIndexes(int class_id) const;
+  FeatureIndexPtr getWordIndexes(int class_id) const;
 
   vector<int> getClassFeatures(Hash h) const;
 
@@ -32,12 +33,12 @@ class FeatureIndexesPair {
 
   template<class Archive>
   void serialize(Archive& ar, const unsigned int version) {
-    ar & classIndexes;
+    ar & classIndex;
     ar & wordIndexes;
   }
 
-  FeatureIndexesPtr classIndexes;
-  vector<FeatureIndexesPtr> wordIndexes;
+  FeatureIndexPtr classIndex;
+  vector<FeatureIndexPtr> wordIndexes;
 };
 
 typedef boost::shared_ptr<FeatureIndexesPair> FeatureIndexesPairPtr;

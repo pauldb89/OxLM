@@ -18,6 +18,7 @@ add_libraries(lbl
   feature_context_generator.cc
   feature_context_hasher.cc
   feature_filter.cc
+  feature_index.cc
   feature_indexes_pair.cc
   feature_matcher.cc
   feature_store.cc

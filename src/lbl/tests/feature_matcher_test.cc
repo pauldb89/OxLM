@@ -24,12 +24,11 @@ class FeatureMatcherTest : public testing::Test {
   }
 
   void checkFeatureContexts(
-      FeatureIndexesPtr feature_indexes,
+      FeatureIndexPtr feature_index,
       const vector<Hash>& context_hashes,
-      int feature_index) const {
+      int feature) const {
     for (Hash context_hash: context_hashes) {
-      vector<int>& indexes = feature_indexes->at(context_hash);
-      EXPECT_TRUE(find(indexes.begin(), indexes.end(), feature_index) != indexes.end());
+      EXPECT_TRUE(feature_index->contains(context_hash, feature));
     }
   }
 
@@ -43,53 +42,53 @@ TEST_F(FeatureMatcherTest, TestGlobal) {
   vector<Hash> context_hashes;
   auto feature_indexes_pair = feature_matcher->getFeatureIndexes();
 
-  FeatureIndexesPtr feature_indexes = feature_indexes_pair->getClassIndexes();
-  EXPECT_EQ(8, feature_indexes->size());
+  FeatureIndexPtr feature_index = feature_indexes_pair->getClassIndex();
+  EXPECT_EQ(8, feature_index->size());
   history = {0, 0};
   context_hashes = generator->getFeatureContextHashes(history);
-  checkFeatureContexts(feature_indexes, context_hashes, 1);
+  checkFeatureContexts(feature_index, context_hashes, 1);
   history = {2, 0};
   context_hashes = generator->getFeatureContextHashes(history);
-  checkFeatureContexts(feature_indexes, context_hashes, 2);
+  checkFeatureContexts(feature_index, context_hashes, 2);
   history = {3, 2};
   context_hashes = generator->getFeatureContextHashes(history);
-  checkFeatureContexts(feature_indexes, context_hashes, 2);
+  checkFeatureContexts(feature_index, context_hashes, 2);
   history = {3, 3};
   context_hashes = generator->getFeatureContextHashes(history);
-  checkFeatureContexts(feature_indexes, context_hashes, 0);
+  checkFeatureContexts(feature_index, context_hashes, 0);
   history = {0, 0};
   context_hashes = generator->getFeatureContextHashes(history);
-  checkFeatureContexts(feature_indexes, context_hashes, 2);
+  checkFeatureContexts(feature_index, context_hashes, 2);
   history = {3, 0};
   context_hashes = generator->getFeatureContextHashes(history);
-  checkFeatureContexts(feature_indexes, context_hashes, 1);
+  checkFeatureContexts(feature_index, context_hashes, 1);
 
-  feature_indexes = feature_indexes_pair->getWordIndexes(0);
-  EXPECT_EQ(2, feature_indexes->size());
+  feature_index = feature_indexes_pair->getWordIndexes(0);
+  EXPECT_EQ(2, feature_index->size());
   history = {3, 3};
   context_hashes = generator->getFeatureContextHashes(history);
-  checkFeatureContexts(feature_indexes, context_hashes, 1);
+  checkFeatureContexts(feature_index, context_hashes, 1);
 
-  feature_indexes = feature_indexes_pair->getWordIndexes(1);
-  EXPECT_EQ(4, feature_indexes->size());
+  feature_index = feature_indexes_pair->getWordIndexes(1);
+  EXPECT_EQ(4, feature_index->size());
   history = {0, 0};
   context_hashes = generator->getFeatureContextHashes(history);
-  checkFeatureContexts(feature_indexes, context_hashes, 0);
+  checkFeatureContexts(feature_index, context_hashes, 0);
   history = {3, 0};
   context_hashes = generator->getFeatureContextHashes(history);
-  checkFeatureContexts(feature_indexes, context_hashes, 0);
+  checkFeatureContexts(feature_index, context_hashes, 0);
 
-  feature_indexes = feature_indexes_pair->getWordIndexes(2);
-  EXPECT_EQ(6, feature_indexes->size());
+  feature_index = feature_indexes_pair->getWordIndexes(2);
+  EXPECT_EQ(6, feature_index->size());
   history = {2, 0};
   context_hashes = generator->getFeatureContextHashes(history);
-  checkFeatureContexts(feature_indexes, context_hashes, 0);
+  checkFeatureContexts(feature_index, context_hashes, 0);
   history = {3, 2};
   context_hashes = generator->getFeatureContextHashes(history);
-  checkFeatureContexts(feature_indexes, context_hashes, 0);
+  checkFeatureContexts(feature_index, context_hashes, 0);
   history = {0, 0};
   context_hashes = generator->getFeatureContextHashes(history);
-  checkFeatureContexts(feature_indexes, context_hashes, 0);
+  checkFeatureContexts(feature_index, context_hashes, 0);
 }
 
 } // namespace oxlm

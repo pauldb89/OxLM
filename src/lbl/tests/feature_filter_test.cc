@@ -33,7 +33,7 @@ class FeatureFilterTest : public testing::Test {
             corpus, index, processor, generator, ngram_filter);
     FeatureIndexesPairPtr feature_indexes = matcher->getFeatureIndexes();
     filter = boost::make_shared<FeatureFilter>(
-        feature_indexes->getClassIndexes());
+        feature_indexes->getClassIndex());
   }
 
   boost::shared_ptr<FeatureFilter> filter;
