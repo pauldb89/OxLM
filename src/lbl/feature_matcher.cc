@@ -13,6 +13,8 @@ FeatureMatcher::FeatureMatcher(
     const boost::shared_ptr<FeatureContextGenerator>& generator,
     const boost::shared_ptr<NGramFilter>& filter) {
   featureIndexes = boost::make_shared<FeatureIndexesPair>(index);
+
+  size_t num_processed = 0;
   for (size_t i = 0; i < corpus->size(); ++i) {
     int word_id = corpus->at(i);
     int class_id = index->getClass(word_id);
@@ -29,7 +31,16 @@ FeatureMatcher::FeatureMatcher(
     for (Hash context_hash: context_hashes) {
       featureIndexes->addWordIndex(class_id, context_hash, word_class_id);
     }
+
+    ++num_processed;
+    if (num_processed % 1000000 == 0) {
+      cout << ".";
+      if (num_processed % 100000000 == 0) {
+        cout << " [" << num_processed << "]" << endl;
+      }
+    }
   }
+  cout << endl;
 }
 
 FeatureIndexesPairPtr FeatureMatcher::getFeatureIndexes() const {
